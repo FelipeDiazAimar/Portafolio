@@ -1,6 +1,9 @@
 {
   "name": "portafolio",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -8,6 +11,7 @@
   "scripts": {
     "dev:web": "npm run dev -w apps/web",
     "dev:playground": "npm run dev -w apps/playground",
-    "dev:api": "npm run dev -w apps/api"
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build -w apps/web"
   }
 }
