@@ -1,0 +1,18 @@
+@import '@portafolio/config/tokens/tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-3);
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "portfolio-monorepo",
+    "titulo": "Portfolio Fullstack (este proyecto)",
+    "resumen": "Monorepo con Next.js, Vite y Express desplegado como un único proyecto en Vercel.",
+    "stack": ["Next.js", "React", "Vite", "Express", "Supabase"]
+  },
+  {
+    "slug": "proyecto-demo",
+    "titulo": "Proyecto de ejemplo",
+    "resumen": "Reemplazá esta entrada con uno de tus proyectos reales.",
+    "stack": ["React"]
+  }
+]
