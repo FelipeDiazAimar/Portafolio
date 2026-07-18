@@ -3,7 +3,7 @@
 import styles from './TextoRodante.module.css';
 
 const REPETICIONES = 4;
-const DEMORA_POR_LETRA_MS = 40;
+const DEMORA_POR_LETRA_MS = 60;
 
 export default function TextoRodante({ texto, demoraInicial = 0 }) {
   const letras = texto.split('');
