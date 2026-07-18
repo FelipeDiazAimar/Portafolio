@@ -1,0 +1,60 @@
+.hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.capa {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.activa {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.titulo {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(2.5rem, 8vw, 6rem);
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
+}
+
+.capa-inicio {
+  background: linear-gradient(135deg, #1a1c22 0%, #2b2f3a 100%);
+}
+
+.capa-sobre-mi {
+  background: linear-gradient(135deg, #2a2438 0%, #4a3f66 100%);
+}
+
+.capa-proyectos {
+  background: linear-gradient(135deg, #10263b 0%, #1f4d73 100%);
+}
+
+.capa-experiencia {
+  background: linear-gradient(135deg, #3b2a10 0%, #73561f 100%);
+}
+
+.capa-habilidades {
+  background: linear-gradient(135deg, #10322b 0%, #1f7357 100%);
+}
+
+.capa-contacto {
+  background: linear-gradient(135deg, #3b1020 0%, #731f45 100%);
+}
