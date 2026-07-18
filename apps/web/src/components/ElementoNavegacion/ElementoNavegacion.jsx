@@ -11,7 +11,7 @@ export default function ElementoNavegacion({ enlace, icono, variante }) {
       <Link href={enlace.href} className={styles.enlace}>
         <span className={styles.icono}>{icono}</span>
         <span className={styles.texto}>
-          <TextoBrillante texto={enlace.label} />
+          <TextoBrillante texto={enlace.label} activo={variante === 'mini'} />
         </span>
       </Link>
     </motion.div>

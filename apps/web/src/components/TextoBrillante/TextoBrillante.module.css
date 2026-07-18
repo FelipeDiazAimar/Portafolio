@@ -1,6 +1,10 @@
 .texto {
   display: inline-block;
   white-space: nowrap;
+  color: var(--color-fg);
+}
+
+.brillante {
   background-image: linear-gradient(
     100deg,
     var(--color-fg) 0%,
@@ -15,7 +19,7 @@
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: recorrido 2.2s ease-in-out infinite;
+  animation: recorrido 4.5s ease-in-out infinite;
 }
 
 @keyframes recorrido {
