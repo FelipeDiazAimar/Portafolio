@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import TextoBrillante from '@/components/TextoBrillante/TextoBrillante.jsx';
+import TextoRodante from '@/components/TextoRodante/TextoRodante.jsx';
 import styles from './ElementoNavegacion.module.css';
 
 export default function ElementoNavegacion({ enlace, icono, variante }) {
@@ -11,7 +12,11 @@ export default function ElementoNavegacion({ enlace, icono, variante }) {
       <Link href={enlace.href} className={styles.enlace}>
         <span className={styles.icono}>{icono}</span>
         <span className={styles.texto}>
-          <TextoBrillante texto={enlace.label} activo={variante === 'mini'} />
+          {variante === 'grande' ? (
+            <TextoRodante texto={enlace.label} />
+          ) : (
+            <TextoBrillante texto={enlace.label} activo />
+          )}
         </span>
       </Link>
     </motion.div>
