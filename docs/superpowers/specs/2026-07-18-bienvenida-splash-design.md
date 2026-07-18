@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Pantalla de bienvenida/loader para `apps/web` que se muestra al cargar la app: fondo oscuro a pantalla completa, texto "Bienvenido a mi / Portfolio Website" en español con animación de revelación desde abajo, iconos minimalistas y enlace a GitHub. Se auto-desmonta tras reproducirse.
+Pantalla de bienvenida/loader para `apps/web` que se muestra al cargar la app: fondo oscuro a pantalla completa, texto "Bienvenido a mi / Portfolio Web" en español con animación de revelación desde abajo, iconos minimalistas y enlace a GitHub. Se auto-desmonta tras reproducirse.
 
 ## Alcance
 
@@ -25,7 +25,7 @@ Fuera de alcance: persistencia entre navegaciones (sessionStorage para no repeti
   <div className={styles.icons}> {/* 3 SVG: code, database, rocket, stagger */}
   <div className={styles.textBlock}>
     <div className={styles.lineMask}><span className={styles.line}>Bienvenido a mi</span></div>
-    <div className={styles.lineMask}><span className={styles.line}>Portfolio Website</span></div>
+    <div className={styles.lineMask}><span className={styles.line}>Portfolio Web</span></div>
   </div>
   <div className={styles.linkMask}><a className={styles.link} href="https://github.com/FelipeDiazAimar">github.com/FelipeDiazAimar</a></div>
 </div>

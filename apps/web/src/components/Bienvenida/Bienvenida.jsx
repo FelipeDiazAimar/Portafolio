@@ -77,7 +77,7 @@ export default function Bienvenida() {
           <span className={`${styles.line} ${styles.line1}`}>Bienvenido a mi</span>
         </div>
         <div className={styles.lineMask}>
-          <span className={`${styles.line} ${styles.line2}`}>Portfolio Website</span>
+          <span className={`${styles.line} ${styles.line2}`}>Portfolio Web</span>
         </div>
       </div>
 
