@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import TextoBrillante from '@/components/TextoBrillante/TextoBrillante.jsx';
@@ -10,14 +11,28 @@ import styles from './ElementoNavegacion.module.css';
 // cuando el splash termina de desaparecer, si no se juega sin que se vea.
 const DEMORA_RODANTE_MS = 3300;
 
+// Módulo-scope a propósito: la píldora grande se desmonta y remonta cada
+// vez que el visitante scrollea arriba/abajo del umbral, y solo la
+// PRIMERA aparición de verdad (justo después de Bienvenida) debe esperar
+// los 3.3s. Los remontajes siguientes deben animar de una.
+let yaSeMostroLaPildoraGrande = false;
+
 export default function ElementoNavegacion({ enlace, icono, variante }) {
+  const esPrimeraVez = useRef(variante === 'grande' && !yaSeMostroLaPildoraGrande).current;
+
+  useEffect(() => {
+    if (variante === 'grande') {
+      yaSeMostroLaPildoraGrande = true;
+    }
+  }, [variante]);
+
   return (
     <motion.div layout layoutId={`nav-${enlace.href}`} className={styles[variante]}>
       <Link href={enlace.href} className={styles.enlace}>
         <span className={styles.icono}>{icono}</span>
         <span className={styles.texto}>
           {variante === 'grande' ? (
-            <TextoRodante texto={enlace.label} demoraInicial={DEMORA_RODANTE_MS} />
+            <TextoRodante texto={enlace.label} demoraInicial={esPrimeraVez ? DEMORA_RODANTE_MS : 0} />
           ) : (
             <TextoBrillante texto={enlace.label} activo />
           )}
