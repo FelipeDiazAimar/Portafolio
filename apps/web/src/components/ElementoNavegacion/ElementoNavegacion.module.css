@@ -28,7 +28,6 @@
 .icono {
   display: flex;
   align-items: center;
-  justify-content: center;
   flex-shrink: 0;
   color: var(--color-fg);
 }
@@ -37,9 +36,9 @@
   display: none;
 }
 
-.mini .icono {
-  width: 40px;
-  height: 40px;
+.mini .enlace {
+  padding-left: 4px;
+  gap: 0.4rem;
 }
 
 .texto {
@@ -48,7 +47,7 @@
 }
 
 .mini .texto {
-  padding: 0 0.75rem 0 0.25rem;
+  padding-right: 0.75rem;
 }
 
 .enlace:hover .texto {

@@ -19,7 +19,7 @@
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: recorrido 4.5s ease-in-out infinite;
+  animation: recorrido 7s ease-in-out infinite;
 }
 
 @keyframes recorrido {
