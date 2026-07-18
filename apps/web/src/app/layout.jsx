@@ -1,3 +1,4 @@
+import Bienvenida from '@/components/Bienvenida/Bienvenida.jsx';
 import Header from '@/components/Header/Header.jsx';
 import '../styles/globals.css';
 
@@ -10,6 +11,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>
+        <Bienvenida />
         <Header />
         <main>{children}</main>
       </body>
