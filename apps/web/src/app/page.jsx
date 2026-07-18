@@ -1,17 +1,22 @@
-import Link from 'next/link';
 import styles from './page.module.css';
+
+const SECCIONES = [
+  { id: 'sobre-mi', titulo: 'Sobre mí' },
+  { id: 'proyectos', titulo: 'Proyectos' },
+  { id: 'experiencia', titulo: 'Experiencia' },
+  { id: 'habilidades', titulo: 'Habilidades' },
+  { id: 'contacto', titulo: 'Contacto' },
+];
 
 export default function HomePage() {
   return (
     <>
-      <section>
-        <h1>Felipe Diaz Aimar</h1>
-        <p>Desarrollador fullstack — React, Next.js, Node/Express.</p>
-        <Link href="/proyectos" className={styles.link}>
-          Ver proyectos
-        </Link>
-      </section>
-      <div className={styles.espaciador} />
+      <section id="inicio" className={styles.seccionHero} />
+      {SECCIONES.map((seccion) => (
+        <section key={seccion.id} id={seccion.id} className={styles.seccion}>
+          <h2>{seccion.titulo}</h2>
+        </section>
+      ))}
     </>
   );
 }

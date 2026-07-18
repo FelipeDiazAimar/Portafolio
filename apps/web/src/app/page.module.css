@@ -1,15 +1,18 @@
-.link {
-  display: inline-block;
-  background: var(--color-accent, #5b8cff);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius, 8px);
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  text-decoration: none;
-  cursor: pointer;
+.seccionHero {
+  height: 100vh;
 }
 
-.espaciador {
-  height: 250vh;
+.seccion {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-margin-top: 5rem;
+}
+
+.seccion h2 {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(2rem, 6vw, 4rem);
+  color: var(--color-fg);
 }
