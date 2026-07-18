@@ -7,13 +7,15 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-fg) transparent;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {
   margin: 0;
-  overflow-x: hidden;
   font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-fg);
@@ -24,19 +26,4 @@ main {
   max-width: 960px;
   margin: 0 auto;
   padding: var(--space-3);
-}
-
-/* Scrollbar propia: sin fondo, --color-fg ya invierte con el tema
-   (blanca en oscuro, negra en claro). */
-::-webkit-scrollbar {
-  width: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: var(--color-fg);
-  border-radius: 100px;
 }

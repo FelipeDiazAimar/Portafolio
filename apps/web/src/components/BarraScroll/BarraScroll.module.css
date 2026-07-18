@@ -1,0 +1,17 @@
+.pista {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100vh;
+  z-index: 950;
+  pointer-events: none;
+}
+
+.thumb {
+  width: 100%;
+  background: var(--color-fg);
+  opacity: 0.5;
+  border-radius: 100px;
+  transition: opacity 0.2s ease, transform 0.05s linear;
+}
