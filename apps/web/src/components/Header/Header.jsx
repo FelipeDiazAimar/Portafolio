@@ -16,7 +16,7 @@ export default function Header() {
       <Link href="/" className={styles.logo}>Felipe Diaz Aimar</Link>
       <GlassSurface
         width="auto"
-        height={56}
+        height={48}
         borderRadius={100}
         className={styles.pill}
         opacity={0.9}

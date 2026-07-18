@@ -1,8 +1,11 @@
+import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
 import Bienvenida from '@/components/Bienvenida/Bienvenida.jsx';
 import Header from '@/components/Header/Header.jsx';
 import ThemeToggle from '@/components/ThemeToggle/ThemeToggle.jsx';
 import '../styles/globals.css';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const metadata = {
   title: 'Felipe Diaz Aimar — Portfolio',
@@ -28,7 +31,7 @@ export default async function RootLayout({ children }) {
   const locale = resolveLocale(headerList.get('accept-language'));
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning className={inter.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

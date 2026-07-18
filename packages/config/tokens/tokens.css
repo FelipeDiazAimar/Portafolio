@@ -5,7 +5,7 @@
   --color-accent: #5b8cff;
   --color-border: rgba(255, 255, 255, 0.1);
   --color-chip-bg: rgba(255, 255, 255, 0.08);
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
   --space-1: 0.5rem;
   --space-2: 1rem;
   --space-3: 1.5rem;
