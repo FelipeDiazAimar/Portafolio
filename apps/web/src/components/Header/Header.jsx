@@ -1,10 +1,10 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import Link from 'next/link';
 import { GlassSurface } from '@portafolio/ui';
 import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegacion.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
+import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import styles from './Header.module.css';
 
 function IconoPersona() {
@@ -55,11 +55,11 @@ function IconoSobre() {
 }
 
 const ENLACES = [
-  { href: '/sobre-mi', label: 'Sobre mi', icono: <IconoPersona /> },
-  { href: '/proyectos', label: 'Proyectos', icono: <IconoGrid /> },
-  { href: '/experiencia', label: 'Experiencia', icono: <IconoMaletin /> },
-  { href: '/habilidades', label: 'Habilidades', icono: <IconoEstrella /> },
-  { href: '/contacto', label: 'Contáctame', icono: <IconoSobre /> },
+  { href: '#sobre-mi', seccion: 'sobre-mi', label: 'Sobre mi', icono: <IconoPersona /> },
+  { href: '#proyectos', seccion: 'proyectos', label: 'Proyectos', icono: <IconoGrid /> },
+  { href: '#experiencia', seccion: 'experiencia', label: 'Experiencia', icono: <IconoMaletin /> },
+  { href: '#habilidades', seccion: 'habilidades', label: 'Habilidades', icono: <IconoEstrella /> },
+  { href: '#contacto', seccion: 'contacto', label: 'Contáctame', icono: <IconoSobre /> },
 ];
 
 const PROPS_GLASS = {
@@ -79,10 +79,11 @@ const TRANSICION_FADE = { duration: 0.4, ease: [0.16, 1, 0.3, 1] };
 
 export default function Header() {
   const estaScrolleado = useScrollPasadoViewport();
+  const { setSeccionActiva } = usePortfolio();
 
   return (
     <header className={styles.header}>
-      <Link href="/" className={styles.logo}>Felipe Diaz Aimar</Link>
+      <a href="#inicio" className={styles.logo}>Felipe Diaz Aimar</a>
 
       <AnimatePresence mode="popLayout" initial={false}>
         {!estaScrolleado ? (
@@ -96,9 +97,12 @@ export default function Header() {
           >
             <GlassSurface width="auto" height={40} borderRadius={100} {...PROPS_GLASS}>
               <nav className={styles.navGrande}>
-                <ul className={styles.listaGrande}>
+                <ul
+                  className={styles.listaGrande}
+                  onMouseLeave={() => setSeccionActiva('inicio')}
+                >
                   {ENLACES.map((enlace) => (
-                    <li key={enlace.href}>
+                    <li key={enlace.href} onMouseEnter={() => setSeccionActiva(enlace.seccion)}>
                       <ElementoNavegacion enlace={enlace} icono={enlace.icono} variante="grande" />
                     </li>
                   ))}
