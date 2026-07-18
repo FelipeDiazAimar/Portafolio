@@ -67,7 +67,7 @@ export default function ThemeToggle() {
     <div className={styles.wrapper} data-visible={visible}>
       <GlassSurface
         width={80}
-        height={48}
+        height={40}
         borderRadius={100}
         className={styles.track}
         opacity={0.9}
