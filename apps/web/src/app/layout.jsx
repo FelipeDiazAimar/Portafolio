@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import Bienvenida from '@/components/Bienvenida/Bienvenida.jsx';
 import Header from '@/components/Header/Header.jsx';
 import ThemeToggle from '@/components/ThemeToggle/ThemeToggle.jsx';
+import HeroInmersivo from '@/components/HeroInmersivo/HeroInmersivo.jsx';
+import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import '../styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -36,10 +38,13 @@ export default async function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        <Bienvenida locale={locale} />
-        <ThemeToggle />
-        <Header />
-        <main>{children}</main>
+        <ProveedorPortfolio>
+          <Bienvenida locale={locale} />
+          <ThemeToggle />
+          <Header />
+          <HeroInmersivo />
+          <main>{children}</main>
+        </ProveedorPortfolio>
       </body>
     </html>
   );
