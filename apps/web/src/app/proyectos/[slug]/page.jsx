@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import { obtenerProyecto } from '@/lib/proyectos.js';
 
-export default function ProyectoDetallePage({ params }) {
-  const proyecto = obtenerProyecto(params.slug);
+export default async function ProyectoDetallePage({ params }) {
+  const { slug } = await params;
+  const proyecto = obtenerProyecto(slug);
 
   if (!proyecto) {
     notFound();

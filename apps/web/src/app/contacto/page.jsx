@@ -13,13 +13,17 @@ export default function ContactoPage() {
     const formData = new FormData(event.target);
     const payload = Object.fromEntries(formData.entries());
 
-    const response = await fetch('/api/contacto', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch('/api/contacto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    setEstado(response.ok ? 'enviado' : 'error');
+      setEstado(response.ok ? 'enviado' : 'error');
+    } catch (error) {
+      setEstado('error');
+    }
   }
 
   return (

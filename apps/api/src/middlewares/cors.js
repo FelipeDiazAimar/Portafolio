@@ -3,7 +3,11 @@ const { ALLOWED_ORIGINS } = require('../config/env');
 
 module.exports = cors({
   origin(origin, callback) {
-    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
       return;
     }
