@@ -6,6 +6,19 @@ import styles from './Bienvenida.module.css';
 const EXIT_DELAY_MS = 2600;
 const UNMOUNT_DELAY_MS = 3200;
 
+const COPY = {
+  es: {
+    ariaLabel: 'Cargando',
+    line1: 'Bienvenido a mi',
+    line2: 'Portfolio Web',
+  },
+  en: {
+    ariaLabel: 'Loading',
+    line1: 'Welcome to my',
+    line2: 'Portfolio Website',
+  },
+};
+
 function IconCode() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -36,9 +49,10 @@ function IconRocket() {
   );
 }
 
-export default function Bienvenida() {
+export default function Bienvenida({ locale = 'es' }) {
   const [visible, setVisible] = useState(true);
   const [exiting, setExiting] = useState(false);
+  const t = COPY[locale] ?? COPY.es;
 
   useEffect(() => {
     const exitTimer = setTimeout(() => setExiting(true), EXIT_DELAY_MS);
@@ -58,7 +72,7 @@ export default function Bienvenida() {
     <div
       className={`${styles.splash} ${exiting ? styles.exiting : ''}`}
       role="status"
-      aria-label="Cargando"
+      aria-label={t.ariaLabel}
     >
       <div className={styles.icons}>
         <span className={`${styles.icon} ${styles.icon1}`}>
@@ -74,10 +88,10 @@ export default function Bienvenida() {
 
       <div className={styles.textBlock}>
         <div className={styles.lineMask}>
-          <span className={`${styles.line} ${styles.line1}`}>Bienvenido a mi</span>
+          <span className={`${styles.line} ${styles.line1}`}>{t.line1}</span>
         </div>
         <div className={styles.lineMask}>
-          <span className={`${styles.line} ${styles.line2}`}>Portfolio Web</span>
+          <span className={`${styles.line} ${styles.line2}`}>{t.line2}</span>
         </div>
       </div>
 

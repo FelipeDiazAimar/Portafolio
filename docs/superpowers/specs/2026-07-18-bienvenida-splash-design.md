@@ -75,8 +75,21 @@ El overlay al ser `position: fixed` cubre el resto del contenido mientras está 
 
 ## Accesibilidad
 
-- `role="status"` + `aria-label="Cargando"` en el overlay para lectores de pantalla.
+- `role="status"` + `aria-label` (localizado) en el overlay para lectores de pantalla.
 - Enlace de GitHub con `target="_blank" rel="noopener noreferrer"`.
+
+## Detección de idioma (i18n)
+
+`Bienvenida` acepta una prop `locale` (`'es' | 'en'`, default `'es'`) que selecciona un diccionario interno (`COPY`) con `ariaLabel`, `line1`, `line2`. El link de GitHub no se traduce (es una URL).
+
+El locale se resuelve **server-side**, no client-side, para evitar el flash de "español → cambia a inglés" que ocurriría si se leyera `navigator.language` en el cliente después de una hidratación que ya renderizó en español:
+
+- `apps/web/src/app/layout.jsx` se vuelve `async` y usa `headers()` de `next/headers` para leer `Accept-Language`.
+- `resolveLocale()` toma el primer tag del header (antes de la primera coma), y devuelve `'en'` si empieza con `en` (case-insensitive), sino `'es'` (incluye el caso sin header o idiomas no soportados).
+- El `locale` resuelto también fija `<html lang={locale}>`.
+- No hay UI para que el usuario cambie el idioma manualmente (fuera de alcance) ni persistencia (se recalcula en cada request).
+
+**Trade-off aceptado:** al depender de `headers()`, Next.js marca todas las rutas bajo este layout como dinámicas (`ƒ`) en vez de estáticas (`○`) — se pierde el pre-render estático de `/`, `/proyectos`, `/sobre-mi`, `/contacto`. Es el costo de detectar el idioma sin flash ni pedirlo explícitamente.
 
 ## Criterios de aceptación
 
@@ -84,3 +97,4 @@ El overlay al ser `position: fixed` cubre el resto del contenido mientras está 
 - Las dos líneas de texto y el link aparecen con efecto de revelación desde abajo (`translateY` + `opacity`), en cascada (iconos → línea 1 → línea 2 → link).
 - El splash desaparece automáticamente (fade-out) sin interacción del usuario, ~3.2s después de montarse.
 - No introduce errores de hidratación ni warnings en consola al correr `next dev`.
+- Con `Accept-Language: en-US,en;q=0.9` el splash y `<html lang>` muestran inglés; con `es-AR`, sin header, o un idioma no soportado (ej. `fr-FR`), muestran español.
