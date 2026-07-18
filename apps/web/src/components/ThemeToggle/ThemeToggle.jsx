@@ -87,6 +87,7 @@ export default function ThemeToggle() {
           onClick={handleToggle}
           aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
         >
+          <span className={styles.pista} aria-hidden="true" />
           <span className={`${styles.icon} ${theme === 'dark' ? styles.iconActive : ''}`}>
             <IconMoon />
           </span>
