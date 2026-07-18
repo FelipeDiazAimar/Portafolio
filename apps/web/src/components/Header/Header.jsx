@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GlassSurface } from '@portafolio/ui';
 import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegacion.jsx';
@@ -80,6 +81,15 @@ const TRANSICION_FADE = { duration: 0.4, ease: [0.16, 1, 0.3, 1] };
 export default function Header() {
   const estaScrolleado = useScrollPasadoViewport();
   const { setSeccionActiva } = usePortfolio();
+  const refPildoraGrande = useRef(null);
+
+  function manejarMovimientoRaton(evento) {
+    const contenedor = refPildoraGrande.current;
+    if (!contenedor) return;
+    const rect = contenedor.getBoundingClientRect();
+    contenedor.style.setProperty('--raton-x', `${evento.clientX - rect.left}px`);
+    contenedor.style.setProperty('--raton-y', `${evento.clientY - rect.top}px`);
+  }
 
   return (
     <header className={styles.header}>
@@ -89,7 +99,9 @@ export default function Header() {
         {!estaScrolleado ? (
           <motion.div
             key="pildora-grande"
+            ref={refPildoraGrande}
             className={styles.pildoraGrandeWrapper}
+            onMouseMove={manejarMovimientoRaton}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

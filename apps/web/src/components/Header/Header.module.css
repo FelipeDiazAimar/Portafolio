@@ -20,7 +20,51 @@
 }
 
 .pildoraGrandeWrapper {
+  position: relative;
   justify-self: center;
+  border-radius: 100px;
+}
+
+/* Spotlight: borde que brilla siguiendo al mouse (--raton-x / --raton-y,
+   inyectadas por Header.jsx). No toca el fondo de GlassSurface: son
+   pseudo-elementos propios del wrapper, elevados por encima con z-index. */
+.pildoraGrandeWrapper::before,
+.pildoraGrandeWrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.pildoraGrandeWrapper::before {
+  z-index: 2;
+  padding: 1px;
+  background: radial-gradient(
+    circle at var(--raton-x, 0px) var(--raton-y, 0px),
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 100px
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.pildoraGrandeWrapper::after {
+  z-index: 3;
+  background: radial-gradient(
+    circle at var(--raton-x, 0px) var(--raton-y, 0px),
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 100px
+  );
+}
+
+.pildoraGrandeWrapper:hover::before,
+.pildoraGrandeWrapper:hover::after {
+  opacity: 1;
 }
 
 .navGrande {
