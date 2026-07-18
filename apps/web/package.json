@@ -8,10 +8,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "@portafolio/config": "*",
+    "@portafolio/ui": "*",
+    "framer-motion": "^12.42.2",
     "next": "^15.1.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@portafolio/ui": "*",
-    "@portafolio/config": "*"
+    "react-dom": "^19.0.0"
   }
 }

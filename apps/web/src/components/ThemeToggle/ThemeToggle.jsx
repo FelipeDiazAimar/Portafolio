@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { GlassSurface } from '@portafolio/ui';
+import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
 import styles from './ThemeToggle.module.css';
 
 function IconMoon() {
@@ -31,7 +32,8 @@ function readStoredTheme() {
 
 export default function ThemeToggle() {
   const [theme, setTheme] = useState('dark');
-  const [visible, setVisible] = useState(true);
+  const pasado = useScrollPasadoViewport();
+  const visible = !pasado;
 
   useEffect(() => {
     const stored = readStoredTheme();
@@ -48,25 +50,6 @@ export default function ThemeToggle() {
 
     mql.addEventListener('change', handleSystemChange);
     return () => mql.removeEventListener('change', handleSystemChange);
-  }, []);
-
-  useEffect(() => {
-    let ticking = false;
-
-    function updateVisibility() {
-      setVisible(window.scrollY <= window.innerHeight);
-      ticking = false;
-    }
-
-    function handleScroll() {
-      if (!ticking) {
-        window.requestAnimationFrame(updateVisibility);
-        ticking = true;
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   function handleToggle() {
