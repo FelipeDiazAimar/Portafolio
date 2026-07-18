@@ -8,6 +8,9 @@ apps/web/out/
 # Vite (apps/playground)
 apps/playground/dist/
 
+# Playground build copied into web's public/ at build time (apps/web)
+apps/web/public/playground/
+
 # Backend build output (apps/api)
 apps/api/dist/
 
