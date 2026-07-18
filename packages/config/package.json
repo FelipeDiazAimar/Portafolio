@@ -1,0 +1,9 @@
+{
+  "name": "@portafolio/config",
+  "version": "0.0.0",
+  "private": true,
+  "main": "eslint/index.js",
+  "dependencies": {
+    "@eslint/js": "^9.15.0"
+  }
+}
