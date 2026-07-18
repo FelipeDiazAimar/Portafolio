@@ -5,7 +5,7 @@ import styles from './TextoRodante.module.css';
 const REPETICIONES = 4;
 const DEMORA_POR_LETRA_MS = 40;
 
-export default function TextoRodante({ texto }) {
+export default function TextoRodante({ texto, demoraInicial = 0 }) {
   const letras = texto.split('');
 
   return (
@@ -17,7 +17,7 @@ export default function TextoRodante({ texto }) {
           <span key={indice} className={styles.ventana} aria-hidden="true">
             <span
               className={styles.columna}
-              style={{ animationDelay: `${indice * DEMORA_POR_LETRA_MS}ms` }}
+              style={{ animationDelay: `${demoraInicial + indice * DEMORA_POR_LETRA_MS}ms` }}
             >
               {Array.from({ length: REPETICIONES }, (_, copia) => (
                 <span key={copia} className={styles.letra}>
