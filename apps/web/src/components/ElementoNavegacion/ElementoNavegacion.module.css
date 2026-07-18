@@ -27,6 +27,10 @@
   color: var(--color-fg);
 }
 
+.grande .icono {
+  display: none;
+}
+
 .texto {
   opacity: 0.85;
   transition: opacity 0.25s ease;

@@ -1,32 +1,28 @@
-.contenedor {
-  position: relative;
-  display: inline-flex;
+.texto {
+  display: inline-block;
   white-space: nowrap;
-}
-
-.base {
-  color: var(--color-fg);
-}
-
-.brillo {
-  position: absolute;
-  inset: 0;
-  color: var(--color-bg);
-  pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 30%, #000 50%, transparent 70%);
-  mask-image: linear-gradient(to right, transparent 30%, #000 50%, transparent 70%);
-  -webkit-mask-size: 150% auto;
-  mask-size: 150% auto;
+  background-image: linear-gradient(
+    100deg,
+    var(--color-fg) 0%,
+    var(--color-fg) 40%,
+    var(--color-bg) 50%,
+    var(--color-fg) 60%,
+    var(--color-fg) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: recorrido 2.2s ease-in-out infinite;
 }
 
 @keyframes recorrido {
   0% {
-    -webkit-mask-position: 200%;
-    mask-position: 200%;
+    background-position: 150% 0;
   }
   100% {
-    -webkit-mask-position: -100%;
-    mask-position: -100%;
+    background-position: -150% 0;
   }
 }
