@@ -1,0 +1,60 @@
+.wrapper {
+  position: fixed;
+  top: 1.5rem;
+  right: 2rem;
+  z-index: 1000;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wrapper[data-visible='false'] {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+
+.track {
+  cursor: pointer;
+}
+
+.button {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  color: var(--color-fg);
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.iconActive {
+  opacity: 1;
+}
+
+.thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.thumbLight {
+  transform: translateX(32px);
+}
