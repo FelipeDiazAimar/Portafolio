@@ -5,16 +5,24 @@ import { createPortal } from 'react-dom';
 import styles from './NombreAscii.module.css';
 
 const DEMORA_INICIO_MS = 3300;
-const DURACION_MATERIALIZADO_MS = 450;
-const DISPERSION_DEMORA_MS = 900;
-const ESPERA_ANTES_DE_LIMPIAR_MS = 1600;
+
+// Fase 1: el campo entero se llena de ASCII.
+const DISPERSION_LLENADO_MS = 900;
+const DURACION_LLENADO_MS = 450;
+const ESPERA_CAMPO_LLENO_MS = 900;
+// Fase 2: el relleno se adelgaza y recién ahí aparece el nombre.
+const DISPERSION_ADELGAZADO_MS = 700;
+const DURACION_ADELGAZADO_MS = 900;
+const ESPERA_NOMBRE_ASCII_MS = 1500;
 
 // Cuántas filas de lluvia se agregan arriba y abajo del nombre.
 const FILAS_LLUVIA = 14;
+// Separación horizontal entre columnas, en fracción del alto de celda.
+const SEPARACION_COLUMNAS = 0.6;
 
-// El relleno del nombre usa caracteres "gordos" para que el cuerpo de las
-// letras se lea macizo; la lluvia usa símbolos sueltos tipo data flow.
-const CARACTERES_DENSOS = '█MW#@$&B8';
+// Nada de bloques (█) ni glifos raros: en muchas fuentes monoespaciadas
+// caen en el rectángulo de "carácter faltante". Solo ASCII imprimible.
+const CARACTERES_DENSOS = 'MW#@$%&B8NQ';
 const CARACTERES_LLUVIA = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789!?*/|:;<>=+-_%$#@&^~';
 
 function elegir(alfabeto) {
@@ -85,67 +93,77 @@ function calcarTextoLimpio(elementoLimpio, contenedor) {
   };
 }
 
-// Arma las columnas verticales: cada una es un stream independiente que
-// atraviesa la zona del nombre. Dentro del nombre los caracteres son densos
-// y opacos; fuera, la lluvia pierde densidad y opacidad a medida que se
-// aleja verticalmente — el degradado es por carácter, no una franja encima.
+// Arma las columnas verticales. Cada celda guarda DOS opacidades: la del
+// campo lleno inicial y la definitiva. Nunca cambia de carácter — lo que
+// se anima es sólo la opacidad, así el adelgazado se ve como un fundido y
+// no como letras que aparecen y desaparecen de golpe.
 function generarCampo(calco) {
   const { pixeles, ancho, alto, tamanoFuente, izquierda, arriba } = calco;
   const { data } = pixeles;
 
   const celdaAlto = Math.max(5, Math.round(tamanoFuente / 9));
-  const celdaAncho = celdaAlto * medirRatioMonoespaciado();
+  const separacion = celdaAlto * SEPARACION_COLUMNAS;
+  const anchoCaracter = celdaAlto * medirRatioMonoespaciado();
+  const paso = anchoCaracter + separacion;
 
-  const totalColumnas = Math.floor(ancho / celdaAncho);
+  const totalColumnas = Math.floor(ancho / paso);
   const filasNombre = Math.floor(alto / celdaAlto);
   if (totalColumnas <= 0 || filasNombre <= 0) return null;
 
   function esGlifo(columna, fila) {
-    const x = Math.min(ancho - 1, Math.floor(columna * celdaAncho + celdaAncho / 2));
+    const x = Math.min(ancho - 1, Math.floor(columna * paso + anchoCaracter / 2));
     const y = Math.min(alto - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
     return data[(y * ancho + x) * 4 + 3] > 128;
   }
 
-  // t: 0 pegado al nombre, 1 en el borde exterior del campo.
-  function celdaDeLluvia(distancia) {
-    const t = distancia / (FILAS_LLUVIA + 1);
-    const densidad = 0.9 * (1 - t) + 0.06;
-    if (Math.random() > densidad) return { caracter: ' ', opacidad: 0 };
-    return { caracter: elegir(CARACTERES_LLUVIA), opacidad: Math.max(0.04, (1 - t) ** 1.6) };
+  function celda(caracter, opacidadFinal) {
+    return {
+      caracter,
+      // En el campo lleno todo pesa parecido: el nombre todavía no se lee.
+      opacidadLlena: 0.75 + Math.random() * 0.25,
+      opacidadFinal,
+      demoraLlenado: Math.random() * DISPERSION_LLENADO_MS,
+      demoraAdelgazado: Math.random() * DISPERSION_ADELGAZADO_MS,
+    };
   }
 
   const columnas = [];
   for (let c = 0; c < totalColumnas; c++) {
+    // Cada columna tiene su propio "caudal": si todas tuvieran la misma
+    // densidad el conjunto se lee como un párrafo macizo, no como streams.
+    const caudal = 0.3 + Math.random() * 0.7;
     const celdas = [];
+
+    // t: 0 pegado al nombre, 1 en el borde exterior del campo.
+    function celdaDeLluvia(distancia) {
+      const t = distancia / (FILAS_LLUVIA + 1);
+      const densidad = (0.6 * (1 - t) + 0.04) * caudal;
+      const caracter = elegir(CARACTERES_LLUVIA);
+      if (Math.random() > densidad) return celda(caracter, 0);
+      return celda(caracter, Math.max(0.05, (1 - t) ** 1.5));
+    }
 
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
       if (esGlifo(c, f)) {
-        celdas.push({ caracter: elegir(CARACTERES_DENSOS), opacidad: 1 });
+        celdas.push(celda(elegir(CARACTERES_DENSOS), 1));
       } else {
-        // Huecos entre letras: apenas un rastro de lluvia para no comerse
-        // la legibilidad del nombre.
-        celdas.push(
-          Math.random() < 0.3
-            ? { caracter: elegir(CARACTERES_LLUVIA), opacidad: 0.16 }
-            : { caracter: ' ', opacidad: 0 }
-        );
+        // Huecos entre las letras: caracteres sueltos apenas perceptibles.
+        const suelto = Math.random() < 0.4;
+        celdas.push(celda(elegir(CARACTERES_LLUVIA), suelto ? 0.14 + Math.random() * 0.1 : 0));
       }
     }
 
     for (let d = 1; d <= FILAS_LLUVIA; d++) celdas.push(celdaDeLluvia(d));
 
-    // Demora aleatoria por carácter: el campo "se materializa" como estática,
-    // sin ninguna línea que barra en una dirección.
-    columnas.push(
-      celdas.map((celda) => ({ ...celda, demora: Math.random() * DISPERSION_DEMORA_MS }))
-    );
+    columnas.push(celdas);
   }
 
   return {
     columnas,
     tamanoCelda: celdaAlto,
+    separacion,
     izquierda,
     arriba: arriba - FILAS_LLUVIA * celdaAlto,
   };
@@ -156,7 +174,8 @@ export default function NombreAscii() {
   const refLimpio = useRef(null);
 
   const [empezar, setEmpezar] = useState(false);
-  const [formado, setFormado] = useState(false);
+  // 'oculto' -> 'lleno' -> 'lluvia' -> 'formado'
+  const [fase, setFase] = useState('oculto');
   const [campo, setCampo] = useState(null);
   const [montado, setMontado] = useState(false);
 
@@ -174,7 +193,7 @@ export default function NombreAscii() {
   }, []);
 
   useEffect(() => {
-    if (!empezar || formado) return;
+    if (!empezar || fase === 'formado') return;
     let cancelado = false;
 
     document.fonts.ready.then(() => {
@@ -184,12 +203,12 @@ export default function NombreAscii() {
     return () => {
       cancelado = true;
     };
-  }, [empezar, formado, construirCampo]);
+  }, [empezar, fase, construirCampo]);
 
   // El tamaño del nombre depende del viewport (clamp con vw), así que si
   // cambia hay que recalcar: si no, el ASCII queda corrido respecto al texto.
   useEffect(() => {
-    if (!empezar || formado) return;
+    if (!empezar || fase === 'formado') return;
     let temporizador;
     function alRedimensionar() {
       clearTimeout(temporizador);
@@ -200,21 +219,44 @@ export default function NombreAscii() {
       window.removeEventListener('resize', alRedimensionar);
       clearTimeout(temporizador);
     };
-  }, [empezar, formado, construirCampo]);
+  }, [empezar, fase, construirCampo]);
 
+  // Encadena las fases. El primer salto va en un frame aparte para que el
+  // navegador tenga un estado inicial (opacidad 0) desde donde transicionar.
   useEffect(() => {
-    if (!campo || formado) return;
-    const total =
-      DISPERSION_DEMORA_MS + DURACION_MATERIALIZADO_MS + ESPERA_ANTES_DE_LIMPIAR_MS;
-    const temporizador = setTimeout(() => setFormado(true), total);
-    return () => clearTimeout(temporizador);
-  }, [campo, formado]);
+    if (!campo) return;
+
+    const cuadro = requestAnimationFrame(() => setFase('lleno'));
+
+    const aLluvia = setTimeout(
+      () => setFase('lluvia'),
+      DISPERSION_LLENADO_MS + DURACION_LLENADO_MS + ESPERA_CAMPO_LLENO_MS
+    );
+
+    const aFormado = setTimeout(
+      () => setFase('formado'),
+      DISPERSION_LLENADO_MS +
+        DURACION_LLENADO_MS +
+        ESPERA_CAMPO_LLENO_MS +
+        DISPERSION_ADELGAZADO_MS +
+        DURACION_ADELGAZADO_MS +
+        ESPERA_NOMBRE_ASCII_MS
+    );
+
+    return () => {
+      cancelAnimationFrame(cuadro);
+      clearTimeout(aLluvia);
+      clearTimeout(aFormado);
+    };
+  }, [campo]);
 
   function reiniciar() {
     setCampo(null);
-    setFormado(false);
+    setFase('oculto');
     setEmpezar(true);
   }
+
+  const enLluvia = fase === 'lluvia' || fase === 'formado';
 
   return (
     <div className={styles.contenedor} ref={refContenedor}>
@@ -222,7 +264,7 @@ export default function NombreAscii() {
 
       <div
         ref={refLimpio}
-        className={`${styles.textoLimpio} ${formado ? styles.visible : ''}`}
+        className={`${styles.textoLimpio} ${fase === 'formado' ? styles.visible : ''}`}
         aria-hidden="true"
       >
         <span>Felipe</span>
@@ -231,12 +273,13 @@ export default function NombreAscii() {
 
       {campo && (
         <div
-          className={`${styles.ascii} ${formado ? styles.oculto : ''}`}
+          className={`${styles.ascii} ${fase === 'formado' ? styles.oculto : ''}`}
           aria-hidden="true"
           style={{
             left: `${campo.izquierda}px`,
             top: `${campo.arriba}px`,
             fontSize: `${campo.tamanoCelda}px`,
+            columnGap: `${campo.separacion}px`,
           }}
         >
           {campo.columnas.map((celdas, indiceColumna) => (
@@ -245,10 +288,19 @@ export default function NombreAscii() {
                 <span
                   key={indiceCelda}
                   className={styles.caracter}
-                  style={{
-                    '--opacidad': celda.opacidad,
-                    animationDelay: `${celda.demora}ms`,
-                  }}
+                  style={
+                    enLluvia
+                      ? {
+                          opacity: celda.opacidadFinal,
+                          transitionDuration: `${DURACION_ADELGAZADO_MS}ms`,
+                          transitionDelay: `${celda.demoraAdelgazado}ms`,
+                        }
+                      : {
+                          opacity: fase === 'oculto' ? 0 : celda.opacidadLlena,
+                          transitionDuration: `${DURACION_LLENADO_MS}ms`,
+                          transitionDelay: `${celda.demoraLlenado}ms`,
+                        }
+                  }
                 >
                   {celda.caracter}
                 </span>
