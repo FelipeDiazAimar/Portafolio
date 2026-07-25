@@ -187,6 +187,17 @@ function generarCampo(calco) {
 
   const filasTotales = FILAS_LLUVIA * 2 + filasNombre;
   const centroVertical = (filasTotales - 1) / 2;
+  // Distancia vertical 0..1 en una ESCALA ABSOLUTA (misma fila = misma
+  // distancia en cualquier columna). Antes el barrido de fase 2 usaba el
+  // `t` de cada rayo, relativo a su propio alcance — dos columnas con
+  // alcances distintos (uno más corto por la ondulación, o el margen con
+  // el suyo) llegaban a t=1 a alturas reales distintas, así que el cierre
+  // no se veía parejo fila por fila y terminaba leyéndose como si viniera
+  // también de los costados. Con una sola escala por fila, arriba y abajo
+  // se cierran juntos sin importar la columna.
+  function distanciaVerticalGlobal(distanciaAbsolutaDesdeCentro) {
+    return Math.min(1, distanciaAbsolutaDesdeCentro / centroVertical);
+  }
   // Media altura visual de una columna de texto (nombre + lluvia tapeada).
   // El margen arranca su alcance en este valor y no en FILAS_LLUVIA: si no,
   // la altura caía en seco justo en el borde texto/margen — un bloque alto
@@ -229,10 +240,11 @@ function generarCampo(calco) {
         const t = distancia / (alcance + 1);
         const variacion = 0.82 + Math.random() * 0.18;
         const magnitud = (1 - t) ** 1.15 * variacion * atenuacion;
-        // En la fase 2 sólo queda el nombre: el barrido es vertical (desde
-        // arriba y desde abajo hacia el centro), no lateral — la punta de
-        // CADA trazo de margen se apaga primero, su propio centro al final.
-        celdas.push(celda(caracter, magnitud, 0, false, t));
+        // `distancia` ya es la distancia absoluta a centroVertical (misma
+        // escala que usan las columnas de texto), así el barrido vertical
+        // cierra a la misma altura en todas las columnas, sin importar
+        // cuánto alcance tenga cada trazo de margen.
+        celdas.push(celda(caracter, magnitud, 0, false, distanciaVerticalGlobal(distancia)));
       }
       columnas.push(celdas);
       continue;
@@ -244,7 +256,6 @@ function generarCampo(calco) {
     // nombre, más oscuro hacia los costados). No se aplica igual en toda
     // la altura: ver `atenuacionHorizontalEnT`.
     const atenuacionHorizontal = atenuacionHorizontalGlobal(c);
-    const distHorizontal = distanciaHorizontalGlobal(c);
 
     // El apagado lateral crece con la distancia vertical al nombre (t): a
     // la altura del propio nombre (t≈0) no hay apagado lateral — así el
@@ -257,8 +268,14 @@ function generarCampo(calco) {
 
     // t: 0 pegado al nombre, 1 en la punta de ESTA columna — el decaimiento
     // es relativo a su propia altura, así todas se apagan justo en su punta.
+    // `distancia` en cambio es una distancia EN FILAS al borde del nombre;
+    // sumándole medio alto de la banda del nombre se vuelve distancia
+    // absoluta al centro vertical del campo, la misma escala que usa el
+    // margen — así el barrido de fase 2 cierra parejo fila por fila, sin
+    // depender de cuánto alcance tenga esta columna en particular.
     function celdaDeLluvia(distancia) {
       const caracter = elegir(CARACTERES_LLUVIA);
+      const distanciaAbsoluta = (filasNombre - 1) / 2 + distancia;
       // Fuera de la envolvente la celda no existe en ninguna de las fases.
       if (distancia > alcance) return celda(caracter, 0, 0, false, 1);
 
@@ -271,7 +288,7 @@ function generarCampo(calco) {
       // Fase 2: sólo queda el nombre — el resto del campo termina en 0. El
       // barrido es vertical (desde arriba y desde abajo hacia el centro),
       // no lateral: lo que está más lejos EN ALTURA se apaga primero.
-      return celda(caracter, enOnda, 0, false, t);
+      return celda(caracter, enOnda, 0, false, distanciaVerticalGlobal(distanciaAbsoluta));
     }
 
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
@@ -287,9 +304,13 @@ function generarCampo(calco) {
         // cambio periódico de caracteres, para que no titile.
         celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1, true, 0));
       } else {
-        // Huecos entre las letras: a la altura del nombre, así que el
-        // barrido vertical los deja para el final igual que a los glifos.
-        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, 0));
+        // Huecos entre las letras: su distancia al centro depende de en
+        // qué fila de la banda del nombre caen (arriba/abajo dentro del
+        // propio nombre), con la misma escala absoluta que el resto.
+        const distanciaAbsoluta = Math.abs(f - (filasNombre - 1) / 2);
+        celdas.push(
+          celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, distanciaVerticalGlobal(distanciaAbsoluta))
+        );
       }
     }
 
