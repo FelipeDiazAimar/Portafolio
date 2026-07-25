@@ -7,55 +7,88 @@ import styles from './NombreAscii.module.css';
 const DEMORA_INICIO_MS = 3300;
 const DEMORA_POR_FILA_MS = 60;
 const DURACION_FILA_MS = 500;
-const TAMANO_CELDA_X = 6;
-const TAMANO_CELDA_Y = 11;
-const TAMANO_FUENTE_PX = 70;
-const CARACTERES_RELLENO = '/*+#%@$&01';
+const TAMANO_FUENTE_NOMBRE_PX = 80;
+const FILAS_RELLENO = 10;
+const DENSIDAD_RELLENO = 0.8;
+const CARACTERES_RELLENO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const LINEAS = ['Felipe', 'Diaz Aimar'];
 
-// Genera una grilla de caracteres ASCII que calca la silueta real del
-// texto: dibuja las líneas en un canvas oculto con la misma fuente que
-// usa .textoLimpio, y por cada celda de la grilla pone un carácter si
-// ese punto cae "dentro" de la letra (según el canal alfa del pixel).
+// Mide cuántos px de ancho ocupa un carácter monoespaciado en relación a
+// su alto (con line-height 1) — así la grilla de sampleo tiene la MISMA
+// proporción que el <pre> real y el ASCII no sale estirado ni achatado.
+function medirRatioMonoespaciado() {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const referencia = 100;
+  ctx.font = `${referencia}px monospace`;
+  return ctx.measureText('0').width / referencia;
+}
+
+function caracterAleatorio() {
+  return CARACTERES_RELLENO[Math.floor(Math.random() * CARACTERES_RELLENO.length)];
+}
+
+// Genera la grilla completa: filas de relleno disperso, el nombre calcado
+// del canvas (según el canal alfa de cada celda), y más filas de relleno.
+// Devuelve también qué porcentaje de la altura total ocupa el relleno, para
+// que las franjas de degradado cubran exactamente esa zona.
 function generarGrillaAscii(fontFamily) {
+  const ratioMonoespaciado = medirRatioMonoespaciado();
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const pesoFuente = 800;
 
-  ctx.font = `${pesoFuente} ${TAMANO_FUENTE_PX}px ${fontFamily}`;
-  const altoLinea = TAMANO_FUENTE_PX * 1.15;
+  ctx.font = `${pesoFuente} ${TAMANO_FUENTE_NOMBRE_PX}px ${fontFamily}`;
+  const altoLinea = TAMANO_FUENTE_NOMBRE_PX * 1.15;
   const anchoMaximo = Math.max(...LINEAS.map((linea) => ctx.measureText(linea).width));
 
   canvas.width = Math.ceil(anchoMaximo) + 4;
   canvas.height = Math.ceil(altoLinea * LINEAS.length);
 
   // Redimensionar el canvas resetea el contexto: hay que reaplicar el font.
-  ctx.font = `${pesoFuente} ${TAMANO_FUENTE_PX}px ${fontFamily}`;
+  ctx.font = `${pesoFuente} ${TAMANO_FUENTE_NOMBRE_PX}px ${fontFamily}`;
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'top';
   LINEAS.forEach((linea, indice) => ctx.fillText(linea, 0, indice * altoLinea));
 
   const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const columnas = Math.floor(width / TAMANO_CELDA_X);
-  const filas = Math.floor(height / TAMANO_CELDA_Y);
-  const grilla = [];
 
-  for (let fila = 0; fila < filas; fila++) {
-    let filaTexto = '';
+  const celdaAlto = 11;
+  const celdaAncho = Math.max(1, Math.round(celdaAlto * ratioMonoespaciado));
+  const columnas = Math.floor(width / celdaAncho);
+  const filasNombre = Math.floor(height / celdaAlto);
+
+  function filaDelNombre(fila) {
+    let texto = '';
     for (let columna = 0; columna < columnas; columna++) {
-      const x = Math.min(width - 1, Math.floor(columna * TAMANO_CELDA_X + TAMANO_CELDA_X / 2));
-      const y = Math.min(height - 1, Math.floor(fila * TAMANO_CELDA_Y + TAMANO_CELDA_Y / 2));
+      const x = Math.min(width - 1, Math.floor(columna * celdaAncho + celdaAncho / 2));
+      const y = Math.min(height - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
       const alpha = data[(y * width + x) * 4 + 3];
-      filaTexto += alpha > 128 ? CARACTERES_RELLENO[Math.floor(Math.random() * CARACTERES_RELLENO.length)] : ' ';
+      texto += alpha > 128 ? caracterAleatorio() : ' ';
     }
-    grilla.push(filaTexto);
+    return texto;
   }
 
-  return grilla;
+  function filaDeRelleno() {
+    let texto = '';
+    for (let columna = 0; columna < columnas; columna++) {
+      texto += Math.random() < DENSIDAD_RELLENO ? caracterAleatorio() : ' ';
+    }
+    return texto;
+  }
+
+  const filas = [];
+  for (let i = 0; i < FILAS_RELLENO; i++) filas.push(filaDeRelleno());
+  for (let fila = 0; fila < filasNombre; fila++) filas.push(filaDelNombre(fila));
+  for (let i = 0; i < FILAS_RELLENO; i++) filas.push(filaDeRelleno());
+
+  const porcentajeRelleno = (FILAS_RELLENO / filas.length) * 100;
+
+  return { filas, porcentajeRelleno };
 }
 
-function AsciiAnimado({ formado, onFormado }) {
-  const [grilla, setGrilla] = useState(null);
+function AsciiAnimado({ formado, onFormado, onGrilla }) {
+  const [filas, setFilas] = useState(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -63,27 +96,30 @@ function AsciiAnimado({ formado, onFormado }) {
     document.fonts.ready.then(() => {
       if (cancelado) return;
       const fontFamily = getComputedStyle(document.body).fontFamily;
-      setGrilla(generarGrillaAscii(fontFamily));
+      const { filas: filasGeneradas, porcentajeRelleno } = generarGrillaAscii(fontFamily);
+      setFilas(filasGeneradas);
+      onGrilla(porcentajeRelleno);
     });
 
     return () => {
       cancelado = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!grilla) return;
-    const duracionTotal = grilla.length * DEMORA_POR_FILA_MS + DURACION_FILA_MS;
+    if (!filas) return;
+    const duracionTotal = filas.length * DEMORA_POR_FILA_MS + DURACION_FILA_MS;
     const temporizadorFin = setTimeout(onFormado, duracionTotal);
     return () => clearTimeout(temporizadorFin);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grilla]);
+  }, [filas]);
 
-  if (!grilla) return null;
+  if (!filas) return null;
 
   return (
     <pre className={`${styles.ascii} ${formado ? styles.oculto : ''}`} aria-hidden="true">
-      {grilla.map((filaTexto, indice) => (
+      {filas.map((filaTexto, indice) => (
         <span key={indice} className={styles.fila} style={{ animationDelay: `${indice * DEMORA_POR_FILA_MS}ms` }}>
           {filaTexto}
           {'\n'}
@@ -98,16 +134,13 @@ export default function NombreAscii() {
   const [formado, setFormado] = useState(false);
   const [intento, setIntento] = useState(0);
   const [montado, setMontado] = useState(false);
+  const [porcentajeRelleno, setPorcentajeRelleno] = useState(35);
 
   useEffect(() => {
     const temporizadorInicio = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizadorInicio);
   }, []);
 
-  // Portal a propósito: HeroInmersivo y toda su cadena de .capa tienen
-  // pointer-events: none (es una capa decorativa, aria-hidden), así que
-  // ningún elemento clickeable renderizado ahí adentro puede recibir clics
-  // de forma confiable. Sacamos el botón del DOM del hero por completo.
   useEffect(() => {
     setMontado(true);
   }, []);
@@ -122,15 +155,28 @@ export default function NombreAscii() {
     <div className={styles.contenedor}>
       <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
 
-      {empezar && <AsciiAnimado key={intento} formado={formado} onFormado={() => setFormado(true)} />}
+      {empezar && (
+        <AsciiAnimado
+          key={intento}
+          formado={formado}
+          onFormado={() => setFormado(true)}
+          onGrilla={setPorcentajeRelleno}
+        />
+      )}
 
       <div className={`${styles.textoLimpio} ${formado ? styles.visible : ''}`} aria-hidden="true">
         <span>Felipe</span>
         <span>Diaz Aimar</span>
       </div>
 
-      <div className={`${styles.franja} ${styles.franjaSuperior} ${formado ? styles.encogida : ''}`} />
-      <div className={`${styles.franja} ${styles.franjaInferior} ${formado ? styles.encogida : ''}`} />
+      <div
+        className={styles.franja}
+        style={{ top: 0, height: formado ? '0%' : `${porcentajeRelleno}%`, background: 'linear-gradient(to bottom, var(--color-bg) 0%, transparent 100%)' }}
+      />
+      <div
+        className={styles.franja}
+        style={{ bottom: 0, height: formado ? '0%' : `${porcentajeRelleno}%`, background: 'linear-gradient(to top, var(--color-bg) 0%, transparent 100%)' }}
+      />
 
       {/* TEMPORAL: solo para probar la animación sin recargar la página. Sacar después. */}
       {montado &&
