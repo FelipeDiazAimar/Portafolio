@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GlassSurface } from '@portafolio/ui';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
 import styles from './ThemeToggle.module.css';
@@ -34,6 +34,15 @@ export default function ThemeToggle() {
   const [theme, setTheme] = useState('dark');
   const pasado = useScrollPasadoViewport();
   const visible = !pasado;
+  const refToggle = useRef(null);
+
+  function manejarMovimientoRaton(evento) {
+    const contenedor = refToggle.current;
+    if (!contenedor) return;
+    const rect = contenedor.getBoundingClientRect();
+    contenedor.style.setProperty('--raton-x', `${evento.clientX - rect.left}px`);
+    contenedor.style.setProperty('--raton-y', `${evento.clientY - rect.top}px`);
+  }
 
   useEffect(() => {
     const stored = readStoredTheme();
@@ -64,7 +73,12 @@ export default function ThemeToggle() {
   }
 
   return (
-    <div className={styles.wrapper} data-visible={visible}>
+    <div
+      ref={refToggle}
+      className={styles.wrapper}
+      data-visible={visible}
+      onMouseMove={manejarMovimientoRaton}
+    >
       <GlassSurface
         width={64}
         height={40}

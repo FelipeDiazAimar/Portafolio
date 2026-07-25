@@ -3,6 +3,7 @@
   top: 1rem;
   right: 2rem;
   z-index: 1000;
+  border-radius: 100px;
   opacity: 1;
   transform: translateY(0);
   transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -12,6 +13,47 @@
   opacity: 0;
   transform: translateY(-12px);
   pointer-events: none;
+}
+
+/* Spotlight: mismo mecanismo que .pildoraGrandeWrapper en Header.module.css
+   (--raton-x / --raton-y inyectadas por ThemeToggle.jsx). */
+.wrapper::before,
+.wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.wrapper::before {
+  z-index: 4;
+  padding: 1.5px;
+  background: radial-gradient(
+    circle at var(--raton-x, 0px) var(--raton-y, 0px),
+    rgba(255, 255, 255, 0.45) 0%,
+    transparent 130px
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.wrapper::after {
+  z-index: 5;
+  background: radial-gradient(
+    circle at var(--raton-x, 0px) var(--raton-y, 0px),
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 160px
+  );
+}
+
+.wrapper:hover::before,
+.wrapper:hover::after {
+  opacity: 1;
 }
 
 .track {
