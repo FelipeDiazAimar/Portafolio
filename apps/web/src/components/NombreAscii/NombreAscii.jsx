@@ -7,16 +7,16 @@ import styles from './NombreAscii.module.css';
 const DEMORA_INICIO_MS = 3300;
 
 // Fase 1: se dibuja la onda sonora completa.
-const DISPERSION_ONDA_MS = 900;
-const DURACION_ONDA_MS = 450;
-const ESPERA_ONDA_MS = 1000;
+const DISPERSION_ONDA_MS = 550;
+const DURACION_ONDA_MS = 300;
+const ESPERA_ONDA_MS = 650;
 // Fase 2: la onda se atenúa (arriba, abajo y en el medio) y deja leer el nombre.
-const DISPERSION_REVELADO_MS = 700;
-const DURACION_REVELADO_MS = 900;
-const ESPERA_REVELADO_MS = 1600;
+const DISPERSION_REVELADO_MS = 450;
+const DURACION_REVELADO_MS = 600;
+const ESPERA_REVELADO_MS = 1000;
 // Fase 3: los caracteres se apagan de a poco y entra el texto normal.
-const DISPERSION_DESVANECIDO_MS = 900;
-const DURACION_DESVANECIDO_MS = 800;
+const DISPERSION_DESVANECIDO_MS = 550;
+const DURACION_DESVANECIDO_MS = 500;
 
 // Máximo de filas de lluvia arriba y abajo del nombre. Cuánto usa cada
 // columna lo decide la envolvente de onda.
