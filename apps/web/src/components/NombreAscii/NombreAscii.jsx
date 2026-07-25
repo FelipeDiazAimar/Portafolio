@@ -30,6 +30,10 @@ const COLUMNAS_MARGEN_LATERAL = 7;
 // Brillo máximo del fondo en la fase 2: la onda tiene que quedar por
 // debajo del nombre, no competirle.
 const BRILLO_FONDO_REVELADO = 0.6;
+// Cada cuánto se re-sortean caracteres en las fases 1 y 2, y qué fracción
+// de las celdas (que no sean parte del nombre) cambia por tick.
+const INTERVALO_CAMBIO_CARACTERES_MS = 110;
+const PROBABILIDAD_CAMBIO_CARACTER = 0.06;
 
 // Nada de bloques (█) ni glifos raros: en muchas fuentes monoespaciadas
 // caen en el rectángulo de "carácter faltante". Solo ASCII imprimible.
@@ -157,11 +161,12 @@ function generarCampo(calco) {
     return 0.15 + 0.85 * (1 - t) ** 1.4;
   }
 
-  function celda(caracter, opacidadOnda, opacidadRevelado) {
+  function celda(caracter, opacidadOnda, opacidadRevelado, esNombre = false) {
     return {
       caracter,
       opacidadOnda,
       opacidadRevelado,
+      esNombre,
       demoraOnda: Math.random() * DISPERSION_ONDA_MS,
       demoraRevelado: Math.random() * DISPERSION_REVELADO_MS,
       demoraDesvanecido: Math.random() * DISPERSION_DESVANECIDO_MS,
@@ -170,12 +175,17 @@ function generarCampo(calco) {
 
   const filasTotales = FILAS_LLUVIA * 2 + filasNombre;
   const centroVertical = (filasTotales - 1) / 2;
+  // Media altura visual de una columna de texto (nombre + lluvia tapeada).
+  // El margen arranca su alcance en este valor y no en FILAS_LLUVIA: si no,
+  // la altura caía en seco justo en el borde texto/margen — un bloque alto
+  // pegado a columnas mucho más bajas. Así decae gradual, como el resto de
+  // la onda.
+  const semiAlturaTexto = filasNombre / 2 + FILAS_LLUVIA;
 
   const columnas = [];
   for (let c = 0; c < totalColumnas; c++) {
     const columnaTexto = c - margen;
     const esMargen = columnaTexto < 0 || columnaTexto >= columnasTexto;
-    const alcance = alturaDeOnda(c, totalColumnas);
     const celdas = [];
 
     // Las columnas de margen no tienen nombre que revelar: son un único
@@ -185,6 +195,15 @@ function generarCampo(calco) {
     // la onda y no como un bloque rectangular pegado al costado.
     if (esMargen) {
       const atenuacion = atenuacionLateral(columnaTexto);
+      // t: 0 pegado al borde del texto, 1 en la punta del margen — el
+      // techo de altura baja gradualmente desde la escala del nombre
+      // hasta la escala normal de la lluvia.
+      const fuera = columnaTexto < 0 ? -columnaTexto : columnaTexto - columnasTexto + 1;
+      const tBorde = Math.min(1, fuera / margen);
+      const techo = FILAS_LLUVIA + (semiAlturaTexto - FILAS_LLUVIA) * (1 - tBorde) ** 1.4;
+      const modulacion = alturaDeOnda(c, totalColumnas) / FILAS_LLUVIA;
+      const alcance = Math.max(1, Math.round(techo * modulacion));
+
       for (let i = 0; i < filasTotales; i++) {
         const distancia = Math.abs(i - centroVertical);
         const caracter = elegir(CARACTERES_LLUVIA);
@@ -200,6 +219,8 @@ function generarCampo(calco) {
       columnas.push(celdas);
       continue;
     }
+
+    const alcance = alturaDeOnda(c, totalColumnas);
 
     // Cada columna tiene su propio "caudal": si todas pesaran igual el
     // conjunto se lee como un párrafo macizo, no como streams separados.
@@ -231,8 +252,9 @@ function generarCampo(calco) {
       const enOnda = 0.82 + Math.random() * 0.18;
       if (esGlifo(columnaTexto, f)) {
         // El nombre queda excluido de la apertura del medio: es lo único
-        // que sube a opacidad plena en la fase 2.
-        celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1));
+        // que sube a opacidad plena en la fase 2. `esNombre` también lo
+        // excluye del cambio periódico de caracteres, para que no titile.
+        celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1, true));
       } else {
         // Huecos entre las letras: caracteres sueltos apenas perceptibles.
         const suelto = Math.random() < 0.4;
@@ -363,6 +385,36 @@ export default function NombreAscii() {
       clearTimeout(aDesvanecido);
     };
   }, [campo]);
+
+  // Fases 1 y 2: los caracteres de ruido se van resorteando con el tiempo
+  // (los del nombre no, para que se lea estable). Actualiza por función,
+  // sin `campo` en las dependencias, así no reinicia el intervalo en cada
+  // tick; y sólo reemplaza el array de la columna que tuvo cambios, para
+  // no forzar un re-render de las que no.
+  useEffect(() => {
+    if (fase !== 'onda' && fase !== 'revelado') return;
+
+    const intervalo = setInterval(() => {
+      setCampo((previo) => {
+        if (!previo) return previo;
+        let huboCambios = false;
+        const columnas = previo.columnas.map((celdas) => {
+          let columnaCambio = false;
+          const nuevasCeldas = celdas.map((celda) => {
+            if (celda.esNombre || Math.random() >= PROBABILIDAD_CAMBIO_CARACTER) return celda;
+            columnaCambio = true;
+            return { ...celda, caracter: elegir(CARACTERES_LLUVIA) };
+          });
+          if (!columnaCambio) return celdas;
+          huboCambios = true;
+          return nuevasCeldas;
+        });
+        return huboCambios ? { ...previo, columnas } : previo;
+      });
+    }, INTERVALO_CAMBIO_CARACTERES_MS);
+
+    return () => clearInterval(intervalo);
+  }, [fase]);
 
   function reiniciar() {
     setCampo(null);
