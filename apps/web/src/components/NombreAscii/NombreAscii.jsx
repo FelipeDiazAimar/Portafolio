@@ -243,12 +243,20 @@ function generarCampo(calco) {
 
     const alcance = alturaDeOnda(c, totalColumnas);
 
-    // 1 en el centro horizontal del nombre, decae hacia los dos costados —
-    // la lluvia de arriba/abajo y la banda del nombre se van apagando
-    // lateralmente en vez de tener el mismo brillo en todo el ancho. Misma
-    // escala que usan las columnas de margen, sin salto en la costura.
+    // Techo del apagado lateral para ESTA columna (0 en el centro del
+    // nombre, más oscuro hacia los costados). No se aplica igual en toda
+    // la altura: ver `atenuacionHorizontalEnT`.
     const atenuacionHorizontal = atenuacionHorizontalGlobal(c);
     const distHorizontal = distanciaHorizontalGlobal(c);
+
+    // El apagado lateral crece con la distancia vertical al nombre (t): a
+    // la altura del propio nombre (t≈0) no hay apagado lateral — así el
+    // degradado corre desde las esquinas arriba/abajo hacia el centro, no
+    // desde los costados a la altura del nombre. En la punta de cada rayo
+    // (t≈1) sí pega el apagado lateral completo.
+    function atenuacionHorizontalEnT(t) {
+      return 1 - (1 - atenuacionHorizontal) * Math.min(1, t) ** 1.4;
+    }
 
     // t: 0 pegado al nombre, 1 en la punta de ESTA columna — el decaimiento
     // es relativo a su propia altura, así todas se apagan justo en su punta.
@@ -260,9 +268,9 @@ function generarCampo(calco) {
       const t = distancia / (alcance + 1);
       const variacion = 0.82 + Math.random() * 0.18;
 
-      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo (y
-      // hacia los laterales).
-      const enOnda = (1 - t) ** 1.15 * variacion * atenuacionHorizontal;
+      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo, y
+      // el apagado lateral se suma recién a medida que se aleja del nombre.
+      const enOnda = (1 - t) ** 1.15 * variacion * atenuacionHorizontalEnT(t);
       // Fase 2: sólo queda el nombre — el resto del campo termina en 0.
       // Lo lejano (en vertical o en horizontal) se apaga primero.
       const distanciaRevelado = Math.max(t, distHorizontal);
@@ -273,11 +281,10 @@ function generarCampo(calco) {
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
-      // Sin este factor, la banda del nombre quedaba pareja de punta a
-      // punta en la fase 1 — un rectángulo opaco de bordes duros justo en
-      // medio de una onda que sí se degrada. Con él, sus costados se apagan
-      // igual que la lluvia de arriba/abajo y deja de desentonar.
-      const enOnda = (0.82 + Math.random() * 0.18) * atenuacionHorizontal;
+      // A la altura del nombre (t=0) no hay apagado lateral: por eso el
+      // degradado se ve venir desde arriba/abajo hacia el centro, y no
+      // también desde los costados a esta altura.
+      const enOnda = 0.82 + Math.random() * 0.18;
       if (esGlifo(columnaTexto, f)) {
         // El nombre queda excluido del apagado: es lo único que se sigue
         // viendo al final de la fase 2. `esNombre` también lo excluye del
