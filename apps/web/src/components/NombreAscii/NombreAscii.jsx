@@ -15,8 +15,9 @@ const DISPERSION_ADELGAZADO_MS = 700;
 const DURACION_ADELGAZADO_MS = 900;
 const ESPERA_NOMBRE_ASCII_MS = 1500;
 
-// Cuántas filas de lluvia se agregan arriba y abajo del nombre.
-const FILAS_LLUVIA = 14;
+// Máximo de filas de lluvia arriba y abajo del nombre. Cuánto usa cada
+// columna lo decide la envolvente de onda.
+const FILAS_LLUVIA = 18;
 // Separación horizontal entre columnas, en fracción del alto de celda.
 const SEPARACION_COLUMNAS = 0.6;
 
@@ -27,6 +28,21 @@ const CARACTERES_LLUVIA = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789!?*/|:;<>=+-_%$#@&^
 
 function elegir(alfabeto) {
   return alfabeto[Math.floor(Math.random() * alfabeto.length)];
+}
+
+// Envolvente tipo onda sonora: cuántas filas de lluvia le tocan a cada
+// columna. Varias senoidales de distinta frecuencia superpuestas más un
+// jitter, para que el contorno suba y baje como un visualizador de audio
+// en vez de recortarse como un rectángulo.
+function alturaDeOnda(columna, totalColumnas) {
+  const x = columna / Math.max(1, totalColumnas - 1);
+  const perfil =
+    0.5 +
+    0.28 * Math.sin(2 * Math.PI * 1.5 * x) +
+    0.18 * Math.sin(2 * Math.PI * 4.3 * x + 1.2) +
+    0.12 * Math.sin(2 * Math.PI * 9.1 * x + 3.4) +
+    (Math.random() - 0.5) * 0.14;
+  return Math.max(1, Math.round(Math.min(1, Math.max(0.08, perfil)) * FILAS_LLUVIA));
 }
 
 // Ancho de un carácter monoespaciado relativo a su alto (con line-height 1).
@@ -116,11 +132,10 @@ function generarCampo(calco) {
     return data[(y * ancho + x) * 4 + 3] > 128;
   }
 
-  function celda(caracter, opacidadFinal) {
+  function celda(caracter, opacidadLlena, opacidadFinal) {
     return {
       caracter,
-      // En el campo lleno todo pesa parecido: el nombre todavía no se lee.
-      opacidadLlena: 0.75 + Math.random() * 0.25,
+      opacidadLlena,
       opacidadFinal,
       demoraLlenado: Math.random() * DISPERSION_LLENADO_MS,
       demoraAdelgazado: Math.random() * DISPERSION_ADELGAZADO_MS,
@@ -132,26 +147,36 @@ function generarCampo(calco) {
     // Cada columna tiene su propio "caudal": si todas tuvieran la misma
     // densidad el conjunto se lee como un párrafo macizo, no como streams.
     const caudal = 0.3 + Math.random() * 0.7;
+    const alcance = alturaDeOnda(c, totalColumnas);
     const celdas = [];
 
-    // t: 0 pegado al nombre, 1 en el borde exterior del campo.
+    // t: 0 pegado al nombre, 1 en la punta de ESTA columna — así cada una
+    // se apaga en su propia altura y el conjunto dibuja la onda.
     function celdaDeLluvia(distancia) {
-      const t = distancia / (FILAS_LLUVIA + 1);
-      const densidad = (0.6 * (1 - t) + 0.04) * caudal;
       const caracter = elegir(CARACTERES_LLUVIA);
-      if (Math.random() > densidad) return celda(caracter, 0);
-      return celda(caracter, Math.max(0.05, (1 - t) ** 1.5));
+      // Fuera de la envolvente la celda no existe en ninguna de las fases.
+      if (distancia > alcance) return celda(caracter, 0, 0);
+
+      const t = distancia / (alcance + 1);
+      // En el campo lleno todo pesa parecido: el nombre todavía no se lee.
+      const llena = 0.75 + Math.random() * 0.25;
+      const densidad = (0.6 * (1 - t) + 0.04) * caudal;
+      if (Math.random() > densidad) return celda(caracter, llena, 0);
+      return celda(caracter, llena, Math.max(0.05, (1 - t) ** 1.5));
     }
 
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
+      const llena = 0.75 + Math.random() * 0.25;
       if (esGlifo(c, f)) {
-        celdas.push(celda(elegir(CARACTERES_DENSOS), 1));
+        celdas.push(celda(elegir(CARACTERES_DENSOS), llena, 1));
       } else {
         // Huecos entre las letras: caracteres sueltos apenas perceptibles.
         const suelto = Math.random() < 0.4;
-        celdas.push(celda(elegir(CARACTERES_LLUVIA), suelto ? 0.14 + Math.random() * 0.1 : 0));
+        celdas.push(
+          celda(elegir(CARACTERES_LLUVIA), llena, suelto ? 0.14 + Math.random() * 0.1 : 0)
+        );
       }
     }
 
@@ -179,6 +204,10 @@ export default function NombreAscii() {
   const [campo, setCampo] = useState(null);
   const [montado, setMontado] = useState(false);
 
+  // Espejo de `fase` para leerla desde listeners sin re-suscribirlos.
+  const refFase = useRef(fase);
+  refFase.current = fase;
+
   useEffect(() => {
     setMontado(true);
     const temporizador = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
@@ -192,8 +221,11 @@ export default function NombreAscii() {
     setCampo(generarCampo(calco));
   }, []);
 
+  // Ojo: `fase` NO puede estar acá. Al construir el campo se dispara la
+  // cadena de fases, y si eso reconstruía el campo el ciclo se reiniciaba
+  // solo — el nombre asomaba y volvía al campo lleno para siempre.
   useEffect(() => {
-    if (!empezar || fase === 'formado') return;
+    if (!empezar || campo) return;
     let cancelado = false;
 
     document.fonts.ready.then(() => {
@@ -203,14 +235,16 @@ export default function NombreAscii() {
     return () => {
       cancelado = true;
     };
-  }, [empezar, fase, construirCampo]);
+  }, [empezar, campo, construirCampo]);
 
   // El tamaño del nombre depende del viewport (clamp con vw), así que si
   // cambia hay que recalcar: si no, el ASCII queda corrido respecto al texto.
+  // Solo mientras el campo aún se está armando: recalcar más tarde
+  // reiniciaría la animación.
   useEffect(() => {
-    if (!empezar || fase === 'formado') return;
     let temporizador;
     function alRedimensionar() {
+      if (refFase.current !== 'oculto' && refFase.current !== 'lleno') return;
       clearTimeout(temporizador);
       temporizador = setTimeout(construirCampo, 150);
     }
@@ -219,7 +253,7 @@ export default function NombreAscii() {
       window.removeEventListener('resize', alRedimensionar);
       clearTimeout(temporizador);
     };
-  }, [empezar, fase, construirCampo]);
+  }, [construirCampo]);
 
   // Encadena las fases. El primer salto va en un frame aparte para que el
   // navegador tenga un estado inicial (opacidad 0) desde donde transicionar.
