@@ -27,6 +27,10 @@ const SEPARACION_COLUMNAS = 0.6;
 // esto el campo terminaba justo en el ancho del texto y se notaba el
 // corte vertical en los laterales.
 const COLUMNAS_MARGEN_LATERAL = 7;
+// Cuánto más oscurecen las esquinas (lejos del nombre en vertical Y en
+// horizontal) por encima del apagado lateral base, que ya se aplica en
+// toda la altura.
+const ATENUACION_ESQUINA = 0.55;
 // Cada cuánto se re-sortean caracteres en las fases 1 y 2, y qué fracción
 // de las celdas (que no sean parte del nombre) cambia por tick.
 const INTERVALO_CAMBIO_CARACTERES_MS = 110;
@@ -252,18 +256,19 @@ function generarCampo(calco) {
 
     const alcance = alturaDeOnda(c, totalColumnas);
 
-    // Techo del apagado lateral para ESTA columna (0 en el centro del
-    // nombre, más oscuro hacia los costados). No se aplica igual en toda
-    // la altura: ver `atenuacionHorizontalEnT`.
+    // Apagado lateral base para ESTA columna (1 en el centro del nombre,
+    // más oscuro hacia los costados) — se aplica SIEMPRE, en toda la
+    // altura, incluida la banda del nombre: el degradado va del centro
+    // hacia los laterales izquierdo y derecho también, no sólo de arriba y
+    // abajo hacia el centro.
     const atenuacionHorizontal = atenuacionHorizontalGlobal(c);
 
-    // El apagado lateral crece con la distancia vertical al nombre (t): a
-    // la altura del propio nombre (t≈0) no hay apagado lateral — así el
-    // degradado corre desde las esquinas arriba/abajo hacia el centro, no
-    // desde los costados a la altura del nombre. En la punta de cada rayo
-    // (t≈1) sí pega el apagado lateral completo.
+    // Encima de ese apagado lateral base, uno extra que crece con la
+    // distancia vertical al nombre (t): las esquinas (lejos en las dos
+    // direcciones) quedan más oscuras que el resto del lateral.
     function atenuacionHorizontalEnT(t) {
-      return 1 - (1 - atenuacionHorizontal) * Math.min(1, t) ** 1.4;
+      const extra = 1 - (1 - ATENUACION_ESQUINA) * Math.min(1, t) ** 1.4;
+      return atenuacionHorizontal * extra;
     }
 
     // t: 0 pegado al nombre, 1 en la punta de ESTA columna — el decaimiento
@@ -294,10 +299,10 @@ function generarCampo(calco) {
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
-      // A la altura del nombre (t=0) no hay apagado lateral: por eso el
-      // degradado se ve venir desde arriba/abajo hacia el centro, y no
-      // también desde los costados a esta altura.
-      const enOnda = 0.82 + Math.random() * 0.18;
+      // El apagado lateral base se aplica también a la altura del nombre:
+      // el degradado corre desde el centro hacia los laterales acá
+      // también, no sólo de arriba/abajo hacia el centro.
+      const enOnda = (0.82 + Math.random() * 0.18) * atenuacionHorizontal;
       if (esGlifo(columnaTexto, f)) {
         // El nombre queda excluido del apagado: es lo único que se sigue
         // viendo al final de la fase 2. `esNombre` también lo excluye del
