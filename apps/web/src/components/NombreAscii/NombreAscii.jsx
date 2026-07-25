@@ -226,6 +226,14 @@ function generarCampo(calco) {
     // conjunto se lee como un párrafo macizo, no como streams separados.
     const caudal = 0.65 + Math.random() * 0.35;
 
+    // 1 en el centro horizontal del nombre, decae hacia los dos costados
+    // del texto — la lluvia de arriba/abajo se va apagando lateralmente en
+    // vez de tener el mismo brillo en todo el ancho, y así empalma con el
+    // degradado que ya tienen las columnas de margen.
+    const centroTexto = (columnasTexto - 1) / 2;
+    const distanciaHorizontal = Math.abs(columnaTexto - centroTexto) / Math.max(1, centroTexto);
+    const atenuacionHorizontal = 0.3 + 0.7 * (1 - Math.min(1, distanciaHorizontal)) ** 1.3;
+
     // t: 0 pegado al nombre, 1 en la punta de ESTA columna — el decaimiento
     // es relativo a su propia altura, así todas se apagan justo en su punta.
     function celdaDeLluvia(distancia) {
@@ -236,12 +244,18 @@ function generarCampo(calco) {
       const t = distancia / (alcance + 1);
       const variacion = 0.82 + Math.random() * 0.18;
 
-      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo.
-      const enOnda = (1 - t) ** 1.15 * variacion;
+      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo (y
+      // hacia los laterales).
+      const enOnda = (1 - t) ** 1.15 * variacion * atenuacionHorizontal;
       // Fase 2: además se abre en el medio. El seno vale 0 en las dos
       // puntas y máximo a mitad de camino, así el nombre queda despejado
       // y la onda sigue leyéndose como fondo.
-      const enRevelado = Math.sin(Math.PI * t) ** 1.2 * BRILLO_FONDO_REVELADO * caudal * variacion;
+      const enRevelado =
+        Math.sin(Math.PI * t) ** 1.2 *
+        BRILLO_FONDO_REVELADO *
+        caudal *
+        variacion *
+        atenuacionHorizontal;
 
       return celda(caracter, enOnda, enRevelado);
     }
@@ -324,11 +338,18 @@ export default function NombreAscii() {
     return () => clearTimeout(temporizador);
   }, []);
 
+  // Sube sólo cuando se construye un campo NUEVO (primera vez o resize),
+  // nunca en el titileo de caracteres — la cadena de fases se engancha acá
+  // en vez de en `campo`, porque el titileo reemplaza `campo` por un objeto
+  // nuevo en cada tick y eso reiniciaba los temporizadores de fase sin fin.
+  const [cicloCampo, setCicloCampo] = useState(0);
+
   const construirCampo = useCallback(() => {
     if (!refContenedor.current || !refLimpio.current) return;
     const calco = calcarTextoLimpio(refLimpio.current, refContenedor.current);
     if (!calco) return;
     setCampo(generarCampo(calco));
+    setCicloCampo((id) => id + 1);
   }, []);
 
   // Ojo: `fase` NO puede estar acá. Al construir el campo se dispara la
@@ -368,7 +389,7 @@ export default function NombreAscii() {
   // Encadena las fases. El primer salto va en un frame aparte para que el
   // navegador tenga un estado inicial (opacidad 0) desde donde transicionar.
   useEffect(() => {
-    if (!campo) return;
+    if (cicloCampo === 0) return;
 
     const cuadro = requestAnimationFrame(() => setFase('onda'));
 
@@ -384,7 +405,7 @@ export default function NombreAscii() {
       clearTimeout(aRevelado);
       clearTimeout(aDesvanecido);
     };
-  }, [campo]);
+  }, [cicloCampo]);
 
   // Fases 1 y 2: los caracteres de ruido se van resorteando con el tiempo
   // (los del nombre no, para que se lea estable). Actualiza por función,
