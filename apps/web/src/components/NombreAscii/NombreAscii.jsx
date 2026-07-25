@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './NombreAscii.module.css';
 
 const DEMORA_INICIO_MS = 3300;
@@ -96,10 +97,19 @@ export default function NombreAscii() {
   const [empezar, setEmpezar] = useState(false);
   const [formado, setFormado] = useState(false);
   const [intento, setIntento] = useState(0);
+  const [montado, setMontado] = useState(false);
 
   useEffect(() => {
     const temporizadorInicio = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizadorInicio);
+  }, []);
+
+  // Portal a propósito: HeroInmersivo y toda su cadena de .capa tienen
+  // pointer-events: none (es una capa decorativa, aria-hidden), así que
+  // ningún elemento clickeable renderizado ahí adentro puede recibir clics
+  // de forma confiable. Sacamos el botón del DOM del hero por completo.
+  useEffect(() => {
+    setMontado(true);
   }, []);
 
   function reiniciar() {
@@ -123,9 +133,13 @@ export default function NombreAscii() {
       <div className={`${styles.franja} ${styles.franjaInferior} ${formado ? styles.encogida : ''}`} />
 
       {/* TEMPORAL: solo para probar la animación sin recargar la página. Sacar después. */}
-      <button type="button" onClick={reiniciar} className={styles.botonReiniciar}>
-        Reiniciar animación
-      </button>
+      {montado &&
+        createPortal(
+          <button type="button" onClick={reiniciar} className={styles.botonReiniciar}>
+            Reiniciar animación
+          </button>,
+          document.body
+        )}
     </div>
   );
 }
