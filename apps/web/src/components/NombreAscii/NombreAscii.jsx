@@ -149,13 +149,23 @@ function generarCampo(calco) {
     return data[(y * ancho + x) * 4 + 3] > 128;
   }
 
-  // 1 sobre el nombre, se apaga suavemente hacia las puntas del margen —
-  // así la onda lateral no termina en un borde duro.
-  function atenuacionLateral(columnaTexto) {
-    if (columnaTexto >= 0 && columnaTexto < columnasTexto) return 1;
-    const fuera = columnaTexto < 0 ? -columnaTexto : columnaTexto - columnasTexto + 1;
-    const t = Math.min(1, fuera / margen);
-    return 0.15 + 0.85 * (1 - t) ** 1.4;
+  // Distancia horizontal 0..1 en UNA sola escala continua para todo el
+  // campo (texto + margen), medida desde el centro del nombre hasta la
+  // punta del margen. Antes el texto medía su propio degradado relativo a
+  // su ancho (0 en el centro, 1 en el borde del texto) y el margen el suyo
+  // por separado (0 en ese mismo borde, 1 en la punta) — al evaluarlos
+  // pegados uno a otro el brillo pegaba un salto justo en la costura
+  // (texto terminaba tenue, margen arrancaba a pleno) y por lo mismo la
+  // demora de revelado no eran comparables entre columnas de texto y de
+  // margen, así que el barrido lateral no cerraba al mismo tiempo que el
+  // vertical. Con una sola escala por índice de columna `c` (no por
+  // columnaTexto) ambos problemas se resuelven juntos.
+  const centroGlobal = (totalColumnas - 1) / 2;
+  function distanciaHorizontalGlobal(c) {
+    return Math.min(1, Math.abs(c - centroGlobal) / centroGlobal);
+  }
+  function atenuacionHorizontalGlobal(c) {
+    return 0.15 + 0.85 * (1 - distanciaHorizontalGlobal(c)) ** 1.3;
   }
 
   // distanciaRevelado: 0 pegado al nombre, 1 en la punta más lejana. La
@@ -196,10 +206,14 @@ function generarCampo(calco) {
     // tenue en la de revelado), para que se lea como el final natural de
     // la onda y no como un bloque rectangular pegado al costado.
     if (esMargen) {
-      const atenuacion = atenuacionLateral(columnaTexto);
-      // t: 0 pegado al borde del texto, 1 en la punta del margen — el
-      // techo de altura baja gradualmente desde la escala del nombre
-      // hasta la escala normal de la lluvia.
+      const atenuacion = atenuacionHorizontalGlobal(c);
+      const distHorizontal = distanciaHorizontalGlobal(c);
+      // tBorde: 0 pegado al borde del texto, 1 en la punta del margen — el
+      // techo de altura baja gradualmente desde la escala del nombre hasta
+      // la escala normal de la lluvia. Es un concepto distinto de la
+      // distancia horizontal global (esa mide brillo/demora; esta mide
+      // cuántas filas alcanza el trazo), así que se queda con su propia
+      // escala relativa al margen.
       const fuera = columnaTexto < 0 ? -columnaTexto : columnaTexto - columnasTexto + 1;
       const tBorde = Math.min(1, fuera / margen);
       const techo = FILAS_LLUVIA + (semiAlturaTexto - FILAS_LLUVIA) * (1 - tBorde) ** 1.4;
@@ -217,9 +231,10 @@ function generarCampo(calco) {
         const variacion = 0.82 + Math.random() * 0.18;
         const magnitud = (1 - t) ** 1.15 * variacion * atenuacion;
         // En la fase 2 sólo queda el nombre: el margen entero se apaga, más
-        // lejos (en vertical dentro de su propio trazo, y en horizontal
-        // hacia la punta del margen) primero.
-        const distanciaRevelado = Math.max(t, tBorde);
+        // lejos primero — en la misma escala horizontal que usan las
+        // columnas de texto, para que el cierre lateral y el vertical
+        // terminen juntos.
+        const distanciaRevelado = Math.max(t, distHorizontal);
         celdas.push(celda(caracter, magnitud, 0, false, distanciaRevelado));
       }
       columnas.push(celdas);
@@ -228,13 +243,12 @@ function generarCampo(calco) {
 
     const alcance = alturaDeOnda(c, totalColumnas);
 
-    // 1 en el centro horizontal del nombre, decae hacia los dos costados
-    // del texto — la lluvia de arriba/abajo se va apagando lateralmente en
-    // vez de tener el mismo brillo en todo el ancho, y así empalma con el
-    // degradado que ya tienen las columnas de margen.
-    const centroTexto = (columnasTexto - 1) / 2;
-    const distanciaHorizontal = Math.abs(columnaTexto - centroTexto) / Math.max(1, centroTexto);
-    const atenuacionHorizontal = 0.3 + 0.7 * (1 - Math.min(1, distanciaHorizontal)) ** 1.3;
+    // 1 en el centro horizontal del nombre, decae hacia los dos costados —
+    // la lluvia de arriba/abajo y la banda del nombre se van apagando
+    // lateralmente en vez de tener el mismo brillo en todo el ancho. Misma
+    // escala que usan las columnas de margen, sin salto en la costura.
+    const atenuacionHorizontal = atenuacionHorizontalGlobal(c);
+    const distHorizontal = distanciaHorizontalGlobal(c);
 
     // t: 0 pegado al nombre, 1 en la punta de ESTA columna — el decaimiento
     // es relativo a su propia altura, así todas se apagan justo en su punta.
@@ -251,7 +265,7 @@ function generarCampo(calco) {
       const enOnda = (1 - t) ** 1.15 * variacion * atenuacionHorizontal;
       // Fase 2: sólo queda el nombre — el resto del campo termina en 0.
       // Lo lejano (en vertical o en horizontal) se apaga primero.
-      const distanciaRevelado = Math.max(t, distanciaHorizontal);
+      const distanciaRevelado = Math.max(t, distHorizontal);
 
       return celda(caracter, enOnda, 0, false, distanciaRevelado);
     }
@@ -272,7 +286,7 @@ function generarCampo(calco) {
       } else {
         // Huecos entre las letras: caracteres sueltos apenas perceptibles
         // en la fase 1, que se apagan junto con el resto del campo en la 2.
-        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, distanciaHorizontal));
+        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, distHorizontal));
       }
     }
 
