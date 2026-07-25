@@ -27,9 +27,6 @@ const SEPARACION_COLUMNAS = 0.6;
 // esto el campo terminaba justo en el ancho del texto y se notaba el
 // corte vertical en los laterales.
 const COLUMNAS_MARGEN_LATERAL = 7;
-// Brillo máximo del fondo en la fase 2: la onda tiene que quedar por
-// debajo del nombre, no competirle.
-const BRILLO_FONDO_REVELADO = 0.6;
 // Cada cuánto se re-sortean caracteres en las fases 1 y 2, y qué fracción
 // de las celdas (que no sean parte del nombre) cambia por tick.
 const INTERVALO_CAMBIO_CARACTERES_MS = 110;
@@ -161,14 +158,18 @@ function generarCampo(calco) {
     return 0.15 + 0.85 * (1 - t) ** 1.4;
   }
 
-  function celda(caracter, opacidadOnda, opacidadRevelado, esNombre = false) {
+  // distanciaRevelado: 0 pegado al nombre, 1 en la punta más lejana. La
+  // transición fase 1 -> fase 2 la usa como demora: así el barrido es
+  // literalmente de afuera hacia adentro (lo lejano arranca casi enseguida,
+  // lo cercano recién al final) hasta que sólo queda el nombre.
+  function celda(caracter, opacidadOnda, opacidadRevelado, esNombre = false, distanciaRevelado = 0) {
     return {
       caracter,
       opacidadOnda,
       opacidadRevelado,
       esNombre,
       demoraOnda: Math.random() * DISPERSION_ONDA_MS,
-      demoraRevelado: Math.random() * DISPERSION_REVELADO_MS,
+      demoraRevelado: distanciaRevelado * DISPERSION_REVELADO_MS + Math.random() * 80,
       demoraDesvanecido: Math.random() * DISPERSION_DESVANECIDO_MS,
     };
   }
@@ -208,23 +209,23 @@ function generarCampo(calco) {
         const distancia = Math.abs(i - centroVertical);
         const caracter = elegir(CARACTERES_LLUVIA);
         if (distancia > alcance) {
-          celdas.push(celda(caracter, 0, 0));
+          celdas.push(celda(caracter, 0, 0, false, 1));
           continue;
         }
         const t = distancia / (alcance + 1);
         const variacion = 0.82 + Math.random() * 0.18;
         const magnitud = (1 - t) ** 1.15 * variacion * atenuacion;
-        celdas.push(celda(caracter, magnitud, magnitud * BRILLO_FONDO_REVELADO));
+        // En la fase 2 sólo queda el nombre: el margen entero se apaga, más
+        // lejos (en vertical dentro de su propio trazo, y en horizontal
+        // hacia la punta del margen) primero.
+        const distanciaRevelado = Math.max(t, tBorde);
+        celdas.push(celda(caracter, magnitud, 0, false, distanciaRevelado));
       }
       columnas.push(celdas);
       continue;
     }
 
     const alcance = alturaDeOnda(c, totalColumnas);
-
-    // Cada columna tiene su propio "caudal": si todas pesaran igual el
-    // conjunto se lee como un párrafo macizo, no como streams separados.
-    const caudal = 0.65 + Math.random() * 0.35;
 
     // 1 en el centro horizontal del nombre, decae hacia los dos costados
     // del texto — la lluvia de arriba/abajo se va apagando lateralmente en
@@ -239,7 +240,7 @@ function generarCampo(calco) {
     function celdaDeLluvia(distancia) {
       const caracter = elegir(CARACTERES_LLUVIA);
       // Fuera de la envolvente la celda no existe en ninguna de las fases.
-      if (distancia > alcance) return celda(caracter, 0, 0);
+      if (distancia > alcance) return celda(caracter, 0, 0, false, 1);
 
       const t = distancia / (alcance + 1);
       const variacion = 0.82 + Math.random() * 0.18;
@@ -247,17 +248,11 @@ function generarCampo(calco) {
       // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo (y
       // hacia los laterales).
       const enOnda = (1 - t) ** 1.15 * variacion * atenuacionHorizontal;
-      // Fase 2: además se abre en el medio. El seno vale 0 en las dos
-      // puntas y máximo a mitad de camino, así el nombre queda despejado
-      // y la onda sigue leyéndose como fondo.
-      const enRevelado =
-        Math.sin(Math.PI * t) ** 1.2 *
-        BRILLO_FONDO_REVELADO *
-        caudal *
-        variacion *
-        atenuacionHorizontal;
+      // Fase 2: sólo queda el nombre — el resto del campo termina en 0.
+      // Lo lejano (en vertical o en horizontal) se apaga primero.
+      const distanciaRevelado = Math.max(t, distanciaHorizontal);
 
-      return celda(caracter, enOnda, enRevelado);
+      return celda(caracter, enOnda, 0, false, distanciaRevelado);
     }
 
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
@@ -269,16 +264,14 @@ function generarCampo(calco) {
       // igual que la lluvia de arriba/abajo y deja de desentonar.
       const enOnda = (0.82 + Math.random() * 0.18) * atenuacionHorizontal;
       if (esGlifo(columnaTexto, f)) {
-        // El nombre queda excluido de la apertura del medio: es lo único
-        // que sube a opacidad plena en la fase 2. `esNombre` también lo
-        // excluye del cambio periódico de caracteres, para que no titile.
-        celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1, true));
+        // El nombre queda excluido del apagado: es lo único que se sigue
+        // viendo al final de la fase 2. `esNombre` también lo excluye del
+        // cambio periódico de caracteres, para que no titile.
+        celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1, true, 0));
       } else {
-        // Huecos entre las letras: caracteres sueltos apenas perceptibles.
-        const suelto = Math.random() < 0.4;
-        celdas.push(
-          celda(elegir(CARACTERES_LLUVIA), enOnda, suelto ? 0.12 + Math.random() * 0.1 : 0)
-        );
+        // Huecos entre las letras: caracteres sueltos apenas perceptibles
+        // en la fase 1, que se apagan junto con el resto del campo en la 2.
+        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, distanciaHorizontal));
       }
     }
 
@@ -411,13 +404,15 @@ export default function NombreAscii() {
     };
   }, [cicloCampo]);
 
-  // Fases 1 y 2: los caracteres de ruido se van resorteando con el tiempo
-  // (los del nombre no, para que se lea estable). Actualiza por función,
-  // sin `campo` en las dependencias, así no reinicia el intervalo en cada
-  // tick; y sólo reemplaza el array de la columna que tuvo cambios, para
-  // no forzar un re-render de las que no.
+  // Fase 1: los caracteres de ruido se van resorteando con el tiempo (los
+  // del nombre no, para que se lea estable). Se corta al entrar en fase 2:
+  // ahí el ruido ya está desvaneciéndose hacia 0, seguir cambiando el
+  // carácter de algo que se apaga sólo se vería como un parpadeo suelto.
+  // Actualiza por función, sin `campo` en las dependencias, así no reinicia
+  // el intervalo en cada tick; y sólo reemplaza el array de la columna que
+  // tuvo cambios, para no forzar un re-render de las que no.
   useEffect(() => {
-    if (fase !== 'onda' && fase !== 'revelado') return;
+    if (fase !== 'onda') return;
 
     const intervalo = setInterval(() => {
       setCampo((previo) => {
