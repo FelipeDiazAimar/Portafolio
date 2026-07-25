@@ -1,43 +1,51 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAsciiText, standard } from 'react-ascii-text';
+import { useAsciiText, ansiShadow } from 'react-ascii-text';
 import styles from './NombreAscii.module.css';
 
 const DEMORA_INICIO_MS = 3300;
 const DURACION_ANIMACION_MS = 2600;
 const CARACTERES_ANIMACION = '/*+#%@$&';
 
-export default function NombreAscii() {
-  const [empezar, setEmpezar] = useState(false);
-  const [formado, setFormado] = useState(false);
-
+// Componente separado a propósito: react-ascii-text arranca su loop de
+// animación apenas se monta (isPaused solo pausa/reanuda un loop que ya
+// está corriendo, no evita que arranque) — así que la única forma real
+// de retrasar el inicio es no montar este componente hasta después de
+// los 3.3s de Bienvenida.
+function AsciiAnimado({ formado, onFormado }) {
   const refAscii = useAsciiText({
-    font: standard,
+    font: ansiShadow,
     text: ['Felipe', 'Diaz Aimar'],
     animationDirection: 'down',
     animationCharacters: CARACTERES_ANIMACION,
     animationSpeed: 25,
     animationLoop: false,
-    isPaused: !empezar,
   });
+
+  useEffect(() => {
+    const temporizadorFin = setTimeout(onFormado, DURACION_ANIMACION_MS);
+    return () => clearTimeout(temporizadorFin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <pre className={`${styles.ascii} ${formado ? styles.oculto : ''}`} ref={refAscii} aria-hidden="true" />;
+}
+
+export default function NombreAscii() {
+  const [empezar, setEmpezar] = useState(false);
+  const [formado, setFormado] = useState(false);
 
   useEffect(() => {
     const temporizadorInicio = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizadorInicio);
   }, []);
 
-  useEffect(() => {
-    if (!empezar) return;
-    const temporizadorFin = setTimeout(() => setFormado(true), DURACION_ANIMACION_MS);
-    return () => clearTimeout(temporizadorFin);
-  }, [empezar]);
-
   return (
     <div className={styles.contenedor}>
       <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
 
-      <pre className={`${styles.ascii} ${formado ? styles.oculto : ''}`} ref={refAscii} aria-hidden="true" />
+      {empezar && <AsciiAnimado formado={formado} onFormado={() => setFormado(true)} />}
 
       <div className={`${styles.textoLimpio} ${formado ? styles.visible : ''}`} aria-hidden="true">
         <span>Felipe</span>

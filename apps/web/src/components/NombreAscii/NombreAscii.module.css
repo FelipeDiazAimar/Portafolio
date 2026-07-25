@@ -2,7 +2,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 10rem;
+  width: min(90vw, 42rem);
+  min-height: 15rem;
 }
 
 .soloLectura {
@@ -19,8 +20,8 @@
 .ascii {
   margin: 0;
   font-family: monospace;
-  font-size: clamp(0.45rem, 0.9vw, 0.7rem);
-  line-height: 1.05;
+  font-size: clamp(0.5rem, 1vw, 0.85rem);
+  line-height: 1.1;
   color: var(--color-fg);
   white-space: pre;
   opacity: 1;
