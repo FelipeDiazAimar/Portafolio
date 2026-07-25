@@ -112,7 +112,7 @@ export default function Header() {
             activarCon="inViewHover"
             secuencial
             direccionRevelado="start"
-            usarSoloCaracteresOriginales
+            caracteres="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=<>/\|"
             velocidad={35}
             className={styles.logoRevelado}
             encryptedClassName={styles.logoEncriptado}
