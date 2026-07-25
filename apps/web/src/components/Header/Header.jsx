@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GlassSurface } from '@portafolio/ui';
 import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegacion.jsx';
@@ -79,10 +79,21 @@ const PROPS_GLASS = {
 
 const TRANSICION_FADE = { duration: 0.4, ease: [0.16, 1, 0.3, 1] };
 
+// Coincide con UNMOUNT_DELAY_MS de Bienvenida (igual que DEMORA_RODANTE_MS
+// en ElementoNavegacion): si el nombre se descifra antes, queda tapado por
+// el splash y nadie lo llega a ver.
+const DEMORA_NOMBRE_MS = 3300;
+
 export default function Header() {
   const estaScrolleado = useScrollPasadoViewport();
   const { setSeccionActiva } = usePortfolio();
   const refPildoraGrande = useRef(null);
+  const [mostrarNombreDescifrado, setMostrarNombreDescifrado] = useState(false);
+
+  useEffect(() => {
+    const temporizador = setTimeout(() => setMostrarNombreDescifrado(true), DEMORA_NOMBRE_MS);
+    return () => clearTimeout(temporizador);
+  }, []);
 
   function manejarMovimientoRaton(evento) {
     const contenedor = refPildoraGrande.current;
@@ -95,16 +106,20 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <a href="#inicio" className={styles.logo}>
-        <TextoDescifrado
-          texto="Felipe Diaz Aimar"
-          activarCon="hover"
-          secuencial
-          direccionRevelado="start"
-          usarSoloCaracteresOriginales
-          velocidad={35}
-          className={styles.logoRevelado}
-          encryptedClassName={styles.logoEncriptado}
-        />
+        {mostrarNombreDescifrado ? (
+          <TextoDescifrado
+            texto="Felipe Diaz Aimar"
+            activarCon="inViewHover"
+            secuencial
+            direccionRevelado="start"
+            usarSoloCaracteresOriginales
+            velocidad={35}
+            className={styles.logoRevelado}
+            encryptedClassName={styles.logoEncriptado}
+          />
+        ) : (
+          'Felipe Diaz Aimar'
+        )}
       </a>
 
       <AnimatePresence mode="popLayout" initial={false}>
