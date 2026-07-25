@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom';
 import styles from './NombreAscii.module.css';
 
 const DEMORA_INICIO_MS = 3300;
-const DEMORA_POR_FILA_MS = 60;
-const DURACION_FILA_MS = 500;
+const DEMORA_POR_COLUMNA_MS = 30;
+const DURACION_COLUMNA_MS = 500;
 const TAMANO_FUENTE_NOMBRE_PX = 80;
 const FILAS_RELLENO = 10;
 const DENSIDAD_RELLENO = 0.8;
@@ -28,10 +28,10 @@ function caracterAleatorio() {
   return CARACTERES_RELLENO[Math.floor(Math.random() * CARACTERES_RELLENO.length)];
 }
 
-// Genera la grilla completa: filas de relleno disperso, el nombre calcado
-// del canvas (según el canal alfa de cada celda), y más filas de relleno.
-// Devuelve también qué porcentaje de la altura total ocupa el relleno, para
-// que las franjas de degradado cubran exactamente esa zona.
+// Genera la grilla completa (por filas): relleno disperso arriba, el
+// nombre calcado del canvas (según el canal alfa de cada celda), y más
+// relleno abajo. Devuelve también qué porcentaje de la altura total
+// ocupa el relleno, para que las franjas de degradado cubran esa zona.
 function generarGrillaAscii(fontFamily) {
   const ratioMonoespaciado = medirRatioMonoespaciado();
   const canvas = document.createElement('canvas');
@@ -55,12 +55,12 @@ function generarGrillaAscii(fontFamily) {
 
   const celdaAlto = 11;
   const celdaAncho = Math.max(1, Math.round(celdaAlto * ratioMonoespaciado));
-  const columnas = Math.floor(width / celdaAncho);
+  const numColumnas = Math.floor(width / celdaAncho);
   const filasNombre = Math.floor(height / celdaAlto);
 
   function filaDelNombre(fila) {
     let texto = '';
-    for (let columna = 0; columna < columnas; columna++) {
+    for (let columna = 0; columna < numColumnas; columna++) {
       const x = Math.min(width - 1, Math.floor(columna * celdaAncho + celdaAncho / 2));
       const y = Math.min(height - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
       const alpha = data[(y * width + x) * 4 + 3];
@@ -71,7 +71,7 @@ function generarGrillaAscii(fontFamily) {
 
   function filaDeRelleno() {
     let texto = '';
-    for (let columna = 0; columna < columnas; columna++) {
+    for (let columna = 0; columna < numColumnas; columna++) {
       texto += Math.random() < DENSIDAD_RELLENO ? caracterAleatorio() : ' ';
     }
     return texto;
@@ -87,8 +87,25 @@ function generarGrillaAscii(fontFamily) {
   return { filas, porcentajeRelleno };
 }
 
+// Da vuelta la grilla de filas a columnas: cada string resultante se lee
+// de arriba hacia abajo en una posición horizontal fija — son las
+// "líneas verticales" que se animan como streams independientes, en vez
+// de un párrafo que se revela línea por línea.
+function transponerAColumnas(filas) {
+  const numColumnas = filas[0]?.length ?? 0;
+  const columnas = [];
+  for (let c = 0; c < numColumnas; c++) {
+    let columna = '';
+    for (let f = 0; f < filas.length; f++) {
+      columna += filas[f][c] ?? ' ';
+    }
+    columnas.push(columna);
+  }
+  return columnas;
+}
+
 function AsciiAnimado({ formado, onFormado, onGrilla }) {
-  const [filas, setFilas] = useState(null);
+  const [columnas, setColumnas] = useState(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -96,8 +113,8 @@ function AsciiAnimado({ formado, onFormado, onGrilla }) {
     document.fonts.ready.then(() => {
       if (cancelado) return;
       const fontFamily = getComputedStyle(document.body).fontFamily;
-      const { filas: filasGeneradas, porcentajeRelleno } = generarGrillaAscii(fontFamily);
-      setFilas(filasGeneradas);
+      const { filas, porcentajeRelleno } = generarGrillaAscii(fontFamily);
+      setColumnas(transponerAColumnas(filas));
       onGrilla(porcentajeRelleno);
     });
 
@@ -108,24 +125,31 @@ function AsciiAnimado({ formado, onFormado, onGrilla }) {
   }, []);
 
   useEffect(() => {
-    if (!filas) return;
-    const duracionTotal = filas.length * DEMORA_POR_FILA_MS + DURACION_FILA_MS;
+    if (!columnas) return;
+    const duracionTotal = columnas.length * DEMORA_POR_COLUMNA_MS + DURACION_COLUMNA_MS;
     const temporizadorFin = setTimeout(onFormado, duracionTotal);
     return () => clearTimeout(temporizadorFin);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filas]);
+  }, [columnas]);
 
-  if (!filas) return null;
+  if (!columnas) return null;
 
   return (
-    <pre className={`${styles.ascii} ${formado ? styles.oculto : ''}`} aria-hidden="true">
-      {filas.map((filaTexto, indice) => (
-        <span key={indice} className={styles.fila} style={{ animationDelay: `${indice * DEMORA_POR_FILA_MS}ms` }}>
-          {filaTexto}
-          {'\n'}
+    <div className={`${styles.ascii} ${formado ? styles.oculto : ''}`} aria-hidden="true">
+      {columnas.map((columnaTexto, indiceColumna) => (
+        <span
+          key={indiceColumna}
+          className={styles.columna}
+          style={{ animationDelay: `${indiceColumna * DEMORA_POR_COLUMNA_MS}ms` }}
+        >
+          {columnaTexto.split('').map((caracter, indiceFila) => (
+            <span key={indiceFila} className={styles.caracter}>
+              {caracter}
+            </span>
+          ))}
         </span>
       ))}
-    </pre>
+    </div>
   );
 }
 
@@ -169,13 +193,23 @@ export default function NombreAscii() {
         <span>Diaz Aimar</span>
       </div>
 
+      {/* Más transparente lejos del nombre (bordes), más opaco (tapado)
+          cerca del nombre, en el medio. */}
       <div
         className={styles.franja}
-        style={{ top: 0, height: formado ? '0%' : `${porcentajeRelleno}%`, background: 'linear-gradient(to bottom, var(--color-bg) 0%, transparent 100%)' }}
+        style={{
+          top: 0,
+          height: formado ? '0%' : `${porcentajeRelleno}%`,
+          background: 'linear-gradient(to bottom, transparent 0%, var(--color-bg) 100%)',
+        }}
       />
       <div
         className={styles.franja}
-        style={{ bottom: 0, height: formado ? '0%' : `${porcentajeRelleno}%`, background: 'linear-gradient(to top, var(--color-bg) 0%, transparent 100%)' }}
+        style={{
+          bottom: 0,
+          height: formado ? '0%' : `${porcentajeRelleno}%`,
+          background: 'linear-gradient(to top, transparent 0%, var(--color-bg) 100%)',
+        }}
       />
 
       {/* TEMPORAL: solo para probar la animación sin recargar la página. Sacar después. */}
