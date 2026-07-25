@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GlassSurface } from '@portafolio/ui';
 import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegacion.jsx';
+import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import styles from './Header.module.css';
@@ -93,7 +94,18 @@ export default function Header() {
 
   return (
     <header className={styles.header}>
-      <a href="#inicio" className={styles.logo}>Felipe Diaz Aimar</a>
+      <a href="#inicio" className={styles.logo}>
+        <TextoDescifrado
+          texto="Felipe Diaz Aimar"
+          activarCon="hover"
+          secuencial
+          direccionRevelado="start"
+          usarSoloCaracteresOriginales
+          velocidad={35}
+          className={styles.logoRevelado}
+          encryptedClassName={styles.logoEncriptado}
+        />
+      </a>
 
       <AnimatePresence mode="popLayout" initial={false}>
         {!estaScrolleado ? (
