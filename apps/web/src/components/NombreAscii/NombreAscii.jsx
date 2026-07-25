@@ -95,17 +95,24 @@ function AsciiAnimado({ formado, onFormado }) {
 export default function NombreAscii() {
   const [empezar, setEmpezar] = useState(false);
   const [formado, setFormado] = useState(false);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
     const temporizadorInicio = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizadorInicio);
   }, []);
 
+  function reiniciar() {
+    setFormado(false);
+    setEmpezar(true);
+    setIntento((valor) => valor + 1);
+  }
+
   return (
     <div className={styles.contenedor}>
       <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
 
-      {empezar && <AsciiAnimado formado={formado} onFormado={() => setFormado(true)} />}
+      {empezar && <AsciiAnimado key={intento} formado={formado} onFormado={() => setFormado(true)} />}
 
       <div className={`${styles.textoLimpio} ${formado ? styles.visible : ''}`} aria-hidden="true">
         <span>Felipe</span>
@@ -114,6 +121,11 @@ export default function NombreAscii() {
 
       <div className={`${styles.franja} ${styles.franjaSuperior} ${formado ? styles.encogida : ''}`} />
       <div className={`${styles.franja} ${styles.franjaInferior} ${formado ? styles.encogida : ''}`} />
+
+      {/* TEMPORAL: solo para probar la animación sin recargar la página. Sacar después. */}
+      <button type="button" onClick={reiniciar} className={styles.botonReiniciar}>
+        Reiniciar animación
+      </button>
     </div>
   );
 }
