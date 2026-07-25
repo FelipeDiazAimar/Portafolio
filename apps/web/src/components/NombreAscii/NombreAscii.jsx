@@ -23,6 +23,10 @@ const DURACION_DESVANECIDO_MS = 500;
 const FILAS_LLUVIA = 18;
 // Separación horizontal entre columnas, en fracción del alto de celda.
 const SEPARACION_COLUMNAS = 0.6;
+// Cuántas columnas de onda sobresalen a los costados del nombre — sin
+// esto el campo terminaba justo en el ancho del texto y se notaba el
+// corte vertical en los laterales.
+const COLUMNAS_MARGEN_LATERAL = 7;
 // Brillo máximo del fondo en la fase 2: la onda tiene que quedar por
 // debajo del nombre, no competirle.
 const BRILLO_FONDO_REVELADO = 0.6;
@@ -127,14 +131,31 @@ function generarCampo(calco) {
   const anchoCaracter = celdaAlto * medirRatioMonoespaciado();
   const paso = anchoCaracter + separacion;
 
-  const totalColumnas = Math.floor(ancho / paso);
+  const columnasTexto = Math.floor(ancho / paso);
   const filasNombre = Math.floor(alto / celdaAlto);
-  if (totalColumnas <= 0 || filasNombre <= 0) return null;
+  if (columnasTexto <= 0 || filasNombre <= 0) return null;
 
-  function esGlifo(columna, fila) {
-    const x = Math.min(ancho - 1, Math.floor(columna * paso + anchoCaracter / 2));
+  // El campo es más ancho que el nombre: `margen` columnas de pura onda
+  // sobresalen de cada lado. `c` sigue indexando 0..totalColumnas-1 (para
+  // que la envolvente de la onda sea continua de punta a punta); el índice
+  // dentro del texto se corrige restando el margen.
+  const margen = COLUMNAS_MARGEN_LATERAL;
+  const totalColumnas = columnasTexto + margen * 2;
+
+  function esGlifo(columnaTexto, fila) {
+    if (columnaTexto < 0 || columnaTexto >= columnasTexto) return false;
+    const x = Math.min(ancho - 1, Math.floor(columnaTexto * paso + anchoCaracter / 2));
     const y = Math.min(alto - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
     return data[(y * ancho + x) * 4 + 3] > 128;
+  }
+
+  // 1 sobre el nombre, se apaga suavemente hacia las puntas del margen —
+  // así la onda lateral no termina en un borde duro.
+  function atenuacionLateral(columnaTexto) {
+    if (columnaTexto >= 0 && columnaTexto < columnasTexto) return 1;
+    const fuera = columnaTexto < 0 ? -columnaTexto : columnaTexto - columnasTexto + 1;
+    const t = Math.min(1, fuera / margen);
+    return 0.15 + 0.85 * (1 - t) ** 1.4;
   }
 
   function celda(caracter, opacidadOnda, opacidadRevelado) {
@@ -150,9 +171,10 @@ function generarCampo(calco) {
 
   const columnas = [];
   for (let c = 0; c < totalColumnas; c++) {
+    const columnaTexto = c - margen;
     // Cada columna tiene su propio "caudal": si todas pesaran igual el
     // conjunto se lee como un párrafo macizo, no como streams separados.
-    const caudal = 0.65 + Math.random() * 0.35;
+    const caudal = (0.65 + Math.random() * 0.35) * atenuacionLateral(columnaTexto);
     const alcance = alturaDeOnda(c, totalColumnas);
     const celdas = [];
 
@@ -166,8 +188,9 @@ function generarCampo(calco) {
       const t = distancia / (alcance + 1);
       const variacion = 0.82 + Math.random() * 0.18;
 
-      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo.
-      const enOnda = (1 - t) ** 1.15 * variacion;
+      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo (y
+      // hacia los costados, en las columnas de margen).
+      const enOnda = (1 - t) ** 1.15 * variacion * atenuacionLateral(columnaTexto);
       // Fase 2: además se abre en el medio. El seno vale 0 en las dos
       // puntas y máximo a mitad de camino, así el nombre queda despejado
       // y la onda sigue leyéndose como fondo.
@@ -179,17 +202,21 @@ function generarCampo(calco) {
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
-      const enOnda = 0.82 + Math.random() * 0.18;
-      if (esGlifo(c, f)) {
+      const enOnda = 0.82 + Math.random() * 0.18 * atenuacionLateral(columnaTexto);
+      if (esGlifo(columnaTexto, f)) {
         // El nombre queda excluido de la apertura del medio: es lo único
         // que sube a opacidad plena en la fase 2.
         celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1));
-      } else {
+      } else if (columnaTexto >= 0 && columnaTexto < columnasTexto) {
         // Huecos entre las letras: caracteres sueltos apenas perceptibles.
         const suelto = Math.random() < 0.4;
         celdas.push(
           celda(elegir(CARACTERES_LLUVIA), enOnda, suelto ? 0.12 + Math.random() * 0.1 : 0)
         );
+      } else {
+        // Margen lateral, a la altura del nombre: sigue siendo onda de
+        // fondo, no huecos del nombre.
+        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, enOnda * 0.5));
       }
     }
 
@@ -202,7 +229,7 @@ function generarCampo(calco) {
     columnas,
     tamanoCelda: celdaAlto,
     separacion,
-    izquierda,
+    izquierda: izquierda - margen * paso,
     arriba: arriba - FILAS_LLUVIA * celdaAlto,
   };
 }
