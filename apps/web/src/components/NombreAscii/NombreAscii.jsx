@@ -159,9 +159,10 @@ function generarCampo(calco) {
   }
 
   // distanciaRevelado: 0 pegado al nombre, 1 en la punta más lejana. La
-  // transición fase 1 -> fase 2 la usa como demora: así el barrido es
-  // literalmente de afuera hacia adentro (lo lejano arranca casi enseguida,
-  // lo cercano recién al final) hasta que sólo queda el nombre.
+  // transición fase 1 -> fase 2 la usa como demora INVERTIDA: lo lejano
+  // (distancia 1) arranca casi enseguida (demora ~0), lo cercano al nombre
+  // (distancia 0) recién al final (demora ~máxima) — el barrido es
+  // literalmente de afuera hacia adentro, hasta que sólo queda el nombre.
   function celda(caracter, opacidadOnda, opacidadRevelado, esNombre = false, distanciaRevelado = 0) {
     return {
       caracter,
@@ -169,7 +170,7 @@ function generarCampo(calco) {
       opacidadRevelado,
       esNombre,
       demoraOnda: Math.random() * DISPERSION_ONDA_MS,
-      demoraRevelado: distanciaRevelado * DISPERSION_REVELADO_MS + Math.random() * 80,
+      demoraRevelado: (1 - distanciaRevelado) * DISPERSION_REVELADO_MS + Math.random() * 80,
       demoraDesvanecido: Math.random() * DISPERSION_DESVANECIDO_MS,
     };
   }
