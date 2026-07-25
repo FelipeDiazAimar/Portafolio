@@ -143,7 +143,6 @@ function generarCampo(calco) {
   const totalColumnas = columnasTexto + margen * 2;
 
   function esGlifo(columnaTexto, fila) {
-    if (columnaTexto < 0 || columnaTexto >= columnasTexto) return false;
     const x = Math.min(ancho - 1, Math.floor(columnaTexto * paso + anchoCaracter / 2));
     const y = Math.min(alto - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
     return data[(y * ancho + x) * 4 + 3] > 128;
@@ -169,14 +168,42 @@ function generarCampo(calco) {
     };
   }
 
+  const filasTotales = FILAS_LLUVIA * 2 + filasNombre;
+  const centroVertical = (filasTotales - 1) / 2;
+
   const columnas = [];
   for (let c = 0; c < totalColumnas; c++) {
     const columnaTexto = c - margen;
-    // Cada columna tiene su propio "caudal": si todas pesaran igual el
-    // conjunto se lee como un párrafo macizo, no como streams separados.
-    const caudal = (0.65 + Math.random() * 0.35) * atenuacionLateral(columnaTexto);
+    const esMargen = columnaTexto < 0 || columnaTexto >= columnasTexto;
     const alcance = alturaDeOnda(c, totalColumnas);
     const celdas = [];
+
+    // Las columnas de margen no tienen nombre que revelar: son un único
+    // trazo que nace en el centro vertical del campo y se va cerrando
+    // hacia arriba y abajo — el mismo perfil en las dos fases (apenas más
+    // tenue en la de revelado), para que se lea como el final natural de
+    // la onda y no como un bloque rectangular pegado al costado.
+    if (esMargen) {
+      const atenuacion = atenuacionLateral(columnaTexto);
+      for (let i = 0; i < filasTotales; i++) {
+        const distancia = Math.abs(i - centroVertical);
+        const caracter = elegir(CARACTERES_LLUVIA);
+        if (distancia > alcance) {
+          celdas.push(celda(caracter, 0, 0));
+          continue;
+        }
+        const t = distancia / (alcance + 1);
+        const variacion = 0.82 + Math.random() * 0.18;
+        const magnitud = (1 - t) ** 1.15 * variacion * atenuacion;
+        celdas.push(celda(caracter, magnitud, magnitud * BRILLO_FONDO_REVELADO));
+      }
+      columnas.push(celdas);
+      continue;
+    }
+
+    // Cada columna tiene su propio "caudal": si todas pesaran igual el
+    // conjunto se lee como un párrafo macizo, no como streams separados.
+    const caudal = 0.65 + Math.random() * 0.35;
 
     // t: 0 pegado al nombre, 1 en la punta de ESTA columna — el decaimiento
     // es relativo a su propia altura, así todas se apagan justo en su punta.
@@ -188,9 +215,8 @@ function generarCampo(calco) {
       const t = distancia / (alcance + 1);
       const variacion = 0.82 + Math.random() * 0.18;
 
-      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo (y
-      // hacia los costados, en las columnas de margen).
-      const enOnda = (1 - t) ** 1.15 * variacion * atenuacionLateral(columnaTexto);
+      // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo.
+      const enOnda = (1 - t) ** 1.15 * variacion;
       // Fase 2: además se abre en el medio. El seno vale 0 en las dos
       // puntas y máximo a mitad de camino, así el nombre queda despejado
       // y la onda sigue leyéndose como fondo.
@@ -202,21 +228,17 @@ function generarCampo(calco) {
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
-      const enOnda = 0.82 + Math.random() * 0.18 * atenuacionLateral(columnaTexto);
+      const enOnda = 0.82 + Math.random() * 0.18;
       if (esGlifo(columnaTexto, f)) {
         // El nombre queda excluido de la apertura del medio: es lo único
         // que sube a opacidad plena en la fase 2.
         celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1));
-      } else if (columnaTexto >= 0 && columnaTexto < columnasTexto) {
+      } else {
         // Huecos entre las letras: caracteres sueltos apenas perceptibles.
         const suelto = Math.random() < 0.4;
         celdas.push(
           celda(elegir(CARACTERES_LLUVIA), enOnda, suelto ? 0.12 + Math.random() * 0.1 : 0)
         );
-      } else {
-        // Margen lateral, a la altura del nombre: sigue siendo onda de
-        // fondo, no huecos del nombre.
-        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, enOnda * 0.5));
       }
     }
 
