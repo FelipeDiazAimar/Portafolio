@@ -1,10 +1,11 @@
 'use client';
 
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
+import NombreAscii from '@/components/NombreAscii/NombreAscii.jsx';
 import styles from './HeroInmersivo.module.css';
 
 const SECCIONES = [
-  { id: 'inicio', titulo: 'Bienvenido' },
+  { id: 'inicio' },
   { id: 'sobre-mi', titulo: 'Sobre Mí' },
   { id: 'proyectos', titulo: 'Mis Proyectos' },
   { id: 'experiencia', titulo: 'Experiencia Laboral' },
@@ -24,7 +25,11 @@ export default function HeroInmersivo() {
             seccion.id === seccionActiva ? styles.activa : ''
           }`}
         >
-          <span className={styles.titulo}>{seccion.titulo}</span>
+          {seccion.id === 'inicio' ? (
+            <NombreAscii />
+          ) : (
+            <span className={styles.titulo}>{seccion.titulo}</span>
+          )}
         </div>
       ))}
     </div>

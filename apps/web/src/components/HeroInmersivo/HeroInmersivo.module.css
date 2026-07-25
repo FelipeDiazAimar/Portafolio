@@ -36,6 +36,8 @@
 }
 
 .capa-inicio {
+  justify-content: flex-start;
+  padding-left: clamp(2rem, 8vw, 6rem);
   background: linear-gradient(135deg, #1a1c22 0%, #2b2f3a 100%);
 }
 
