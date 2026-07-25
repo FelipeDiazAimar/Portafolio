@@ -103,9 +103,17 @@ export default function Header() {
     contenedor.style.setProperty('--raton-y', `${evento.clientY - rect.top}px`);
   }
 
+  // El <header> es sticky, así que ocupa espacio real en el flujo: #inicio
+  // no arranca en el tope del documento sino justo debajo del header, y el
+  // scroll nativo del ancla se quedaba corto. Forzamos scroll a 0 directo.
+  function irAlInicio(evento) {
+    evento.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   return (
     <header className={styles.header}>
-      <a href="#inicio" className={styles.logo}>
+      <a href="#inicio" onClick={irAlInicio} className={styles.logo}>
         {mostrarNombreDescifrado ? (
           <TextoDescifrado
             texto="</>"
