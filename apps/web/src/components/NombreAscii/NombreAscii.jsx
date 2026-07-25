@@ -207,7 +207,6 @@ function generarCampo(calco) {
     // la onda y no como un bloque rectangular pegado al costado.
     if (esMargen) {
       const atenuacion = atenuacionHorizontalGlobal(c);
-      const distHorizontal = distanciaHorizontalGlobal(c);
       // tBorde: 0 pegado al borde del texto, 1 en la punta del margen — el
       // techo de altura baja gradualmente desde la escala del nombre hasta
       // la escala normal de la lluvia. Es un concepto distinto de la
@@ -230,12 +229,10 @@ function generarCampo(calco) {
         const t = distancia / (alcance + 1);
         const variacion = 0.82 + Math.random() * 0.18;
         const magnitud = (1 - t) ** 1.15 * variacion * atenuacion;
-        // En la fase 2 sólo queda el nombre: el margen entero se apaga, más
-        // lejos primero — en la misma escala horizontal que usan las
-        // columnas de texto, para que el cierre lateral y el vertical
-        // terminen juntos.
-        const distanciaRevelado = Math.max(t, distHorizontal);
-        celdas.push(celda(caracter, magnitud, 0, false, distanciaRevelado));
+        // En la fase 2 sólo queda el nombre: el barrido es vertical (desde
+        // arriba y desde abajo hacia el centro), no lateral — la punta de
+        // CADA trazo de margen se apaga primero, su propio centro al final.
+        celdas.push(celda(caracter, magnitud, 0, false, t));
       }
       columnas.push(celdas);
       continue;
@@ -271,11 +268,10 @@ function generarCampo(calco) {
       // Fase 1: sólido en el centro, se desvanece hacia arriba y abajo, y
       // el apagado lateral se suma recién a medida que se aleja del nombre.
       const enOnda = (1 - t) ** 1.15 * variacion * atenuacionHorizontalEnT(t);
-      // Fase 2: sólo queda el nombre — el resto del campo termina en 0.
-      // Lo lejano (en vertical o en horizontal) se apaga primero.
-      const distanciaRevelado = Math.max(t, distHorizontal);
-
-      return celda(caracter, enOnda, 0, false, distanciaRevelado);
+      // Fase 2: sólo queda el nombre — el resto del campo termina en 0. El
+      // barrido es vertical (desde arriba y desde abajo hacia el centro),
+      // no lateral: lo que está más lejos EN ALTURA se apaga primero.
+      return celda(caracter, enOnda, 0, false, t);
     }
 
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
@@ -291,9 +287,9 @@ function generarCampo(calco) {
         // cambio periódico de caracteres, para que no titile.
         celdas.push(celda(elegir(CARACTERES_DENSOS), enOnda, 1, true, 0));
       } else {
-        // Huecos entre las letras: caracteres sueltos apenas perceptibles
-        // en la fase 1, que se apagan junto con el resto del campo en la 2.
-        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, distHorizontal));
+        // Huecos entre las letras: a la altura del nombre, así que el
+        // barrido vertical los deja para el final igual que a los glifos.
+        celdas.push(celda(elegir(CARACTERES_LLUVIA), enOnda, 0, false, 0));
       }
     }
 
