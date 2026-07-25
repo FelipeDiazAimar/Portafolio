@@ -1,5 +1,6 @@
 .seccionHero {
   height: 100vh;
+  pointer-events: none;
 }
 
 .seccion {
