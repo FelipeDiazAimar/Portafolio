@@ -6,22 +6,6 @@
   min-height: 15rem;
 }
 
-.botonReiniciar {
-  position: fixed;
-  bottom: 1rem;
-  left: 1rem;
-  z-index: 9998;
-  pointer-events: auto;
-  padding: 0.4rem 0.75rem;
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  color: var(--color-fg);
-  background: rgba(255, 0, 0, 0.15);
-  border: 1px dashed rgba(255, 0, 0, 0.5);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
 .soloLectura {
   position: absolute;
   width: 1px;

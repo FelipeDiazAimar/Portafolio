@@ -108,7 +108,7 @@ export default function Header() {
       <a href="#inicio" className={styles.logo}>
         {mostrarNombreDescifrado ? (
           <TextoDescifrado
-            texto="Felipe Diaz Aimar"
+            texto="</>"
             activarCon="inViewHover"
             secuencial
             direccionRevelado="start"
@@ -118,8 +118,27 @@ export default function Header() {
             encryptedClassName={styles.logoEncriptado}
           />
         ) : (
-          'Felipe Diaz Aimar'
+          '</>'
         )}
+        {/* El nombre ya aparece en el ASCII de la sección inicio: acá se
+            oculta mientras esa sección está a la vista y sólo se muestra
+            cuando se scrollea a otra, para no duplicarlo. */}
+        <span className={`${styles.logoNombre} ${estaScrolleado ? styles.logoNombreVisible : ''}`}>
+          {mostrarNombreDescifrado ? (
+            <TextoDescifrado
+              texto="Felipe Diaz Aimar"
+              activarCon="inViewHover"
+              secuencial
+              direccionRevelado="start"
+              caracteres="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=<>/\|"
+              velocidad={35}
+              className={styles.logoRevelado}
+              encryptedClassName={styles.logoEncriptado}
+            />
+          ) : (
+            'Felipe Diaz Aimar'
+          )}
+        </span>
       </a>
 
       <AnimatePresence mode="popLayout" initial={false}>

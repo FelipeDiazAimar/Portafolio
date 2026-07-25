@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import styles from './NombreAscii.module.css';
 
 const DEMORA_INICIO_MS = 3300;
@@ -367,14 +366,12 @@ export default function NombreAscii() {
   // 'oculto' -> 'onda' -> 'revelado' -> 'desvanecido'
   const [fase, setFase] = useState('oculto');
   const [campo, setCampo] = useState(null);
-  const [montado, setMontado] = useState(false);
 
   // Espejo de `fase` para leerla desde listeners sin re-suscribirlos.
   const refFase = useRef(fase);
   refFase.current = fase;
 
   useEffect(() => {
-    setMontado(true);
     const temporizador = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizador);
   }, []);
@@ -480,12 +477,6 @@ export default function NombreAscii() {
     return () => clearInterval(intervalo);
   }, [fase]);
 
-  function reiniciar() {
-    setCampo(null);
-    setFase('oculto');
-    setEmpezar(true);
-  }
-
   return (
     <div className={styles.contenedor} ref={refContenedor}>
       <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
@@ -525,15 +516,6 @@ export default function NombreAscii() {
           ))}
         </div>
       )}
-
-      {/* TEMPORAL: solo para probar la animación sin recargar la página. Sacar después. */}
-      {montado &&
-        createPortal(
-          <button type="button" onClick={reiniciar} className={styles.botonReiniciar}>
-            Reiniciar animación
-          </button>,
-          document.body
-        )}
     </div>
   );
 }
