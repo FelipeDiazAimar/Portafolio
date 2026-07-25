@@ -1,216 +1,262 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './NombreAscii.module.css';
 
 const DEMORA_INICIO_MS = 3300;
-const DEMORA_POR_COLUMNA_MS = 30;
-const DURACION_COLUMNA_MS = 500;
-const TAMANO_FUENTE_NOMBRE_PX = 80;
-const FILAS_RELLENO = 10;
-const DENSIDAD_RELLENO = 0.8;
-const CARACTERES_RELLENO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-const LINEAS = ['Felipe', 'Diaz Aimar'];
+const DURACION_MATERIALIZADO_MS = 450;
+const DISPERSION_DEMORA_MS = 900;
+const ESPERA_ANTES_DE_LIMPIAR_MS = 1600;
 
-// Mide cuántos px de ancho ocupa un carácter monoespaciado en relación a
-// su alto (con line-height 1) — así la grilla de sampleo tiene la MISMA
-// proporción que el <pre> real y el ASCII no sale estirado ni achatado.
+// Cuántas filas de lluvia se agregan arriba y abajo del nombre.
+const FILAS_LLUVIA = 14;
+
+// El relleno del nombre usa caracteres "gordos" para que el cuerpo de las
+// letras se lea macizo; la lluvia usa símbolos sueltos tipo data flow.
+const CARACTERES_DENSOS = '█MW#@$&B8';
+const CARACTERES_LLUVIA = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789!?*/|:;<>=+-_%$#@&^~';
+
+function elegir(alfabeto) {
+  return alfabeto[Math.floor(Math.random() * alfabeto.length)];
+}
+
+// Ancho de un carácter monoespaciado relativo a su alto (con line-height 1).
+// Lo necesitamos para que la celda de sampleo tenga exactamente la misma
+// proporción que el carácter renderizado — si no, el ASCII sale estirado.
 function medirRatioMonoespaciado() {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const ctx = document.createElement('canvas').getContext('2d');
   const referencia = 100;
   ctx.font = `${referencia}px monospace`;
   return ctx.measureText('0').width / referencia;
 }
 
-function caracterAleatorio() {
-  return CARACTERES_RELLENO[Math.floor(Math.random() * CARACTERES_RELLENO.length)];
-}
+// Calca el texto limpio TAL COMO EL NAVEGADOR LO DIBUJA: lee la posición y
+// la tipografía real de cada línea del DOM y las repinta en un canvas del
+// mismo tamaño. Así la grilla resultante se superpone pixel a pixel con el
+// texto final, en vez de ser un dibujo aparte que hay que adivinar dónde va.
+function calcarTextoLimpio(elementoLimpio, contenedor) {
+  const lineas = Array.from(elementoLimpio.children);
+  if (lineas.length === 0) return null;
 
-// Genera la grilla completa (por filas): relleno disperso arriba, el
-// nombre calcado del canvas (según el canal alfa de cada celda), y más
-// relleno abajo. Devuelve también qué porcentaje de la altura total
-// ocupa el relleno, para que las franjas de degradado cubran esa zona.
-function generarGrillaAscii(fontFamily) {
-  const ratioMonoespaciado = medirRatioMonoespaciado();
+  const rectContenedor = contenedor.getBoundingClientRect();
+  const rects = lineas.map((linea) => linea.getBoundingClientRect());
+
+  const izquierda = Math.min(...rects.map((r) => r.left));
+  const arriba = Math.min(...rects.map((r) => r.top));
+  const derecha = Math.max(...rects.map((r) => r.right));
+  const abajo = Math.max(...rects.map((r) => r.bottom));
+
+  const ancho = Math.ceil(derecha - izquierda);
+  const alto = Math.ceil(abajo - arriba);
+  if (ancho <= 0 || alto <= 0) return null;
+
   const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  const pesoFuente = 800;
-
-  ctx.font = `${pesoFuente} ${TAMANO_FUENTE_NOMBRE_PX}px ${fontFamily}`;
-  const altoLinea = TAMANO_FUENTE_NOMBRE_PX * 1.15;
-  const anchoMaximo = Math.max(...LINEAS.map((linea) => ctx.measureText(linea).width));
-
-  canvas.width = Math.ceil(anchoMaximo) + 4;
-  canvas.height = Math.ceil(altoLinea * LINEAS.length);
-
-  // Redimensionar el canvas resetea el contexto: hay que reaplicar el font.
-  ctx.font = `${pesoFuente} ${TAMANO_FUENTE_NOMBRE_PX}px ${fontFamily}`;
+  canvas.width = ancho;
+  canvas.height = alto;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.fillStyle = '#fff';
-  ctx.textBaseline = 'top';
-  LINEAS.forEach((linea, indice) => ctx.fillText(linea, 0, indice * altoLinea));
+  ctx.textBaseline = 'alphabetic';
 
-  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  lineas.forEach((linea, indice) => {
+    const estilo = getComputedStyle(linea);
+    ctx.font = `${estilo.fontStyle} ${estilo.fontWeight} ${estilo.fontSize} ${estilo.fontFamily}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = estilo.letterSpacing;
 
-  const celdaAlto = 11;
-  const celdaAncho = Math.max(1, Math.round(celdaAlto * ratioMonoespaciado));
-  const numColumnas = Math.floor(width / celdaAncho);
-  const filasNombre = Math.floor(height / celdaAlto);
+    const rect = rects[indice];
+    const metricas = ctx.measureText(linea.textContent);
+    const ascendente = metricas.fontBoundingBoxAscent ?? metricas.actualBoundingBoxAscent;
+    const descendente = metricas.fontBoundingBoxDescent ?? metricas.actualBoundingBoxDescent;
+    // El glifo se apoya en la línea base, que va centrada dentro de la caja
+    // de línea (rect.height incluye el line-height, no sólo el glifo).
+    const lineaBase = rect.top - arriba + (rect.height - (ascendente + descendente)) / 2 + ascendente;
+    ctx.fillText(linea.textContent, rect.left - izquierda, lineaBase);
+  });
 
-  function filaDelNombre(fila) {
-    let texto = '';
-    for (let columna = 0; columna < numColumnas; columna++) {
-      const x = Math.min(width - 1, Math.floor(columna * celdaAncho + celdaAncho / 2));
-      const y = Math.min(height - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
-      const alpha = data[(y * width + x) * 4 + 3];
-      texto += alpha > 128 ? caracterAleatorio() : ' ';
-    }
-    return texto;
-  }
+  const tamanoFuente = parseFloat(getComputedStyle(lineas[0]).fontSize);
 
-  function filaDeRelleno() {
-    let texto = '';
-    for (let columna = 0; columna < numColumnas; columna++) {
-      texto += Math.random() < DENSIDAD_RELLENO ? caracterAleatorio() : ' ';
-    }
-    return texto;
-  }
-
-  const filas = [];
-  for (let i = 0; i < FILAS_RELLENO; i++) filas.push(filaDeRelleno());
-  for (let fila = 0; fila < filasNombre; fila++) filas.push(filaDelNombre(fila));
-  for (let i = 0; i < FILAS_RELLENO; i++) filas.push(filaDeRelleno());
-
-  const porcentajeRelleno = (FILAS_RELLENO / filas.length) * 100;
-
-  return { filas, porcentajeRelleno };
+  return {
+    pixeles: ctx.getImageData(0, 0, ancho, alto),
+    ancho,
+    alto,
+    tamanoFuente,
+    izquierda: izquierda - rectContenedor.left,
+    arriba: arriba - rectContenedor.top,
+  };
 }
 
-// Da vuelta la grilla de filas a columnas: cada string resultante se lee
-// de arriba hacia abajo en una posición horizontal fija — son las
-// "líneas verticales" que se animan como streams independientes, en vez
-// de un párrafo que se revela línea por línea.
-function transponerAColumnas(filas) {
-  const numColumnas = filas[0]?.length ?? 0;
+// Arma las columnas verticales: cada una es un stream independiente que
+// atraviesa la zona del nombre. Dentro del nombre los caracteres son densos
+// y opacos; fuera, la lluvia pierde densidad y opacidad a medida que se
+// aleja verticalmente — el degradado es por carácter, no una franja encima.
+function generarCampo(calco) {
+  const { pixeles, ancho, alto, tamanoFuente, izquierda, arriba } = calco;
+  const { data } = pixeles;
+
+  const celdaAlto = Math.max(5, Math.round(tamanoFuente / 9));
+  const celdaAncho = celdaAlto * medirRatioMonoespaciado();
+
+  const totalColumnas = Math.floor(ancho / celdaAncho);
+  const filasNombre = Math.floor(alto / celdaAlto);
+  if (totalColumnas <= 0 || filasNombre <= 0) return null;
+
+  function esGlifo(columna, fila) {
+    const x = Math.min(ancho - 1, Math.floor(columna * celdaAncho + celdaAncho / 2));
+    const y = Math.min(alto - 1, Math.floor(fila * celdaAlto + celdaAlto / 2));
+    return data[(y * ancho + x) * 4 + 3] > 128;
+  }
+
+  // t: 0 pegado al nombre, 1 en el borde exterior del campo.
+  function celdaDeLluvia(distancia) {
+    const t = distancia / (FILAS_LLUVIA + 1);
+    const densidad = 0.9 * (1 - t) + 0.06;
+    if (Math.random() > densidad) return { caracter: ' ', opacidad: 0 };
+    return { caracter: elegir(CARACTERES_LLUVIA), opacidad: Math.max(0.04, (1 - t) ** 1.6) };
+  }
+
   const columnas = [];
-  for (let c = 0; c < numColumnas; c++) {
-    let columna = '';
-    for (let f = 0; f < filas.length; f++) {
-      columna += filas[f][c] ?? ' ';
+  for (let c = 0; c < totalColumnas; c++) {
+    const celdas = [];
+
+    for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
+
+    for (let f = 0; f < filasNombre; f++) {
+      if (esGlifo(c, f)) {
+        celdas.push({ caracter: elegir(CARACTERES_DENSOS), opacidad: 1 });
+      } else {
+        // Huecos entre letras: apenas un rastro de lluvia para no comerse
+        // la legibilidad del nombre.
+        celdas.push(
+          Math.random() < 0.3
+            ? { caracter: elegir(CARACTERES_LLUVIA), opacidad: 0.16 }
+            : { caracter: ' ', opacidad: 0 }
+        );
+      }
     }
-    columnas.push(columna);
+
+    for (let d = 1; d <= FILAS_LLUVIA; d++) celdas.push(celdaDeLluvia(d));
+
+    // Demora aleatoria por carácter: el campo "se materializa" como estática,
+    // sin ninguna línea que barra en una dirección.
+    columnas.push(
+      celdas.map((celda) => ({ ...celda, demora: Math.random() * DISPERSION_DEMORA_MS }))
+    );
   }
-  return columnas;
+
+  return {
+    columnas,
+    tamanoCelda: celdaAlto,
+    izquierda,
+    arriba: arriba - FILAS_LLUVIA * celdaAlto,
+  };
 }
 
-function AsciiAnimado({ formado, onFormado, onGrilla }) {
-  const [columnas, setColumnas] = useState(null);
+export default function NombreAscii() {
+  const refContenedor = useRef(null);
+  const refLimpio = useRef(null);
+
+  const [empezar, setEmpezar] = useState(false);
+  const [formado, setFormado] = useState(false);
+  const [campo, setCampo] = useState(null);
+  const [montado, setMontado] = useState(false);
 
   useEffect(() => {
+    setMontado(true);
+    const temporizador = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
+    return () => clearTimeout(temporizador);
+  }, []);
+
+  const construirCampo = useCallback(() => {
+    if (!refContenedor.current || !refLimpio.current) return;
+    const calco = calcarTextoLimpio(refLimpio.current, refContenedor.current);
+    if (!calco) return;
+    setCampo(generarCampo(calco));
+  }, []);
+
+  useEffect(() => {
+    if (!empezar || formado) return;
     let cancelado = false;
 
     document.fonts.ready.then(() => {
-      if (cancelado) return;
-      const fontFamily = getComputedStyle(document.body).fontFamily;
-      const { filas, porcentajeRelleno } = generarGrillaAscii(fontFamily);
-      setColumnas(transponerAColumnas(filas));
-      onGrilla(porcentajeRelleno);
+      if (!cancelado) construirCampo();
     });
 
     return () => {
       cancelado = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [empezar, formado, construirCampo]);
+
+  // El tamaño del nombre depende del viewport (clamp con vw), así que si
+  // cambia hay que recalcar: si no, el ASCII queda corrido respecto al texto.
+  useEffect(() => {
+    if (!empezar || formado) return;
+    let temporizador;
+    function alRedimensionar() {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(construirCampo, 150);
+    }
+    window.addEventListener('resize', alRedimensionar);
+    return () => {
+      window.removeEventListener('resize', alRedimensionar);
+      clearTimeout(temporizador);
+    };
+  }, [empezar, formado, construirCampo]);
 
   useEffect(() => {
-    if (!columnas) return;
-    const duracionTotal = columnas.length * DEMORA_POR_COLUMNA_MS + DURACION_COLUMNA_MS;
-    const temporizadorFin = setTimeout(onFormado, duracionTotal);
-    return () => clearTimeout(temporizadorFin);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnas]);
-
-  if (!columnas) return null;
-
-  return (
-    <div className={`${styles.ascii} ${formado ? styles.oculto : ''}`} aria-hidden="true">
-      {columnas.map((columnaTexto, indiceColumna) => (
-        <span
-          key={indiceColumna}
-          className={styles.columna}
-          style={{ animationDelay: `${indiceColumna * DEMORA_POR_COLUMNA_MS}ms` }}
-        >
-          {columnaTexto.split('').map((caracter, indiceFila) => (
-            <span key={indiceFila} className={styles.caracter}>
-              {caracter}
-            </span>
-          ))}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-export default function NombreAscii() {
-  const [empezar, setEmpezar] = useState(false);
-  const [formado, setFormado] = useState(false);
-  const [intento, setIntento] = useState(0);
-  const [montado, setMontado] = useState(false);
-  const [porcentajeRelleno, setPorcentajeRelleno] = useState(35);
-
-  useEffect(() => {
-    const temporizadorInicio = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
-    return () => clearTimeout(temporizadorInicio);
-  }, []);
-
-  useEffect(() => {
-    setMontado(true);
-  }, []);
+    if (!campo || formado) return;
+    const total =
+      DISPERSION_DEMORA_MS + DURACION_MATERIALIZADO_MS + ESPERA_ANTES_DE_LIMPIAR_MS;
+    const temporizador = setTimeout(() => setFormado(true), total);
+    return () => clearTimeout(temporizador);
+  }, [campo, formado]);
 
   function reiniciar() {
+    setCampo(null);
     setFormado(false);
     setEmpezar(true);
-    setIntento((valor) => valor + 1);
   }
 
   return (
-    <div className={styles.contenedor}>
+    <div className={styles.contenedor} ref={refContenedor}>
       <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
 
-      {empezar && (
-        <AsciiAnimado
-          key={intento}
-          formado={formado}
-          onFormado={() => setFormado(true)}
-          onGrilla={setPorcentajeRelleno}
-        />
-      )}
-
-      <div className={`${styles.textoLimpio} ${formado ? styles.visible : ''}`} aria-hidden="true">
+      <div
+        ref={refLimpio}
+        className={`${styles.textoLimpio} ${formado ? styles.visible : ''}`}
+        aria-hidden="true"
+      >
         <span>Felipe</span>
         <span>Diaz Aimar</span>
       </div>
 
-      {/* Más transparente lejos del nombre (bordes), más opaco (tapado)
-          cerca del nombre, en el medio. */}
-      <div
-        className={styles.franja}
-        style={{
-          top: 0,
-          height: formado ? '0%' : `${porcentajeRelleno}%`,
-          background: 'linear-gradient(to bottom, transparent 0%, var(--color-bg) 100%)',
-        }}
-      />
-      <div
-        className={styles.franja}
-        style={{
-          bottom: 0,
-          height: formado ? '0%' : `${porcentajeRelleno}%`,
-          background: 'linear-gradient(to top, transparent 0%, var(--color-bg) 100%)',
-        }}
-      />
+      {campo && (
+        <div
+          className={`${styles.ascii} ${formado ? styles.oculto : ''}`}
+          aria-hidden="true"
+          style={{
+            left: `${campo.izquierda}px`,
+            top: `${campo.arriba}px`,
+            fontSize: `${campo.tamanoCelda}px`,
+          }}
+        >
+          {campo.columnas.map((celdas, indiceColumna) => (
+            <span key={indiceColumna} className={styles.columna}>
+              {celdas.map((celda, indiceCelda) => (
+                <span
+                  key={indiceCelda}
+                  className={styles.caracter}
+                  style={{
+                    '--opacidad': celda.opacidad,
+                    animationDelay: `${celda.demora}ms`,
+                  }}
+                >
+                  {celda.caracter}
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* TEMPORAL: solo para probar la animación sin recargar la página. Sacar después. */}
       {montado &&

@@ -33,51 +33,14 @@
   border: 0;
 }
 
-.ascii {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  margin: 0;
-  font-family: monospace;
-  font-size: clamp(7px, 0.85vw, 10px);
-  line-height: 1;
-  color: #000;
-  white-space: pre;
-  opacity: 1;
-  transition: opacity 0.6s ease;
-}
-
-.ascii.oculto {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.columna {
-  display: flex;
-  flex-direction: column;
-}
-
-.caracter {
-  display: block;
-  opacity: 0;
-  transform: translateY(-6px);
-  animation: caracterAparece 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes caracterAparece {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .textoLimpio {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
+  /* flex-start (y no stretch) para que cada <span> mida exactamente lo que
+     mide su texto: el calco del ASCII se basa en ese rect. */
+  align-items: flex-start;
   justify-content: center;
   font-family: var(--font-sans);
   font-weight: 800;
@@ -93,11 +56,49 @@
   opacity: 1;
 }
 
-.franja {
+/* El campo se posiciona por JS (left/top/font-size calculados) para caer
+   exactamente sobre el texto limpio. */
+.ascii {
   position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 2;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin: 0;
+  font-family: monospace;
+  line-height: 1;
+  color: var(--color-fg);
+  white-space: pre;
   pointer-events: none;
-  transition: height 1s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  transition: opacity 0.6s ease;
+}
+
+.ascii.oculto {
+  opacity: 0;
+}
+
+.columna {
+  display: flex;
+  flex-direction: column;
+}
+
+.caracter {
+  display: block;
+  opacity: 0;
+  animation: caracterMaterializa 0.45s ease forwards;
+}
+
+/* Cada carácter llega a SU propia opacidad final (más tenue cuanto más
+   lejos del nombre), en vez de taparse con una franja de degradado. */
+@keyframes caracterMaterializa {
+  to {
+    opacity: var(--opacidad);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caracter {
+    animation-duration: 0.01ms;
+    animation-delay: 0ms !important;
+  }
 }
