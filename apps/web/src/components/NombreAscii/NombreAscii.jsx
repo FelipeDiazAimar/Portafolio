@@ -263,7 +263,11 @@ function generarCampo(calco) {
     for (let d = FILAS_LLUVIA; d >= 1; d--) celdas.push(celdaDeLluvia(d));
 
     for (let f = 0; f < filasNombre; f++) {
-      const enOnda = 0.82 + Math.random() * 0.18;
+      // Sin este factor, la banda del nombre quedaba pareja de punta a
+      // punta en la fase 1 — un rectángulo opaco de bordes duros justo en
+      // medio de una onda que sí se degrada. Con él, sus costados se apagan
+      // igual que la lluvia de arriba/abajo y deja de desentonar.
+      const enOnda = (0.82 + Math.random() * 0.18) * atenuacionHorizontal;
       if (esGlifo(columnaTexto, f)) {
         // El nombre queda excluido de la apertura del medio: es lo único
         // que sube a opacidad plena en la fase 2. `esNombre` también lo
