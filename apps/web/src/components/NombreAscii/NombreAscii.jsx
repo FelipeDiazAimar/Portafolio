@@ -107,7 +107,11 @@ function calcarTextoLimpio(elementoLimpio, contenedor) {
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'alphabetic';
 
-  lineas.forEach((linea, indice) => {
+  // Se guardan las mismas métricas con las que se calca, porque el colapso
+  // necesita repintar el texto limpio sobre SU canvas: mientras el efecto
+  // corre, el nombre se dibuja ahí (no en el DOM) para poder agujerearlo
+  // celda por celda a medida que el mouse lo va rompiendo.
+  const lineasCalcadas = lineas.map((linea, indice) => {
     const estilo = getComputedStyle(linea);
     ctx.font = `${estilo.fontStyle} ${estilo.fontWeight} ${estilo.fontSize} ${estilo.fontFamily}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = estilo.letterSpacing;
@@ -119,7 +123,10 @@ function calcarTextoLimpio(elementoLimpio, contenedor) {
     // El glifo se apoya en la línea base, que va centrada dentro de la caja
     // de línea (rect.height incluye el line-height, no sólo el glifo).
     const lineaBase = rect.top - arriba + (rect.height - (ascendente + descendente)) / 2 + ascendente;
-    ctx.fillText(linea.textContent, rect.left - izquierda, lineaBase);
+    const x = rect.left - izquierda;
+    ctx.fillText(linea.textContent, x, lineaBase);
+
+    return { texto: linea.textContent, fuente: ctx.font, espaciado: estilo.letterSpacing, x, lineaBase };
   });
 
   const tamanoFuente = parseFloat(getComputedStyle(lineas[0]).fontSize);
@@ -129,6 +136,7 @@ function calcarTextoLimpio(elementoLimpio, contenedor) {
     ancho,
     alto,
     tamanoFuente,
+    lineas: lineasCalcadas,
     izquierda: izquierda - rectContenedor.left,
     arriba: arriba - rectContenedor.top,
   };
@@ -343,6 +351,11 @@ function generarCampo(calco) {
     paso,
     izquierda: izquierda - margen * paso,
     arriba: arriba - FILAS_LLUVIA * celdaAlto,
+    // Origen y métricas del texto limpio SIN los corrimientos de arriba: el
+    // colapso repinta el nombre sobre su canvas y necesita la caja real.
+    textoIzquierda: izquierda,
+    textoArriba: arriba,
+    lineasLimpias: calco.lineas,
   };
 }
 

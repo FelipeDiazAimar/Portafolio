@@ -10,14 +10,16 @@ export const ALTO_ESCOBA = 70;
 const FUERA_DE_ESCENA = -9999;
 
 // Un cuerpo por celda de glifo, en la posición exacta que ocupa hoy el
-// carácter en pantalla. Nacen dinámicos: el pedido es que la pila entera se
-// derrumbe al tocarla, no sólo la parte que roza el cursor.
+// carácter en pantalla. Nacen ESTÁTICOS: el nombre queda colgado y sólo se
+// desprende lo que el mouse toca (`liberarCuerpo`); el resto sigue en su
+// lugar. Como el cursor también es estático, pasar por encima de una celda
+// todavía no liberada no produce ninguna colisión.
 export function crearMundo({ ancho, alto, celdas, anchoCaracter, altoCaracter }) {
   const motor = Engine.create();
-  motor.gravity.y = 1;
 
   const cuerposDeCaracteres = celdas.map((celda) =>
     Bodies.rectangle(celda.x, celda.y, anchoCaracter, altoCaracter, {
+      isStatic: true,
       friction: 0.4,
       restitution: 0.15,
       // Las celdas son de pocos px: con el slop por defecto (0.05) se
@@ -82,14 +84,10 @@ export function colocarSinImpulso(cuerpo, x, y) {
   Body.setPosition(cuerpo, { x, y });
 }
 
-// Fracción de piezas prácticamente quietas — dispara la entrada del stickman.
-export function fraccionQuieta(cuerpos, umbralVelocidad = 0.4) {
-  if (cuerpos.length === 0) return 1;
-  let quietas = 0;
-  for (const cuerpo of cuerpos) {
-    if (cuerpo.speed < umbralVelocidad) quietas += 1;
-  }
-  return quietas / cuerpos.length;
+// Desprende una celda: pasa de colgada a caer con gravedad. Sólo se llama
+// para las que el mouse efectivamente tocó.
+export function liberarCuerpo(cuerpo) {
+  Body.setStatic(cuerpo, false);
 }
 
 export function destruirMundo(motor) {
