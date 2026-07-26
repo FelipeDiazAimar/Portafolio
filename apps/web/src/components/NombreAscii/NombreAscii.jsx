@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './NombreAscii.module.css';
+import ColapsoFisico from '@/components/ColapsoFisico/ColapsoFisico.jsx';
 
 const DEMORA_INICIO_MS = 3300;
 
@@ -327,6 +328,9 @@ function generarCampo(calco) {
     columnas,
     tamanoCelda: celdaAlto,
     separacion,
+    // Distancia entre columnas (ancho de carácter + separación). La usa
+    // ColapsoFisico para ubicar cada celda en píxeles sin medir el DOM.
+    paso,
     izquierda: izquierda - margen * paso,
     arriba: arriba - FILAS_LLUVIA * celdaAlto,
   };
@@ -366,6 +370,10 @@ export default function NombreAscii() {
   // 'oculto' -> 'onda' -> 'revelado' -> 'desvanecido'
   const [fase, setFase] = useState('oculto');
   const [campo, setCampo] = useState(null);
+  const [colapso, setColapso] = useState(null);
+  // Tras un colapso hay que salir del área y volver a entrar para
+  // re-disparar: si no, quedarse quieto encima lo relanzaría en loop.
+  const refEsperandoSalida = useRef(false);
 
   // Espejo de `fase` para leerla desde listeners sin re-suscribirlos.
   const refFase = useRef(fase);
@@ -477,13 +485,49 @@ export default function NombreAscii() {
     return () => clearInterval(intervalo);
   }, [fase]);
 
+  // La detección NO usa eventos del DOM del nombre: .capa tiene
+  // pointer-events:none, el hero está en z-index:-1 y .seccionHero también
+  // anula punteros — es la cascada que ya rompió el botón de prueba durante
+  // la fase 1. Se compara la posición del cursor contra el rect medido.
+  useEffect(() => {
+    if (fase !== 'desvanecido' || colapso) return undefined;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    function alMoverse(evento) {
+      const nodo = refLimpio.current;
+      if (!nodo) return;
+      const rect = nodo.getBoundingClientRect();
+      const adentro =
+        evento.clientX >= rect.left &&
+        evento.clientX <= rect.right &&
+        evento.clientY >= rect.top &&
+        evento.clientY <= rect.bottom;
+
+      if (!adentro) {
+        refEsperandoSalida.current = false;
+        return;
+      }
+      if (refEsperandoSalida.current) return;
+      setColapso({
+        x: evento.clientX + window.scrollX,
+        y: evento.clientY + window.scrollY,
+      });
+    }
+
+    window.addEventListener('mousemove', alMoverse, { passive: true });
+    return () => window.removeEventListener('mousemove', alMoverse);
+  }, [fase, colapso]);
+
   return (
     <div className={styles.contenedor} ref={refContenedor}>
       <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
 
       <div
         ref={refLimpio}
-        className={`${styles.textoLimpio} ${fase === 'desvanecido' ? styles.visible : ''}`}
+        className={`${styles.textoLimpio} ${
+          fase === 'desvanecido' && !colapso ? styles.visible : ''
+        }`}
         aria-hidden="true"
       >
         <span>Felipe</span>
@@ -515,6 +559,18 @@ export default function NombreAscii() {
             </span>
           ))}
         </div>
+      )}
+
+      {colapso && campo && (
+        <ColapsoFisico
+          campo={campo}
+          refContenedor={refContenedor}
+          posicionInicialRaton={colapso}
+          alTerminar={() => {
+            refEsperandoSalida.current = true;
+            setColapso(null);
+          }}
+        />
       )}
     </div>
   );
