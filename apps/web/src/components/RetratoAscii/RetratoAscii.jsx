@@ -55,7 +55,7 @@ export default function RetratoAscii() {
     const lienzo = refLienzo.current;
     const marco = refMarco.current;
     const imagen = refImagen.current;
-    if (!lienzo || !marco || !imagen) return;
+    if (!lienzo || !marco || !imagen) return false;
 
     const { colorTexto, colorFondo, invertida } = leerColoresDelTema();
     const ascii = convertirAAscii(imagen, { columnas: COLUMNAS_ASCII, invertida });
@@ -69,6 +69,13 @@ export default function RetratoAscii() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo);
+
+    // El canvas queda pintado entero desde que carga la imagen, pero la
+    // escritura no arranca hasta DEMORA_INICIO_MS. Sin recortarlo acá, el
+    // retrato completo asoma cuando se va el splash de Bienvenida y después
+    // desaparece de golpe al empezar a escribirse.
+    lienzo.style.clipPath = recorteDeEscritura(0, ascii.columnas, ascii.filas);
+    return true;
   }, []);
 
   // Carga de la imagen y primer pintado. Con reduced-motion no se pinta nunca.
@@ -79,12 +86,21 @@ export default function RetratoAscii() {
     imagen.onload = () => {
       if (cancelado) return;
       refImagen.current = imagen;
-      repintar();
-      setListo(true);
+      try {
+        // Si no se pudo pintar no hay ASCII que escribir: se degrada a
+        // mostrar la foto en vez de dejar el marco vacío esperando una
+        // intro que no puede arrancar.
+        if (repintar()) setListo(true);
+        else setFase('foto');
+      } catch {
+        // Cualquier fallo de la conversión o del canvas: se muestra la foto.
+        setFase('foto');
+      }
     };
-    // Sin esto, un fallo de carga dejaría `listo` en false para siempre: la
-    // intro nunca arrancaría y, como la foto sólo se revela al salir de
-    // 'escribiendo', el marco quedaría vacío. Se salta directo a la foto.
+    // Si la imagen no carga, el <Image> de next/image apunta al mismo archivo
+    // y también va a fallar, así que esto no recupera nada: sólo evita que
+    // `listo` quede en false para siempre y con él la fase trabada en
+    // 'esperando'. Degradación, no rescate.
     imagen.onerror = () => {
       if (cancelado) return;
       setFase('foto');
@@ -118,7 +134,12 @@ export default function RetratoAscii() {
     if (fase !== 'escribiendo') return undefined;
     const lienzo = refLienzo.current;
     const ascii = refAscii.current;
-    if (!lienzo || !ascii) return undefined;
+    if (!lienzo || !ascii) {
+      // Sin ASCII no hay nada que escribir: se salta al cruce en vez de
+      // dejar la fase trabada.
+      setFase('revelando');
+      return undefined;
+    }
 
     const inicio = performance.now();
     let bucle = 0;

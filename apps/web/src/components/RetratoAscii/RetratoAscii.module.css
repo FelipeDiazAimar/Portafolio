@@ -50,12 +50,12 @@
 .ascii.enmascarado {
   -webkit-mask-image: radial-gradient(
     circle at var(--origen-x) var(--origen-y),
-    #000 calc(var(--radio) - var(--borde)),
+    #000 max(0px, calc(var(--radio) - var(--borde))),
     transparent var(--radio)
   );
   mask-image: radial-gradient(
     circle at var(--origen-x) var(--origen-y),
-    #000 calc(var(--radio) - var(--borde)),
+    #000 max(0px, calc(var(--radio) - var(--borde))),
     transparent var(--radio)
   );
 }
@@ -65,12 +65,12 @@
 .ascii.enmascarado.saliendo {
   -webkit-mask-image: radial-gradient(
     circle at var(--origen-x) var(--origen-y),
-    transparent calc(var(--radio) - var(--borde)),
+    transparent max(0px, calc(var(--radio) - var(--borde))),
     #000 var(--radio)
   );
   mask-image: radial-gradient(
     circle at var(--origen-x) var(--origen-y),
-    transparent calc(var(--radio) - var(--borde)),
+    transparent max(0px, calc(var(--radio) - var(--borde))),
     #000 var(--radio)
   );
 }
