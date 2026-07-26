@@ -55,6 +55,15 @@ export default function Bienvenida({ locale = 'es' }) {
   const t = COPY[locale] ?? COPY.es;
 
   useEffect(() => {
+    // El navegador restaura solo la posición de scroll que tenía la página
+    // en un F5 (no es un bug nuestro, es scrollRestoration = 'auto' por
+    // defecto): si quedó algo de scroll de una visita anterior, la sección
+    // de inicio aparece corrida en vez de arrancar centrada.
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+
     const exitTimer = setTimeout(() => setExiting(true), EXIT_DELAY_MS);
     const unmountTimer = setTimeout(() => setVisible(false), UNMOUNT_DELAY_MS);
 

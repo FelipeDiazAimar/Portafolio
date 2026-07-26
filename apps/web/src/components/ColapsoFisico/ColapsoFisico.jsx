@@ -49,6 +49,11 @@ const PASO_REBOBINADO = 0.6;
 // Si durante ese lapso el mouse rompe algo, vuelve a entrar; si no, se
 // rebobina y ya no aparece más.
 const ESPERA_ANTES_DE_REBOBINAR_MS = 2500;
+// Demora extra antes de que el stickman entre por primera vez en toda la
+// sesión (no en cada colapso: ColapsoFisico se remonta entero en cada uno,
+// así que la marca vive a nivel de módulo, fuera del componente).
+const DEMORA_EXTRA_PRIMERA_APARICION_MS = 2500;
+let yaAparecioStickman = false;
 
 export default function ColapsoFisico({
   campo,
@@ -182,6 +187,9 @@ export default function ColapsoFisico({
     let fase = 'rompiendo';
     let indiceRebobinado = 0;
     let bucle = 0;
+    // 0 hasta que se cumplen las condiciones normales de entrada; desde ahí
+    // se cuenta la demora extra de la primera aparición.
+    let momentoListoParaBarrer = 0;
     let terminado = false;
     let rotas = 0;
     let escobaApoyada = false;
@@ -296,7 +304,19 @@ export default function ColapsoFisico({
         const listo =
           ahora - momentoUltimaRotura > ESPERA_TRAS_ULTIMA_ROTURA_MS &&
           fraccionRotasQuietas() > UMBRAL_QUIETUD;
-        if (listo) fase = 'barrido';
+        if (!listo) return false;
+
+        // La primera vez que el stickman aparece en toda la sesión, se suma
+        // una demora extra antes de dejarlo entrar. Las veces siguientes
+        // (mismo colapso con otra pasada, o un colapso nuevo) no la pagan.
+        if (yaAparecioStickman) {
+          fase = 'barrido';
+          return false;
+        }
+        if (momentoListoParaBarrer === 0) momentoListoParaBarrer = ahora;
+        if (ahora - momentoListoParaBarrer < DEMORA_EXTRA_PRIMERA_APARICION_MS) return false;
+        yaAparecioStickman = true;
+        fase = 'barrido';
         return false;
       }
       if (fase === 'barrido' && stickman.x > ancho - MARGEN_FIN_BARRIDO_PX) {
