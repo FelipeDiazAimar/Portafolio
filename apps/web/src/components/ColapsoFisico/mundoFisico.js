@@ -17,16 +17,25 @@ const FUERA_DE_ESCENA = -9999;
 export function crearMundo({ ancho, alto, celdas, anchoCaracter, altoCaracter }) {
   const motor = Engine.create();
 
-  const cuerposDeCaracteres = celdas.map((celda) =>
-    Bodies.rectangle(celda.x, celda.y, anchoCaracter, altoCaracter, {
-      isStatic: true,
+  const cuerposDeCaracteres = celdas.map((celda) => {
+    const cuerpo = Bodies.rectangle(celda.x, celda.y, anchoCaracter, altoCaracter, {
       friction: 0.4,
       restitution: 0.15,
       // Las celdas son de pocos px: con el slop por defecto (0.05) se
       // encajan visiblemente unas dentro de otras al apilarse.
       slop: 0.02,
-    })
-  );
+    });
+    // OJO: no se puede pasar `isStatic: true` en las opciones. Body.create
+    // hace Common.extend(defaults, options) —que ya deja isStatic en true—
+    // ANTES de llamar a Body.setStatic, así que la guarda `if (!part.isStatic)`
+    // de setStatic da falso y nunca guarda `_original`. Sin `_original`, el
+    // setStatic(false) de `liberarCuerpo` no restaura la masa: queda en
+    // Infinity con inverseMass 0, o sea aceleración cero, y el carácter no
+    // cae nunca. Creándolo dinámico y congelándolo después, `_original` sí
+    // se guarda con la masa real.
+    Body.setStatic(cuerpo, true);
+    return cuerpo;
+  });
 
   // Piso al pie de la sección (no de la caja del nombre) y paredes a los
   // costados. Las paredes son gruesas a propósito: una pieza chica a

@@ -272,16 +272,23 @@ export default function ColapsoFisico({
     // Recorta del texto limpio la celda de cada carácter ya roto. El hueco
     // queda fijo en la posición original aunque el carácter ya se haya caído:
     // por eso la letra se ve mordida justo por donde pasó el mouse.
+    //
+    // El hueco cubre TODO el paso de la columna (ancho de carácter +
+    // separación), no sólo el ancho del carácter: la grilla ASCII deja aire
+    // entre columnas pero el texto limpio es continuo, así que recortando
+    // sólo el carácter quedaban tiras verticales de texto sin borrar en cada
+    // separación. El sangrado extra evita costuras de un píxel por redondeo.
+    const SANGRADO_HUECO_PX = 0.5;
+    const huecoAncho = campo.paso + SANGRADO_HUECO_PX * 2;
+    const huecoAlto = campo.tamanoCelda + SANGRADO_HUECO_PX * 2;
+    const huecoOffsetX = anchoCaracter / 2 + campo.separacion / 2 + SANGRADO_HUECO_PX;
+    const huecoOffsetY = campo.tamanoCelda / 2 + SANGRADO_HUECO_PX;
+
     function abrirHuecos() {
       for (let i = 0; i < celdas.length; i += 1) {
         const celda = celdas[i];
         if (!celda.rota) continue;
-        ctx.clearRect(
-          celda.x - anchoCaracter / 2,
-          celda.y - campo.tamanoCelda / 2,
-          anchoCaracter,
-          campo.tamanoCelda
-        );
+        ctx.clearRect(celda.x - huecoOffsetX, celda.y - huecoOffsetY, huecoAncho, huecoAlto);
       }
     }
 
