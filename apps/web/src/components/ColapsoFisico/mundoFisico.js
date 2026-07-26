@@ -62,8 +62,13 @@ export function crearMundo({ ancho, alto, celdas, anchoCaracter, altoCaracter })
   return { motor, cuerposDeCaracteres, cuerpoCursor, cuerpoEscoba };
 }
 
+// El tercer argumento actualiza la velocidad del cuerpo a partir del salto.
+// Sin él, cursor y escoba entran al solver con velocidad {0,0}: sólo sacan
+// a los caracteres del solapamiento en vez de empujarlos, y como Bounds.update
+// expande los límites según la velocidad, un movimiento rápido del mouse
+// atraviesa la pila sin tocarla.
 export function moverCuerpo(cuerpo, x, y) {
-  Body.setPosition(cuerpo, { x, y });
+  Body.setPosition(cuerpo, { x, y }, true);
 }
 
 export function sacarDeEscena(cuerpo) {

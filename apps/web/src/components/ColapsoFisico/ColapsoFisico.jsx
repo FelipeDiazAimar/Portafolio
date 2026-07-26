@@ -25,7 +25,13 @@ const AVANCE_PASO_CAMINATA = 0.18;
 const X_INICIAL_STICKMAN = -60;
 const HOLGURA_SALIDA_PX = 80;
 
-export default function ColapsoFisico({ campo, refContenedor, posicionInicialRaton, alTerminar }) {
+export default function ColapsoFisico({
+  campo,
+  refContenedor,
+  posicionInicialRaton,
+  visible = true,
+  alTerminar,
+}) {
   const refLienzo = useRef(null);
   // El callback puede cambiar de identidad entre renders; se lee por ref para
   // que el efecto no se reinicie (reiniciarlo destruiría la simulación).
@@ -94,7 +100,6 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     });
     const grabadora = crearGrabadora(cuerposDeCaracteres.length);
 
-    const color = getComputedStyle(document.body).color;
     const fuente = `${campo.tamanoCelda}px monospace`;
 
     const raton = { ...posicionInicialRaton };
@@ -153,12 +158,18 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     }
 
     // --- Dibujo ----------------------------------------------------------
+    // Color leído por cuadro (no una sola vez al montar): el ThemeToggle
+    // cambia data-theme en cualquier momento y body tiene transition de
+    // color, así que fijarlo en el montaje dejaría los caracteres con el
+    // color viejo, potencialmente invisibles contra el fondo nuevo.
     function abrirCuadro() {
       ctx.clearRect(0, 0, ancho, alto);
       ctx.font = fuente;
+      const color = getComputedStyle(document.body).color;
       ctx.fillStyle = color;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      return color;
     }
 
     function dibujarCaracter(caracter, x, y, angulo) {
@@ -170,7 +181,7 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     }
 
     function dibujarDesdeMotor() {
-      abrirCuadro();
+      const color = abrirCuadro();
       for (let i = 0; i < cuerposDeCaracteres.length; i += 1) {
         const cuerpo = cuerposDeCaracteres[i];
         dibujarCaracter(celdas[i].caracter, cuerpo.position.x, cuerpo.position.y, cuerpo.angle);
@@ -185,7 +196,7 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     }
 
     function dibujarDesdeFoto(foto) {
-      abrirCuadro();
+      const color = abrirCuadro();
       for (let i = 0; i < celdas.length; i += 1) {
         const posicion = leerCelda(foto, i);
         dibujarCaracter(celdas[i].caracter, posicion.x, posicion.y, posicion.angulo);
@@ -254,11 +265,18 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     // no se reemplaza. Si eso cambiara, cada tick del titileo destruiría y
     // recrearía la simulación — el mismo bug que ya rompió dos veces la
     // cadena de fases de NombreAscii.
+    //
+    // `visible` tampoco entra acá a propósito: sólo controla la opacidad del
+    // overlay (abajo, en el JSX). La simulación —y su grabación— tienen que
+    // seguir corriendo debajo aunque la capa esté desvanecida.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campo, refContenedor]);
 
   return createPortal(
-    <div className={styles.overlay} aria-hidden="true">
+    <div
+      className={`${styles.overlay} ${visible ? '' : styles.oculto}`}
+      aria-hidden="true"
+    >
       <canvas ref={refLienzo} className={styles.lienzo} />
     </div>,
     document.body

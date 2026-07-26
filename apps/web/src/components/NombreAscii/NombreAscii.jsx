@@ -1,8 +1,18 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import styles from './NombreAscii.module.css';
-import ColapsoFisico from '@/components/ColapsoFisico/ColapsoFisico.jsx';
+
+// matter-js pesa ~83 KB y el efecto está detrás de un gate de hover fino:
+// con import estático viajaba en el chunk del layout raíz, o sea a TODAS las
+// rutas y a todo visitante móvil, para nunca poder ejecutarse. Se carga
+// recién cuando hace falta.
+const ColapsoFisico = dynamic(
+  () => import('@/components/ColapsoFisico/ColapsoFisico.jsx'),
+  { ssr: false }
+);
 
 const DEMORA_INICIO_MS = 3300;
 
@@ -363,6 +373,7 @@ function estiloDeCelda(celda, fase) {
 }
 
 export default function NombreAscii() {
+  const { seccionActiva } = usePortfolio();
   const refContenedor = useRef(null);
   const refLimpio = useRef(null);
 
@@ -494,6 +505,7 @@ export default function NombreAscii() {
   // la fase 1. Se compara la posición del cursor contra el rect medido.
   useEffect(() => {
     if (fase !== 'desvanecido' || colapso || !campo) return undefined;
+    if (seccionActiva !== 'inicio') return undefined;
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
@@ -521,7 +533,7 @@ export default function NombreAscii() {
 
     window.addEventListener('mousemove', alMoverse, { passive: true });
     return () => window.removeEventListener('mousemove', alMoverse);
-  }, [fase, colapso, campo]);
+  }, [fase, colapso, campo, seccionActiva]);
 
   return (
     <div className={styles.contenedor} ref={refContenedor}>
@@ -570,6 +582,7 @@ export default function NombreAscii() {
           campo={campo}
           refContenedor={refContenedor}
           posicionInicialRaton={colapso}
+          visible={seccionActiva === 'inicio'}
           alTerminar={() => {
             refEsperandoSalida.current = true;
             setColapso(null);
