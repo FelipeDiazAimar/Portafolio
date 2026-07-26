@@ -1,10 +1,11 @@
 // 3 floats por cuerpo (x, y, ángulo). El stickman NO se graba: no participa
 // del rebobinado — una vez que se fue, se fue.
 const FLOATS_POR_CUERPO = 3;
-// Techo de memoria: ~380 cuerpos ≈ 4.6 KB por cuadro, 1200 cuadros ≈ 5.5 MB.
-// Con el barrido lento hacen falta bastantes más cuadros que antes; el
-// llamador graba uno de cada dos para que entren.
-const MAX_CUADROS = 1200;
+// Techo de memoria: ~380 cuerpos ≈ 4.6 KB por foto, 1400 fotos ≈ 6.4 MB.
+// El barrido lento se lleva unas 800 fotos por sí solo y la fase de rotura la
+// maneja el usuario, que puede demorar: de ahí el margen. El llamador graba
+// uno de cada dos cuadros para que entren.
+const MAX_CUADROS = 1400;
 
 // La reconstrucción tiene que ser el recorrido inverso exacto, no un tween de
 // vuelta al origen: por eso se guarda una foto por cuadro y en el rebobinado

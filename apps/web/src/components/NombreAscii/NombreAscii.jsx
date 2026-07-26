@@ -126,7 +126,32 @@ function calcarTextoLimpio(elementoLimpio, contenedor) {
     const x = rect.left - izquierda;
     ctx.fillText(linea.textContent, x, lineaBase);
 
-    return { texto: linea.textContent, fuente: ctx.font, espaciado: estilo.letterSpacing, x, lineaBase };
+    // Caja de cada letra por separado: el colapso convierte a ASCII la LETRA
+    // entera que toca el mouse, así que necesita saber dónde empieza y
+    // termina cada una. Se mide por prefijos para que el letter-spacing y el
+    // kerning queden incluidos, igual que al pintar la línea completa.
+    const texto = linea.textContent;
+    const letras = [];
+    for (let k = 0; k < texto.length; k += 1) {
+      const hastaAntes = ctx.measureText(texto.slice(0, k)).width;
+      const hastaDespues = ctx.measureText(texto.slice(0, k + 1)).width;
+      letras.push({
+        caracter: texto[k],
+        x: x + hastaAntes,
+        ancho: hastaDespues - hastaAntes,
+      });
+    }
+
+    return {
+      texto,
+      fuente: ctx.font,
+      espaciado: estilo.letterSpacing,
+      x,
+      lineaBase,
+      bordeArriba: rect.top - arriba,
+      bordeAbajo: rect.bottom - arriba,
+      letras,
+    };
   });
 
   const tamanoFuente = parseFloat(getComputedStyle(lineas[0]).fontSize);

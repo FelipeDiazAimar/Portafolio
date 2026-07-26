@@ -20,7 +20,11 @@ const PASO_MS = 1000 / 60;
 // Radio alrededor del cursor dentro del cual una celda se desprende. Algo
 // mayor que el radio del cuerpo del cursor, así se suelta justo antes de que
 // el cursor la alcance y el empujón la encuentra ya cayendo.
-const RADIO_ROTURA_PX = 30;
+const RADIO_ROTURA_PX = 26;
+// Radio, más amplio, con el que la LETRA entera pasa a verse en ASCII. Es
+// mayor que el de rotura a propósito: primero se ve la letra convertirse en
+// caracteres y recién después se le empiezan a caer los que toca el mouse.
+const RADIO_CONVERSION_PX = 48;
 const UMBRAL_QUIETUD = 0.85;
 // Cuánto hay que dejar de romper cosas nuevas para que se considere terminada
 // la interacción y entre el stickman.
@@ -28,19 +32,21 @@ const ESPERA_TRAS_ULTIMA_ROTURA_MS = 1500;
 // Si el mouse entró al nombre pero no llegó a romper nada, el efecto se cierra
 // solo en vez de quedar montado ocupando un rAF.
 const TIEMPO_SIN_ROMPER_NADA_MS = 6000;
-// Cuadros de caminata. Es el doble que antes a propósito: el barrido tenía que
-// ser mucho más lento.
-const CUADROS_PRESUPUESTO_CAMINATA = 1000;
-const VELOCIDAD_STICKMAN_MINIMA_PX = 0.8;
+// Cuadros de caminata: a 60fps son ~27 s de punta a punta.
+const CUADROS_PRESUPUESTO_CAMINATA = 1600;
+const VELOCIDAD_STICKMAN_MINIMA_PX = 0.5;
 // Cuántos px avanza el stickman por cada ciclo completo de barrido.
 const DISTANCIA_POR_BARRIDO_PX = 90;
 const MARGEN_FIN_BARRIDO_PX = 120;
 const X_INICIAL_STICKMAN = -60;
 const HOLGURA_SALIDA_PX = 80;
 // Se graba uno de cada dos cuadros: con el barrido lento la simulación dura
-// demasiado para grabarla entera. El rebobinado avanza una foto por cuadro, o
-// sea que sale al doble de velocidad — que es justo el efecto de rebobinar.
+// demasiado para grabarla entera.
 const INTERVALO_GRABACION = 2;
+// Fotos que consume el rebobinado por cuadro. Menos de 1 lo hace más lento
+// que la simulación original; las posiciones intermedias se interpolan entre
+// foto y foto, así bajar la velocidad no lo vuelve un pase de diapositivas.
+const PASO_REBOBINADO = 0.6;
 // Pausa entre que el stickman sale de pantalla y arranca la reconstrucción.
 const ESPERA_ANTES_DE_REBOBINAR_MS = 1500;
 
@@ -99,8 +105,9 @@ export default function ColapsoFisico({
           x: origenX + campo.izquierda + c * campo.paso + anchoCaracter / 2,
           y: origenY + campo.arriba + i * campo.tamanoCelda + campo.tamanoCelda / 2,
           // Se enciende cuando el mouse pasa por encima: recién ahí la celda
-          // deja de ser tipografía limpia y pasa a ser un carácter suelto.
+          // se suelta y cae.
           rota: false,
+          letra: -1,
         });
       });
     });
@@ -108,6 +115,45 @@ export default function ColapsoFisico({
     if (celdas.length === 0) {
       refAlTerminar.current();
       return undefined;
+    }
+
+    // --- Letras -----------------------------------------------------------
+    // La unidad de conversión a ASCII es la LETRA, no la celda: apenas el
+    // mouse roza una letra, esa letra entera deja de dibujarse como
+    // tipografía y pasa a verse como su nube de caracteres. Si no, el glifo
+    // limpio seguía asomando por detrás de los caracteres y no se entendía.
+    const letras = [];
+    campo.lineasLimpias.forEach((linea) => {
+      linea.letras.forEach((letra) => {
+        letras.push({
+          caracter: letra.caracter,
+          fuente: linea.fuente,
+          espaciado: linea.espaciado,
+          baseline: origenY + campo.textoArriba + linea.lineaBase,
+          x0: origenX + campo.textoIzquierda + letra.x,
+          x1: origenX + campo.textoIzquierda + letra.x + letra.ancho,
+          y0: origenY + campo.textoArriba + linea.bordeArriba,
+          y1: origenY + campo.textoArriba + linea.bordeAbajo,
+        });
+      });
+    });
+
+    const letraConvertida = new Array(letras.length).fill(false);
+
+    celdas.forEach((celda) => {
+      for (let l = 0; l < letras.length; l += 1) {
+        const letra = letras[l];
+        if (celda.x < letra.x0 || celda.x >= letra.x1) continue;
+        if (celda.y < letra.y0 || celda.y >= letra.y1) continue;
+        celda.letra = l;
+        return;
+      }
+    });
+
+    // Una celda fuera de toda caja de letra (bordes del muestreo) no tiene
+    // glifo limpio que ocultar: se dibuja sola en cuanto se rompe.
+    function celdaVisibleComoAscii(celda) {
+      return celda.letra >= 0 ? letraConvertida[celda.letra] : celda.rota;
     }
 
     // --- Mundo, grabadora y estado local --------------------------------
@@ -147,10 +193,18 @@ export default function ColapsoFisico({
     function romperCercanas(ahora) {
       for (let i = 0; i < celdas.length; i += 1) {
         const celda = celdas[i];
-        if (celda.rota) continue;
         const dx = raton.x - celda.x;
         const dy = raton.y - celda.y;
-        if (dx * dx + dy * dy > RADIO_ROTURA_PX * RADIO_ROTURA_PX) continue;
+        const distancia2 = dx * dx + dy * dy;
+
+        // Primero la letra entera se convierte a ASCII…
+        if (celda.letra >= 0 && distancia2 <= RADIO_CONVERSION_PX * RADIO_CONVERSION_PX) {
+          letraConvertida[celda.letra] = true;
+        }
+
+        // …y sólo se desprenden las celdas que el mouse toca de verdad.
+        if (celda.rota) continue;
+        if (distancia2 > RADIO_ROTURA_PX * RADIO_ROTURA_PX) continue;
         celda.rota = true;
         liberarCuerpo(cuerposDeCaracteres[i]);
         rotas += 1;
@@ -250,58 +304,37 @@ export default function ColapsoFisico({
       return getComputedStyle(document.body).color;
     }
 
-    // Mientras el efecto corre, el nombre lo dibuja ESTE canvas y no el DOM:
-    // es la única forma de irle abriendo huecos celda por celda.
-    function dibujarTextoLimpio(color) {
+    // Mientras el efecto corre, el nombre lo dibuja ESTE canvas y no el DOM.
+    // Se pinta letra por letra y se saltean las ya convertidas: así la
+    // tipografía limpia desaparece de golpe para esa letra y no queda
+    // asomando por detrás de sus caracteres.
+    function dibujarLetrasIntactas(color) {
       ctx.save();
       ctx.fillStyle = color;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
-      campo.lineasLimpias.forEach((linea) => {
-        ctx.font = linea.fuente;
-        if ('letterSpacing' in ctx) ctx.letterSpacing = linea.espaciado;
-        ctx.fillText(
-          linea.texto,
-          origenX + campo.textoIzquierda + linea.x,
-          origenY + campo.textoArriba + linea.lineaBase
-        );
-      });
+      for (let l = 0; l < letras.length; l += 1) {
+        if (letraConvertida[l]) continue;
+        const letra = letras[l];
+        ctx.font = letra.fuente;
+        if ('letterSpacing' in ctx) ctx.letterSpacing = letra.espaciado;
+        ctx.fillText(letra.caracter, letra.x0, letra.baseline);
+      }
       ctx.restore();
     }
 
-    // Recorta del texto limpio la celda de cada carácter ya roto. El hueco
-    // queda fijo en la posición original aunque el carácter ya se haya caído:
-    // por eso la letra se ve mordida justo por donde pasó el mouse.
-    //
-    // El hueco cubre TODO el paso de la columna (ancho de carácter +
-    // separación), no sólo el ancho del carácter: la grilla ASCII deja aire
-    // entre columnas pero el texto limpio es continuo, así que recortando
-    // sólo el carácter quedaban tiras verticales de texto sin borrar en cada
-    // separación. El sangrado extra evita costuras de un píxel por redondeo.
-    const SANGRADO_HUECO_PX = 0.5;
-    const huecoAncho = campo.paso + SANGRADO_HUECO_PX * 2;
-    const huecoAlto = campo.tamanoCelda + SANGRADO_HUECO_PX * 2;
-    const huecoOffsetX = anchoCaracter / 2 + campo.separacion / 2 + SANGRADO_HUECO_PX;
-    const huecoOffsetY = campo.tamanoCelda / 2 + SANGRADO_HUECO_PX;
-
-    function abrirHuecos() {
-      for (let i = 0; i < celdas.length; i += 1) {
-        const celda = celdas[i];
-        if (!celda.rota) continue;
-        ctx.clearRect(celda.x - huecoOffsetX, celda.y - huecoOffsetY, huecoAncho, huecoAlto);
-      }
-    }
-
-    // `posicionDe` devuelve dónde va cada carácter roto: del motor en vivo o
-    // de una foto grabada, según la fase.
-    function dibujarCaracteresRotos(color, posicionDe) {
+    // Los caracteres de las letras ya convertidas. Los que todavía no se
+    // rompieron siguen quietos en su celda —el cuerpo estático devuelve su
+    // posición original—, los rotos van donde los dejó la física.
+    // `posicionDe` los resuelve del motor en vivo o de una foto grabada.
+    function dibujarCaracteres(color, posicionDe) {
       ctx.save();
       ctx.font = fuenteAscii;
       ctx.fillStyle = color;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (let i = 0; i < celdas.length; i += 1) {
-        if (!celdas[i].rota) continue;
+        if (!celdaVisibleComoAscii(celdas[i])) continue;
         const posicion = posicionDe(i);
         ctx.save();
         ctx.translate(posicion.x, posicion.y);
@@ -313,9 +346,8 @@ export default function ColapsoFisico({
     }
 
     function dibujarNombre(color, posicionDe) {
-      dibujarTextoLimpio(color);
-      abrirHuecos();
-      dibujarCaracteresRotos(color, posicionDe);
+      dibujarLetrasIntactas(color);
+      dibujarCaracteres(color, posicionDe);
     }
 
     function dibujarDesdeMotor() {
@@ -335,9 +367,21 @@ export default function ColapsoFisico({
 
     // El stickman no se dibuja acá: una vez que se fue, se fue. No vuelve
     // caminando hacia atrás como parte de la reconstrucción.
-    function dibujarDesdeFoto(foto) {
+    //
+    // Se interpola entre dos fotos consecutivas para poder rebobinar a menos
+    // de una foto por cuadro sin que se vea a los saltos.
+    function dibujarDesdeFotos(fotoA, fotoB, mezcla) {
       const color = abrirCuadro();
-      dibujarNombre(color, (i) => leerCelda(foto, i));
+      dibujarNombre(color, (i) => {
+        const a = leerCelda(fotoA, i);
+        if (mezcla === 0) return a;
+        const b = leerCelda(fotoB, i);
+        return {
+          x: a.x + (b.x - a.x) * mezcla,
+          y: a.y + (b.y - a.y) * mezcla,
+          angulo: a.angulo + (b.angulo - a.angulo) * mezcla,
+        };
+      });
     }
 
     // --- Bucle único -----------------------------------------------------
@@ -349,11 +393,15 @@ export default function ColapsoFisico({
 
     function cuadro(ahora) {
       if (fase === 'rebobinado') {
-        const foto = grabadora.leerCuadro(indiceRebobinado);
-        if (!foto) return terminar();
-        dibujarDesdeFoto(foto);
-        indiceRebobinado -= 1;
-        if (indiceRebobinado < 0) return terminar();
+        const indice = Math.max(0, indiceRebobinado);
+        const base = Math.floor(indice);
+        const fotoA = grabadora.leerCuadro(base);
+        if (!fotoA) return terminar();
+        dibujarDesdeFotos(fotoA, grabadora.leerCuadro(base + 1) || fotoA, indice - base);
+        // El corte va DESPUÉS de dibujar, así la foto 0 —el nombre intacto—
+        // llega a verse antes de devolverle el lugar al texto del DOM.
+        if (indiceRebobinado <= 0) return terminar();
+        indiceRebobinado -= PASO_REBOBINADO;
       } else {
         moverCuerpo(cuerpoCursor, raton.x, raton.y);
         if (fase === 'rompiendo') romperCercanas(ahora);

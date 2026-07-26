@@ -2,11 +2,17 @@ export const ALTO_STICKMAN = 96;
 
 // Qué tan cerca del cuerpo queda la escoba al final del retorno, y cuánto se
 // aleja en el empuje.
-const ALCANCE_MINIMO = 20;
-const AMPLITUD_BARRIDO = 52;
+const ALCANCE_MINIMO = 24;
+const AMPLITUD_BARRIDO = 58;
 // Fracción del ciclo que dura el empuje. El resto es el retorno, que va más
 // rápido porque la escoba vuelve levantada y sin peso.
 const PROPORCION_EMPUJE = 0.68;
+// Cuánto sigue el palo por encima de la mano de arriba.
+const SOBRANTE_PALO = 28;
+// Medio ancho del cabezal (un palo de piso, no una escoba de cerdas).
+const MEDIO_CABEZAL = 15;
+// Cuánto se despegan los codos de la línea hombro-mano.
+const CURVATURA_CODO = 11;
 
 // Posición dentro del ciclo de barrido, 0..1.
 function faseDelCiclo(paso) {
@@ -20,7 +26,7 @@ export function estaEmpujando(paso) {
 }
 
 // Un ciclo de barrido: empuje largo hacia adelante y retorno rápido, como
-// alguien que arrastra la escoba y la vuelve a traer.
+// alguien que arrastra el palo y lo vuelve a traer.
 function curvaBarrido(paso) {
   const t = faseDelCiclo(paso);
   if (t < PROPORCION_EMPUJE) {
@@ -32,13 +38,27 @@ function curvaBarrido(paso) {
   return 1 - (t - PROPORCION_EMPUJE) / (1 - PROPORCION_EMPUJE);
 }
 
-// Offset horizontal de la punta de la escoba respecto de la `x` del
-// stickman. Lo usan el dibujo Y el cuerpo físico de la escoba: si cada uno
-// lo calculara por su cuenta, lo que se ve barriendo y lo que empuja se
-// desincronizarían.
+// Offset horizontal de la punta del palo respecto de la `x` del stickman. Lo
+// usan el dibujo Y el cuerpo físico: si cada uno lo calculara por su cuenta,
+// lo que se ve barriendo y lo que empuja se desincronizarían.
 export function desplazamientoEscoba(paso, barriendo) {
   if (!barriendo) return ALCANCE_MINIMO;
   return ALCANCE_MINIMO + curvaBarrido(paso) * AMPLITUD_BARRIDO;
+}
+
+// Brazo en dos tramos con el codo salido hacia afuera, en vez de una recta
+// del hombro a la mano.
+function trazarBrazo(ctx, hombroX, hombroY, manoX, manoY, curvatura) {
+  const dx = manoX - hombroX;
+  const dy = manoY - hombroY;
+  const largo = Math.hypot(dx, dy) || 1;
+  const perpX = -dy / largo;
+  const perpY = dx / largo;
+  const codoX = (hombroX + manoX) / 2 + perpX * curvatura;
+  const codoY = (hombroY + manoY) / 2 + perpY * curvatura;
+  ctx.moveTo(hombroX, hombroY);
+  ctx.lineTo(codoX, codoY);
+  ctx.lineTo(manoX, manoY);
 }
 
 // Stickman procedural: sólo líneas, sin sprites ni assets.
@@ -46,17 +66,37 @@ export function dibujarStickman(ctx, { x, suelo, paso, barriendo }, color) {
   const alcance = desplazamientoEscoba(paso, barriendo);
   const empujando = barriendo && estaEmpujando(paso);
   const cabezaY = suelo - ALTO_STICKMAN;
-  const hombroY = suelo - ALTO_STICKMAN * 0.72;
-  const caderaY = suelo - ALTO_STICKMAN * 0.42;
-  const balanceo = Math.sin(paso * Math.PI * 2) * 9;
+  const hombroY = suelo - ALTO_STICKMAN * 0.74;
+  const caderaY = suelo - ALTO_STICKMAN * 0.44;
+  const balanceo = Math.sin(paso * Math.PI * 2) * 10;
+
+  const hombroX = x + 3;
+  const puntaX = x + alcance;
+  const puntaY = suelo - (empujando ? 4 : 12);
+
+  // Eje del palo: apunta desde la punta (en el piso) hacia arriba y atrás.
+  const ejeX = hombroX - 12 - puntaX;
+  const ejeY = hombroY - 34 - puntaY;
+  const largoEje = Math.hypot(ejeX, ejeY) || 1;
+  const dirX = ejeX / largoEje;
+  const dirY = ejeY / largoEje;
+
+  // Las dos manos agarran el palo a alturas distintas, y el palo sigue de
+  // largo por encima de la mano de arriba.
+  const manoBajaX = puntaX + dirX * largoEje * 0.46;
+  const manoBajaY = puntaY + dirY * largoEje * 0.46;
+  const manoAltaX = puntaX + dirX * largoEje * 0.8;
+  const manoAltaY = puntaY + dirY * largoEje * 0.8;
+  const topeX = puntaX + dirX * (largoEje + SOBRANTE_PALO);
+  const topeY = puntaY + dirY * (largoEje + SOBRANTE_PALO);
 
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = 2.5;
 
-  // Cabeza y torso, apenas inclinado hacia la escoba.
+  // Cabeza, torso y piernas.
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.arc(x, cabezaY, 8.5, 0, Math.PI * 2);
   ctx.stroke();
@@ -70,50 +110,29 @@ export function dibujarStickman(ctx, { x, suelo, paso, barriendo }, color) {
   ctx.lineTo(x + balanceo, suelo);
   ctx.stroke();
 
-  // El palo va de las manos al cabezal. En el retorno la escoba se levanta
-  // unos px del piso, que es lo que hace legible el gesto de barrer.
-  const manoX = x + 4 + alcance * 0.34;
-  const manoY = hombroY + 5;
-  const puntaX = x + alcance;
-  const puntaY = suelo - (empujando ? 6 : 14);
-
+  // Brazos con codo. El de abajo dobla al revés que el de arriba, que es
+  // como quedan las manos cuando una agarra más abajo que la otra.
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
-  ctx.moveTo(manoX, manoY);
+  trazarBrazo(ctx, hombroX, hombroY, manoAltaX, manoAltaY, CURVATURA_CODO);
+  trazarBrazo(ctx, hombroX, hombroY + 9, manoBajaX, manoBajaY, -CURVATURA_CODO);
+  ctx.stroke();
+
+  // Palo entero, del tope al piso.
+  ctx.lineWidth = 2.8;
+  ctx.beginPath();
+  ctx.moveTo(topeX, topeY);
   ctx.lineTo(puntaX, puntaY);
   ctx.stroke();
 
-  // Los dos brazos agarran el palo en puntos distintos, como en una escoba real.
-  ctx.beginPath();
-  ctx.moveTo(x + 2, hombroY);
-  ctx.lineTo(manoX, manoY);
-  ctx.moveTo(x + 2, hombroY + 6);
-  ctx.lineTo(manoX + (puntaX - manoX) * 0.3, manoY + (puntaY - manoY) * 0.3);
-  ctx.stroke();
-
-  // Cabezal: una barra perpendicular al palo más un abanico de cerdas. Sin
-  // esto la escoba se leía como una raya suelta (o como una tercera pierna).
-  const largo = Math.hypot(puntaX - manoX, puntaY - manoY) || 1;
-  const dirX = (puntaX - manoX) / largo;
-  const dirY = (puntaY - manoY) / largo;
+  // Cabezal: una sola barra maciza perpendicular al palo. Es un palo de
+  // piso, no una escoba: sin cerdas.
   const perpX = -dirY;
   const perpY = dirX;
-  const medioCabezal = 10;
-
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = 5.5;
   ctx.beginPath();
-  ctx.moveTo(puntaX - perpX * medioCabezal, puntaY - perpY * medioCabezal);
-  ctx.lineTo(puntaX + perpX * medioCabezal, puntaY + perpY * medioCabezal);
-  ctx.stroke();
-
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  for (let i = -2; i <= 2; i += 1) {
-    const proporcion = i / 2;
-    const baseX = puntaX + perpX * medioCabezal * proporcion;
-    const baseY = puntaY + perpY * medioCabezal * proporcion;
-    ctx.moveTo(baseX, baseY);
-    ctx.lineTo(baseX + dirX * 11 + perpX * proporcion * 5, baseY + dirY * 11);
-  }
+  ctx.moveTo(puntaX - perpX * MEDIO_CABEZAL, puntaY - perpY * MEDIO_CABEZAL);
+  ctx.lineTo(puntaX + perpX * MEDIO_CABEZAL, puntaY + perpY * MEDIO_CABEZAL);
   ctx.stroke();
 
   ctx.restore();
