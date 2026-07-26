@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Engine } from 'matter-js';
 import {
   ALTO_ESCOBA,
+  colocarSinImpulso,
   crearMundo,
   destruirMundo,
   fraccionQuieta,
@@ -145,7 +146,20 @@ export default function ColapsoFisico({
         const asentado =
           ahora - inicio > MINIMO_DERRUMBE_MS &&
           fraccionQuieta(cuerposDeCaracteres) > UMBRAL_QUIETUD;
-        if (asentado) fase = 'barrido';
+        if (asentado) {
+          fase = 'barrido';
+          // Misma trampa que el cursor: la escoba está estacionada en
+          // (-9999,-9999) y el próximo cuadro la movería con `moverCuerpo`
+          // (con impulso) hasta su posición real, entrando al solver como un
+          // salto de miles de px/paso. Se la reubica sin impulso ahora, así
+          // el primer `moverCuerpo` de actualizarStickman ya parte de un
+          // lugar real y sólo aporta el delta de un cuadro.
+          colocarSinImpulso(
+            cuerpoEscoba,
+            stickman.x + desplazamientoEscoba(stickman.paso, true),
+            suelo - ALTO_ESCOBA / 2
+          );
+        }
         return;
       }
       if (fase === 'barrido' && stickman.x > ancho - MARGEN_FIN_BARRIDO_PX) {
@@ -237,6 +251,14 @@ export default function ColapsoFisico({
       bucle = requestAnimationFrame(cuadro);
       return undefined;
     }
+
+    // El cursor nace estacionado en (-9999,-9999); reubicarlo con
+    // `moverCuerpo` (con impulso, por el fix de N3) en el primer cuadro
+    // entraría al solver como un salto de ~14.000 px/paso y dispararía los
+    // caracteres que toca a través de las paredes. Se lo coloca sin impulso
+    // en la posición real ANTES del cuadro 0, así el primer `moverCuerpo`
+    // del bucle ya parte de ahí y sólo aporta el delta real del mouse.
+    colocarSinImpulso(cuerpoCursor, raton.x, raton.y);
 
     // Cuadro 0 = la formación intacta. Se graba antes de mover el cursor y antes
     // del primer Engine.update: si no, el último cuadro del rebobinado ya trae un

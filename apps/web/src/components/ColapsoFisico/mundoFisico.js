@@ -75,6 +75,13 @@ export function sacarDeEscena(cuerpo) {
   Body.setPosition(cuerpo, { x: FUERA_DE_ESCENA, y: FUERA_DE_ESCENA });
 }
 
+// Coloca un cuerpo sin generar velocidad. Hace falta al SACARLO del
+// estacionamiento (-9999): con `moverCuerpo` ese salto entra al solver como
+// ~14.000 px/paso y dispara los caracteres que toca a través de las paredes.
+export function colocarSinImpulso(cuerpo, x, y) {
+  Body.setPosition(cuerpo, { x, y });
+}
+
 // Fracción de piezas prácticamente quietas — dispara la entrada del stickman.
 export function fraccionQuieta(cuerpos, umbralVelocidad = 0.4) {
   if (cuerpos.length === 0) return 1;
