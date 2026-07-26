@@ -2,7 +2,11 @@
 
 ## Objetivo
 
-Completar la capa `inicio` del `HeroInmersivo`: hoy tiene el nombre a la izquierda y el resto vacío. Va una foto grande del usuario a la derecha que, al pasarle el mouse por encima, se convierte en su versión ASCII con un barrido circular que nace en el punto por donde entró el cursor. Al salir, la foto vuelve con el mismo barrido, esta vez naciendo en el punto por donde salió.
+Completar la capa `inicio` del `HeroInmersivo`: hoy tiene el nombre a la izquierda y el resto vacío. Va una foto grande del usuario a la derecha, con dos momentos distintos.
+
+**Al cargar la página**, la foto no aparece: primero se *escribe* su versión ASCII, carácter por carácter en orden de lectura —de izquierda a derecha y bajando— como si alguien la fuera tipeando. Cuando termina, ese ASCII se desvanece y en su lugar aparece la foto. Esto corre en paralelo con la intro del nombre, así la capa se completa de una sola vez.
+
+**De ahí en adelante**, pasarle el mouse por encima convierte la foto en ASCII con un barrido circular que nace en el punto por donde entró el cursor; al salir, la foto vuelve con un barrido que nace en el punto por donde salió.
 
 ## Alcance
 
@@ -149,6 +153,36 @@ function pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo) {
 
 El canvas se dimensiona con `devicePixelRatio` (`lienzo.width = ancho * dpr`, `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)`), como el overlay del colapso.
 
+## La intro: el ASCII se escribe
+
+Al cargar, la foto arranca en `opacity: 0` y lo único visible es el canvas del ASCII, que se va destapando carácter por carácter en orden de lectura. El canvas **tampoco se repinta acá**: lo que se anima es un `clip-path` con forma de L —todas las filas ya completas, más el pedazo de la fila en curso—, así que sigue valiendo que el ASCII se pinta una sola vez.
+
+```js
+// progreso 0..1 sobre el total de celdas, en orden de lectura.
+function recorteDeEscritura(progreso, columnas, filas) {
+  if (progreso >= 1) return 'none';
+
+  const reveladas = progreso * columnas * filas;
+  const fila = Math.floor(reveladas / columnas);
+  const columna = reveladas - fila * columnas;
+
+  const yCompleto = (100 * fila) / filas;
+  const ySiguiente = (100 * (fila + 1)) / filas;
+  const xParcial = (100 * columna) / columnas;
+
+  // Rectángulo de las filas terminadas + el trozo escrito de la fila actual.
+  return `polygon(0% 0%, 100% 0%, 100% ${yCompleto}%, ${xParcial}% ${yCompleto}%, ${xParcial}% ${ySiguiente}%, 0% ${ySiguiente}%)`;
+}
+```
+
+El avance es **lineal**, sin easing: una máquina de escribir tiene cadencia constante, y cualquier ease-out haría que las últimas filas se arrastren.
+
+La foto tiene que estar en `opacity: 0` durante toda la escritura. El `clip-path` recorta el canvas de verdad —no lo pinta transparente—, así que en la zona todavía no escrita se vería la foto por debajo.
+
+Cuando la escritura termina viene el cambio: el ASCII se desvanece y la foto entra, con un cross-fade de `DURACION_REVELADO_FOTO_MS`. Al terminarlo, y en el mismo cuadro, se le devuelve al canvas su `opacity: 1` y se le aplica la máscara del barrido con radio 0. Como la máscara lo tapa por completo, ese cambio de opacidad no se ve; es lo que deja al componente listo para el hover.
+
+Durante toda la intro el hover se ignora: el estado `foto` es el que habilita la interacción.
+
 ## El barrido: una máscara, no un repintado
 
 El ASCII no se redibuja mientras barre. Lo que se anima es una máscara CSS sobre el canvas:
@@ -161,8 +195,13 @@ El ASCII no se redibuja mientras barre. Lo que se anima es una máscara CSS sobr
   --origen-y: 50%;
   --radio: 0px;
   --borde: 48px;
-  /* Entrando: opaco adentro del círculo, transparente afuera. El ASCII
-     "crece" desde el punto por donde entró el cursor. */
+}
+
+/* La máscara sólo entra en juego cuando termina la intro: mientras se
+   escribe, quien recorta es el clip-path. */
+/* Entrando: opaco adentro del círculo, transparente afuera. El ASCII
+   "crece" desde el punto por donde entró el cursor. */
+.ascii.enmascarado {
   -webkit-mask-image: radial-gradient(
     circle at var(--origen-x) var(--origen-y),
     #000 calc(var(--radio) - var(--borde)),
@@ -177,7 +216,7 @@ El ASCII no se redibuja mientras barre. Lo que se anima es una máscara CSS sobr
 
 /* Saliendo: la misma máscara con las paradas invertidas. El ASCII se borra
    desde el punto por donde salió el cursor hacia afuera, y aparece la foto. */
-.ascii.saliendo {
+.ascii.enmascarado.saliendo {
   -webkit-mask-image: radial-gradient(
     circle at var(--origen-x) var(--origen-y),
     transparent calc(var(--radio) - var(--borde)),
@@ -197,10 +236,14 @@ El ASCII no se redibuja mientras barre. Lo que se anima es una máscara CSS sobr
 
 ## Máquina de estados
 
-Cuatro estados: `foto` (asentado, ASCII oculto), `aAscii` (barriendo hacia ASCII), `ascii` (asentado, cubierto), `aFoto` (barriendo de vuelta).
+Dos estados de intro, que corren una sola vez: `escribiendo` (el ASCII se tipea, foto en `opacity: 0`) y `revelando` (cross-fade del ASCII a la foto). Después, los cuatro del hover: `foto` (asentado, ASCII oculto), `aAscii` (barriendo hacia ASCII), `ascii` (asentado, cubierto), `aFoto` (barriendo de vuelta).
 
 | Situación | Qué pasa |
 | --- | --- |
+| Pasan `DEMORA_INICIO_MS` desde el montaje | `escribiendo` |
+| La escritura llega al final | `revelando` |
+| Termina el cross-fade | `foto`: se restaura `opacity: 1` del canvas y se aplica `.enmascarado` con radio 0 |
+| El cursor se mueve durante `escribiendo` o `revelando` | se ignora: el hover recién se arma en `foto` |
 | El cursor entra estando en `foto` | `origenBarrido` = punto de entrada, polaridad normal, `aAscii` |
 | El barrido llega al final | `ascii` |
 | El cursor sale estando en `ascii` | `origenBarrido` = última posición conocida dentro del marco, polaridad invertida (`.saliendo`), `aFoto` |
@@ -242,7 +285,10 @@ function alMoverse(evento) {
 
 Se agrega también un listener de `mouseleave` en `document` que fuerza la salida: si el cursor abandona la ventana no llegan más `mousemove` y el retrato quedaría en ASCII para siempre.
 
-El efecto se descarta entero si no matchea `(hover: hover) and (pointer: fine)` o si matchea `prefers-reduced-motion: reduce` — mismos gates que ya usa el nombre.
+Los dos gates que usa el nombre siguen valiendo, pero **no cubren lo mismo**, porque acá hay una parte que no es interactiva:
+
+- `(hover: hover) and (pointer: fine)` gatea **sólo el barrido**. Un dispositivo sin mouse igual ve la intro escribirse y quedarse en la foto; simplemente nunca dispara el hover.
+- `prefers-reduced-motion: reduce` gatea **todo**: no hay escritura ni barrido, la foto se muestra directamente en `opacity: 1` desde el arranque y el canvas nunca se pinta.
 
 ## Tema
 
@@ -299,8 +345,23 @@ La capa pasa a repartir el ancho entre el nombre y el retrato:
   height: 100%;
 }
 
+/* Arranca oculta: durante la escritura el clip-path recorta el canvas de
+   verdad, así que si la foto fuera visible asomaría por lo no escrito. */
 .foto {
   object-fit: contain;
+  opacity: 0;
+  transition: opacity var(--duracion-revelado) ease;
+}
+
+.foto.revelada {
+  opacity: 1;
+}
+
+/* El canvas se desvanece en el mismo cruce, y vuelve a opacity 1 —ya tapado
+   por la máscara— cuando el estado pasa a `foto`. */
+.ascii.desvaneciendo {
+  opacity: 0;
+  transition: opacity var(--duracion-revelado) ease;
 }
 
 @media (max-width: 768px) {
@@ -321,14 +382,24 @@ El hero entero está marcado `aria-hidden="true"` en `HeroInmersivo`, así que e
 Puntos de partida, a afinar a ojo en el navegador como el resto de los efectos:
 
 ```js
-const COLUMNAS_ASCII = 110;      // columnas de la grilla; con 433×577 da ~88 filas
-const DURACION_BARRIDO_MS = 700; // lo que tarda el círculo en cubrir el marco
-const BORDE_MASCARA_PX = 48;     // ancho del degradado en el frente del barrido
+const COLUMNAS_ASCII = 110;         // columnas de la grilla; con 433×577 da ~88 filas
+const DEMORA_INICIO_MS = 3300;      // espera a que se vaya el splash; mismo valor que NombreAscii
+const DURACION_ESCRITURA_MS = 3200; // lo que tarda en tipearse el ASCII entero
+const DURACION_REVELADO_FOTO_MS = 700; // cross-fade del ASCII a la foto
+const DURACION_BARRIDO_MS = 700;    // lo que tarda el círculo en cubrir el marco
+const BORDE_MASCARA_PX = 48;        // ancho del degradado en el frente del barrido
 ```
+
+`DEMORA_INICIO_MS` tiene que seguir valiendo lo mismo que en `NombreAscii`: es lo que hace que las dos intros arranquen juntas.
+
+Sobre `DURACION_ESCRITURA_MS`: con 110 columnas y ~88 filas, 3200 ms dan unos 36 ms por fila, así que el barrido horizontal dentro de cada fila es muy rápido y lo que se percibe es sobre todo el frente bajando con el borde dentado. Si el gesto de máquina de escribir no se llega a leer, la palanca es alargar esta duración (o bajar `COLUMNAS_ASCII`, que acorta las filas).
 
 ## Criterios de aceptación
 
 - La capa `inicio` muestra el nombre a la izquierda y la foto grande a la derecha.
+- Al cargar la página no se ve la foto: se ve el ASCII escribiéndose de izquierda a derecha y de arriba a abajo, arrancando junto con la intro del nombre.
+- Terminada la escritura, el ASCII se desvanece y aparece la foto, sin parpadeos ni saltos en el pasaje.
+- Mover el mouse sobre el retrato durante la intro no dispara nada; el hover recién responde con la foto ya asentada.
 - Al entrar con el mouse en la foto, la versión ASCII aparece con un barrido circular que nace **en el punto por donde entró el cursor** y termina cubriendo toda la imagen.
 - Al salir, la foto vuelve con un barrido que nace **en el punto por donde salió el cursor**.
 - Entrar o salir a mitad de un barrido invierte el que está corriendo, sin saltos ni cambios de centro.
