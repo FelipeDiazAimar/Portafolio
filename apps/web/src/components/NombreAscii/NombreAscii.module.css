@@ -41,6 +41,14 @@
   opacity: 1;
 }
 
+/* La transición lenta con delay es para la entrada de la fase 3. Una vez que
+   entra en juego el colapso hay que ir y volver rápido: si no, el texto real
+   se superpone a la pila que ya está cayendo, y al rebobinar queda un hueco
+   en blanco donde debería estar el nombre reformado. */
+.textoLimpio.rapida {
+  transition: opacity 0.18s ease;
+}
+
 /* El campo se posiciona por JS (left/top/font-size calculados) para caer
    exactamente sobre el texto limpio. */
 .ascii {

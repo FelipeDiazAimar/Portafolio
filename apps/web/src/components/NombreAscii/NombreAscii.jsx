@@ -374,6 +374,9 @@ export default function NombreAscii() {
   // Tras un colapso hay que salir del área y volver a entrar para
   // re-disparar: si no, quedarse quieto encima lo relanzaría en loop.
   const refEsperandoSalida = useRef(false);
+  // Se enciende con el primer colapso y ya no se apaga: a partir de ahí el
+  // texto limpio entra y sale rápido, en las dos direcciones.
+  const refYaColapso = useRef(false);
 
   // Espejo de `fase` para leerla desde listeners sin re-suscribirlos.
   const refFase = useRef(fase);
@@ -490,7 +493,7 @@ export default function NombreAscii() {
   // anula punteros — es la cascada que ya rompió el botón de prueba durante
   // la fase 1. Se compara la posición del cursor contra el rect medido.
   useEffect(() => {
-    if (fase !== 'desvanecido' || colapso) return undefined;
+    if (fase !== 'desvanecido' || colapso || !campo) return undefined;
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
@@ -509,6 +512,7 @@ export default function NombreAscii() {
         return;
       }
       if (refEsperandoSalida.current) return;
+      refYaColapso.current = true;
       setColapso({
         x: evento.clientX + window.scrollX,
         y: evento.clientY + window.scrollY,
@@ -517,7 +521,7 @@ export default function NombreAscii() {
 
     window.addEventListener('mousemove', alMoverse, { passive: true });
     return () => window.removeEventListener('mousemove', alMoverse);
-  }, [fase, colapso]);
+  }, [fase, colapso, campo]);
 
   return (
     <div className={styles.contenedor} ref={refContenedor}>
@@ -527,7 +531,7 @@ export default function NombreAscii() {
         ref={refLimpio}
         className={`${styles.textoLimpio} ${
           fase === 'desvanecido' && !colapso ? styles.visible : ''
-        }`}
+        } ${colapso || refYaColapso.current ? styles.rapida : ''}`}
         aria-hidden="true"
       >
         <span>Felipe</span>
