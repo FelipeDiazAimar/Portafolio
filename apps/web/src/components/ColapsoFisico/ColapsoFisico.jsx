@@ -45,8 +45,10 @@ const HOLGURA_SALIDA_PX = 80;
 // que la simulación original; las posiciones intermedias se interpolan entre
 // foto y foto, así bajar la velocidad no lo vuelve un pase de diapositivas.
 const PASO_REBOBINADO = 0.6;
-// Pausa entre que el stickman sale de pantalla y arranca la reconstrucción.
-const ESPERA_ANTES_DE_REBOBINAR_MS = 1500;
+// Ventana entre que el stickman sale de pantalla y arranca la reconstrucción.
+// Si durante ese lapso el mouse rompe algo, vuelve a entrar; si no, se
+// rebobina y ya no aparece más.
+const ESPERA_ANTES_DE_REBOBINAR_MS = 2500;
 
 export default function ColapsoFisico({
   campo,
@@ -262,17 +264,6 @@ export default function ColapsoFisico({
       }
     }
 
-    // ¿Quedó algo roto sin empujar hasta el borde derecho? Es lo que decide
-    // si hace falta otra pasada.
-    function quedanRestosSinBarrer() {
-      const limite = ancho - MARGEN_FIN_BARRIDO_PX;
-      for (let i = 0; i < celdas.length; i += 1) {
-        if (!celdas[i].rota) continue;
-        if (cuerposDeCaracteres[i].position.x < limite) return true;
-      }
-      return false;
-    }
-
     // Lo manda de nuevo al arranque. La escoba se estaciona sí o sí: si
     // quedara apoyada, el teleport del stickman la movería de una punta a la
     // otra con `moverCuerpo` y ese salto entra al solver como un impulso
@@ -312,15 +303,9 @@ export default function ColapsoFisico({
         fase = 'salida';
         return false;
       }
+      // Al salir siempre se abre la ventana de espera: es ahí, y sólo ahí,
+      // donde se decide si vuelve o si se rebobina.
       if (fase === 'salida' && stickman.x > ancho + HOLGURA_SALIDA_PX) {
-        // Si el mouse siguió rompiendo mientras barría, lo nuevo le quedó
-        // atrás: en vez de irse, arranca otra pasada. La válvula de la
-        // grabadora es lo que impide que esto se estire para siempre.
-        const rompiendoTodavia = ahora - momentoUltimaRotura < ESPERA_TRAS_ULTIMA_ROTURA_MS;
-        if (rompiendoTodavia || quedanRestosSinBarrer()) {
-          reiniciarPasada();
-          return false;
-        }
         fase = 'espera';
         momentoSalida = ahora;
         sacarDeEscena(cuerpoEscoba);
@@ -328,7 +313,11 @@ export default function ColapsoFisico({
         return false;
       }
       if (fase === 'espera') {
-        // Romper algo durante la pausa lo hace volver en vez de rebobinar.
+        // Romper algo durante la ventana lo hace volver a entrar. Que la
+        // condición sea "hubo una rotura nueva" —y no "quedaron restos sin
+        // barrer"— es lo que garantiza que esto termine: cada pasada de más
+        // exige una acción del mouse, así que no puede quedarse en un ciclo
+        // de pasadas persiguiendo un carácter que no logra empujar.
         if (momentoUltimaRotura > momentoSalida) {
           reiniciarPasada();
           return false;

@@ -2,8 +2,8 @@ export const ALTO_STICKMAN = 96;
 
 // Qué tan cerca del cuerpo queda la escoba al final del retorno, y cuánto se
 // aleja en el empuje.
-const ALCANCE_MINIMO = 24;
-const AMPLITUD_BARRIDO = 58;
+const ALCANCE_MINIMO = 20;
+const AMPLITUD_BARRIDO = 30;
 // Fracción del ciclo que dura el empuje. El resto es el retorno, que va más
 // rápido porque la escoba vuelve levantada y sin peso.
 const PROPORCION_EMPUJE = 0.68;
