@@ -1,0 +1,20 @@
+/* Portal a document.body: adentro del hero heredaría pointer-events:none y
+   quedaría detrás del contenido por el z-index:-1 de .hero. Se posiciona
+   en absoluto sobre los primeros 100vh del documento, que es justo lo que
+   ocupa el hero, así scrollea junto con él. */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  /* Decorativo: la detección del hover es por mousemove en window. */
+  pointer-events: none;
+}
+
+.lienzo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
