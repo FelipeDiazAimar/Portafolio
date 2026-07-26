@@ -1,0 +1,83 @@
+.marco {
+  position: relative;
+  flex-shrink: 0;
+  /* La spec decía 70vh fijo; con clamp no se come el ancho del nombre en
+     pantallas intermedias. `--duracion-revelado` tiene que coincidir con
+     DURACION_REVELADO_FOTO_MS del componente. */
+  height: clamp(20rem, 62vh, 34rem);
+  aspect-ratio: 433 / 577;
+  --duracion-revelado: 700ms;
+}
+
+.foto,
+.ascii {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Arranca oculta: durante la escritura el clip-path recorta el canvas de
+   verdad, así que si la foto fuera visible asomaría por lo no escrito. */
+.foto {
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity var(--duracion-revelado) ease;
+}
+
+.foto.revelada {
+  opacity: 1;
+}
+
+.ascii {
+  --origen-x: 50%;
+  --origen-y: 50%;
+  --radio: 0px;
+  --borde: 48px;
+}
+
+/* El canvas se desvanece en el cruce hacia la foto, y vuelve a opacity 1
+   —ya tapado por la máscara— cuando el estado pasa a `foto`. */
+.ascii.desvaneciendo {
+  opacity: 0;
+  transition: opacity var(--duracion-revelado) ease;
+}
+
+/* La máscara sólo entra en juego cuando termina la intro: mientras se
+   escribe, quien recorta es el clip-path.
+   Entrando: opaco adentro del círculo, transparente afuera. El ASCII
+   "crece" desde el punto por donde entró el cursor. */
+.ascii.enmascarado {
+  -webkit-mask-image: radial-gradient(
+    circle at var(--origen-x) var(--origen-y),
+    #000 calc(var(--radio) - var(--borde)),
+    transparent var(--radio)
+  );
+  mask-image: radial-gradient(
+    circle at var(--origen-x) var(--origen-y),
+    #000 calc(var(--radio) - var(--borde)),
+    transparent var(--radio)
+  );
+}
+
+/* Saliendo: la misma máscara con las paradas invertidas. El ASCII se borra
+   desde el punto por donde salió el cursor hacia afuera. */
+.ascii.enmascarado.saliendo {
+  -webkit-mask-image: radial-gradient(
+    circle at var(--origen-x) var(--origen-y),
+    transparent calc(var(--radio) - var(--borde)),
+    #000 var(--radio)
+  );
+  mask-image: radial-gradient(
+    circle at var(--origen-x) var(--origen-y),
+    transparent calc(var(--radio) - var(--borde)),
+    #000 var(--radio)
+  );
+}
+
+/* Por debajo de este ancho el nombre y el retrato no entran juntos. */
+@media (max-width: 1024px) {
+  .marco {
+    display: none;
+  }
+}

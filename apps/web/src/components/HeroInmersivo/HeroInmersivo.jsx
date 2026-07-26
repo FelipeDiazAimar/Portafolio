@@ -2,6 +2,7 @@
 
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import NombreAscii from '@/components/NombreAscii/NombreAscii.jsx';
+import RetratoAscii from '@/components/RetratoAscii/RetratoAscii.jsx';
 import styles from './HeroInmersivo.module.css';
 
 const SECCIONES = [
@@ -26,7 +27,10 @@ export default function HeroInmersivo() {
           }`}
         >
           {seccion.id === 'inicio' ? (
-            <NombreAscii />
+            <>
+              <NombreAscii />
+              <RetratoAscii />
+            </>
           ) : (
             <span className={styles.titulo}>{seccion.titulo}</span>
           )}

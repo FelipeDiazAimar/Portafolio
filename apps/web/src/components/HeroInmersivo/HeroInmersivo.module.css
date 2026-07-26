@@ -36,8 +36,10 @@
 }
 
 .capa-inicio {
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: clamp(1.5rem, 4vw, 4rem);
   padding-left: clamp(2rem, 8vw, 6rem);
+  padding-right: clamp(2rem, 8vw, 6rem);
   background: var(--color-bg);
 }
 
