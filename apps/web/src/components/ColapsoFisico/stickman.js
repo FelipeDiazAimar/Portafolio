@@ -9,6 +9,11 @@ const AMPLITUD_BARRIDO = 58;
 const PROPORCION_EMPUJE = 0.68;
 // Medio ancho del cabezal (un palo de piso, no una escoba de cerdas).
 const MEDIO_CABEZAL = 15;
+// Del extremo apoyado al tope del palo. Es un offset FIJO: define un palo
+// rígido de ~92 px que se traslada al barrer, en vez de un palo que se
+// estira porque tiene el tope clavado al cuerpo.
+const OFFSET_TOPE_X = -46;
+const OFFSET_TOPE_Y = -80;
 // Desvío del codo respecto del punto medio hombro-mano. Es un vector fijo
 // hacia ABAJO y ATRÁS, no una perpendicular al brazo: con la perpendicular
 // la dirección del codo dependía de dónde cayera la mano y terminaba
@@ -70,11 +75,11 @@ export function dibujarStickman(ctx, { x, suelo, paso, barriendo }, color) {
   const puntaX = x + alcance;
   const puntaY = suelo - (empujando ? 4 : 12);
 
-  // El palo queda definido por sus DOS extremos, en vez de por un eje que se
-  // extiende: así no puede pasarse de largo. Arriba llega apenas por encima
-  // del hombro, que es donde termina un palo de piso real.
-  const topeX = x + 8;
-  const topeY = hombroY - 8;
+  // El palo es RÍGIDO: el tope es un offset fijo respecto de la punta, así
+  // que al barrer se traslada entero en vez de estirarse. Lo que se estira y
+  // se encoge son los brazos, que es lo que pasa de verdad al barrer.
+  const topeX = puntaX + OFFSET_TOPE_X;
+  const topeY = puntaY + OFFSET_TOPE_Y;
 
   // Las dos manos agarran cerca del tope, a alturas distintas. El palo
   // sobresale un poco por encima de la mano de arriba.

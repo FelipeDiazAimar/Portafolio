@@ -41,9 +41,6 @@ const DISTANCIA_POR_BARRIDO_PX = 90;
 const MARGEN_FIN_BARRIDO_PX = 120;
 const X_INICIAL_STICKMAN = -60;
 const HOLGURA_SALIDA_PX = 80;
-// Se graba uno de cada dos cuadros: con el barrido lento la simulación dura
-// demasiado para grabarla entera.
-const INTERVALO_GRABACION = 2;
 // Fotos que consume el rebobinado por cuadro. Menos de 1 lo hace más lento
 // que la simulación original; las posiciones intermedias se interpolan entre
 // foto y foto, así bajar la velocidad no lo vuelve un pase de diapositivas.
@@ -112,6 +109,9 @@ export default function ColapsoFisico({
           // se suelta y cae.
           rota: false,
           letra: -1,
+          // Posición dentro de la grabación. -1 mientras sigue colgada: sólo
+          // se graban los caracteres rotos, que son los únicos que se mueven.
+          ranura: -1,
         });
       });
     });
@@ -168,7 +168,10 @@ export default function ColapsoFisico({
       anchoCaracter,
       altoCaracter: campo.tamanoCelda,
     });
-    const grabadora = crearGrabadora(cuerposDeCaracteres.length);
+    const grabadora = crearGrabadora();
+    // Cuerpos ya sueltos, en el orden en que se rompieron. Ese orden ES la
+    // ranura con la que cada uno se guarda y se lee de la grabación.
+    const cuerposRotos = [];
 
     const fuenteAscii = `${campo.tamanoCelda}px monospace`;
 
@@ -179,7 +182,6 @@ export default function ColapsoFisico({
     let bucle = 0;
     let terminado = false;
     let rotas = 0;
-    let contadorCuadros = 0;
     let escobaApoyada = false;
     let momentoUltimaRotura = 0;
     let momentoSalida = 0;
@@ -211,6 +213,8 @@ export default function ColapsoFisico({
         // …y se desprende la celda que el mouse tocó.
         if (celda.rota) continue;
         celda.rota = true;
+        celda.ranura = cuerposRotos.length;
+        cuerposRotos.push(cuerposDeCaracteres[i]);
         liberarCuerpo(cuerposDeCaracteres[i]);
         rotas += 1;
         momentoUltimaRotura = ahora;
@@ -313,7 +317,7 @@ export default function ColapsoFisico({
         // atrás: en vez de irse, arranca otra pasada. La válvula de la
         // grabadora es lo que impide que esto se estire para siempre.
         const rompiendoTodavia = ahora - momentoUltimaRotura < ESPERA_TRAS_ULTIMA_ROTURA_MS;
-        if (!grabadora.lleno && (rompiendoTodavia || quedanRestosSinBarrer())) {
+        if (rompiendoTodavia || quedanRestosSinBarrer()) {
           reiniciarPasada();
           return false;
         }
@@ -325,7 +329,7 @@ export default function ColapsoFisico({
       }
       if (fase === 'espera') {
         // Romper algo durante la pausa lo hace volver en vez de rebobinar.
-        if (momentoUltimaRotura > momentoSalida && !grabadora.lleno) {
+        if (momentoUltimaRotura > momentoSalida) {
           reiniciarPasada();
           return false;
         }
@@ -413,9 +417,12 @@ export default function ColapsoFisico({
     function dibujarDesdeFotos(fotoA, fotoB, mezcla) {
       const color = abrirCuadro();
       dibujarNombre(color, (i) => {
-        const a = leerCelda(fotoA, i);
+        const celda = celdas[i];
+        const a = leerCelda(fotoA, celda.ranura);
+        // Sin dato en esa foto = todavía no se había roto: seguía colgada.
+        if (!a) return { x: celda.x, y: celda.y, angulo: 0 };
         if (mezcla === 0) return a;
-        const b = leerCelda(fotoB, i);
+        const b = leerCelda(fotoB, celda.ranura) || a;
         return {
           x: a.x + (b.x - a.x) * mezcla,
           y: a.y + (b.y - a.y) * mezcla,
@@ -453,15 +460,12 @@ export default function ColapsoFisico({
         // caer un cuadro y la grabación deja de ser reproducible.
         Engine.update(motor, PASO_MS);
 
-        contadorCuadros += 1;
         // Durante la espera previa al rebobinado no se graba: si no, la
-        // reconstrucción arrancaría con un tramo congelado.
-        if (fase !== 'espera' && contadorCuadros % INTERVALO_GRABACION === 0) {
-          grabadora.grabarCuadro(cuerposDeCaracteres);
-        }
+        // reconstrucción arrancaría con un tramo congelado. El intervalo lo
+        // maneja la propia grabadora.
+        if (fase !== 'espera') grabadora.grabarCuadro(cuerposRotos);
 
         if (evaluarTransicion(ahora)) return undefined;
-        if (grabadora.lleno && fase !== 'rebobinado') empezarRebobinado();
         dibujarDesdeMotor();
       }
       bucle = requestAnimationFrame(cuadro);
