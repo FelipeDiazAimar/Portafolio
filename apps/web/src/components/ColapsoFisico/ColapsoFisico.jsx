@@ -18,7 +18,8 @@ import styles from './ColapsoFisico.module.css';
 const PASO_MS = 1000 / 60;
 const UMBRAL_QUIETUD = 0.85;
 const MINIMO_DERRUMBE_MS = 1200;
-const VELOCIDAD_STICKMAN_PX = 2.2;
+const CUADROS_PRESUPUESTO_CAMINATA = 520;
+const VELOCIDAD_STICKMAN_MINIMA_PX = 2.2;
 const MARGEN_FIN_BARRIDO_PX = 120;
 const AVANCE_PASO_CAMINATA = 0.18;
 const X_INICIAL_STICKMAN = -60;
@@ -40,6 +41,17 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     const ancho = overlay.clientWidth;
     const alto = overlay.clientHeight;
     const suelo = alto;
+
+    // La caminata tiene que entrar SIEMPRE en el presupuesto de grabación:
+    // a velocidad fija, en un viewport ancho el stickman todavía está barriendo
+    // cuando la grabadora se llena, y el rebobinado corta a mitad de la barrida.
+    // Se reparte el ancho real en un presupuesto fijo de cuadros y se deja el
+    // resto del buffer para el derrumbe.
+    const recorridoStickman = ancho + HOLGURA_SALIDA_PX - X_INICIAL_STICKMAN;
+    const velocidadStickman = Math.max(
+      VELOCIDAD_STICKMAN_MINIMA_PX,
+      recorridoStickman / CUADROS_PRESUPUESTO_CAMINATA
+    );
 
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     lienzo.width = ancho * dpr;
@@ -101,7 +113,7 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
     // --- Simulación ------------------------------------------------------
     function actualizarStickman() {
       if (fase === 'derrumbe') return;
-      stickman.x += VELOCIDAD_STICKMAN_PX;
+      stickman.x += velocidadStickman;
       stickman.paso += AVANCE_PASO_CAMINATA;
       if (fase === 'barrido') {
         moverCuerpo(
@@ -214,6 +226,16 @@ export default function ColapsoFisico({ campo, refContenedor, posicionInicialRat
       bucle = requestAnimationFrame(cuadro);
       return undefined;
     }
+
+    // Cuadro 0 = la formación intacta. Se graba antes de mover el cursor y antes
+    // del primer Engine.update: si no, el último cuadro del rebobinado ya trae un
+    // paso de física (y la penetración del cursor sobre los glifos que toca), y el
+    // nombre nunca termina de reformarse del todo.
+    grabadora.grabarCuadro(cuerposDeCaracteres, {
+      x: stickman.x,
+      paso: stickman.paso,
+      barriendo: false,
+    });
 
     bucle = requestAnimationFrame(cuadro);
 
