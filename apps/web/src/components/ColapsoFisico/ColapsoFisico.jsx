@@ -260,9 +260,10 @@ export default function ColapsoFisico({
     // del bucle ya parte de ahí y sólo aporta el delta real del mouse.
     colocarSinImpulso(cuerpoCursor, raton.x, raton.y);
 
-    // Cuadro 0 = la formación intacta. Se graba antes de mover el cursor y antes
-    // del primer Engine.update: si no, el último cuadro del rebobinado ya trae un
-    // paso de física (y la penetración del cursor sobre los glifos que toca), y el
+    // Cuadro 0 = la formación intacta. Se graba antes del primer Engine.update
+    // (colocar el cursor acá arriba no mueve ningún glifo, es un cuerpo
+    // estático): si no, el último cuadro del rebobinado ya trae un paso de
+    // física —y la penetración del cursor sobre los glifos que toca— y el
     // nombre nunca termina de reformarse del todo.
     grabadora.grabarCuadro(cuerposDeCaracteres, {
       x: stickman.x,
