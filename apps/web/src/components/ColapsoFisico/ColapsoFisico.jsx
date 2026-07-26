@@ -20,11 +20,12 @@ const PASO_MS = 1000 / 60;
 // Radio alrededor del cursor dentro del cual una celda se desprende. Algo
 // mayor que el radio del cuerpo del cursor, así se suelta justo antes de que
 // el cursor la alcance y el empujón la encuentra ya cayendo.
-const RADIO_ROTURA_PX = 26;
-// Radio, más amplio, con el que la LETRA entera pasa a verse en ASCII. Es
-// mayor que el de rotura a propósito: primero se ve la letra convertirse en
-// caracteres y recién después se le empiezan a caer los que toca el mouse.
-const RADIO_CONVERSION_PX = 48;
+//
+// El mismo radio decide cuándo la LETRA entera pasa a verse en ASCII: son un
+// único valor y no dos, porque con un radio de conversión más amplio se
+// alcanzaban celdas de letras vecinas y esas letras se convertían sin que
+// llegara a romperse nada de ellas.
+const RADIO_ACCION_PX = 26;
 const UMBRAL_QUIETUD = 0.85;
 // Cuánto hay que dejar de romper cosas nuevas para que se considere terminada
 // la interacción y entre el stickman.
@@ -55,13 +56,16 @@ export default function ColapsoFisico({
   refContenedor,
   posicionInicialRaton,
   visible = true,
+  alConvertirLetra,
   alTerminar,
 }) {
   const refLienzo = useRef(null);
-  // El callback puede cambiar de identidad entre renders; se lee por ref para
-  // que el efecto no se reinicie (reiniciarlo destruiría la simulación).
+  // Los callbacks pueden cambiar de identidad entre renders; se leen por ref
+  // para que el efecto no se reinicie (reiniciarlo destruiría la simulación).
   const refAlTerminar = useRef(alTerminar);
   refAlTerminar.current = alTerminar;
+  const refAlConvertirLetra = useRef(alConvertirLetra);
+  refAlConvertirLetra.current = alConvertirLetra;
 
   useEffect(() => {
     const lienzo = refLienzo.current;
@@ -196,15 +200,16 @@ export default function ColapsoFisico({
         const dx = raton.x - celda.x;
         const dy = raton.y - celda.y;
         const distancia2 = dx * dx + dy * dy;
+        if (distancia2 > RADIO_ACCION_PX * RADIO_ACCION_PX) continue;
 
-        // Primero la letra entera se convierte a ASCII…
-        if (celda.letra >= 0 && distancia2 <= RADIO_CONVERSION_PX * RADIO_CONVERSION_PX) {
+        // La letra entera pasa a verse como caracteres…
+        if (celda.letra >= 0 && !letraConvertida[celda.letra]) {
           letraConvertida[celda.letra] = true;
+          refAlConvertirLetra.current?.(celda.letra);
         }
 
-        // …y sólo se desprenden las celdas que el mouse toca de verdad.
+        // …y se desprende la celda que el mouse tocó.
         if (celda.rota) continue;
-        if (distancia2 > RADIO_ROTURA_PX * RADIO_ROTURA_PX) continue;
         celda.rota = true;
         liberarCuerpo(cuerposDeCaracteres[i]);
         rotas += 1;

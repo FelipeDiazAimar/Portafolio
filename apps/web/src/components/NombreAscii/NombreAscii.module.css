@@ -15,6 +15,42 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+  color: inherit;
+}
+
+/* Es un enlace: si se puede enfocar con teclado tiene que poder verse.
+   Un foco invisible es peor que no tener el enlace. */
+.soloLectura:focus-visible {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.35rem 0.6rem;
+  overflow: visible;
+  clip: auto;
+  background: var(--color-bg);
+  outline: 2px solid var(--color-fg);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Capa de blancos de mouse. Va portaleada a document.body igual que el
+   canvas del colapso: dentro del hero heredaría pointer-events:none y
+   quedaría detrás del contenido por el z-index:-1 de .hero. */
+.zonaEnlace {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.hitboxLetra {
+  position: absolute;
+  display: block;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .textoLimpio {

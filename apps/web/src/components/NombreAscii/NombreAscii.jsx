@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import styles from './NombreAscii.module.css';
@@ -410,6 +411,27 @@ function estiloDeCelda(celda, fase) {
   };
 }
 
+// Caja de cada letra en coordenadas de PÁGINA, para poder ponerle encima una
+// zona clickeable. Misma conversión que usa ColapsoFisico para sus celdas.
+function cajasDeLetras(campo, contenedor) {
+  const rect = contenedor.getBoundingClientRect();
+  const origenX = rect.left + window.scrollX;
+  const origenY = rect.top + window.scrollY;
+  const cajas = [];
+  campo.lineasLimpias.forEach((linea) => {
+    linea.letras.forEach((letra) => {
+      cajas.push({
+        caracter: letra.caracter,
+        izquierda: origenX + campo.textoIzquierda + letra.x,
+        arriba: origenY + campo.textoArriba + linea.bordeArriba,
+        ancho: letra.ancho,
+        alto: linea.bordeAbajo - linea.bordeArriba,
+      });
+    });
+  });
+  return cajas;
+}
+
 export default function NombreAscii() {
   const { seccionActiva } = usePortfolio();
   const refContenedor = useRef(null);
@@ -419,6 +441,11 @@ export default function NombreAscii() {
   // 'oculto' -> 'onda' -> 'revelado' -> 'desvanecido'
   const [fase, setFase] = useState('oculto');
   const [campo, setCampo] = useState(null);
+  const [cajasLetras, setCajasLetras] = useState([]);
+  // Índices de las letras que ya se convirtieron a ASCII durante un colapso:
+  // esas dejan de ser clickeables hasta que el nombre se reconstruye.
+  const [letrasRotas, setLetrasRotas] = useState(() => new Set());
+  const [montado, setMontado] = useState(false);
   const [colapso, setColapso] = useState(null);
   // Tras un colapso hay que salir del área y volver a entrar para
   // re-disparar: si no, quedarse quieto encima lo relanzaría en loop.
@@ -432,6 +459,7 @@ export default function NombreAscii() {
   refFase.current = fase;
 
   useEffect(() => {
+    setMontado(true);
     const temporizador = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizador);
   }, []);
@@ -446,7 +474,9 @@ export default function NombreAscii() {
     if (!refContenedor.current || !refLimpio.current) return;
     const calco = calcarTextoLimpio(refLimpio.current, refContenedor.current);
     if (!calco) return;
-    setCampo(generarCampo(calco));
+    const nuevoCampo = generarCampo(calco);
+    setCampo(nuevoCampo);
+    setCajasLetras(nuevoCampo ? cajasDeLetras(nuevoCampo, refContenedor.current) : []);
     setCicloCampo((id) => id + 1);
   }, []);
 
@@ -573,9 +603,15 @@ export default function NombreAscii() {
     return () => window.removeEventListener('mousemove', alMoverse);
   }, [fase, colapso, campo, seccionActiva]);
 
+  const zonaClickeableVisible = fase === 'desvanecido' && seccionActiva === 'inicio';
+
   return (
     <div className={styles.contenedor} ref={refContenedor}>
-      <span className={styles.soloLectura}>Felipe Diaz Aimar</span>
+      {/* Único destino de teclado y lectores de pantalla. Las hitboxes de
+          abajo son sólo blancos de mouse, para no dejar 17 tabulaciones. */}
+      <a href="#contacto" className={styles.soloLectura}>
+        Felipe Diaz Aimar
+      </a>
 
       <div
         ref={refLimpio}
@@ -621,12 +657,49 @@ export default function NombreAscii() {
           refContenedor={refContenedor}
           posicionInicialRaton={colapso}
           visible={seccionActiva === 'inicio'}
+          alConvertirLetra={(indice) =>
+            setLetrasRotas((previo) => {
+              if (previo.has(indice)) return previo;
+              const siguiente = new Set(previo);
+              siguiente.add(indice);
+              return siguiente;
+            })
+          }
           alTerminar={() => {
             refEsperandoSalida.current = true;
+            setLetrasRotas(new Set());
             setColapso(null);
           }}
         />
       )}
+
+      {/* Una hitbox por letra, portaleada como el canvas para escapar del
+          pointer-events:none del hero. Las letras que ya se convirtieron a
+          ASCII se sacan: no hay glifo ahí, así que no hay dónde hacer clic. */}
+      {montado &&
+        zonaClickeableVisible &&
+        cajasLetras.length > 0 &&
+        createPortal(
+          <div className={styles.zonaEnlace} aria-hidden="true">
+            {cajasLetras.map((caja, indice) =>
+              letrasRotas.has(indice) || caja.caracter === ' ' ? null : (
+                <a
+                  key={indice}
+                  href="#contacto"
+                  tabIndex={-1}
+                  className={styles.hitboxLetra}
+                  style={{
+                    left: `${caja.izquierda}px`,
+                    top: `${caja.arriba}px`,
+                    width: `${caja.ancho}px`,
+                    height: `${caja.alto}px`,
+                  }}
+                />
+              )
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
