@@ -7,12 +7,14 @@ const AMPLITUD_BARRIDO = 58;
 // Fracción del ciclo que dura el empuje. El resto es el retorno, que va más
 // rápido porque la escoba vuelve levantada y sin peso.
 const PROPORCION_EMPUJE = 0.68;
-// Cuánto sigue el palo por encima de la mano de arriba.
-const SOBRANTE_PALO = 28;
 // Medio ancho del cabezal (un palo de piso, no una escoba de cerdas).
 const MEDIO_CABEZAL = 15;
-// Cuánto se despegan los codos de la línea hombro-mano.
-const CURVATURA_CODO = 11;
+// Desvío del codo respecto del punto medio hombro-mano. Es un vector fijo
+// hacia ABAJO y ATRÁS, no una perpendicular al brazo: con la perpendicular
+// la dirección del codo dependía de dónde cayera la mano y terminaba
+// apuntando hacia adelante o hacia arriba.
+const DESVIO_CODO_X = -7;
+const DESVIO_CODO_Y = 10;
 
 // Posición dentro del ciclo de barrido, 0..1.
 function faseDelCiclo(paso) {
@@ -46,16 +48,10 @@ export function desplazamientoEscoba(paso, barriendo) {
   return ALCANCE_MINIMO + curvaBarrido(paso) * AMPLITUD_BARRIDO;
 }
 
-// Brazo en dos tramos con el codo salido hacia afuera, en vez de una recta
-// del hombro a la mano.
-function trazarBrazo(ctx, hombroX, hombroY, manoX, manoY, curvatura) {
-  const dx = manoX - hombroX;
-  const dy = manoY - hombroY;
-  const largo = Math.hypot(dx, dy) || 1;
-  const perpX = -dy / largo;
-  const perpY = dx / largo;
-  const codoX = (hombroX + manoX) / 2 + perpX * curvatura;
-  const codoY = (hombroY + manoY) / 2 + perpY * curvatura;
+// Brazo en dos tramos, con el codo caído hacia atrás.
+function trazarBrazo(ctx, hombroX, hombroY, manoX, manoY, desvioX, desvioY) {
+  const codoX = (hombroX + manoX) / 2 + desvioX;
+  const codoY = (hombroY + manoY) / 2 + desvioY;
   ctx.moveTo(hombroX, hombroY);
   ctx.lineTo(codoX, codoY);
   ctx.lineTo(manoX, manoY);
@@ -74,21 +70,18 @@ export function dibujarStickman(ctx, { x, suelo, paso, barriendo }, color) {
   const puntaX = x + alcance;
   const puntaY = suelo - (empujando ? 4 : 12);
 
-  // Eje del palo: apunta desde la punta (en el piso) hacia arriba y atrás.
-  const ejeX = hombroX - 12 - puntaX;
-  const ejeY = hombroY - 34 - puntaY;
-  const largoEje = Math.hypot(ejeX, ejeY) || 1;
-  const dirX = ejeX / largoEje;
-  const dirY = ejeY / largoEje;
+  // El palo queda definido por sus DOS extremos, en vez de por un eje que se
+  // extiende: así no puede pasarse de largo. Arriba llega apenas por encima
+  // del hombro, que es donde termina un palo de piso real.
+  const topeX = x + 8;
+  const topeY = hombroY - 8;
 
-  // Las dos manos agarran el palo a alturas distintas, y el palo sigue de
-  // largo por encima de la mano de arriba.
-  const manoBajaX = puntaX + dirX * largoEje * 0.46;
-  const manoBajaY = puntaY + dirY * largoEje * 0.46;
-  const manoAltaX = puntaX + dirX * largoEje * 0.8;
-  const manoAltaY = puntaY + dirY * largoEje * 0.8;
-  const topeX = puntaX + dirX * (largoEje + SOBRANTE_PALO);
-  const topeY = puntaY + dirY * (largoEje + SOBRANTE_PALO);
+  // Las dos manos agarran cerca del tope, a alturas distintas. El palo
+  // sobresale un poco por encima de la mano de arriba.
+  const manoAltaX = topeX + (puntaX - topeX) * 0.14;
+  const manoAltaY = topeY + (puntaY - topeY) * 0.14;
+  const manoBajaX = topeX + (puntaX - topeX) * 0.42;
+  const manoBajaY = topeY + (puntaY - topeY) * 0.42;
 
   ctx.save();
   ctx.strokeStyle = color;
@@ -110,12 +103,20 @@ export function dibujarStickman(ctx, { x, suelo, paso, barriendo }, color) {
   ctx.lineTo(x + balanceo, suelo);
   ctx.stroke();
 
-  // Brazos con codo. El de abajo dobla al revés que el de arriba, que es
-  // como quedan las manos cuando una agarra más abajo que la otra.
+  // Brazos con codo. Los dos codos caen hacia abajo y atrás; el de la mano
+  // baja cuelga un poco más.
   ctx.lineWidth = 2.2;
   ctx.beginPath();
-  trazarBrazo(ctx, hombroX, hombroY, manoAltaX, manoAltaY, CURVATURA_CODO);
-  trazarBrazo(ctx, hombroX, hombroY + 9, manoBajaX, manoBajaY, -CURVATURA_CODO);
+  trazarBrazo(ctx, hombroX, hombroY, manoAltaX, manoAltaY, DESVIO_CODO_X, DESVIO_CODO_Y);
+  trazarBrazo(
+    ctx,
+    hombroX,
+    hombroY + 9,
+    manoBajaX,
+    manoBajaY,
+    DESVIO_CODO_X + 2,
+    DESVIO_CODO_Y + 3
+  );
   ctx.stroke();
 
   // Palo entero, del tope al piso.
@@ -127,8 +128,9 @@ export function dibujarStickman(ctx, { x, suelo, paso, barriendo }, color) {
 
   // Cabezal: una sola barra maciza perpendicular al palo. Es un palo de
   // piso, no una escoba: sin cerdas.
-  const perpX = -dirY;
-  const perpY = dirX;
+  const largoPalo = Math.hypot(puntaX - topeX, puntaY - topeY) || 1;
+  const perpX = -(puntaY - topeY) / largoPalo;
+  const perpY = (puntaX - topeX) / largoPalo;
   ctx.lineWidth = 5.5;
   ctx.beginPath();
   ctx.moveTo(puntaX - perpX * MEDIO_CABEZAL, puntaY - perpY * MEDIO_CABEZAL);
