@@ -16,6 +16,12 @@ const DEMORA_INICIO_MS = 3300;
 const DURACION_ESCRITURA_MS = 3200;
 // Tiene que coincidir con --duracion-revelado del CSS.
 const DURACION_REVELADO_FOTO_MS = 700;
+const DURACION_BARRIDO_MS = 700;
+const BORDE_MASCARA_PX = 48;
+
+function suavizar(t) {
+  return 1 - (1 - t) ** 3;
+}
 
 // Recorte en L: las filas ya terminadas más el trozo escrito de la fila en
 // curso. Es lo que hace que el ASCII se "escriba" sin repintar el canvas.
@@ -38,15 +44,29 @@ export default function RetratoAscii() {
   const refLienzo = useRef(null);
   const refImagen = useRef(null);
   const refAscii = useRef(null);
+  const refUltimoInterior = useRef({ x: 0, y: 0 });
+  const refOrigen = useRef({ x: 0, y: 0 });
+  const refProgreso = useRef(0);
+  const refDestino = useRef('foto');
+  const refPolaridad = useRef(false);
+  const refRadioMaximo = useRef(0);
 
   // 'esperando' -> 'escribiendo' -> 'revelando' -> 'foto'
+  // y de ahí en más: 'foto' <-> 'transicion' <-> 'ascii'
   const [fase, setFase] = useState('esperando');
   const [esperaCumplida, setEsperaCumplida] = useState(false);
   const [listo, setListo] = useState(false);
   const [reducido, setReducido] = useState(false);
+  const [saliendo, setSaliendo] = useState(false);
+  const [interactivo, setInteractivo] = useState(false);
+  const [listoParaHover, setListoParaHover] = useState(false);
+
+  const refFase = useRef(fase);
+  refFase.current = fase;
 
   useEffect(() => {
     setReducido(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    setInteractivo(window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   }, []);
 
   // Convierte y pinta. Se llama una vez al cargar la imagen; la Task 4 la
@@ -166,6 +186,127 @@ export default function RetratoAscii() {
     return () => clearTimeout(temporizador);
   }, [fase]);
 
+  // Marca que la intro terminó, para armar el hover una sola vez.
+  useEffect(() => {
+    if (fase === 'foto' && !listoParaHover) setListoParaHover(true);
+  }, [fase, listoParaHover]);
+
+  // La detección NO usa eventos del DOM: `.capa` tiene pointer-events:none, el
+  // hero está en z-index:-1 y `.seccionHero` también anula punteros, así que
+  // un onMouseEnter sobre el retrato nunca se dispararía. Se compara la
+  // posición del cursor contra el rect del marco.
+  useEffect(() => {
+    if (!listoParaHover || !interactivo || reducido) return undefined;
+
+    function evaluar(adentro) {
+      const deseado = adentro ? 'ascii' : 'foto';
+      const actual = refFase.current;
+      if (actual === deseado) return;
+
+      if (actual === 'transicion') {
+        // Ya hay un barrido corriendo: sólo se invierte el sentido.
+        refDestino.current = deseado;
+        return;
+      }
+
+      refOrigen.current = { ...refUltimoInterior.current };
+      refPolaridad.current = deseado === 'foto';
+      refProgreso.current = 0;
+      refDestino.current = deseado;
+      setSaliendo(refPolaridad.current);
+      setFase('transicion');
+    }
+
+    function alMoverse(evento) {
+      const marco = refMarco.current;
+      if (!marco) return;
+      const rect = marco.getBoundingClientRect();
+      const adentro =
+        evento.clientX >= rect.left &&
+        evento.clientX <= rect.right &&
+        evento.clientY >= rect.top &&
+        evento.clientY <= rect.bottom;
+
+      if (adentro) {
+        // Relativas al marco, que es lo que consume la máscara. Se guarda la
+        // última posición INTERIOR: al salir, el centro del círculo tiene que
+        // caer sobre la imagen, no fuera de ella.
+        refUltimoInterior.current = {
+          x: evento.clientX - rect.left,
+          y: evento.clientY - rect.top,
+        };
+      }
+      evaluar(adentro);
+    }
+
+    // Si el cursor abandona la ventana no llegan más mousemove y el retrato
+    // se quedaría en ASCII para siempre.
+    function alSalirDelDocumento() {
+      evaluar(false);
+    }
+
+    window.addEventListener('mousemove', alMoverse, { passive: true });
+    document.addEventListener('mouseleave', alSalirDelDocumento);
+    return () => {
+      window.removeEventListener('mousemove', alMoverse);
+      document.removeEventListener('mouseleave', alSalirDelDocumento);
+    };
+  }, [listoParaHover, interactivo, reducido]);
+
+  useEffect(() => {
+    if (fase !== 'transicion') return undefined;
+    const lienzo = refLienzo.current;
+    const marco = refMarco.current;
+    if (!lienzo || !marco) return undefined;
+
+    const { width: ancho, height: alto } = marco.getBoundingClientRect();
+    const origen = refOrigen.current;
+    // La esquina más lejana, más el borde: por debajo de eso quedaría una
+    // esquina sin cubrir al final del barrido.
+    refRadioMaximo.current =
+      Math.max(
+        Math.hypot(origen.x, origen.y),
+        Math.hypot(ancho - origen.x, origen.y),
+        Math.hypot(origen.x, alto - origen.y),
+        Math.hypot(ancho - origen.x, alto - origen.y)
+      ) + BORDE_MASCARA_PX;
+
+    lienzo.style.setProperty('--origen-x', `${origen.x}px`);
+    lienzo.style.setProperty('--origen-y', `${origen.y}px`);
+
+    let anterior = performance.now();
+    let bucle = 0;
+
+    function cuadro(ahora) {
+      const avance = (ahora - anterior) / DURACION_BARRIDO_MS;
+      anterior = ahora;
+
+      // Con polaridad normal el ASCII crece con el progreso; con la invertida
+      // el progreso es cuánto se borró. El destino se lee cada cuadro porque
+      // el mouse puede cambiarlo a mitad de camino.
+      const objetivo = refPolaridad.current
+        ? (refDestino.current === 'foto' ? 1 : 0)
+        : (refDestino.current === 'ascii' ? 1 : 0);
+
+      const paso = objetivo > refProgreso.current ? avance : -avance;
+      refProgreso.current = Math.min(1, Math.max(0, refProgreso.current + paso));
+
+      lienzo.style.setProperty(
+        '--radio',
+        `${suavizar(refProgreso.current) * refRadioMaximo.current}px`
+      );
+
+      if (refProgreso.current === objetivo) {
+        setFase(refDestino.current);
+        return;
+      }
+      bucle = requestAnimationFrame(cuadro);
+    }
+
+    bucle = requestAnimationFrame(cuadro);
+    return () => cancelAnimationFrame(bucle);
+  }, [fase]);
+
   const fotoRevelada = fase !== 'esperando' && fase !== 'escribiendo';
 
   return (
@@ -182,8 +323,8 @@ export default function RetratoAscii() {
         ref={refLienzo}
         aria-hidden="true"
         className={`${styles.ascii} ${fase === 'revelando' ? styles.desvaneciendo : ''} ${
-          fase === 'foto' ? styles.enmascarado : ''
-        }`}
+          listoParaHover ? styles.enmascarado : ''
+        } ${saliendo ? styles.saliendo : ''}`}
       />
     </div>
   );
