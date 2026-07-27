@@ -160,7 +160,16 @@ export default function RetratoAscii() {
       attributes: true,
       attributeFilter: ['data-theme'],
     });
-    return () => observador.disconnect();
+    // Sin `data-theme` en <html>, los tokens los resuelve una media query de
+    // prefers-color-scheme: el tema puede cambiar desde el sistema operativo
+    // sin que mute ningún atributo, así que el observador solo no alcanza.
+    const consultaSistema = window.matchMedia('(prefers-color-scheme: light)');
+    const alCambiarElSistema = () => repintar();
+    consultaSistema.addEventListener('change', alCambiarElSistema);
+    return () => {
+      observador.disconnect();
+      consultaSistema.removeEventListener('change', alCambiarElSistema);
+    };
   }, [reducido, repintar]);
 
   // El marco mide en vh, así que al redimensionar cambia de tamaño y el

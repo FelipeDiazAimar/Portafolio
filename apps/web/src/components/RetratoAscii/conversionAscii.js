@@ -16,7 +16,27 @@ export function medirRatioMonoespaciado() {
 }
 
 export function luminanciaDeColor(css) {
-  const componentes = css.match(/\d+(\.\d+)?/g);
+  const texto = css.trim();
+
+  // Los tokens del proyecto son hexadecimales, y hex es lo que devuelve
+  // getPropertyValue de una custom property.
+  const hex = texto.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const digitos = hex[1];
+    const completo =
+      digitos.length === 3
+        ? digitos
+            .split('')
+            .map((d) => d + d)
+            .join('')
+        : digitos;
+    const r = parseInt(completo.slice(0, 2), 16);
+    const g = parseInt(completo.slice(2, 4), 16);
+    const b = parseInt(completo.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  }
+
+  const componentes = texto.match(/\d+(\.\d+)?/g);
   if (!componentes || componentes.length < 3) return 0;
   const [r, g, b] = componentes.map(Number);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
@@ -26,9 +46,15 @@ export function luminanciaDeColor(css) {
 // las zonas claras de la foto van a caracteres densos. En tema claro es al
 // revés: si no se invierte la rampa, la foto se ve en negativo.
 export function leerColoresDelTema() {
-  const estilo = getComputedStyle(document.body);
-  const colorTexto = estilo.color;
-  const colorFondo = estilo.backgroundColor;
+  // Se leen las custom properties de <html> y NO el computed color de <body>:
+  // globals.css le pone a body `transition: color .3s`, así que justo después
+  // de cambiar el tema getComputedStyle devuelve el valor INTERPOLADO, o sea
+  // todavía el del tema anterior. Eso no sólo pintaría con el color viejo:
+  // también decidiría mal `invertida` y dejaría la foto en negativo. Las
+  // custom properties no transicionan, así que ya valen el color nuevo.
+  const estilo = getComputedStyle(document.documentElement);
+  const colorTexto = estilo.getPropertyValue('--color-fg').trim();
+  const colorFondo = estilo.getPropertyValue('--color-bg').trim();
   return {
     colorTexto,
     colorFondo,
