@@ -90,11 +90,29 @@ export default function RetratoAscii() {
 
     pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo);
 
-    // El canvas queda pintado entero desde que carga la imagen, pero la
-    // escritura no arranca hasta DEMORA_INICIO_MS. Sin recortarlo acá, el
-    // retrato completo asoma cuando se va el splash de Bienvenida y después
-    // desaparece de golpe al empezar a escribirse.
-    lienzo.style.clipPath = recorteDeEscritura(0, ascii.columnas, ascii.filas);
+    // El clip-path depende de en qué fase está la intro, así que se lee de
+    // `refFase` (espejo actualizado en cada render) en vez de meter `fase`
+    // en las dependencias: eso re-suscribiría a los dos efectos de la Task 4
+    // en cada cambio de fase.
+    //
+    // - 'esperando': la intro todavía no arrancó. El canvas queda pintado
+    //   entero desde que carga la imagen, pero la escritura no empieza hasta
+    //   DEMORA_INICIO_MS. Sin recortarlo acá, el retrato completo asoma
+    //   cuando se va el splash de Bienvenida y después desaparece de golpe
+    //   al empezar a escribirse.
+    // - 'escribiendo': el rAF de la escritura ya está animando el
+    //   clip-path cuadro a cuadro. Si un cambio de tema o un resize dispara
+    //   `repintar` acá, no hay que tocarlo: pisarlo con el recorte en 0
+    //   reiniciaría la escritura a mitad de camino.
+    // - Cualquier otra fase ('revelando', 'transicion', 'foto', 'ascii'): la
+    //   intro ya terminó, así que el clip-path tiene que quedar en 'none'.
+    //   Si se dejara el recorte en 0 (o lo que sea que tuviera antes) de
+    //   forma permanente, el ASCII no se volvería a ver nunca más.
+    if (refFase.current === 'esperando') {
+      lienzo.style.clipPath = recorteDeEscritura(0, ascii.columnas, ascii.filas);
+    } else if (refFase.current !== 'escribiendo') {
+      lienzo.style.clipPath = 'none';
+    }
     return true;
   }, []);
 
@@ -128,6 +146,37 @@ export default function RetratoAscii() {
     imagen.src = RUTA_RETRATO;
     return () => {
       cancelado = true;
+    };
+  }, [reducido, repintar]);
+
+  // El canvas se pinta una sola vez, así que un cambio de tema lo dejaría con
+  // los colores viejos: caracteres claros sobre fondo claro, o al revés. Y no
+  // alcanza con repintar: `leerColoresDelTema` también da vuelta la rampa, así
+  // que hay que rehacer la conversión entera, no sólo el pintado.
+  useEffect(() => {
+    if (reducido) return undefined;
+    const observador = new MutationObserver(() => repintar());
+    observador.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observador.disconnect();
+  }, [reducido, repintar]);
+
+  // El marco mide en vh, así que al redimensionar cambia de tamaño y el
+  // bitmap quedaría estirado. Con debounce: repintar convierte la imagen
+  // entera y no vale la pena hacerlo en cada evento del arrastre.
+  useEffect(() => {
+    if (reducido) return undefined;
+    let temporizador;
+    function alRedimensionar() {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(repintar, 200);
+    }
+    window.addEventListener('resize', alRedimensionar);
+    return () => {
+      window.removeEventListener('resize', alRedimensionar);
+      clearTimeout(temporizador);
     };
   }, [reducido, repintar]);
 
