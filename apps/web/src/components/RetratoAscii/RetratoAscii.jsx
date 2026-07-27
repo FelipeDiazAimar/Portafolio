@@ -213,6 +213,13 @@ export default function RetratoAscii() {
       refPolaridad.current = deseado === 'foto';
       refProgreso.current = 0;
       refDestino.current = deseado;
+      // El radio es una propiedad inline y conserva el valor terminal del
+      // barrido anterior. La clase de polaridad cambia en el commit de React,
+      // pero el bucle recién escribe el radio en su primer rAF: sin este
+      // reseteo síncrono queda un frame con la polaridad nueva y el radio
+      // viejo, que muestra u oculta el ASCII entero de golpe.
+      refLienzo.current?.style.setProperty('--radio', '0px');
+      refFase.current = 'transicion';
       setSaliendo(refPolaridad.current);
       setFase('transicion');
     }
@@ -297,6 +304,10 @@ export default function RetratoAscii() {
       );
 
       if (refProgreso.current === objetivo) {
+        // El espejo se adelanta al render: si no, un mousemove entre el fin
+        // del bucle y el próximo render entraría en la rama de inversión y
+        // escribiría un destino que ya nadie lee.
+        refFase.current = refDestino.current;
         setFase(refDestino.current);
         return;
       }
@@ -323,7 +334,7 @@ export default function RetratoAscii() {
         ref={refLienzo}
         aria-hidden="true"
         className={`${styles.ascii} ${fase === 'revelando' ? styles.desvaneciendo : ''} ${
-          listoParaHover ? styles.enmascarado : ''
+          listoParaHover || fase === 'foto' ? styles.enmascarado : ''
         } ${saliendo ? styles.saliendo : ''}`}
       />
     </div>
