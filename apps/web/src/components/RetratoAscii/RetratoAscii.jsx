@@ -2,10 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { convertirAAscii, leerColoresDelTema, pintarAscii } from './conversionAscii.js';
 import styles from './RetratoAscii.module.css';
 
 const RUTA_RETRATO = '/Yo.png';
+// Medidas reales del archivo. Tienen que coincidir con el `aspect-ratio` de
+// `.marco`: la foto es `object-fit: contain` y el ASCII llena la caja entera,
+// así que si el marco tuviera otra proporción las dos capas dejarían de
+// registrar entre sí y el barrido mostraría foto donde el ASCII dibuja sujeto.
 const ANCHO_RETRATO = 433;
 const ALTO_RETRATO = 577;
 
@@ -18,6 +23,10 @@ const DURACION_ESCRITURA_MS = 3200;
 const DURACION_REVELADO_FOTO_MS = 700;
 const DURACION_BARRIDO_MS = 700;
 const BORDE_MASCARA_PX = 48;
+// Ni `onload` ni `onerror` cubren una petición que se cuelga sin resolver ni
+// fallar. Sin este rescate la fase queda en 'esperando' para siempre y el
+// marco vacío: el canvas recortado a cero y la foto en opacity 0.
+const TIEMPO_MAXIMO_DE_CARGA_MS = 8000;
 
 function suavizar(t) {
   return 1 - (1 - t) ** 3;
@@ -40,6 +49,7 @@ function recorteDeEscritura(progreso, columnas, filas) {
 }
 
 export default function RetratoAscii() {
+  const { seccionActiva } = usePortfolio();
   const refMarco = useRef(null);
   const refLienzo = useRef(null);
   const refImagen = useRef(null);
@@ -69,8 +79,8 @@ export default function RetratoAscii() {
     setInteractivo(window.matchMedia('(hover: hover) and (pointer: fine)').matches);
   }, []);
 
-  // Convierte y pinta. Se llama una vez al cargar la imagen; la Task 4 la
-  // vuelve a llamar cuando cambia el tema.
+  // Convierte y pinta. Se llama al cargar la imagen, al cambiar el tema (del
+  // sitio o del sistema operativo) y al redimensionar la ventana.
   const repintar = useCallback(() => {
     const lienzo = refLienzo.current;
     const marco = refMarco.current;
@@ -116,6 +126,19 @@ export default function RetratoAscii() {
     return true;
   }, []);
 
+  // Los otros llamadores de `repintar` corren fuera de la ruta de carga, que
+  // es la única con su propio try/catch. Como `repintar` limpia el bitmap
+  // (`lienzo.width = …`) antes de pintar, una excepción a mitad de camino
+  // dejaría el canvas vacío y sin rescate: un toggle de tema apagaría el
+  // retrato para siempre. Se degrada a mostrar la foto, igual que la carga.
+  const repintarSeguro = useCallback(() => {
+    try {
+      if (!repintar()) setFase('foto');
+    } catch {
+      setFase('foto');
+    }
+  }, [repintar]);
+
   // Carga de la imagen y primer pintado. Con reduced-motion no se pinta nunca.
   useEffect(() => {
     if (reducido) return undefined;
@@ -144,8 +167,16 @@ export default function RetratoAscii() {
       setFase('foto');
     };
     imagen.src = RUTA_RETRATO;
+    // Ni `onload` ni `onerror` cubren una petición que se cuelga sin resolver
+    // ni fallar. Sin este rescate la fase queda en 'esperando' para siempre y
+    // el marco vacío: el canvas recortado a cero y la foto en opacity 0.
+    const rescate = setTimeout(() => {
+      if (cancelado) return;
+      if (refFase.current === 'esperando') setFase('foto');
+    }, TIEMPO_MAXIMO_DE_CARGA_MS);
     return () => {
       cancelado = true;
+      clearTimeout(rescate);
     };
   }, [reducido, repintar]);
 
@@ -155,7 +186,7 @@ export default function RetratoAscii() {
   // que hay que rehacer la conversión entera, no sólo el pintado.
   useEffect(() => {
     if (reducido) return undefined;
-    const observador = new MutationObserver(() => repintar());
+    const observador = new MutationObserver(() => repintarSeguro());
     observador.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['data-theme'],
@@ -164,13 +195,13 @@ export default function RetratoAscii() {
     // prefers-color-scheme: el tema puede cambiar desde el sistema operativo
     // sin que mute ningún atributo, así que el observador solo no alcanza.
     const consultaSistema = window.matchMedia('(prefers-color-scheme: light)');
-    const alCambiarElSistema = () => repintar();
+    const alCambiarElSistema = () => repintarSeguro();
     consultaSistema.addEventListener('change', alCambiarElSistema);
     return () => {
       observador.disconnect();
       consultaSistema.removeEventListener('change', alCambiarElSistema);
     };
-  }, [reducido, repintar]);
+  }, [reducido, repintarSeguro]);
 
   // El marco mide en vh, así que al redimensionar cambia de tamaño y el
   // bitmap quedaría estirado. Con debounce: repintar convierte la imagen
@@ -180,14 +211,14 @@ export default function RetratoAscii() {
     let temporizador;
     function alRedimensionar() {
       clearTimeout(temporizador);
-      temporizador = setTimeout(repintar, 200);
+      temporizador = setTimeout(repintarSeguro, 200);
     }
     window.addEventListener('resize', alRedimensionar);
     return () => {
       window.removeEventListener('resize', alRedimensionar);
       clearTimeout(temporizador);
     };
-  }, [reducido, repintar]);
+  }, [reducido, repintarSeguro]);
 
   useEffect(() => {
     const temporizador = setTimeout(() => setEsperaCumplida(true), DEMORA_INICIO_MS);
@@ -255,6 +286,7 @@ export default function RetratoAscii() {
   // posición del cursor contra el rect del marco.
   useEffect(() => {
     if (!listoParaHover || !interactivo || reducido) return undefined;
+    if (seccionActiva !== 'inicio') return undefined;
 
     function evaluar(adentro) {
       const deseado = adentro ? 'ascii' : 'foto';
@@ -316,7 +348,7 @@ export default function RetratoAscii() {
       window.removeEventListener('mousemove', alMoverse);
       document.removeEventListener('mouseleave', alSalirDelDocumento);
     };
-  }, [listoParaHover, interactivo, reducido]);
+  }, [listoParaHover, interactivo, reducido, seccionActiva]);
 
   useEffect(() => {
     if (fase !== 'transicion') return undefined;
@@ -388,6 +420,11 @@ export default function RetratoAscii() {
         priority
         className={`${styles.foto} ${fotoRevelada ? styles.revelada : ''}`}
       />
+      {/* El `|| fase === 'foto'` NO es redundante: `listoParaHover` lo
+          enciende un efecto un commit después de que la fase cambia, y en ese
+          render intermedio el canvas ya recuperó opacity 1 al perder
+          `desvaneciendo`. Sin la máscara en ese mismo cuadro, el ASCII entero
+          destella sobre la foto. */}
       <canvas
         ref={refLienzo}
         aria-hidden="true"

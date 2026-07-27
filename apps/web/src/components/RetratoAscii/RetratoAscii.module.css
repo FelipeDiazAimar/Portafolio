@@ -5,6 +5,10 @@
      pantallas intermedias. `--duracion-revelado` tiene que coincidir con
      DURACION_REVELADO_FOTO_MS del componente. */
   height: clamp(20rem, 62vh, 34rem);
+  /* Tiene que coincidir con ANCHO_RETRATO/ALTO_RETRATO del componente: si el
+     marco tuviera otra proporción, la foto (object-fit: contain) se apaisaría
+     dentro de la caja mientras el ASCII la seguiría llenando entera, y las dos
+     capas dejarían de registrar. */
   aspect-ratio: 433 / 577;
   --duracion-revelado: 700ms;
 }
@@ -79,5 +83,14 @@
 @media (max-width: 1024px) {
   .marco {
     display: none;
+  }
+}
+
+/* Con reduced-motion la foto tiene que aparecer directamente, no entrar con
+   un fade: el componente ya saltea la intro, pero la transición vive en el
+   CSS y hay que apagarla acá. */
+@media (prefers-reduced-motion: reduce) {
+  .foto {
+    transition: none;
   }
 }
