@@ -23,9 +23,7 @@ const DURACION_ESCRITURA_MS = 3200;
 const DURACION_REVELADO_FOTO_MS = 700;
 const DURACION_BARRIDO_MS = 700;
 const BORDE_MASCARA_PX = 48;
-// Ni `onload` ni `onerror` cubren una petición que se cuelga sin resolver ni
-// fallar. Sin este rescate la fase queda en 'esperando' para siempre y el
-// marco vacío: el canvas recortado a cero y la foto en opacity 0.
+// Tiempo máximo de espera por la imagen antes de degradar a la foto.
 const TIEMPO_MAXIMO_DE_CARGA_MS = 8000;
 
 function suavizar(t) {
@@ -102,7 +100,7 @@ export default function RetratoAscii() {
 
     // El clip-path depende de en qué fase está la intro, así que se lee de
     // `refFase` (espejo actualizado en cada render) en vez de meter `fase`
-    // en las dependencias: eso re-suscribiría a los dos efectos de la Task 4
+    // en las dependencias: eso re-suscribiría los efectos de tema y resize
     // en cada cambio de fase.
     //
     // - 'esperando': la intro todavía no arrancó. El canvas queda pintado
@@ -133,7 +131,11 @@ export default function RetratoAscii() {
   // retrato para siempre. Se degrada a mostrar la foto, igual que la carga.
   const repintarSeguro = useCallback(() => {
     try {
-      if (!repintar()) setFase('foto');
+      // `repintar` devuelve false tanto ante un fallo como cuando la imagen
+      // todavía no cargó. Sólo el primer caso es motivo de degradar: si se
+      // degradara también en el segundo, un toggle de tema o un resize
+      // mientras carga la foto cancelaría la intro para siempre.
+      if (!repintar() && refImagen.current) setFase('foto');
     } catch {
       setFase('foto');
     }
