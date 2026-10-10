@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMotionValueEvent, useScroll } from 'framer-motion';
 import hitos from '@/data/hitos.json';
 import useConsulta from '@/hooks/useConsulta.js';
@@ -8,9 +8,14 @@ import { indiceDeHito, progresoDeHito } from '@/lib/hitoActivo.js';
 import FondoHito from './FondoHito.jsx';
 import LineaTiempo from './LineaTiempo.jsx';
 import EncabezadoHito from './EncabezadoHito.jsx';
-import EscenarioHito from './EscenarioHito.jsx';
+import Escena3D from './Escena3D/Escena3D.jsx';
 import DescripcionHito from './DescripcionHito.jsx';
 import styles from './SobreMi.module.css';
+
+// Para arrastrar el modelo hay que estar con el cursor encima, así que abrir el
+// detalle al instante en cuanto entra el mouse lo abriría a mitad de cada
+// arrastre. Se espera un momento; un `pointerdown` sobre el canvas lo cancela.
+const ESPERA_HOVER_MODELO_MS = 900;
 
 function SobreMiContenido() {
   const refContenedor = useRef(null);
@@ -19,6 +24,8 @@ function SobreMiContenido() {
   // foco; en celular, los toques sobre un punto, el hilo y la "×".
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const sinHover = !useConsulta('(hover: hover) and (pointer: fine)');
+  const refEspera = useRef(0);
+  useEffect(() => () => clearTimeout(refEspera.current), []);
 
   const { scrollYProgress } = useScroll({
     target: refContenedor,
@@ -61,15 +68,26 @@ function SobreMiContenido() {
         <div
           className={styles.columna}
           onPointerEnter={(evento) => {
-            if (evento.pointerType === 'mouse') alApuntar(true);
+            if (evento.pointerType !== 'mouse') return;
+            clearTimeout(refEspera.current);
+            refEspera.current = setTimeout(() => setDetalleAbierto(true), ESPERA_HOVER_MODELO_MS);
           }}
           onPointerLeave={(evento) => {
-            if (evento.pointerType === 'mouse') alApuntar(false);
+            if (evento.pointerType !== 'mouse') return;
+            clearTimeout(refEspera.current);
+            setDetalleAbierto(false);
           }}
         >
           <EncabezadoHito hito={hito} />
           <div className={styles.zona}>
-            <EscenarioHito hito={hito} desarmado={detalleAbierto} />
+            <Escena3D
+              hito={hito}
+              desarmado={detalleAbierto}
+              onInteraccion={() => {
+                clearTimeout(refEspera.current);
+                setDetalleAbierto(false);
+              }}
+            />
             <DescripcionHito hito={hito} visible={detalleAbierto} />
           </div>
         </div>

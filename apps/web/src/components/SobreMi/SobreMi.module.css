@@ -37,11 +37,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  width: min(42%, 34rem);
+  width: min(46%, 40rem);
+  /* Ocupa todo el alto del panel: el modelo se estira hasta abajo. */
+  align-self: stretch;
 }
 
 .zona {
   position: relative;
+  flex: 1;
   min-height: 18rem;
 }
 
@@ -81,6 +84,7 @@
 
   /* Estado inicial: sólo se ven la imagen y la cinta centrada. */
   .columna {
+    align-self: auto;
     width: calc(100% - 4.5rem);
     margin-top: 2rem;
     opacity: 0;
@@ -104,6 +108,7 @@
   }
 
   .zona {
+    flex: none;
     min-height: 0;
   }
 
