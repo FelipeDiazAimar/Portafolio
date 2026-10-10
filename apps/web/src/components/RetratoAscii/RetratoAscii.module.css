@@ -147,6 +147,14 @@
   }
 }
 
+/* Teléfono bajo (p. ej. 360x640): el texto ocupa más proporción de la pantalla,
+   así que la foto baja un poco para que el pelo no le pise la bio. */
+@media (max-width: 640px) and (max-height: 700px) {
+  .marco {
+    --alto: 74svh;
+  }
+}
+
 /* Tablet en vertical: hay más ancho, así que la foto puede ser más chica en
    proporción y quedar con la cara completa. */
 @media (min-width: 641px) and (max-width: 1024px) and (orientation: portrait) {

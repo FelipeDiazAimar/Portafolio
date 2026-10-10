@@ -7,6 +7,9 @@
     system-ui, sans-serif;
   font-size: clamp(0.8rem, 1.05vw, 0.95rem);
   line-height: 1.65;
+  /* Respeta los saltos de renglón del texto sin conservar espacios repetidos:
+     así cada frase arranca en su propio renglón. */
+  white-space: pre-line;
   color: var(--color-muted);
   opacity: 0;
   transition: opacity 0.4s ease;

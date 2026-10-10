@@ -25,9 +25,10 @@ const ColapsoFisico = dynamic(
 const DEMORA_INICIO_MS = 3300;
 // Aire entre la última línea del nombre y el subtítulo.
 const SEPARACION_SUBTITULO_PX = 6;
-// Texto de presentación bajo el subtítulo. Lo que va entre ** ** sale en negrita.
+// Texto de presentación bajo el subtítulo. Lo que va entre ** ** sale en
+// negrita, y después de cada coma o punto va un salto de renglón (\n).
 const PRESENTACION =
-  'Construyo **aplicaciones web de punta a punta**, de la interfaz a la base de datos. Me gusta el **código claro** y los **detalles cuidados**.';
+  'Construyo **aplicaciones web de punta a punta**,\nde la interfaz a la base de datos.\nMe gusta el **código claro** y los **detalles cuidados**.';
 
 // Fase 1: se dibuja la onda sonora completa.
 const DISPERSION_ONDA_MS = 550;

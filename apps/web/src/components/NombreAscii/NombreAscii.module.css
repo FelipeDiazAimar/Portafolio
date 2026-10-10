@@ -118,12 +118,12 @@
   }
 }
 
-/* Teléfono: la bio no puede pasar del borde izquierdo de la cara. La cara
-   arranca en ~46 % del ancho en cualquier teléfono (queda atada al borde
-   derecho), así que 43vw deja un margen. */
+/* Teléfono: la bio usa todo el ancho disponible para ocupar pocos renglones y
+   leerse de corrido. Termina antes de que empiece el pelo (la cara sube
+   hasta ~40 % del alto de la pantalla), así que no se pisan. */
 @media (max-width: 640px) {
   .subtitulo {
-    width: 43vw;
+    width: calc(100vw - 2.5rem);
     gap: 0.6rem;
   }
 }
