@@ -5,11 +5,6 @@ node_modules/
 apps/web/.next/
 apps/web/out/
 
-# Vite (apps/playground)
-apps/playground/dist/
-
-# Playground build copied into web's public/ at build time (apps/web)
-apps/web/public/playground/
 
 # Backend build output (apps/api)
 apps/api/dist/
@@ -36,3 +31,7 @@ Thumbs.db
 dist/
 build/
 coverage/
+
+# Repos de referencia clonados solo para migración (no commitear)
+Portfolio/
+referencias/
