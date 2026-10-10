@@ -1,11 +1,20 @@
 .texto {
   margin: 0;
-  font-family: var(--font-sans);
+  /* SF Pro no se puede servir desde la web (licencia de Apple): se pide por
+     nombre y se ve en los dispositivos que la tienen (Mac, iPhone, iPad). En
+     el resto cae a Inter, que es muy parecida. */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', var(--font-sans),
+    system-ui, sans-serif;
   font-size: clamp(0.8rem, 1.05vw, 0.95rem);
   line-height: 1.65;
   color: var(--color-muted);
   opacity: 0;
   transition: opacity 0.4s ease;
+}
+
+.negrita {
+  font-weight: 650;
+  color: var(--color-fg);
 }
 
 .visible {
