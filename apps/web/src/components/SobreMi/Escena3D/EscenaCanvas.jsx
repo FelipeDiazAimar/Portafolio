@@ -10,7 +10,7 @@ import { ProveedorDesarme } from './useDesarme.jsx';
 import { cargadorEscena } from './escenas/index.js';
 
 // Cuánto se dispersa la escena saliente antes de montar la del hito nuevo.
-const MS_SALIDA = 350;
+const MS_SALIDA = 700;
 
 export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
   const reducido = useReducedMotion();
@@ -63,7 +63,7 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
       }}
     >
       <LucesAzules />
-      <ProveedorDesarme desarmado={desarmado || saliendo}>
+      <ProveedorDesarme desarmado={desarmado || saliendo} reducido={Boolean(reducido)}>
         <ControlGiro quieto={Boolean(reducido)}>
           <EscalaResponsiva>
             <Suspense fallback={null}>

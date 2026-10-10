@@ -177,11 +177,11 @@ export default function Escena0Notebook({ activa, reducido }) {
         </mesh>
       </PiezaDesarmable>
 
-      <PiezaDesarmable posicion={[0, -0.405, 0]} semilla={2} giro={[0.4, 0.6, 0.2]}>
+      <PiezaDesarmable posicion={[0, -0.405, 0]} semilla={2}>
         <Teclado refPresionada={refTecla} leyendas={leyendas} />
       </PiezaDesarmable>
 
-      <PiezaDesarmable posicion={[0, -0.428, 0.78]} semilla={3} giro={[0.2, -0.5, 0.3]}>
+      <PiezaDesarmable posicion={[0, -0.428, 0.78]} semilla={3}>
         <mesh>
           <boxGeometry args={[1.0, 0.012, 0.6]} />
           <meshStandardMaterial color="#030405" metalness={0.2} roughness={0.55} />
@@ -190,7 +190,7 @@ export default function Escena0Notebook({ activa, reducido }) {
 
       {/* Tapa: bisagra atrás. El grupo interno lleva la apertura (se anima en
           useFrame); PiezaDesarmable sólo mueve y gira la tapa al desarmar. */}
-      <PiezaDesarmable posicion={[0, -0.43, -1.1]} semilla={4} giro={[0.7, 0.5, 0]}>
+      <PiezaDesarmable posicion={[0, -0.43, -1.1]} semilla={4}>
         <group
           ref={refTapa}
           rotation={[ANGULO_ABIERTA * aperturaInicial, 0, 0]}

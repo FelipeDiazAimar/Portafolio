@@ -1,12 +1,7 @@
-// Acerca `actual` a `objetivo` de forma exponencial e independiente de la tasa
-// de cuadros (la misma fórmula que `MathUtils.damp` de three).
-export function amortiguar(actual, objetivo, lambda, dt) {
-  return objetivo + (actual - objetivo) * Math.exp(-lambda * dt);
-}
-
-// A dónde va una pieza cuando se desarma, relativo a su posición armada: sale
-// hacia afuera del centro de la escena con un poco de azar. Determinista (misma
-// semilla → misma dispersión) para que el desarme sea siempre igual.
+// Dirección (y alcance) en que sale una pieza al desarmarse, relativa a su
+// posición armada: hacia afuera del centro de la escena con un poco de azar.
+// Determinista (misma semilla → misma dirección) para que el desarme sea siempre
+// igual. `caida.js` la usa para el empuje inicial.
 export function calcularDispersion([x, y, z], semilla, radio = 2.2) {
   const azar = (n) => {
     const s = Math.sin(semilla * 12.9898 + n * 78.233) * 43758.5453;

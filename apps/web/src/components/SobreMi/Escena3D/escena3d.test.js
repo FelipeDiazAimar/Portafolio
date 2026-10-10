@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hayWebGL } from './soporteWebGL.js';
-import { amortiguar, calcularDispersion } from './desarme.js';
+import { calcularDispersion } from './desarme.js';
+import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
   teclaPresionada,
@@ -26,12 +27,6 @@ test('hayWebGL: true con webgl2 o sólo con webgl', () => {
 
 test('hayWebGL: false si crear el lienzo lanza', () => {
   assert.equal(hayWebGL(() => { throw new Error('sin DOM'); }), false);
-});
-
-test('amortiguar: no se mueve con dt 0 y converge con dt grande', () => {
-  assert.equal(amortiguar(0, 1, 7, 0), 0);
-  cerca(amortiguar(0, 1, 7, 0.1), 1 - Math.exp(-0.7));
-  assert.ok(amortiguar(0, 1, 7, 2) > 0.999);
 });
 
 test('calcularDispersion: determinista y con alcance acotado', () => {
@@ -119,4 +114,59 @@ test('factorLuzPantalla: apagada no ilumina y el escritorio ilumina a pleno', ()
   assert.ok(factorLuzPantalla({ fase: 'arranque' }) > 0 && factorLuzPantalla({ fase: 'arranque' }) < 1);
   assert.equal(factorLuzPantalla({ fase: 'escritorio' }), 1);
   assert.ok(factorLuzPantalla({ fase: 'terminal' }) > 0.5);
+});
+
+const cero = () => ({ p: [0, 0, 0], v: [0, 0, 0], r: [0, 0, 0], w: [0, 0, 0], quieto: false });
+
+test('velocidadInicial: determinista, sale hacia arriba y hacia afuera, y gira', () => {
+  const a = velocidadInicial([1, 0.2, -0.5], 3);
+  const b = velocidadInicial([1, 0.2, -0.5], 3);
+  assert.deepEqual(a, b);
+  assert.ok(a.v[1] > 0, 'tiene un impulso hacia arriba antes de caer');
+  assert.ok(a.v.every(Number.isFinite) && a.w.every(Number.isFinite));
+  assert.ok(Math.hypot(...a.w) > 0.5, 'gira mientras cae');
+  assert.notDeepEqual(velocidadInicial([1, 0.2, -0.5], 4).w, a.w);
+});
+
+test('avanzarCaida: sube un poco, luego cae y termina fuera de vista (quieto)', () => {
+  let e = { ...cero(), v: [0, 2, 0] };
+  let alturaMaxima = 0;
+  for (let i = 0; i < 400 && !e.quieto; i += 1) {
+    e = avanzarCaida(e, 0.016);
+    alturaMaxima = Math.max(alturaMaxima, e.p[1]);
+  }
+  assert.ok(alturaMaxima > 0.1, 'primero sube');
+  assert.equal(e.quieto, true);
+  assert.ok(e.p[1] < LIMITE_CAIDA);
+});
+
+test('avanzarCaida: la gravedad frena la subida y acelera la bajada', () => {
+  let e = { ...cero(), v: [0, 2, 0] };
+  e = avanzarCaida(e, 0.1);
+  const vy1 = e.v[1];
+  e = avanzarCaida(e, 0.1);
+  assert.ok(e.v[1] < vy1, 'la velocidad vertical baja con el tiempo');
+  assert.ok(e.v[1] < 2);
+});
+
+test('avanzarCaida: una vez quieta ya no se mueve', () => {
+  const e = { ...cero(), p: [0, -50, 0], v: [0, -3, 0], quieto: true };
+  assert.deepEqual(avanzarCaida(e, 0.5), e);
+});
+
+test('volverAlOrigen: vuelve al lugar y a la rotación cero, aunque haya dado varias vueltas', () => {
+  let e = { ...cero(), p: [1, -14, 2], r: [7, -9, 3], quieto: true };
+  let llego = false;
+  for (let i = 0; i < 400 && !llego; i += 1) {
+    ({ estado: e, llego } = volverAlOrigen(e, 0.016, 6));
+  }
+  assert.equal(llego, true);
+  assert.ok(Math.hypot(...e.p) < 1e-2 && Math.hypot(...e.r) < 1e-2);
+  assert.equal(e.quieto, false);
+});
+
+test('volverAlOrigen: con la rotación envuelta no da vueltas de más', () => {
+  // 2π + 0.1 equivale a 0.1 de giro real: el primer paso no debe acercarse a 2π.
+  const { estado } = volverAlOrigen({ ...cero(), r: [Math.PI * 2 + 0.1, 0, 0] }, 0.016, 6);
+  assert.ok(Math.abs(estado.r[0]) < 0.2);
 });

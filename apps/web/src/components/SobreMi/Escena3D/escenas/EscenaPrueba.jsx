@@ -13,7 +13,7 @@ export default function EscenaPrueba() {
   return (
     <group>
       {POSICIONES.map((posicion, i) => (
-        <PiezaDesarmable key={i} posicion={posicion} semilla={i + 1} giro={[1.2, 0.8, 0]}>
+        <PiezaDesarmable key={i} posicion={posicion} semilla={i + 1}>
           <mesh material={i % 2 ? azulEmisivo : cuerpoOscuro}>
             <boxGeometry args={[0.8, 0.8, 0.8]} />
           </mesh>

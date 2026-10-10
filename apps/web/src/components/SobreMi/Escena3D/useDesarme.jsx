@@ -1,20 +1,18 @@
 'use client';
 
 import { createContext, useContext, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { amortiguar } from './desarme.js';
 
-// `desarme` va de 0 (armada) a 1 (dispersa). Es un ref y no estado de React:
-// cambia cada cuadro y no debe re-renderizar nada.
-const ContextoDesarme = createContext({ current: 0 });
+// Estado compartido del desarme: `desarmado` (el objetivo) y `reducido`
+// (movimiento reducido). Es un ref y no estado de React: lo leen los useFrame
+// de cada pieza y no debe re-renderizar nada.
+const ContextoDesarme = createContext({ current: { desarmado: false, reducido: false } });
 
-export function ProveedorDesarme({ desarmado, children }) {
-  const valor = useRef(0);
-  useFrame((_, delta) => {
-    // `delta` acotado: al volver de una pestaña oculta no debe dar un salto.
-    valor.current = amortiguar(valor.current, desarmado ? 1 : 0, 7, Math.min(delta, 0.05));
-  });
-  return <ContextoDesarme.Provider value={valor}>{children}</ContextoDesarme.Provider>;
+export function ProveedorDesarme({ desarmado, reducido = false, children }) {
+  const estado = useRef({ desarmado, reducido });
+  // Se actualiza en cada render del proveedor, que es cuando cambian las props.
+  estado.current.desarmado = desarmado;
+  estado.current.reducido = reducido;
+  return <ContextoDesarme.Provider value={estado}>{children}</ContextoDesarme.Provider>;
 }
 
 export function useDesarme() {
