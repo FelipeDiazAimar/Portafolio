@@ -39,5 +39,6 @@
 @media (max-width: 768px) {
   .anio {
     font-size: 2.4rem;
+    text-shadow: 0 0 14px color-mix(in srgb, var(--color-accent) 45%, transparent);
   }
 }

@@ -37,7 +37,8 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  width: min(46%, 40rem);
+  width: min(54%, 46rem);
+  padding-top: 2.2rem;
   /* Ocupa todo el alto del panel: el modelo se estira hasta abajo. */
   align-self: stretch;
 }
@@ -85,7 +86,9 @@
   /* Estado inicial: sólo se ven la imagen y la cinta centrada. */
   .columna {
     align-self: auto;
-    width: calc(100% - 4.5rem);
+    width: calc(100% - 7.5rem);
+    /* Aire para que el scroll interno no recorte el brillo del año. */
+    padding: 1rem 0.5rem 1rem 0;
     margin-top: 2rem;
     opacity: 0;
     pointer-events: none;

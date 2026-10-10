@@ -2,9 +2,9 @@ import * as THREE from 'three';
 
 // Materiales compartidos por todas las escenas, para que se vean como una serie.
 export const cuerpoOscuro = new THREE.MeshStandardMaterial({
-  color: '#10141c',
-  metalness: 0.65,
-  roughness: 0.35,
+  color: '#1a2230',
+  metalness: 0.35,
+  roughness: 0.4,
 });
 
 export const azulEmisivo = new THREE.MeshStandardMaterial({

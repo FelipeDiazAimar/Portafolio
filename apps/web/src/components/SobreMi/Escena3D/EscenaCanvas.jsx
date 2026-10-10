@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber';
 import { useReducedMotion } from 'framer-motion';
 import LucesAzules from './LucesAzules.jsx';
 import ControlGiro from './ControlGiro.jsx';
+import EscalaResponsiva from './EscalaResponsiva.jsx';
 import { ProveedorDesarme } from './useDesarme.jsx';
 import { cargadorEscena } from './escenas/index.js';
 
@@ -38,7 +39,7 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
     <Canvas
       dpr={[1, 2]}
       frameloop={visible ? 'always' : 'never'}
-      camera={{ position: [0, 0.8, 5.6], fov: 38 }}
+      camera={{ position: [0, 0.7, 4.7], fov: 38 }}
       gl={{ alpha: true, antialias: true }}
       style={{ position: 'absolute', inset: 0 }}
       onCreated={({ gl }) => {
@@ -51,9 +52,11 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
       <LucesAzules />
       <ProveedorDesarme desarmado={desarmado || saliendo}>
         <ControlGiro quieto={Boolean(reducido)}>
-          <Suspense fallback={null}>
-            <Escena key={idMostrado} activa={visible} reducido={Boolean(reducido)} />
-          </Suspense>
+          <EscalaResponsiva>
+            <Suspense fallback={null}>
+              <Escena key={idMostrado} activa={visible} reducido={Boolean(reducido)} />
+            </Suspense>
+          </EscalaResponsiva>
         </ControlGiro>
       </ProveedorDesarme>
     </Canvas>

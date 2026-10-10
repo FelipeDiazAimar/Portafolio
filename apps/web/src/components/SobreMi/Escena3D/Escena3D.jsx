@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import EscenarioHito from '../EscenarioHito.jsx';
 import LimiteErrores from './LimiteErrores.jsx';
+import useConsulta from '@/hooks/useConsulta.js';
 import { hayWebGL } from './soporteWebGL.js';
 import { idsConEscena } from './escenas/index.js';
 import styles from './Escena3D.module.css';
@@ -18,6 +19,10 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
   const [montado, setMontado] = useState(false);
   const [visible, setVisible] = useState(false);
   const [fallo, setFallo] = useState(false);
+  // En celular la descripción va DEBAJO del modelo, no encima: el modelo se queda
+  // armado y visible. Sólo en escritorio se desarma para dejar lugar al texto.
+  const esMovil = useConsulta('(max-width: 768px)');
+  const seDesarma = desarmado && !esMovil;
 
   useEffect(() => {
     setWebgl(hayWebGL());
@@ -44,6 +49,7 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
     <div
       ref={refCaja}
       className={styles.caja}
+      data-desarmado={seDesarma}
       onPointerDown={(evento) => {
         if (evento.target.tagName === 'CANVAS') onInteraccion?.();
       }}
@@ -53,7 +59,7 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
           <LimiteErrores onError={() => setFallo(true)}>
             <EscenaCanvas
               idHito={hito.id}
-              desarmado={desarmado}
+              desarmado={seDesarma}
               visible={visible}
               onError={() => setFallo(true)}
             />

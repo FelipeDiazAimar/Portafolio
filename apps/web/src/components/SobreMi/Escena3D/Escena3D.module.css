@@ -1,3 +1,14 @@
+/* Los cambios de opacidad del canvas (al desarmar) son suaves. */
+.caja canvas {
+  transition: opacity 0.5s ease;
+}
+
+/* Con el detalle abierto el modelo (ya desarmado) queda de fondo, tenue, para
+   que la descripción que se le superpone se lea bien. */
+.caja[data-desarmado='true'] canvas {
+  opacity: 0.22;
+}
+
 /* En escritorio ocupa todo el alto que le deja la columna (la zona es flex:1). */
 .caja {
   position: absolute;

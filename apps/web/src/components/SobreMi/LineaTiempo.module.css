@@ -188,8 +188,10 @@
     --paso: 6rem;
   }
 
+  /* Con la cinta centrada, el rótulo cuelga hacia la izquierda: no puede
+     ser más ancho que la mitad de la pantalla (menos el punto y su hueco). */
   .rotulo {
-    max-width: 13rem;
+    max-width: calc(50vw - 3rem);
   }
 
   .anio {

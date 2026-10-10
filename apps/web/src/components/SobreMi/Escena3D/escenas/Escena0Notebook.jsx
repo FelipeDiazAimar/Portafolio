@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
-import { cuerpoOscuro, azulEmisivo, cianEmisivo } from '../materiales.js';
+import { cuerpoOscuro, azulEmisivo } from '../materiales.js';
 import { crearPantalla } from '../pantallaCanvas.js';
 import { dibujarPantalla } from '../dibujarPantalla.js';
 import { estadoPantalla, teclaPresionada, DURACION_TOTAL } from '../pantallaNotebook.js';
@@ -97,7 +97,7 @@ export default function Escena0Notebook({ activa, reducido }) {
   });
 
   return (
-    <group position={[0, -0.55, 0]} rotation={[0, -0.5, 0]}>
+    <group position={[0, -0.2, 0]} rotation={[0, -0.5, 0]}>
       <PiezaDesarmable semilla={1}>
         <mesh position={[0, -0.5, 0]} material={cuerpoOscuro}>
           <boxGeometry args={[3.2, 0.14, 2.2]} />
@@ -112,8 +112,9 @@ export default function Escena0Notebook({ activa, reducido }) {
       </PiezaDesarmable>
 
       <PiezaDesarmable posicion={[0, -0.428, 0.78]} semilla={3} giro={[0.2, -0.5, 0.3]}>
-        <mesh material={cianEmisivo}>
+        <mesh>
           <boxGeometry args={[1.0, 0.012, 0.6]} />
+          <meshStandardMaterial color="#0a1a26" emissive="#3de0ff" emissiveIntensity={0.12} metalness={0.5} roughness={0.4} />
         </mesh>
       </PiezaDesarmable>
 
