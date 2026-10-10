@@ -1,0 +1,70 @@
+/* Ocupa la derecha del panel y se funde con el color del tema por tres bordes
+   (izquierda, arriba y abajo) con dos máscaras combinadas. La máscara no
+   pinta ningún color: funciona igual en tema claro y oscuro. */
+.fondo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 62%;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0%, #000 45%),
+    linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent 0%, #000 45%),
+    linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  mask-composite: intersect;
+  transition: opacity 0.5s ease;
+}
+
+.capa {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+.activa {
+  opacity: 1;
+}
+
+.imagen {
+  object-fit: cover;
+  filter: brightness(0.72) saturate(1.1);
+  transform: scale(1);
+  transition: transform 8s linear;
+}
+
+/* Zoom lento mientras el hito está activo. */
+.activa .imagen {
+  transform: scale(1.06);
+}
+
+@media (max-width: 768px) {
+  .fondo {
+    width: 100%;
+    /* En celular el fondo ocupa todo el ancho: sólo se funde arriba y abajo. */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  }
+
+  /* En el estado detalle del celular la imagen desaparece. */
+  :global([data-detalle='true']) .fondo {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capa {
+    transition-duration: 0.01s;
+  }
+
+  .imagen,
+  .activa .imagen {
+    transition: none;
+    transform: none;
+  }
+}
