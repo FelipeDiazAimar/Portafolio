@@ -1,0 +1,169 @@
+.linea {
+  --paso: 5.25rem;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: clamp(1rem, 5vw, 4rem);
+  width: 2rem;
+  z-index: 3;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
+}
+
+/* El hilo: la mitad de arriba (lo ya recorrido) brilla; la de abajo, apagada.
+   Como la cinta se mueve y el centro no, siempre se lee como "avance". */
+.hiloPasado,
+.hiloFuturo {
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hiloPasado {
+  top: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, transparent, var(--color-accent));
+  box-shadow: 0 0 12px var(--color-accent);
+}
+
+.hiloFuturo {
+  top: 50%;
+  bottom: 0;
+  background: linear-gradient(to bottom, var(--color-border), transparent);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 0;
+  transform: translateY(calc(var(--d) * var(--paso)));
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.45s ease;
+}
+
+.item[data-distancia='0'] {
+  opacity: 1;
+}
+
+.item[data-distancia='1'] {
+  opacity: 0.6;
+}
+
+.item[data-distancia='2'] {
+  opacity: 0.28;
+}
+
+.item[data-distancia='3'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* El botón se ancla a la derecha del item y su rótulo cuelga hacia la
+   izquierda, sobre la imagen. */
+.boton {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.4rem 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rotulo {
+  display: grid;
+  max-width: 12rem;
+  text-align: right;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+}
+
+.anio {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.nombre {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.punto {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  flex: none;
+}
+
+.punto::before {
+  content: '';
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 2px solid var(--color-muted);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.activo .anio {
+  color: var(--color-accent);
+}
+
+.activo .punto::before {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: scale(1.3);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 25%, transparent), 0 0 18px var(--color-accent);
+}
+
+.boton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  /* Estado inicial: la cinta está centrada. Se posiciona con `left` (no con
+     `right`) para poder animar el paso a la derecha. */
+  .linea {
+    right: auto;
+    left: 50%;
+    width: 3rem;
+    transform: translateX(-50%);
+    transition: left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Estado detalle: la cinta se alinea a la derecha y deja sólo el año, así
+     la columna de la izquierda conserva casi todo el ancho. */
+  :global([data-detalle='true']) .linea {
+    left: calc(100% - 2.5rem);
+  }
+
+  :global([data-detalle='true']) .nombre {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item,
+  .linea {
+    transition-duration: 0.01s;
+  }
+}
