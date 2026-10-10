@@ -50,7 +50,7 @@ Se usa scroll nativo, no secuestro de rueda: la rueda, el táctil, el teclado y 
 ```
 
 - Izquierda (~45 %): `EscenarioHito`, con el año grande y el título descifrados con `TextoDescifrado`.
-- Derecha (~55 %): `FondoHito`; la imagen se difumina hacia `var(--color-bg)` con `mask-image: linear-gradient(to right, transparent, #000 45%)`, así funciona en tema claro y oscuro sin duplicar estilos.
+- Derecha (~55 %): `FondoHito`; la imagen se difumina hacia `var(--color-bg)` en **tres bordes**: a la izquierda (hacia el escenario), arriba y abajo. Se logra con dos `mask-image` combinados con `mask-composite: intersect` (uno horizontal y uno vertical: `linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent)`), así funciona en tema claro y oscuro sin duplicar estilos y la imagen se funde con el resto de la página al entrar y salir de la sección.
 - `LineaTiempo` va sobre la imagen, a la derecha.
 
 ## LineaTiempo
@@ -66,12 +66,22 @@ Todas las imágenes están montadas; el crossfade (~700 ms) cambia la opacidad d
 - Hover sobre el escenario, el año o el punto activo → el escenario se desarma y aparece la descripción larga. Al salir, la descripción se oculta y el escenario se rearma.
 - Mientras el 3D no exista, el marcador de posición es un bloque de caracteres que se disuelve y reaparece.
 - Las palabras clave se marcan en el JSON con `**palabra**`; `dividirResaltado` las separa del resto y se renderizan con el tratamiento de `TextoBrillante`.
-- Celular: sin hover; un toque sobre el escenario abre y cierra la descripción.
+- Celular: sin hover; ver la sección "Celular" para los dos estados.
 - `prefers-reduced-motion`: sin zoom, sin desarme, sin crossfade largo; la descripción simplemente aparece y desaparece.
 
 ## Celular
 
-Una columna: imagen de fondo arriba (con el difuminado hacia abajo), el escenario y el texto debajo, y la `LineaTiempo` pasa a una barra horizontal compacta. Misma mecánica de scroll fijado.
+Tiene dos estados, que se alternan por toque:
+
+**Estado inicial.** La `LineaTiempo` está **centrada** y la imagen de fondo del hito activo ocupa toda la pantalla, difuminada arriba y abajo hacia el color del tema. No se ve el escenario ni la descripción.
+
+**Estado detalle** (al tocar un hito). La `LineaTiempo` se desliza y se **alinea a la derecha**; la imagen desaparece. A la izquierda se ve el `EscenarioHito` (el modelo 3D, cuando exista) y **debajo la descripción** del hito, con las palabras resaltadas. La transición es una animación de ~400 ms.
+
+**Volver al estado inicial.** Tocar la `LineaTiempo` (fuera de un punto) o una "×" chica en la esquina del panel. El gesto de la línea es el pedido original; la "×" existe porque ese gesto no es descubrible.
+
+**Scroll en el estado detalle.** El scroll fijado sigue funcionando: al pasar al hito siguiente, el panel de detalle se actualiza con el nuevo hito, sin volver al estado inicial.
+
+El estado detalle se guarda como `detalleAbierto` (booleano) en `SobreMi`. En escritorio ese estado no existe: se usa el hover descrito arriba.
 
 ## Datos: `hitos.json`
 
