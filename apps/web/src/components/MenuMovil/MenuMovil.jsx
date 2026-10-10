@@ -43,7 +43,13 @@ export default function MenuMovil({ enlaces }) {
     // con `body { overflow: hidden }` el visor seguía desplazándose.
     const raiz = document.documentElement;
     const overflowPrevio = raiz.style.overflow;
+    const paddingPrevio = raiz.style.paddingRight;
+    // Si el navegador reserva ancho para una barra de scroll clásica, al
+    // bloquear el scroll ese ancho se libera y todo se corre (queda un hueco o la
+    // página salta). Se lo devolvemos como padding para que nada se mueva.
+    const anchoBarra = window.innerWidth - raiz.clientWidth;
     raiz.style.overflow = 'hidden';
+    if (anchoBarra > 0) raiz.style.paddingRight = `${anchoBarra}px`;
     raiz.dataset.menuAbierto = 'true';
 
     function alPresionarTecla(evento) {
@@ -64,6 +70,7 @@ export default function MenuMovil({ enlaces }) {
 
     return () => {
       raiz.style.overflow = overflowPrevio;
+      raiz.style.paddingRight = paddingPrevio;
       delete raiz.dataset.menuAbierto;
       document.removeEventListener('keydown', alPresionarTecla);
       consulta.removeEventListener('change', alCambiarAncho);
