@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { GlassSurface } from '@portafolio/ui';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
+import useTema from '@/hooks/useTema.js';
 import styles from './ThemeToggle.module.css';
 
 function IconMoon() {
@@ -22,16 +23,8 @@ function IconSun() {
   );
 }
 
-function readStoredTheme() {
-  try {
-    return window.localStorage.getItem('theme');
-  } catch {
-    return null;
-  }
-}
-
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState('dark');
+  const { tema: theme, alternar: handleToggle } = useTema();
   const pasado = useScrollPasadoViewport();
   const visible = !pasado;
   const refToggle = useRef(null);
@@ -42,34 +35,6 @@ export default function ThemeToggle() {
     const rect = contenedor.getBoundingClientRect();
     contenedor.style.setProperty('--raton-x', `${evento.clientX - rect.left}px`);
     contenedor.style.setProperty('--raton-y', `${evento.clientY - rect.top}px`);
-  }
-
-  useEffect(() => {
-    const stored = readStoredTheme();
-    const mql = window.matchMedia('(prefers-color-scheme: light)');
-
-    setTheme(stored === 'light' || stored === 'dark' ? stored : mql.matches ? 'light' : 'dark');
-
-    function handleSystemChange(event) {
-      const current = readStoredTheme();
-      if (current !== 'light' && current !== 'dark') {
-        setTheme(event.matches ? 'light' : 'dark');
-      }
-    }
-
-    mql.addEventListener('change', handleSystemChange);
-    return () => mql.removeEventListener('change', handleSystemChange);
-  }, []);
-
-  function handleToggle() {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
-    try {
-      window.localStorage.setItem('theme', next);
-    } catch {
-      /* ignore */
-    }
   }
 
   return (

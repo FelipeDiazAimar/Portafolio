@@ -88,7 +88,9 @@
 
 .thumb {
   position: absolute;
-  top: 5px;
+  /* Centrada en la pista (40 px de alto). Con `top: 5px` quedaba 8 px más
+     arriba que los íconos y la luna se asomaba por debajo. */
+  top: calc(50% - 7px);
   left: 5px;
   width: 14px;
   height: 14px;
@@ -100,4 +102,11 @@
 
 .thumbLight {
   transform: translateX(24px);
+}
+
+/* En pantallas angostas el tema se cambia desde el menú lateral. */
+@media (max-width: 768px) {
+  .wrapper {
+    display: none;
+  }
 }

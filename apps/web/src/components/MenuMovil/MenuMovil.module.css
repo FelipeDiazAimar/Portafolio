@@ -1,0 +1,172 @@
+/* Sólo en pantallas angostas. En el grid del header ocupa la tercera columna
+   (las píldoras están ocultas y la columna del medio quedaría vacía: sin
+   `grid-column` el autoplacement lo pondría ahí). */
+.raiz {
+  display: none;
+  grid-column: 3;
+  justify-self: end;
+}
+
+@media (max-width: 768px) {
+  .raiz {
+    display: block;
+  }
+}
+
+.boton {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--color-fg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.boton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Ícono de hamburguesa: cuatro rayas (las dos del medio están superpuestas).
+   Al abrir, la de arriba y la de abajo se pliegan al centro y las del medio se
+   cruzan en una X. */
+.icono {
+  position: relative;
+  width: 20px;
+  height: 14px;
+}
+
+.icono span {
+  position: absolute;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 1;
+  transform: rotate(0deg);
+  transition: 0.25s ease-in-out;
+}
+
+.icono span:nth-child(1) {
+  top: 0;
+}
+
+.icono span:nth-child(2),
+.icono span:nth-child(3) {
+  top: 6px;
+}
+
+.icono span:nth-child(4) {
+  top: 12px;
+}
+
+.abierto .icono span:nth-child(1) {
+  top: 6px;
+  left: 50%;
+  width: 0;
+}
+
+.abierto .icono span:nth-child(2) {
+  transform: rotate(45deg);
+}
+
+.abierto .icono span:nth-child(3) {
+  transform: rotate(-45deg);
+}
+
+.abierto .icono span:nth-child(4) {
+  top: 6px;
+  left: 50%;
+  width: 0;
+}
+
+/* Velo sobre la página. Está por debajo del botón, que queda a la vista como
+   botón de cerrar. */
+.fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+
+.fondoVisible {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease;
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: min(84vw, 21rem);
+  /* Deja libre la franja del header, donde queda el botón de cerrar. */
+  padding: 6rem 1.5rem calc(1.75rem + env(safe-area-inset-bottom)) 1rem;
+  background: color-mix(in srgb, var(--color-bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.4);
+  border-left: 1px solid var(--color-border);
+  box-shadow: -18px 0 60px rgba(0, 0, 0, 0.28);
+  transform: translateX(104%);
+  visibility: hidden;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.5s;
+  overflow-y: auto;
+}
+
+.panelAbierto {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tema {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.6rem;
+  margin-left: 1.25rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-chip-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tema:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .panelAbierto,
+  .fondo,
+  .fondoVisible,
+  .icono span {
+    transition-duration: 0.01ms;
+    transition-delay: 0ms;
+  }
+}

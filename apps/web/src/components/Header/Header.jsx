@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GlassSurface } from '@portafolio/ui';
 import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegacion.jsx';
+import MenuMovil from '@/components/MenuMovil/MenuMovil.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
@@ -195,6 +196,9 @@ export default function Header() {
           </motion.nav>
         )}
       </AnimatePresence>
+
+      {/* Sólo en pantallas angostas, donde las píldoras están ocultas. */}
+      <MenuMovil enlaces={ENLACES} />
     </header>
   );
 }
