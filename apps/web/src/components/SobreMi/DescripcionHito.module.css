@@ -27,13 +27,51 @@
 .clave {
   font-weight: 700;
   color: var(--color-fg);
-  transition: color 0.5s ease, text-shadow 0.5s ease;
+  -webkit-text-fill-color: var(--color-fg);
+  /* El relleno se anima para que, al abrir, cada palabra pase de blanca a
+     azul (a través del degradado del halo) de forma escalonada. */
+  transition: color 0.5s ease, text-shadow 0.5s ease, -webkit-text-fill-color 0.5s ease;
   transition-delay: calc(var(--n) * 90ms + 0.4s);
 }
 
 .visible .clave {
   color: var(--color-accent);
   text-shadow: 0 0 16px color-mix(in srgb, var(--color-accent) 50%, transparent);
+}
+
+/* Halo: cada tanto una franja blanca recorre la palabra por dentro de las
+   letras, de izquierda a derecha. Como las palabras son azules, el degradado
+   es azul con una banda blanca; el resto del ciclo la banda queda fuera de la
+   palabra (position 150%). Cada palabra tiene su desfase (`--n`) para que no
+   destellen todas juntas. */
+.visible .clave {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-accent) 0%,
+    var(--color-accent) 40%,
+    #fff 50%,
+    var(--color-accent) 60%,
+    var(--color-accent) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: none;
+  animation: halo 7s ease-in-out infinite;
+  animation-delay: calc(var(--n) * 1.1s + 1.2s);
+}
+
+@keyframes halo {
+  0%,
+  72% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -150% 0;
+  }
 }
 
 /* En celular el estado detalle muestra escenario y descripción apilados: la
@@ -50,6 +88,21 @@
   .clave {
     color: var(--color-accent);
     transition: none;
+    background-image: linear-gradient(
+      100deg,
+      var(--color-accent) 0%,
+      var(--color-accent) 40%,
+      #fff 50%,
+      var(--color-accent) 60%,
+      var(--color-accent) 100%
+    );
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: halo 7s ease-in-out infinite;
+    animation-delay: calc(var(--n) * 1.1s + 1.2s);
   }
 }
 
@@ -60,7 +113,12 @@
     transition-delay: 0s;
   }
 
-  .clave {
+  .clave,
+  .visible .clave {
     transition: none;
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--color-accent);
   }
 }

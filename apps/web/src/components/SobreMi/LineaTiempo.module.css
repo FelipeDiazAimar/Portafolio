@@ -1,14 +1,14 @@
 .linea {
-  --paso: 5.25rem;
+  --paso: 7.5rem;
   /* Posición horizontal de la columna de puntos dentro de la cinta. La cinta
-     es ancha (16rem) porque la máscara recorta lo que sobresale de su caja y
+     es ancha (26rem) porque la máscara recorta lo que sobresale de su caja y
      los rótulos cuelgan a la izquierda de los puntos. */
   --x: calc(100% - 1rem);
   position: absolute;
   top: 0;
   bottom: 0;
   right: clamp(1rem, 5vw, 4rem);
-  width: 16rem;
+  width: 26rem;
   z-index: 3;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
@@ -103,22 +103,50 @@
 
 .rotulo {
   display: grid;
-  max-width: 12rem;
+  max-width: 18rem;
   text-align: right;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  /* SF Pro sólo existe en dispositivos Apple (su licencia no permite
+     distribuirla en una web): ahí se usa; en el resto cae a Inter. */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', var(--font-inter), system-ui, sans-serif;
+  /* Se escala desde el borde derecho (donde está el punto) para que crecer no
+     mueva el rótulo hacia el hilo ni cambie el layout. */
+  transform-origin: right center;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .anio {
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: var(--color-muted);
+  transition: color 0.3s ease;
 }
 
 .nombre {
-  font-size: 0.95rem;
+  font-size: 1.4rem;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Hover (o foco): el rótulo crece con un pequeño rebote, el título se
+   remarca en azul y la fecha pasa a blanco. */
+.boton:hover .rotulo,
+.boton:focus-visible .rotulo {
+  transform: scale(1.18);
+}
+
+.boton:hover .nombre,
+.boton:focus-visible .nombre {
+  color: var(--color-accent);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
+.boton:hover .anio,
+.boton:focus-visible .anio {
+  color: #fff;
 }
 
 .punto {
@@ -156,6 +184,22 @@
 }
 
 @media (max-width: 768px) {
+  .linea {
+    --paso: 6rem;
+  }
+
+  .rotulo {
+    max-width: 13rem;
+  }
+
+  .anio {
+    font-size: 0.95rem;
+  }
+
+  .nombre {
+    font-size: 1.15rem;
+  }
+
   /* Estado inicial: la columna de puntos está centrada en la pantalla. */
   .linea {
     --x: 50%;
@@ -201,5 +245,14 @@
   .hiloPasado,
   .hiloFuturo {
     transition-duration: 0.01s;
+  }
+
+  .rotulo {
+    transition: none;
+  }
+
+  .boton:hover .rotulo,
+  .boton:focus-visible .rotulo {
+    transform: none;
   }
 }
