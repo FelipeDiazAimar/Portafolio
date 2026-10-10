@@ -1,3 +1,4 @@
+import SobreMi from '@/components/SobreMi/SobreMi.jsx';
 import styles from './page.module.css';
 
 const SECCIONES = [
@@ -12,11 +13,15 @@ export default function HomePage() {
   return (
     <>
       <section id="inicio" className={styles.seccionHero} />
-      {SECCIONES.map((seccion) => (
-        <section key={seccion.id} id={seccion.id} className={styles.seccion}>
-          <h2>{seccion.titulo}</h2>
-        </section>
-      ))}
+      {SECCIONES.map((seccion) =>
+        seccion.id === 'sobre-mi' ? (
+          <SobreMi key={seccion.id} />
+        ) : (
+          <section key={seccion.id} id={seccion.id} className={styles.seccion}>
+            <h2>{seccion.titulo}</h2>
+          </section>
+        )
+      )}
     </>
   );
 }
