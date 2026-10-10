@@ -55,10 +55,30 @@ const ESPERA_ANTES_DE_REBOBINAR_MS = 2500;
 const DEMORA_EXTRA_PRIMERA_APARICION_MS = 2500;
 let yaAparecioStickman = false;
 
+// --- Modo 'resortes' (sin stickman) ---------------------------------------
+// Cada carácter caído vuelve a su sitio tirado por un resorte subamortiguado:
+// pasa un poco de largo y se asienta. Constantes en unidades por cuadro.
+const RIGIDEZ_RESORTE = 0.014;
+const AMORTIGUACION_RESORTE = 0.13;
+// Los caracteres no salen todos a la vez: arrancan en una ola de izquierda a
+// derecha, con un poco de azar para que no se vea mecánico.
+const OLA_RESORTES_MS = 650;
+const AZAR_RESORTES_MS = 260;
+const TOLERANCIA_POSICION_PX = 0.35;
+const TOLERANCIA_VELOCIDAD = 0.04;
+const TOPE_RESORTES_MS = 5000;
+const DOS_PI = Math.PI * 2;
+
 export default function ColapsoFisico({
   campo,
   refContenedor,
   posicionInicialRaton,
+  // 'resortes': los caracteres vuelven solos a su sitio, sin personaje.
+  // 'stickman': entra un muñeco que barre y después se rebobina todo.
+  modo = 'stickman',
+  // Rectángulo de página (left, top, width, height) que cubre el overlay. Sin
+  // él, el overlay es el primer 100vh del documento, que es el hero.
+  region = null,
   visible = true,
   alConvertirLetra,
   alTerminar,
@@ -99,9 +119,13 @@ export default function ColapsoFisico({
     // --- Grilla -> celdas en coordenadas de página -----------------------
     // Analítico y no midiendo cada <span>: cientos de getBoundingClientRect
     // serían cientos de reflows forzados justo en el cuadro del disparo.
+    // El overlay no siempre arranca en (0,0) de la página: el del footer
+    // cubre sólo el footer. Todo se expresa relativo a su esquina.
+    const desfaseX = region ? region.left : 0;
+    const desfaseY = region ? region.top : 0;
     const rect = contenedor.getBoundingClientRect();
-    const origenX = rect.left + window.scrollX;
-    const origenY = rect.top + window.scrollY;
+    const origenX = rect.left + window.scrollX - desfaseX;
+    const origenY = rect.top + window.scrollY - desfaseY;
     const anchoCaracter = campo.paso - campo.separacion;
 
     const celdas = [];
@@ -179,10 +203,17 @@ export default function ColapsoFisico({
     // Cuerpos ya sueltos, en el orden en que se rompieron. Ese orden ES la
     // ranura con la que cada uno se guarda y se lee de la grabación.
     const cuerposRotos = [];
+    // Estado de cada resorte, indexado igual que `celdas`. Sólo se llena al
+    // empezar la fase 'resortes'.
+    const resortes = [];
+    let momentoInicioResortes = 0;
 
     const fuenteAscii = `${campo.tamanoCelda}px monospace`;
 
-    const raton = { ...posicionInicialRaton };
+    const raton = {
+      x: posicionInicialRaton.x - desfaseX,
+      y: posicionInicialRaton.y - desfaseY,
+    };
     const stickman = { x: X_INICIAL_STICKMAN, paso: 0 };
     let fase = 'rompiendo';
     let indiceRebobinado = 0;
@@ -198,8 +229,8 @@ export default function ColapsoFisico({
     const inicio = performance.now();
 
     function alMoverse(evento) {
-      raton.x = evento.clientX + window.scrollX;
-      raton.y = evento.clientY + window.scrollY;
+      raton.x = evento.clientX + window.scrollX - desfaseX;
+      raton.y = evento.clientY + window.scrollY - desfaseY;
     }
     window.addEventListener('mousemove', alMoverse, { passive: true });
 
@@ -283,6 +314,69 @@ export default function ColapsoFisico({
       escobaApoyada = false;
     }
 
+    function empezarResortes(ahora) {
+      fase = 'resortes';
+      momentoInicioResortes = ahora;
+      sacarDeEscena(cuerpoCursor);
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (let i = 0; i < celdas.length; i += 1) {
+        minX = Math.min(minX, celdas[i].x);
+        maxX = Math.max(maxX, celdas[i].x);
+      }
+      const extension = Math.max(1, maxX - minX);
+      for (let i = 0; i < celdas.length; i += 1) {
+        const celda = celdas[i];
+        if (!celda.rota) continue;
+        const cuerpo = cuerposDeCaracteres[i];
+        // Ángulo llevado a (-π, π]: el carácter gira por el camino corto.
+        let angulo = cuerpo.angle % DOS_PI;
+        if (angulo > Math.PI) angulo -= DOS_PI;
+        if (angulo < -Math.PI) angulo += DOS_PI;
+        resortes[i] = {
+          x: cuerpo.position.x,
+          y: cuerpo.position.y,
+          angulo,
+          vx: 0,
+          vy: 0,
+          va: 0,
+          demora:
+            ((celda.x - minX) / extension) * OLA_RESORTES_MS + Math.random() * AZAR_RESORTES_MS,
+        };
+      }
+    }
+
+    // Un paso de todos los resortes. Devuelve true cuando ya están todos en
+    // su sitio y quietos.
+    function avanzarResortes(ahora) {
+      const transcurrido = ahora - momentoInicioResortes;
+      let todosAsentados = true;
+      for (let i = 0; i < celdas.length; i += 1) {
+        const resorte = resortes[i];
+        if (!resorte) continue;
+        const celda = celdas[i];
+        if (transcurrido < resorte.demora) {
+          todosAsentados = false;
+          continue;
+        }
+        resorte.vx += (celda.x - resorte.x) * RIGIDEZ_RESORTE - resorte.vx * AMORTIGUACION_RESORTE;
+        resorte.vy += (celda.y - resorte.y) * RIGIDEZ_RESORTE - resorte.vy * AMORTIGUACION_RESORTE;
+        resorte.va += -resorte.angulo * RIGIDEZ_RESORTE - resorte.va * AMORTIGUACION_RESORTE;
+        resorte.x += resorte.vx;
+        resorte.y += resorte.vy;
+        resorte.angulo += resorte.va;
+
+        const quieto =
+          Math.abs(celda.x - resorte.x) < TOLERANCIA_POSICION_PX &&
+          Math.abs(celda.y - resorte.y) < TOLERANCIA_POSICION_PX &&
+          Math.abs(resorte.vx) < TOLERANCIA_VELOCIDAD &&
+          Math.abs(resorte.vy) < TOLERANCIA_VELOCIDAD &&
+          Math.abs(resorte.angulo) < 0.02;
+        if (!quieto) todosAsentados = false;
+      }
+      return todosAsentados || transcurrido > TOPE_RESORTES_MS;
+    }
+
     function empezarRebobinado() {
       fase = 'rebobinado';
       indiceRebobinado = grabadora.cantidad - 1;
@@ -305,6 +399,11 @@ export default function ColapsoFisico({
           ahora - momentoUltimaRotura > ESPERA_TRAS_ULTIMA_ROTURA_MS &&
           fraccionRotasQuietas() > UMBRAL_QUIETUD;
         if (!listo) return false;
+
+        if (modo === 'resortes') {
+          empezarResortes(ahora);
+          return false;
+        }
 
         // La primera vez que el stickman aparece en toda la sesión, se suma
         // una demora extra antes de dejarlo entrar. Las veces siguientes
@@ -418,6 +517,16 @@ export default function ColapsoFisico({
       }
     }
 
+    function dibujarDesdeResortes() {
+      const color = abrirCuadro();
+      dibujarNombre(color, (i) => {
+        const resorte = resortes[i];
+        // Sin resorte = nunca se rompió: sigue en su sitio original.
+        if (!resorte) return { x: celdas[i].x, y: celdas[i].y, angulo: 0 };
+        return { x: resorte.x, y: resorte.y, angulo: resorte.angulo };
+      });
+    }
+
     // El stickman no se dibuja acá: una vez que se fue, se fue. No vuelve
     // caminando hacia atrás como parte de la reconstrucción.
     //
@@ -448,7 +557,16 @@ export default function ColapsoFisico({
     }
 
     function cuadro(ahora) {
-      if (fase === 'rebobinado') {
+      if (fase === 'resortes') {
+        // Los resortes mandan sobre la física: ya no hay simulación.
+        if (avanzarResortes(ahora)) {
+          // El último cuadro, con todo en su sitio, llega a verse antes de
+          // devolverle el lugar al texto del DOM.
+          dibujarDesdeResortes();
+          return terminar();
+        }
+        dibujarDesdeResortes();
+      } else if (fase === 'rebobinado') {
         const indice = Math.max(0, indiceRebobinado);
         const base = Math.floor(indice);
         const fotoA = grabadora.leerCuadro(base);
@@ -472,7 +590,7 @@ export default function ColapsoFisico({
         // Durante la espera previa al rebobinado no se graba: si no, la
         // reconstrucción arrancaría con un tramo congelado. El intervalo lo
         // maneja la propia grabadora.
-        if (fase !== 'espera') grabadora.grabarCuadro(cuerposRotos);
+        if (modo === 'stickman' && fase !== 'espera') grabadora.grabarCuadro(cuerposRotos);
 
         if (evaluarTransicion(ahora)) return undefined;
         dibujarDesdeMotor();
@@ -488,7 +606,7 @@ export default function ColapsoFisico({
 
     // Cuadro 0 = el nombre intacto, sin ninguna celda rota. Es el último
     // fotograma del rebobinado, o sea a lo que vuelve el nombre.
-    grabadora.grabarCuadro(cuerposDeCaracteres);
+    if (modo === 'stickman') grabadora.grabarCuadro(cuerposDeCaracteres);
 
     bucle = requestAnimationFrame(cuadro);
 
@@ -517,6 +635,11 @@ export default function ColapsoFisico({
   return createPortal(
     <div
       className={`${styles.overlay} ${visible ? '' : styles.oculto}`}
+      style={
+        region
+          ? { left: region.left, top: region.top, width: region.width, height: region.height }
+          : undefined
+      }
       aria-hidden="true"
     >
       <canvas ref={refLienzo} className={styles.lienzo} />
