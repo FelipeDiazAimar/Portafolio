@@ -1,0 +1,48 @@
+/* Alto suficiente para que el stickman (96 px) entre de pie con aire encima:
+   el overlay del colapso cubre exactamente esta caja y el piso es su borde
+   inferior. */
+.pie {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  min-height: 15rem;
+  padding: 0 clamp(2rem, 8vw, 6rem) 2rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
+  color: var(--color-fg);
+}
+
+.derechos {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.8rem;
+  opacity: 0.55;
+}
+
+.contenedor {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Misma tipografía que el nombre del hero, más chica. Cada <span> mide
+   exactamente lo que mide su texto: el calco del ASCII se basa en ese rect. */
+.nombre {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.75rem, 3.4vw, 3rem);
+  color: var(--color-fg);
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+
+/* Mientras corre el colapso el nombre lo dibuja el canvas: el texto real se
+   va y vuelve rápido, para que no se superponga con la pila. */
+.nombre.oculto {
+  opacity: 0;
+}

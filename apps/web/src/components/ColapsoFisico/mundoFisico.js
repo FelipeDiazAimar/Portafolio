@@ -3,7 +3,7 @@ import { Bodies, Body, Composite, Engine } from 'matter-js';
 const GROSOR_PARED = 200;
 const RADIO_CURSOR = 26;
 const ANCHO_ESCOBA = 16;
-export const ALTO_ESCOBA = 70;
+export const ALTO_ESCOBA = 28;
 // Las piezas que no participan (cursor y escoba mientras no barre) se
 // mandan lejos en vez de sacarse del mundo: agregar/quitar cuerpos en
 // caliente invalida los índices de la grabación.
