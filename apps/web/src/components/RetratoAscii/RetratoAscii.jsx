@@ -6,7 +6,11 @@ import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { convertirAAscii, leerColoresDelTema, pintarAscii } from './conversionAscii.js';
 import styles from './RetratoAscii.module.css';
 
-const RUTA_RETRATO = '/Yo.png';
+const RUTA_RETRATO = '/retrato.png';
+// La conversión a ASCII sólo necesita una grilla de ~140 columnas: se baja la
+// variante chica que sirve el optimizador de imágenes (unos 100 KB) y no el
+// PNG original de varios MB. La proporción es la misma.
+const RUTA_PARA_ASCII = `/_next/image?url=${encodeURIComponent(RUTA_RETRATO)}&w=640&q=75`;
 // Medidas reales del archivo. Tienen que coincidir con el `aspect-ratio` de
 // `.marco`: la foto es `object-fit: contain` y el ASCII llena la caja entera,
 // así que si el marco tuviera otra proporción las dos capas dejarían de
@@ -174,7 +178,7 @@ export default function RetratoAscii() {
       if (cancelado) return;
       setFase('foto');
     };
-    imagen.src = RUTA_RETRATO;
+    imagen.src = RUTA_PARA_ASCII;
     // Ni `onload` ni `onerror` cubren una petición que se cuelga sin resolver
     // ni fallar. Sin este rescate la fase queda en 'esperando' para siempre y
     // el marco vacío: el canvas recortado a cero y la foto en opacity 0.
