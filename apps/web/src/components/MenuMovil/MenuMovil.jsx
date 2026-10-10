@@ -3,27 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ListaLineas from '@/components/ListaLineas/ListaLineas.jsx';
 import useTema from '@/hooks/useTema.js';
+import InterruptorTema from './InterruptorTema.jsx';
 import styles from './MenuMovil.module.css';
 
 // Mismo punto de corte que oculta las píldoras del header (Header.module.css).
 const CONSULTA_ESCRITORIO = '(min-width: 769px)';
-
-function IconoLuna() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
-function IconoSol() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-    </svg>
-  );
-}
 
 // Botón de hamburguesa + panel lateral derecho con la navegación. Es hijo del
 // grid del <header>, así que queda centrado con el logo por estructura y no por
@@ -40,12 +24,18 @@ export default function MenuMovil({ enlaces }) {
     if (devolverFoco) refBoton.current?.focus();
   }, []);
 
-  // Con el panel abierto la página de atrás no se desplaza, y Escape cierra.
+  // Con el panel abierto: la página de atrás no se desplaza (sólo lo hace el
+  // panel, si su contenido no entra), la barra de scroll pasa a la izquierda
+  // (BarraScroll lee este atributo), y Escape cierra.
   useEffect(() => {
     if (!abierto) return undefined;
 
-    const overflowPrevio = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    // Se bloquea <html> y no <body>: <html> tiene su propio overflow, así que
+    // con `body { overflow: hidden }` el visor seguía desplazándose.
+    const raiz = document.documentElement;
+    const overflowPrevio = raiz.style.overflow;
+    raiz.style.overflow = 'hidden';
+    raiz.dataset.menuAbierto = 'true';
 
     function alPresionarTecla(evento) {
       if (evento.key === 'Escape') cerrar();
@@ -64,7 +54,8 @@ export default function MenuMovil({ enlaces }) {
     const temporizador = setTimeout(() => refPanel.current?.querySelector('a')?.focus(), 80);
 
     return () => {
-      document.body.style.overflow = overflowPrevio;
+      raiz.style.overflow = overflowPrevio;
+      delete raiz.dataset.menuAbierto;
       document.removeEventListener('keydown', alPresionarTecla);
       consulta.removeEventListener('change', alCambiarAncho);
       clearTimeout(temporizador);
@@ -101,6 +92,8 @@ export default function MenuMovil({ enlaces }) {
         </span>
       </button>
 
+      {/* Captura el toque fuera del panel para cerrarlo. Es transparente: el
+          efecto de fondo vive en el panel. */}
       <div
         className={`${styles.fondo} ${abierto ? styles.fondoVisible : ''}`}
         onClick={() => cerrar()}
@@ -114,24 +107,29 @@ export default function MenuMovil({ enlaces }) {
         aria-label="Navegación"
         inert={!abierto}
       >
-        <ListaLineas
-          items={enlaces.map((enlace) => ({ label: enlace.label, href: enlace.href }))}
-          colorAcento="var(--color-accent)"
-          colorTexto="var(--color-fg)"
-          colorMarcador="var(--color-muted)"
-          largoMarcador={34}
-          desplazamientoMaximo={18}
-          radioProximidad={90}
-          separacionItems={26}
-          tamanoFuente={1.45}
-          suavizado={110}
-          alElegir={alElegir}
-        />
+        {/* Capa de fondo: blur mínimo de la página + degradé del color de fondo
+            desde la derecha. No lleva caja ni borde. */}
+        <div className={styles.capaFondo} aria-hidden="true" />
 
-        <button type="button" className={styles.tema} onClick={alternar}>
-          {tema === 'dark' ? <IconoSol /> : <IconoLuna />}
-          <span>{tema === 'dark' ? 'Tema claro' : 'Tema oscuro'}</span>
-        </button>
+        {/* Lo único que se desplaza si el contenido no entra. */}
+        <div id="menu-movil-contenido" className={styles.contenido}>
+          <ListaLineas
+            alineacion="derecha"
+            items={enlaces.map((enlace) => ({ label: enlace.label, href: enlace.href }))}
+            colorAcento="var(--color-accent)"
+            colorTexto="var(--color-fg)"
+            colorMarcador="var(--color-muted)"
+            largoMarcador={34}
+            desplazamientoMaximo={18}
+            radioProximidad={90}
+            separacionItems={26}
+            tamanoFuente={1.45}
+            suavizado={110}
+            alElegir={alElegir}
+          />
+
+          <InterruptorTema tema={tema} alAlternar={alternar} />
+        </div>
       </aside>
     </div>
   );

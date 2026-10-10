@@ -106,3 +106,46 @@
   transform-origin: left center;
   transform: translateY(-50%) scaleX(calc(0.7 + var(--efecto, 0) * 0.6));
 }
+
+/* ---- Alineación a la derecha: el mismo diseño, espejado ---------------------
+   Texto pegado al borde derecho, las líneas guía a la derecha del texto, el ítem
+   cercano se corre hacia la izquierda y el índice pasa a ir después de la
+   etiqueta. */
+.derecha {
+  justify-content: flex-end;
+}
+
+.derecha.conMarcadores {
+  padding-left: 0;
+  padding-right: calc(var(--largo-marcador) + var(--separacion-marcador));
+}
+
+.derecha .lista {
+  align-items: flex-end;
+}
+
+.derecha .etiqueta {
+  flex-direction: row-reverse;
+  transform: translateX(calc(var(--efecto, 0) * var(--desplazamiento-max) * -1));
+}
+
+.derecha .indice {
+  margin-right: 0;
+  margin-left: 0.6rem;
+}
+
+.derecha .marcador {
+  left: auto;
+  right: calc(-1 * var(--largo-marcador) - var(--separacion-marcador));
+  transform-origin: right center;
+}
+
+.derecha.conMarcadores .item:not(:last-child)::after {
+  left: auto;
+  right: calc(-1 * var(--largo-marcador) - var(--separacion-marcador));
+  transform-origin: right center;
+}
+
+.derecha .enlace {
+  text-align: right;
+}

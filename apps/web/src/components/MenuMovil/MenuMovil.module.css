@@ -91,45 +91,45 @@
   width: 0;
 }
 
-/* Velo sobre la página. Está por debajo del botón, que queda a la vista como
-   botón de cerrar. */
+/* Captura el toque fuera del panel para cerrarlo. Transparente a propósito: el
+   efecto de fondo (blur + degradé) es del panel. */
 .fondo {
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: rgba(0, 0, 0, 0.45);
-  opacity: 0;
   visibility: hidden;
-  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
 }
 
 .fondoVisible {
-  opacity: 1;
   visibility: visible;
-  transition: opacity 0.4s ease;
 }
 
 .panel {
+  /* Color con el que el panel se funde desde la derecha. En oscuro, el mismo
+     tono de fondo del hero; en claro, blanco puro (no el gris-blanco del tema). */
+  --velo: var(--color-bg);
+
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
   z-index: 2;
+  isolation: isolate;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: min(84vw, 21rem);
-  /* Deja libre la franja del header, donde queda el botón de cerrar. */
-  padding: 6rem 1.5rem calc(1.75rem + env(safe-area-inset-bottom)) 1rem;
-  background: color-mix(in srgb, var(--color-bg) 86%, transparent);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
-  backdrop-filter: blur(22px) saturate(1.4);
-  border-left: 1px solid var(--color-border);
-  box-shadow: -18px 0 60px rgba(0, 0, 0, 0.28);
+  width: min(92vw, 24rem);
   transform: translateX(104%);
   visibility: hidden;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.5s;
-  overflow-y: auto;
+}
+
+:global(:root[data-theme='light']) .panel {
+  --velo: #ffffff;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme])) .panel {
+    --velo: #ffffff;
+  }
 }
 
 .panelAbierto {
@@ -138,33 +138,52 @@
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.tema {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 0.6rem;
-  margin-left: 1.25rem;
-  padding: 0.65rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-chip-bg);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+/* Sin caja ni borde: un blur mínimo de la página y encima un degradé del color
+   `--velo` que es opaco contra el borde derecho y se desvanece hacia la
+   izquierda, donde se ve la página desenfocada. La máscara apaga también el
+   blur hacia la izquierda, para que no quede un corte seco. */
+.capaFondo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  background: linear-gradient(
+    to left,
+    var(--velo) 0%,
+    color-mix(in srgb, var(--velo) 82%, transparent) 34%,
+    color-mix(in srgb, var(--velo) 38%, transparent) 68%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(to left, #000 58%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 58%, transparent 100%);
 }
 
-.tema:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
+/* Alineado a la derecha. Si el contenido no entra en pantalla, SE DESPLAZA
+   ESTE bloque y no la página (que está bloqueada). El scroll nativo se oculta:
+   la barra del sitio (BarraScroll) pasa a mostrar su avance. */
+.contenido {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  /* Deja libre la franja del header, donde queda el botón de cerrar. */
+  padding: 6rem 1.5rem calc(1.75rem + env(safe-area-inset-bottom)) 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.contenido::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .panel,
   .panelAbierto,
-  .fondo,
-  .fondoVisible,
   .icono span {
     transition-duration: 0.01ms;
     transition-delay: 0ms;

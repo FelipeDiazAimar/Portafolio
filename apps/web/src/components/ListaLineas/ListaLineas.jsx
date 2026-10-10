@@ -33,6 +33,9 @@ export default function ListaLineas({
   tamanoFuente = 1.1,
   suavizado = 100,
   activoInicial = null,
+  // 'izquierda' (como el original) o 'derecha': el mismo diseño espejado, con las
+  // líneas guía a la derecha del texto y el desplazamiento hacia la izquierda.
+  alineacion = 'izquierda',
   alElegir,
   className = '',
 }) {
@@ -131,6 +134,7 @@ export default function ListaLineas({
     styles.lateral,
     mostrarMarcador ? styles.conMarcadores : '',
     escalarTick ? styles.escalaTick : '',
+    alineacion === 'derecha' ? styles.derecha : '',
     className,
   ]
     .filter(Boolean)
