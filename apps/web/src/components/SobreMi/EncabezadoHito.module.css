@@ -1,4 +1,7 @@
 .encabezado {
+  /* Por encima del canvas 3D, que pasa por debajo de las letras. */
+  position: relative;
+  z-index: 2;
   display: grid;
   gap: 0.5rem;
 }

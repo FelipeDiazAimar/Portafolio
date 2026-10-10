@@ -46,7 +46,7 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
     <Canvas
       dpr={[1, 2]}
       frameloop={visible ? 'always' : 'never'}
-      camera={{ position: [0, 0.7, 4.7], fov: 38 }}
+      camera={{ position: [0, 0.7, 6.0], fov: 38 }}
       gl={{ alpha: true, antialias: true }}
       style={{ position: 'absolute', inset: 0 }}
       onCreated={({ gl }) => {

@@ -31,16 +31,23 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
   useEffect(() => {
     const caja = refCaja.current;
     if (!caja) return undefined;
-    // Margen: se monta (y se empieza a cargar el chunk) un poco antes de verse.
-    const observador = new IntersectionObserver(
+    // Un observador con margen monta el canvas (y empieza a cargar el chunk) un
+    // poco antes de verse; otro, sin margen, marca cuándo está realmente a la
+    // vista: recién ahí arranca la animación (la tapa se abre a la vista) y se
+    // activa el render.
+    const precarga = new IntersectionObserver(
       ([entrada]) => {
-        setVisible(entrada.isIntersecting);
         if (entrada.isIntersecting) setMontado(true);
       },
       { rootMargin: '300px' }
     );
-    observador.observe(caja);
-    return () => observador.disconnect();
+    const enPantalla = new IntersectionObserver(([entrada]) => setVisible(entrada.isIntersecting));
+    precarga.observe(caja);
+    enPantalla.observe(caja);
+    return () => {
+      precarga.disconnect();
+      enPantalla.disconnect();
+    };
   }, []);
 
   const usar3D = webgl && idsConEscena.has(hito.id) && !fallo;

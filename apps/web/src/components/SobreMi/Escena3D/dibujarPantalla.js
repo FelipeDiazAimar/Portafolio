@@ -12,11 +12,12 @@ function fondoEscritorio(ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
 }
 
-function logo(ctx, cx, cy, lado) {
-  // Logo estilizado de cuatro paneles (no es el logo oficial de Windows).
+// Logo estilizado de cuatro paneles (no es el logo oficial de Windows). Se usa
+// en el arranque de la pantalla y en la tapa de la notebook.
+export function dibujarLogo(ctx, cx, cy, lado, color = AZUL) {
   const hueco = lado * 0.06;
   const celda = (lado - hueco) / 2;
-  ctx.fillStyle = AZUL;
+  ctx.fillStyle = color;
   for (let fila = 0; fila < 2; fila += 1) {
     for (let col = 0; col < 2; col += 1) {
       ctx.fillRect(cx - lado / 2 + col * (celda + hueco), cy - lado / 2 + fila * (celda + hueco), celda, celda);
@@ -37,19 +38,72 @@ function indicadorCarga(ctx, cx, cy, radio, progreso) {
   }
 }
 
+function iconoMiPc(ctx, x, y) {
+  ctx.strokeStyle = '#e6eeff';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.roundRect(x - 22, y + 12, 44, 28, 4);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y + 40);
+  ctx.lineTo(x, y + 48);
+  ctx.moveTo(x - 12, y + 49);
+  ctx.lineTo(x + 12, y + 49);
+  ctx.stroke();
+}
+
+function iconoPapelera(ctx, x, y) {
+  ctx.strokeStyle = '#e6eeff';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 15, y + 20);
+  ctx.lineTo(x + 15, y + 20);
+  ctx.lineTo(x + 12, y + 50);
+  ctx.lineTo(x - 12, y + 50);
+  ctx.closePath();
+  ctx.moveTo(x - 20, y + 15);
+  ctx.lineTo(x + 20, y + 15);
+  ctx.moveTo(x - 6, y + 10);
+  ctx.lineTo(x + 6, y + 10);
+  ctx.moveTo(x - 4, y + 26);
+  ctx.lineTo(x - 4, y + 44);
+  ctx.moveTo(x + 4, y + 26);
+  ctx.lineTo(x + 4, y + 44);
+  ctx.stroke();
+}
+
+function iconoCarpeta(ctx, x, y, escala = 1) {
+  ctx.fillStyle = '#f5c04a';
+  ctx.beginPath();
+  ctx.roundRect(x - 24 * escala, y + 16 * escala, 48 * escala, 34 * escala, 5 * escala);
+  ctx.fill();
+  ctx.fillStyle = '#e0a52f';
+  ctx.beginPath();
+  ctx.roundRect(x - 24 * escala, y + 11 * escala, 22 * escala, 10 * escala, 3 * escala);
+  ctx.fill();
+}
+
 function iconos(ctx) {
-  const items = ['Mi PC', 'Papelera', 'Proyectos'];
+  const items = [
+    { texto: 'Mi PC', dibujar: iconoMiPc },
+    { texto: 'Papelera', dibujar: iconoPapelera },
+    { texto: 'Proyectos', dibujar: iconoCarpeta },
+  ];
   ctx.font = '22px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
-  items.forEach((texto, i) => {
+  items.forEach(({ texto, dibujar }, i) => {
     const x = 70;
     const y = 50 + i * 118;
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.beginPath();
-    ctx.roundRect(x - 30, y, 60, 60, 12);
+    ctx.roundRect(x - 34, y - 4, 68, 68, 14);
     ctx.fill();
+    dibujar(ctx, x, y);
     ctx.fillStyle = '#e6eeff';
-    ctx.fillText(texto, x, y + 88);
+    ctx.fillText(texto, x, y + 92);
   });
   ctx.textAlign = 'left';
 }
@@ -57,16 +111,46 @@ function iconos(ctx) {
 function barraTareas(ctx, w, h) {
   ctx.fillStyle = 'rgba(8, 12, 28, 0.88)';
   ctx.fillRect(0, h - 58, w, 58);
-  const lado = 30;
-  const hueco = 18;
+  const lado = 32;
+  const hueco = 20;
   const total = 4;
   const inicio = w / 2 - (total * lado + (total - 1) * hueco) / 2;
-  for (let i = 0; i < total; i += 1) {
-    ctx.fillStyle = i === 0 ? AZUL : 'rgba(255,255,255,0.28)';
-    ctx.beginPath();
-    ctx.roundRect(inicio + i * (lado + hueco), h - 44, lado, lado, 7);
-    ctx.fill();
-  }
+  const centroY = h - 29;
+  const centro = (i) => inicio + i * (lado + hueco) + lado / 2;
+
+  // 0: inicio (logo de cuatro paneles)
+  dibujarLogo(ctx, centro(0), centroY, 26);
+
+  // 1: carpeta
+  iconoCarpeta(ctx, centro(1), centroY - 22, 0.65);
+
+  // 2: navegador (globo)
+  ctx.strokeStyle = '#8fd0ff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(centro(2), centroY, 13, 0, Math.PI * 2);
+  ctx.moveTo(centro(2) - 13, centroY);
+  ctx.lineTo(centro(2) + 13, centroY);
+  ctx.moveTo(centro(2), centroY - 13);
+  ctx.bezierCurveTo(centro(2) + 9, centroY - 6, centro(2) + 9, centroY + 6, centro(2), centroY + 13);
+  ctx.moveTo(centro(2), centroY - 13);
+  ctx.bezierCurveTo(centro(2) - 9, centroY - 6, centro(2) - 9, centroY + 6, centro(2), centroY + 13);
+  ctx.stroke();
+
+  // 3: terminal
+  ctx.fillStyle = '#0a0f1c';
+  ctx.beginPath();
+  ctx.roundRect(centro(3) - 15, centroY - 13, 30, 26, 5);
+  ctx.fill();
+  ctx.strokeStyle = AZUL;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(centro(3) - 8, centroY - 5);
+  ctx.lineTo(centro(3) - 2, centroY);
+  ctx.lineTo(centro(3) - 8, centroY + 5);
+  ctx.moveTo(centro(3) + 1, centroY + 6);
+  ctx.lineTo(centro(3) + 9, centroY + 6);
+  ctx.stroke();
 }
 
 function ventanaTerminal(ctx, w, h, estado) {
@@ -138,7 +222,7 @@ export function dibujarPantalla(ctx, w, h, estado) {
   if (estado.fase === 'arranque') {
     ctx.fillStyle = '#03050a';
     ctx.fillRect(0, 0, w, h);
-    logo(ctx, w / 2, h * 0.42, 150);
+    dibujarLogo(ctx, w / 2, h * 0.42, 150);
     indicadorCarga(ctx, w / 2, h * 0.78, 26, estado.progreso);
     return;
   }

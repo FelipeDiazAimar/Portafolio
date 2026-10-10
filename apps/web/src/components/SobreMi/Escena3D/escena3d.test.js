@@ -2,7 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hayWebGL } from './soporteWebGL.js';
 import { amortiguar, calcularDispersion } from './desarme.js';
-import { estadoPantalla, teclaPresionada, DURACION_TOTAL, LINEAS } from './pantallaNotebook.js';
+import {
+  estadoPantalla,
+  teclaPresionada,
+  progresoApertura,
+  factorLuzPantalla,
+  DURACION_APERTURA,
+  DURACION_TOTAL,
+  LINEAS,
+} from './pantallaNotebook.js';
+import { DISPOSICION, COLUMNAS, TOTAL_TECLAS, indiceDeLetra } from './tecladoQwerty.js';
 
 const cerca = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} no está cerca de ${b}`);
 
@@ -65,9 +74,49 @@ test('estadoPantalla: al terminar quedan todas las líneas', () => {
   assert.equal(final.lineas.at(-1), 'beep beep beep');
 });
 
-test('teclaPresionada: -1 sin tecleo y un índice válido mientras se teclea', () => {
-  assert.equal(teclaPresionada(0, 60), -1);
-  assert.equal(teclaPresionada(7.0, 60), -1);
-  // primera letra de "whoami": 'w' = 119 → (119 * 7 + 0) % 60 = 53
-  assert.equal(teclaPresionada(5.8 + 1 / 12 + 0.01, 60), 53);
+test('teclaPresionada: devuelve la letra que se está tecleando, o vacío', () => {
+  assert.equal(teclaPresionada(0), '');
+  assert.equal(teclaPresionada(7.0), '');
+  // primera letra de "whoami"
+  assert.equal(teclaPresionada(5.8 + 1 / 12 + 0.01), 'w');
+});
+
+test('tecladoQwerty: 5 filas de 12 teclas y letras en su sitio', () => {
+  assert.equal(DISPOSICION.length, 5);
+  assert.ok(DISPOSICION.every((fila) => fila.length === COLUMNAS));
+  assert.equal(TOTAL_TECLAS, 60);
+  // fila 1 (QWERTY), columna 1
+  assert.equal(indiceDeLetra('w'), COLUMNAS + 1);
+  assert.equal(indiceDeLetra('W'), COLUMNAS + 1);
+  assert.equal(indiceDeLetra('a'), COLUMNAS * 2);
+  assert.equal(indiceDeLetra('ñ'), -1);
+  assert.equal(indiceDeLetra(''), -1);
+});
+
+test('tecladoQwerty: todas las letras que se teclean existen y no se repiten', () => {
+  for (const { comando } of LINEAS) {
+    for (const letra of comando) assert.ok(indiceDeLetra(letra) >= 0, `falta la tecla "${letra}"`);
+  }
+  const letras = DISPOSICION.flat().filter((tecla) => /^[a-z]$/.test(tecla));
+  assert.equal(new Set(letras).size, letras.length);
+});
+
+test('progresoApertura: va de 0 a 1 sin pasarse y sólo avanza', () => {
+  assert.equal(progresoApertura(-1), 0);
+  assert.equal(progresoApertura(0), 0);
+  assert.equal(progresoApertura(DURACION_APERTURA), 1);
+  assert.equal(progresoApertura(50), 1);
+  let anterior = 0;
+  for (let t = 0; t <= DURACION_APERTURA; t += 0.1) {
+    const valor = progresoApertura(t);
+    assert.ok(valor >= anterior - 1e-12, `retrocede en t=${t}`);
+    anterior = valor;
+  }
+});
+
+test('factorLuzPantalla: apagada no ilumina y el escritorio ilumina a pleno', () => {
+  assert.equal(factorLuzPantalla({ fase: 'apagada' }), 0);
+  assert.ok(factorLuzPantalla({ fase: 'arranque' }) > 0 && factorLuzPantalla({ fase: 'arranque' }) < 1);
+  assert.equal(factorLuzPantalla({ fase: 'escritorio' }), 1);
+  assert.ok(factorLuzPantalla({ fase: 'terminal' }) > 0.5);
 });

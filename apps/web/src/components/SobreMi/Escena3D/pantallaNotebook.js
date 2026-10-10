@@ -12,6 +12,11 @@ const PAUSA_TRAS_SALIDA = 0.7;
 // Cuánto dura "hundida" una tecla después de escribirse su letra.
 const VENTANA_TECLA = 0.09;
 
+// Apertura de la tapa (la primera vez que aparece la escena). La pantalla
+// arranca un poco antes de que termine de abrirse, así no hay un hueco negro.
+export const DURACION_APERTURA = 1.5;
+export const RETRASO_PANTALLA = 1.2;
+
 const T_ARRANQUE = 0.8;
 const T_ESCRITORIO = 3.8;
 const T_APERTURA = 5.0;
@@ -67,16 +72,27 @@ export function estadoPantalla(t) {
   };
 }
 
-// Índice de la tecla que está hundida en el instante `t`, o -1. La tecla de
-// cada letra sale de su código, así "escribir" siempre mueve las mismas teclas.
-export function teclaPresionada(t, totalTeclas) {
+// Letra que está hundida en el instante `t` (o '' si ninguna). La notebook la
+// busca en su distribución para hundir esa tecla.
+export function teclaPresionada(t) {
   for (const entrada of HORARIO) {
     for (let k = 0; k < entrada.comando.length; k += 1) {
       const instante = entrada.inicio + (k + 1) / CARACTERES_POR_SEGUNDO;
-      if (t >= instante && t < instante + VENTANA_TECLA) {
-        return (entrada.comando.charCodeAt(k) * 7 + k) % totalTeclas;
-      }
+      if (t >= instante && t < instante + VENTANA_TECLA) return entrada.comando[k];
     }
   }
-  return -1;
+  return '';
+}
+
+// Cuánto se abrió la tapa en el instante `t`: de 0 (cerrada) a 1 (abierta), con
+// una desaceleración al final.
+export function progresoApertura(t) {
+  const x = Math.min(1, Math.max(0, t / DURACION_APERTURA));
+  return 1 - (1 - x) ** 3;
+}
+
+// Cuánta luz tira la pantalla hacia afuera, según lo que muestra.
+const LUZ_POR_FASE = { apagada: 0, arranque: 0.35, escritorio: 1, terminal: 0.8 };
+export function factorLuzPantalla(estado) {
+  return LUZ_POR_FASE[estado.fase] ?? 0;
 }

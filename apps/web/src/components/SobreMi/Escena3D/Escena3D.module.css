@@ -17,6 +17,15 @@
   place-items: center;
 }
 
+@media (min-width: 769px) {
+  /* El canvas sobresale de la zona para que el modelo no se recorte al girar y
+     pase POR DEBAJO del título (que va por encima, ver EncabezadoHito). Es
+     simétrico arriba y abajo: el centro del modelo sigue siendo el de la zona. */
+  .caja {
+    inset: -10rem -14rem -10rem -10rem;
+  }
+}
+
 @media (max-width: 768px) {
   /* En celular la zona no estira: el modelo tiene un alto fijo. */
   .caja {
