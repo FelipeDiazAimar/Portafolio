@@ -21,6 +21,9 @@ const ALTO_RETRATO = 2390;
 // El retrato ocupa casi todo el alto del hero, así que la grilla es más fina
 // que la del tamaño de tarjeta para que el ASCII siga leyéndose como una cara.
 const COLUMNAS_ASCII = 140;
+// En teléfono la cara ocupa menos píxeles y la conversión pesa más que lo que
+// se llega a distinguir: grilla más gruesa.
+const COLUMNAS_ASCII_MOVIL = 100;
 // Mismo valor que en NombreAscii: es lo que hace que las dos intros arranquen
 // juntas apenas se va el splash de Bienvenida.
 const DEMORA_INICIO_MS = 3300;
@@ -96,7 +99,10 @@ export default function RetratoAscii() {
     if (!lienzo || !marco || !imagen) return false;
 
     const { colorTexto, colorFondo, invertida } = leerColoresDelTema();
-    const ascii = convertirAAscii(imagen, { columnas: COLUMNAS_ASCII, invertida });
+    const columnas = window.matchMedia('(max-width: 640px)').matches
+      ? COLUMNAS_ASCII_MOVIL
+      : COLUMNAS_ASCII;
+    const ascii = convertirAAscii(imagen, { columnas, invertida });
     refAscii.current = ascii;
 
     const { width: ancho, height: alto } = marco.getBoundingClientRect();

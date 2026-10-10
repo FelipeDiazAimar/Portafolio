@@ -25,11 +25,12 @@
      corte seco. `--desvanecido` (0..1) lo escribe el componente según el
      scroll; con 0 la banda mide 0 y no se nota nada. */
   --desvanecido: 0;
+  --difuminado-izq: 14%;
   -webkit-mask-image:
-    linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(to right, transparent 0, #000 var(--difuminado-izq), #000 86%, transparent 100%),
     linear-gradient(to top, transparent 0, #000 calc(var(--desvanecido) * 85vh));
   mask-image:
-    linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(to right, transparent 0, #000 var(--difuminado-izq), #000 86%, transparent 100%),
     linear-gradient(to top, transparent 0, #000 calc(var(--desvanecido) * 85vh));
   -webkit-mask-composite: source-in;
   mask-composite: intersect;
@@ -103,13 +104,20 @@
   );
 }
 
-/* En pantallas angostas el retrato no cabe al lado del nombre: pasa a ser el
-   fondo de la mitad inferior, centrado, y el nombre queda arriba. */
-@media (max-width: 1024px) {
+/* Teléfono: el retrato se corre hacia la derecha y se corta contra el borde
+   (el hero recorta lo que sobra), así a la izquierda queda lugar para el
+   texto. Dos variables lo gobiernan:
+   --alto     altura del marco
+   --visible  fracción del ancho de la foto que queda en pantalla; el resto
+              sale por el borde derecho. 1 = foto entera, 0.5 = media foto. */
+@media (max-width: 640px) {
   .marco {
-    right: 50%;
-    transform: translateX(50%);
-    height: min(78vh, 128vw);
+    --alto: 82svh;
+    --visible: 0.66;
+    --ancho: calc(var(--alto) * 1792 / 2390);
+    --difuminado-izq: 34%;
+    height: var(--alto);
+    right: calc(var(--ancho) * (var(--visible) - 1));
   }
 }
 

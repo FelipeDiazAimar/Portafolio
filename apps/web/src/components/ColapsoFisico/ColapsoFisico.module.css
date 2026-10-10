@@ -8,6 +8,7 @@
   left: 0;
   width: 100%;
   height: 100vh;
+  height: 100svh;
   z-index: 1;
   /* Decorativo: la detección del hover es por mousemove en window. */
   pointer-events: none;
@@ -20,6 +21,15 @@
 
 .oculto {
   opacity: 0;
+}
+
+/* Única parte del overlay que recibe el dedo, y sólo en táctil. `touch-action:
+   none` hace que el navegador no tome el gesto para hacer scroll: el resto de
+   la pantalla sigue desplazándose normal. */
+.zonaEmpuje {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
 }
 
 .lienzo {

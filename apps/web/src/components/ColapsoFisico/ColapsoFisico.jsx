@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Engine } from 'matter-js';
+import { Body, Engine } from 'matter-js';
 import {
   ALTO_ESCOBA,
   colocarSinImpulso,
@@ -76,6 +76,9 @@ export default function ColapsoFisico({
   // 'resortes': los caracteres vuelven solos a su sitio, sin personaje.
   // 'stickman': entra un muñeco que barre y después se rebobina todo.
   modo = 'stickman',
+  // 'raton': el cursor rompe lo que toca. 'tactil': un toque suelta todo de
+  // golpe, y después el dedo empuja dentro de una zona acotada.
+  modoEntrada = 'raton',
   // Rectángulo de página (left, top, width, height) que cubre el overlay. Sin
   // él, el overlay es el primer 100vh del documento, que es el hero.
   region = null,
@@ -84,6 +87,11 @@ export default function ColapsoFisico({
   alTerminar,
 }) {
   const refLienzo = useRef(null);
+  // Dedo apoyado sobre la zona de empuje (coordenadas de página). Lo escriben
+  // los manejadores del JSX y lo lee el bucle, por eso va en una ref.
+  const refDedo = useRef({ activo: false, nuevo: false, x: 0, y: 0 });
+  // Rectángulo (relativo al overlay) donde el dedo puede empujar letras.
+  const [zonaEmpuje, setZonaEmpuje] = useState(null);
   // Los callbacks pueden cambiar de identidad entre renders; se leen por ref
   // para que el efecto no se reinicie (reiniciarlo destruiría la simulación).
   const refAlTerminar = useRef(alTerminar);
@@ -121,6 +129,7 @@ export default function ColapsoFisico({
     // serían cientos de reflows forzados justo en el cuadro del disparo.
     // El overlay no siempre arranca en (0,0) de la página: el del footer
     // cubre sólo el footer. Todo se expresa relativo a su esquina.
+    const tactil = modoEntrada === 'tactil';
     const desfaseX = region ? region.left : 0;
     const desfaseY = region ? region.top : 0;
     const rect = contenedor.getBoundingClientRect();
@@ -174,6 +183,24 @@ export default function ColapsoFisico({
     });
 
     const letraConvertida = new Array(letras.length).fill(false);
+
+    // Zona donde el dedo puede empujar: la columna del nombre con un margen,
+    // extendida hasta el piso, porque las letras caen y hay que poder alcanzarlas.
+    // Es lo único que bloquea el scroll mientras dura el efecto (en táctil son
+    // unos pocos segundos).
+    if (tactil && letras.length > 0) {
+      const margen = 28;
+      const izquierda = Math.min(...letras.map((l) => l.x0)) - margen;
+      const derecha = Math.max(...letras.map((l) => l.x1)) + margen;
+      const arriba = Math.min(...letras.map((l) => l.y0)) - margen;
+      const abajo = alto;
+      setZonaEmpuje({
+        left: izquierda,
+        top: arriba,
+        width: derecha - izquierda,
+        height: abajo - arriba,
+      });
+    }
 
     celdas.forEach((celda) => {
       for (let l = 0; l < letras.length; l += 1) {
@@ -232,7 +259,7 @@ export default function ColapsoFisico({
       raton.x = evento.clientX + window.scrollX - desfaseX;
       raton.y = evento.clientY + window.scrollY - desfaseY;
     }
-    window.addEventListener('mousemove', alMoverse, { passive: true });
+    if (!tactil) window.addEventListener('mousemove', alMoverse, { passive: true });
 
     // --- Rotura localizada ----------------------------------------------
     // Se mide contra la posición ORIGINAL de la celda, que es la zona de la
@@ -577,11 +604,30 @@ export default function ColapsoFisico({
         if (indiceRebobinado <= 0) return terminar();
         indiceRebobinado -= PASO_REBOBINADO;
       } else {
-        moverCuerpo(cuerpoCursor, raton.x, raton.y);
+        if (tactil) {
+          // El cursor sólo existe mientras el dedo está apoyado en la zona.
+          const dedo = refDedo.current;
+          if (dedo.activo) {
+            const dedoX = dedo.x - desfaseX;
+            const dedoY = dedo.y - desfaseY;
+            if (dedo.nuevo) {
+              colocarSinImpulso(cuerpoCursor, dedoX, dedoY);
+              dedo.nuevo = false;
+            } else {
+              moverCuerpo(cuerpoCursor, dedoX, dedoY);
+            }
+            // Mientras el dedo juega no se da por terminada la interacción.
+            momentoUltimaRotura = ahora;
+          } else {
+            sacarDeEscena(cuerpoCursor);
+          }
+        } else {
+          moverCuerpo(cuerpoCursor, raton.x, raton.y);
+        }
         // Se puede seguir rompiendo en cualquier momento antes del
         // rebobinado, no sólo al principio: romper mientras barre lo hace
         // dar otra pasada.
-        romperCercanas(ahora);
+        if (!tactil) romperCercanas(ahora);
         actualizarStickman();
         // Delta fijo: con delta variable la simulación se desestabiliza al
         // caer un cuadro y la grabación deja de ser reproducible.
@@ -602,11 +648,36 @@ export default function ColapsoFisico({
     // El cursor nace estacionado en (-9999,-9999); reubicarlo con
     // `moverCuerpo` (con impulso) en el primer cuadro entraría al solver como
     // un salto de ~14.000 px/paso. Se lo coloca sin impulso ANTES del cuadro 0.
-    colocarSinImpulso(cuerpoCursor, raton.x, raton.y);
+    if (!tactil) colocarSinImpulso(cuerpoCursor, raton.x, raton.y);
 
     // Cuadro 0 = el nombre intacto, sin ninguna celda rota. Es el último
     // fotograma del rebobinado, o sea a lo que vuelve el nombre.
     if (modo === 'stickman') grabadora.grabarCuadro(cuerposDeCaracteres);
+
+    // Táctil: no hay cursor que vaya rompiendo, así que se suelta TODO de golpe,
+    // con un empujón hacia arriba y a los costados para que se note. Va después
+    // del cuadro 0 de la grabación, que tiene que ser el nombre intacto.
+    if (tactil) {
+      for (let i = 0; i < celdas.length; i += 1) {
+        const celda = celdas[i];
+        celda.rota = true;
+        celda.ranura = cuerposRotos.length;
+        cuerposRotos.push(cuerposDeCaracteres[i]);
+        liberarCuerpo(cuerposDeCaracteres[i]);
+        Body.setVelocity(cuerposDeCaracteres[i], {
+          x: (Math.random() - 0.5) * 7,
+          y: -(2.5 + Math.random() * 5.5),
+        });
+        Body.setAngularVelocity(cuerposDeCaracteres[i], (Math.random() - 0.5) * 0.4);
+      }
+      rotas = celdas.length;
+      for (let l = 0; l < letras.length; l += 1) {
+        if (letraConvertida[l]) continue;
+        letraConvertida[l] = true;
+        refAlConvertirLetra.current?.(l);
+      }
+      momentoUltimaRotura = inicio;
+    }
 
     bucle = requestAnimationFrame(cuadro);
 
@@ -643,6 +714,32 @@ export default function ColapsoFisico({
       aria-hidden="true"
     >
       <canvas ref={refLienzo} className={styles.lienzo} />
+      {zonaEmpuje && (
+        <div
+          className={styles.zonaEmpuje}
+          style={zonaEmpuje}
+          onPointerDown={(evento) => {
+            evento.currentTarget.setPointerCapture(evento.pointerId);
+            refDedo.current = {
+              activo: true,
+              nuevo: true,
+              x: evento.clientX + window.scrollX,
+              y: evento.clientY + window.scrollY,
+            };
+          }}
+          onPointerMove={(evento) => {
+            if (!refDedo.current.activo) return;
+            refDedo.current.x = evento.clientX + window.scrollX;
+            refDedo.current.y = evento.clientY + window.scrollY;
+          }}
+          onPointerUp={() => {
+            refDedo.current.activo = false;
+          }}
+          onPointerCancel={() => {
+            refDedo.current.activo = false;
+          }}
+        />
+      )}
     </div>,
     document.body
   );

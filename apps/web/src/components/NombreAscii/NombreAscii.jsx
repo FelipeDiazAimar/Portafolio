@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
+import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
+import useToqueSobre from '@/hooks/useToqueSobre.js';
 import SubtituloHero from '@/components/SubtituloHero/SubtituloHero.jsx';
 import TextoTipeado from '@/components/TextoTipeado/TextoTipeado.jsx';
 import styles from './NombreAscii.module.css';
@@ -358,6 +360,8 @@ export default function NombreAscii() {
   const [letrasRotas, setLetrasRotas] = useState(() => new Set());
   const [montado, setMontado] = useState(false);
   const [colapso, setColapso] = useState(null);
+  // Pantalla táctil: no hay hover, así que el nombre se rompe con un toque.
+  const [tactil, setTactil] = useState(false);
   // Tras un colapso hay que salir del área y volver a entrar para
   // re-disparar: si no, quedarse quieto encima lo relanzaría en loop.
   const refEsperandoSalida = useRef(false);
@@ -370,6 +374,7 @@ export default function NombreAscii() {
   refFase.current = fase;
 
   useEffect(() => {
+    setTactil(esTactil());
     setMontado(true);
     const temporizador = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
     return () => clearTimeout(temporizador);
@@ -485,8 +490,8 @@ export default function NombreAscii() {
   useEffect(() => {
     if (fase !== 'desvanecido' || colapso || !campo) return undefined;
     if (seccionActiva !== 'inicio') return undefined;
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (!tieneHoverFino()) return undefined;
+    if (prefiereMovimientoReducido()) return undefined;
 
     function alMoverse(evento) {
       const nodo = refLimpio.current;
@@ -514,8 +519,27 @@ export default function NombreAscii() {
     return () => window.removeEventListener('mousemove', alMoverse);
   }, [fase, colapso, campo, seccionActiva]);
 
+  // En táctil, un toque sobre el nombre lo hace estallar. Ver useToqueSobre:
+  // no toca el scroll.
+  useToqueSobre(
+    refLimpio,
+    tactil &&
+      fase === 'desvanecido' &&
+      !colapso &&
+      !!campo &&
+      seccionActiva === 'inicio' &&
+      !prefiereMovimientoReducido(),
+    (posicion) => {
+      refYaColapso.current = true;
+      navigator.vibrate?.(15);
+      setColapso({ ...posicion, tactil: true });
+    }
+  );
+
   const subtituloVisible = fase === 'desvanecido' && letrasRotas.size === 0;
-  const zonaClickeableVisible = fase === 'desvanecido' && seccionActiva === 'inicio';
+  // En táctil las hitboxes de letra no existen: tocar el nombre lo rompe en
+  // vez de llevar a contacto.
+  const zonaClickeableVisible = fase === 'desvanecido' && seccionActiva === 'inicio' && !tactil;
 
   return (
     <div className={styles.contenedor} ref={refContenedor}>
@@ -590,6 +614,7 @@ export default function NombreAscii() {
         <ColapsoFisico
           campo={campo}
           modo="resortes"
+          modoEntrada={colapso.tactil ? 'tactil' : 'raton'}
           refContenedor={refContenedor}
           posicionInicialRaton={colapso}
           visible={seccionActiva === 'inicio'}
