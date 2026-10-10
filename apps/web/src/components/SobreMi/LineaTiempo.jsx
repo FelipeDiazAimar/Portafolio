@@ -7,15 +7,9 @@ import styles from './LineaTiempo.module.css';
 // signo, al activo). Los vecinos se atenúan y los lejanos desaparecen.
 export default function LineaTiempo({ hitos, activo, onSeleccionar, onApuntarActivo, onToqueHilo }) {
   return (
-    <nav
-      className={styles.linea}
-      aria-label="Línea de tiempo"
-      onClick={(evento) => {
-        if (evento.target === evento.currentTarget) onToqueHilo();
-      }}
-    >
-      <span className={styles.hiloPasado} aria-hidden="true" />
-      <span className={styles.hiloFuturo} aria-hidden="true" />
+    <nav className={styles.linea} aria-label="Línea de tiempo">
+      <span className={styles.hiloPasado} aria-hidden="true" onClick={onToqueHilo} />
+      <span className={styles.hiloFuturo} aria-hidden="true" onClick={onToqueHilo} />
       <ul className={styles.lista}>
         {hitos.map((hito, i) => {
           const distancia = Math.abs(i - activo);

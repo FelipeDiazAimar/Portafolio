@@ -1,10 +1,14 @@
 .linea {
   --paso: 5.25rem;
+  /* Posición horizontal de la columna de puntos dentro de la cinta. La cinta
+     es ancha (16rem) porque la máscara recorta lo que sobresale de su caja y
+     los rótulos cuelgan a la izquierda de los puntos. */
+  --x: calc(100% - 1rem);
   position: absolute;
   top: 0;
   bottom: 0;
   right: clamp(1rem, 5vw, 4rem);
-  width: 2rem;
+  width: 16rem;
   z-index: 3;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%);
@@ -15,10 +19,11 @@
 .hiloPasado,
 .hiloFuturo {
   position: absolute;
-  left: 50%;
+  left: var(--x);
   width: 2px;
   transform: translateX(-50%);
   pointer-events: none;
+  transition: left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hiloPasado {
@@ -72,8 +77,12 @@
 .boton {
   position: absolute;
   top: 0;
-  right: 0;
-  transform: translateY(-50%);
+  left: var(--x);
+  transform: translate(calc(-100% + 1rem), -50%);
+  transition: left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Sin esto el botón, anclado cerca del borde derecho, se achica al mínimo
+     y el rótulo se parte palabra por palabra. */
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 0.9rem;
@@ -140,30 +149,50 @@
 }
 
 @media (max-width: 768px) {
-  /* Estado inicial: la cinta está centrada. Se posiciona con `left` (no con
-     `right`) para poder animar el paso a la derecha. */
+  /* Estado inicial: la columna de puntos está centrada en la pantalla. */
   .linea {
-    right: auto;
-    left: 50%;
-    width: 3rem;
-    transform: translateX(-50%);
-    transition: left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    --x: 50%;
+    left: 0;
+    right: 0;
+    width: auto;
   }
 
-  /* Estado detalle: la cinta se alinea a la derecha y deja sólo el año, así
+  /* Estado detalle: la columna se alinea a la derecha y deja sólo el año, así
      la columna de la izquierda conserva casi todo el ancho. */
   :global([data-detalle='true']) .linea {
-    left: calc(100% - 2.5rem);
+    --x: calc(100% - 1.5rem);
   }
 
   :global([data-detalle='true']) .nombre {
     display: none;
   }
+
+  /* La cinta ocupa todo el ancho: sólo recibe toques sobre el hilo (con una
+     zona de toque de 2rem alrededor) y los puntos, para no tapar la columna
+     de la izquierda. */
+  .linea {
+    pointer-events: none;
+  }
+
+  .boton,
+  .hiloPasado,
+  .hiloFuturo {
+    pointer-events: auto;
+  }
+
+  .hiloPasado::after,
+  .hiloFuturo::after {
+    content: '';
+    position: absolute;
+    inset: 0 -1rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .item,
-  .linea {
+  .boton,
+  .hiloPasado,
+  .hiloFuturo {
     transition-duration: 0.01s;
   }
 }
