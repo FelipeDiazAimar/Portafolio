@@ -1,59 +1,60 @@
 .pista {
-  --ancho: 168px;
-  --ancho-perilla: 72px;
-  --salida: 9px; /* cuánto sobresale la perilla de la pastilla, a los lados */
+  --ancho: 120px;
+  --alto: 40px;
+  --margen: 3px;
+  --perilla: 34px; /* en reposo: queda DENTRO de la pastilla */
 
   position: relative;
   flex: none;
   width: var(--ancho);
-  height: 58px;
-  padding: 0;
-  border: none;
+  height: var(--alto);
   border-radius: 999px;
   cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.5s ease, box-shadow 0.5s ease;
 }
 
 .pista:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 6px;
+  outline-offset: 5px;
 }
 
-/* ---- Oscuro: pastilla casi negra, perilla a la derecha ---- */
+/* ---- Oscuro: pastilla casi negra ---- */
 .oscuro {
   background: radial-gradient(130% 150% at 28% 18%, #121214 0%, #000000 68%);
   box-shadow:
-    inset 0 3px 10px rgba(255, 255, 255, 0.07),
-    inset 0 -7px 16px rgba(0, 0, 0, 0.9),
-    0 12px 28px rgba(0, 0, 0, 0.38);
+    inset 0 2px 7px rgba(255, 255, 255, 0.07),
+    inset 0 -5px 11px rgba(0, 0, 0, 0.9),
+    0 8px 20px rgba(0, 0, 0, 0.36);
 }
 
-/* ---- Claro: pastilla gris, perilla a la izquierda ---- */
+/* ---- Claro: pastilla gris ---- */
 .claro {
   background: linear-gradient(180deg, #a6a9af 0%, #8f9298 100%);
   box-shadow:
-    inset 0 3px 8px rgba(255, 255, 255, 0.35),
-    inset 0 -6px 14px rgba(0, 0, 0, 0.22),
-    0 12px 28px rgba(60, 64, 72, 0.3);
+    inset 0 2px 6px rgba(255, 255, 255, 0.35),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.22),
+    0 8px 20px rgba(60, 64, 72, 0.28);
 }
 
-/* La palabra del modo: cada una vive en su lado y aparece cuando la perilla se
-   va al otro. */
 .etiqueta {
   position: absolute;
   top: 50%;
   font-family: var(--font-sans);
-  font-size: 1.28rem;
+  font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1;
   transform: translateY(-50%);
   transition: opacity 0.4s ease;
+  pointer-events: none;
 }
 
 .etiquetaOscuro {
-  left: 24px;
+  left: 15px;
   background: linear-gradient(180deg, #ffffff 10%, #8d8f95 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -62,9 +63,9 @@
 }
 
 .etiquetaClaro {
-  right: 24px;
+  right: 15px;
   color: #ffffff;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.18);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.18);
   opacity: 0;
 }
 
@@ -73,33 +74,33 @@
   opacity: 1;
 }
 
-/* Perilla de vidrio: más alta que la pastilla, con borde luminoso. */
+/* Perilla de vidrio. En reposo es un círculo dentro de la pastilla; al tocarla
+   o arrastrarla se agranda y sobresale un poco por arriba y por abajo. La
+   posición horizontal la fija `--x` (JS), y el agrandado crece desde el centro
+   de la perilla. */
 .perilla {
   position: absolute;
-  top: -9px;
-  left: 0;
+  top: 50%;
+  left: var(--margen);
   display: grid;
   place-items: center;
-  width: var(--ancho-perilla);
-  height: 76px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 40px / 44px;
+  width: var(--perilla);
+  height: var(--perilla);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
   color: #ffffff;
   background:
-    radial-gradient(circle at 70% 32%, rgba(255, 255, 255, 0.18), transparent 55%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.03));
+    radial-gradient(circle at 70% 32%, rgba(255, 255, 255, 0.2), transparent 55%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04));
   -webkit-backdrop-filter: blur(3px) saturate(1.4) brightness(1.12);
   backdrop-filter: blur(3px) saturate(1.4) brightness(1.12);
   box-shadow:
-    inset 0 0 22px rgba(255, 255, 255, 0.16),
-    inset 0 -6px 14px rgba(0, 0, 0, 0.28),
-    0 10px 22px rgba(0, 0, 0, 0.3);
-  transform: translateX(calc(var(--ancho) - var(--ancho-perilla) + var(--salida)));
-  transition: transform 0.6s cubic-bezier(0.34, 1.28, 0.5, 1);
-}
-
-.claro .perilla {
-  transform: translateX(calc(-1 * var(--salida)));
+    inset 0 0 14px rgba(255, 255, 255, 0.16),
+    inset 0 -4px 9px rgba(0, 0, 0, 0.28),
+    0 5px 12px rgba(0, 0, 0, 0.3);
+  transform: translate(var(--x, 0px), -50%) scale(1);
+  transition: transform 0.5s cubic-bezier(0.34, 1.28, 0.5, 1), width 0.3s ease, height 0.3s ease,
+    margin 0.3s ease;
 }
 
 .oscuro .perilla {
@@ -108,7 +109,20 @@
     linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02));
 }
 
-/* Los dos íconos están superpuestos; se cruzan al cambiar de modo. */
+/* Tocada o arrastrada: se agranda hacia los lados y hacia arriba/abajo (se
+   mantiene centrada sobre su posición). */
+.presionado .perilla {
+  width: calc(var(--perilla) + 16px);
+  height: calc(var(--perilla) + 18px);
+  margin-left: -8px;
+  border-radius: 30px / 28px;
+}
+
+/* Mientras se arrastra sigue al dedo sin la elasticidad de la transición. */
+.arrastrando .perilla {
+  transition: width 0.3s ease, height 0.3s ease, margin 0.3s ease;
+}
+
 .icono {
   grid-area: 1 / 1;
   display: grid;
@@ -118,8 +132,7 @@
   transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.34, 1.28, 0.5, 1);
 }
 
-.oscuro .iconoLuna,
-.claro .iconoSol {
+.iconoVisible {
   opacity: 1;
   transform: scale(1) rotate(0deg);
 }

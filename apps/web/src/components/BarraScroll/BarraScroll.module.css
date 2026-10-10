@@ -7,14 +7,12 @@
   height: 100svh;
   z-index: 950;
   pointer-events: none;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.3s ease;
 }
 
-/* Con el menú móvil abierto la barra se va al lado izquierdo (el panel está a la
-   derecha) y pasa a medir el desplazamiento del panel. Se desliza con transform
-   porque `right` no se anima de `0` a `auto`. */
+/* Con el menú móvil abierto no hay scroll en ningún lado, así que no hay barra. */
 :global(html[data-menu-abierto='true']) .pista {
-  transform: translateX(calc(6px - 100vw));
+  opacity: 0;
 }
 
 .thumb {

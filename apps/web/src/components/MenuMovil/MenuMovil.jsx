@@ -18,6 +18,15 @@ export default function MenuMovil({ enlaces }) {
   const refBoton = useRef(null);
   const refPanel = useRef(null);
   const { tema, alternar } = useTema();
+  // Pantalla baja: ítems más chicos y juntos para que el panel entre sin scroll.
+  const [compacto, setCompacto] = useState(false);
+  useEffect(() => {
+    const consulta = window.matchMedia('(max-height: 620px)');
+    const leer = () => setCompacto(consulta.matches);
+    leer();
+    consulta.addEventListener('change', leer);
+    return () => consulta.removeEventListener('change', leer);
+  }, []);
 
   const cerrar = useCallback((devolverFoco = true) => {
     setAbierto(false);
@@ -122,8 +131,8 @@ export default function MenuMovil({ enlaces }) {
             largoMarcador={34}
             desplazamientoMaximo={18}
             radioProximidad={90}
-            separacionItems={26}
-            tamanoFuente={1.45}
+            separacionItems={compacto ? 14 : 26}
+            tamanoFuente={compacto ? 1.2 : 1.45}
             suavizado={110}
             alElegir={alElegir}
           />
