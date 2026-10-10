@@ -13,6 +13,19 @@
   color: var(--color-fg);
 }
 
+/* Teléfono: el nombre arriba a la derecha y el © abajo a la izquierda, en vez
+   de intentar que entren en la misma fila. */
+@media (max-width: 640px) {
+  .pie {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    padding: 0 1.25rem 1.75rem;
+    min-height: 14rem;
+  }
+}
+
 .derechos {
   margin: 0;
   font-family: monospace;

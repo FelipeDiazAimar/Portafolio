@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
+import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
+import useToqueSobre from '@/hooks/useToqueSobre.js';
 import styles from './PiePagina.module.css';
 
 // Mismo motivo que en NombreAscii: matter-js sólo se baja si hay hover fino.
@@ -74,6 +76,7 @@ export default function PiePagina() {
   // { x, y, region }: dónde entró el mouse y qué rectángulo de página cubre
   // el overlay del colapso.
   const [colapso, setColapso] = useState(null);
+  const [tactil, setTactil] = useState(false);
   // Tras un colapso hay que salir del nombre y volver a entrar para
   // re-disparar: quedarse quieto encima lo relanzaría en loop.
   const refEsperandoSalida = useRef(false);
@@ -85,6 +88,10 @@ export default function PiePagina() {
     const calco = calcarTextoLimpio(refLimpio.current, refContenedor.current);
     if (!calco) return;
     setCampo(generarCampoNombre(calco));
+  }, []);
+
+  useEffect(() => {
+    setTactil(esTactil());
   }, []);
 
   useEffect(() => {
@@ -111,13 +118,26 @@ export default function PiePagina() {
     };
   }, [construirCampo]);
 
+  // Rectángulo de página que cubre el overlay del colapso. El piso queda un
+  // poco por encima del borde de la página: si coincidiera, los pies y los
+  // caracteres se verían cortados.
+  function regionDelPie() {
+    const rectPie = refPie.current.getBoundingClientRect();
+    return {
+      left: rectPie.left + window.scrollX,
+      top: rectPie.top + window.scrollY,
+      width: rectPie.width,
+      height: rectPie.height - PISO_SOBRE_BORDE_PX,
+    };
+  }
+
   // La detección es por mousemove global y no por eventos del nombre: el
   // overlay del colapso está portaleado a <body> y los mismos motivos del
   // hero (capas con pointer-events: none) hacen poco fiable el hover del DOM.
   useEffect(() => {
     if (!campo || colapso) return undefined;
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (!tieneHoverFino()) return undefined;
+    if (prefiereMovimientoReducido()) return undefined;
 
     function alMoverse(evento) {
       const nodo = refLimpio.current;
@@ -155,6 +175,16 @@ export default function PiePagina() {
     return () => window.removeEventListener('mousemove', alMoverse);
   }, [campo, colapso]);
 
+  // En táctil, un toque sobre el nombre lo hace estallar y entra el stickman.
+  useToqueSobre(
+    refLimpio,
+    tactil && !!campo && !colapso && !prefiereMovimientoReducido(),
+    (posicion) => {
+      navigator.vibrate?.(15);
+      setColapso({ ...posicion, tactil: true, region: regionDelPie() });
+    }
+  );
+
   return (
     <footer className={styles.pie} ref={refPie}>
       <p className={styles.derechos}>© {new Date().getFullYear()}</p>
@@ -172,6 +202,7 @@ export default function PiePagina() {
         <ColapsoFisico
           campo={campo}
           modo="stickman"
+          modoEntrada={colapso.tactil ? 'tactil' : 'raton'}
           refContenedor={refContenedor}
           posicionInicialRaton={{ x: colapso.x, y: colapso.y }}
           region={colapso.region}

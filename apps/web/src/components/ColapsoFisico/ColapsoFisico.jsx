@@ -35,7 +35,7 @@ const ESPERA_TRAS_ULTIMA_ROTURA_MS = 1500;
 const TIEMPO_SIN_ROMPER_NADA_MS = 6000;
 // Cuadros de caminata: a 60fps son ~27 s de punta a punta.
 const CUADROS_PRESUPUESTO_CAMINATA = 1600;
-const VELOCIDAD_STICKMAN_MINIMA_PX = 0.5;
+const VELOCIDAD_STICKMAN_MINIMA_PX = 0.9;
 // Cuántos px avanza el stickman por cada ciclo completo de barrido.
 const DISTANCIA_POR_BARRIDO_PX = 90;
 const MARGEN_FIN_BARRIDO_PX = 120;
