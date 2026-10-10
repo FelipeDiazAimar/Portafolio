@@ -2,7 +2,7 @@
 // respaldo ASCII. Este archivo NO importa three (sólo import() dinámicos), así
 // que se puede usar desde fuera del chunk diferido.
 const ESCENAS = {
-  0: () => import('./EscenaPrueba.jsx'),
+  0: () => import('./Escena0Notebook.jsx'),
 };
 
 export const idsConEscena = new Set(Object.keys(ESCENAS).map(Number));
