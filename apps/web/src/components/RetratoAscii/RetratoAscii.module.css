@@ -1,16 +1,27 @@
 .marco {
-  position: relative;
-  flex-shrink: 0;
-  /* La spec decía 70vh fijo; con clamp no se come el ancho del nombre en
-     pantallas intermedias. `--duracion-revelado` tiene que coincidir con
-     DURACION_REVELADO_FOTO_MS del componente. */
-  height: clamp(20rem, 62vh, 34rem);
+  /* El retrato es el protagonista del hero: va pegado al borde inferior y a
+     la derecha, casi a todo el alto de la pantalla. El nombre queda a la
+     izquierda y, si hace falta, le pasa por encima.
+     `--duracion-revelado` tiene que coincidir con DURACION_REVELADO_FOTO_MS
+     del componente. */
+  position: absolute;
+  right: clamp(0rem, 3vw, 4rem);
+  bottom: 0;
+  /* Más alto que la pantalla a propósito: el PNG trae ~25 % de aire
+     transparente arriba de la cabeza. Anclado al borde inferior, ese aire
+     sale por arriba (el hero recorta) y el sujeto queda enorme. */
+  height: min(118vh, 78vw);
   /* Tiene que coincidir con ANCHO_RETRATO/ALTO_RETRATO del componente: si el
      marco tuviera otra proporción, la foto (object-fit: contain) se apaisaría
      dentro de la caja mientras el ASCII la seguiría llenando entera, y las dos
      capas dejarían de registrar. */
   aspect-ratio: 433 / 577;
   --duracion-revelado: 700ms;
+  /* La foto viene recortada con bordes verticales rectos a la altura de los
+     hombros; sin difuminarlos se lee como un rectángulo pegado. Se aplica al
+     marco entero, así foto y ASCII se funden igual. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%);
 }
 
 .foto,
@@ -79,10 +90,13 @@
   );
 }
 
-/* Por debajo de este ancho el nombre y el retrato no entran juntos. */
+/* En pantallas angostas el retrato no cabe al lado del nombre: pasa a ser el
+   fondo de la mitad inferior, centrado, y el nombre queda arriba. */
 @media (max-width: 1024px) {
   .marco {
-    display: none;
+    right: 50%;
+    transform: translateX(50%);
+    height: min(78vh, 128vw);
   }
 }
 

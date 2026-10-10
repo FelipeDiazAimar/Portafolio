@@ -14,11 +14,15 @@ const RUTA_RETRATO = '/Yo.png';
 const ANCHO_RETRATO = 433;
 const ALTO_RETRATO = 577;
 
-const COLUMNAS_ASCII = 110;
+// El retrato ocupa casi todo el alto del hero, así que la grilla es más fina
+// que la del tamaño de tarjeta para que el ASCII siga leyéndose como una cara.
+const COLUMNAS_ASCII = 140;
 // Mismo valor que en NombreAscii: es lo que hace que las dos intros arranquen
 // juntas apenas se va el splash de Bienvenida.
 const DEMORA_INICIO_MS = 3300;
 const DURACION_ESCRITURA_MS = 3200;
+// Cuánto se queda el ASCII completo a la vista antes de dar paso a la foto.
+const PAUSA_ASCII_MS = 2600;
 // Tiene que coincidir con --duracion-revelado del CSS.
 const DURACION_REVELADO_FOTO_MS = 700;
 const DURACION_BARRIDO_MS = 700;
@@ -59,7 +63,7 @@ export default function RetratoAscii() {
   const refPolaridad = useRef(false);
   const refRadioMaximo = useRef(0);
 
-  // 'esperando' -> 'escribiendo' -> 'revelando' -> 'foto'
+  // 'esperando' -> 'escribiendo' -> 'sosteniendo' -> 'revelando' -> 'foto'
   // y de ahí en más: 'foto' <-> 'transicion' <-> 'ascii'
   const [fase, setFase] = useState('esperando');
   const [esperaCumplida, setEsperaCumplida] = useState(false);
@@ -259,7 +263,7 @@ export default function RetratoAscii() {
       const progreso = Math.min(1, (ahora - inicio) / DURACION_ESCRITURA_MS);
       lienzo.style.clipPath = recorteDeEscritura(progreso, ascii.columnas, ascii.filas);
       if (progreso >= 1) {
-        setFase('revelando');
+        setFase('sosteniendo');
         return;
       }
       bucle = requestAnimationFrame(cuadro);
@@ -267,6 +271,14 @@ export default function RetratoAscii() {
 
     bucle = requestAnimationFrame(cuadro);
     return () => cancelAnimationFrame(bucle);
+  }, [fase]);
+
+  // El ASCII ya está completo: se deja un rato a la vista para que se lea
+  // antes de que la foto lo reemplace.
+  useEffect(() => {
+    if (fase !== 'sosteniendo') return undefined;
+    const temporizador = setTimeout(() => setFase('revelando'), PAUSA_ASCII_MS);
+    return () => clearTimeout(temporizador);
   }, [fase]);
 
   // Cruce ASCII -> foto. Al terminar, el canvas recupera opacity 1 ya tapado
@@ -410,7 +422,7 @@ export default function RetratoAscii() {
     return () => cancelAnimationFrame(bucle);
   }, [fase]);
 
-  const fotoRevelada = fase !== 'esperando' && fase !== 'escribiendo';
+  const fotoRevelada = !['esperando', 'escribiendo', 'sosteniendo'].includes(fase);
 
   return (
     <div className={styles.marco} ref={refMarco}>

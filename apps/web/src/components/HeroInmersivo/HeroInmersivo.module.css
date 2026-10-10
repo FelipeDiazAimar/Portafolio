@@ -43,6 +43,15 @@
   background: var(--color-bg);
 }
 
+/* Debajo de este ancho el retrato se apoya en la mitad inferior, así que el
+   nombre sube a la parte de arriba. */
+@media (max-width: 1024px) {
+  .capa-inicio {
+    align-items: flex-start;
+    padding-top: 16vh;
+  }
+}
+
 .capa-sobre-mi {
   background: linear-gradient(135deg, #2a2438 0%, #4a3f66 100%);
 }

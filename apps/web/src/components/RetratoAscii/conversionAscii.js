@@ -4,6 +4,10 @@
 export const RAMPA = ' .:-=+*#%@';
 // Por debajo de este alfa se considera fondo recortado y la celda queda vacía.
 export const UMBRAL_ALFA = 96;
+const PERCENTIL_BAJO = 0.03;
+const PERCENTIL_ALTO = 0.97;
+// Menor que 1 aclara los tonos medios; la cara es un sujeto de tonos medios.
+const GAMMA = 0.85;
 
 // Ancho de un carácter monoespaciado relativo a su alto. Hace falta para que
 // la grilla no deforme la foto: la celda de muestreo tiene que tener la misma
@@ -78,7 +82,8 @@ export function convertirAAscii(imagen, { columnas, invertida }) {
 
   const anchoCelda = imagen.width / columnas;
   const altoCelda = imagen.height / filas;
-  const celdas = new Array(columnas * filas);
+  // null = celda vacía (fondo recortado); si no, luminancia 0..1.
+  const luces = new Array(columnas * filas).fill(null);
 
   for (let f = 0; f < filas; f += 1) {
     for (let c = 0; c < columnas; c += 1) {
@@ -106,17 +111,28 @@ export function convertirAAscii(imagen, { columnas, invertida }) {
       }
 
       const total = (hastaX - desdeX) * (hastaY - desdeY);
-      if (sumaAlfa / total < UMBRAL_ALFA || opacos === 0) {
-        celdas[f * columnas + c] = ' ';
-        continue;
-      }
-
-      const luz = sumaLuz / opacos / 255;
-      const nivel = invertida ? 1 - luz : luz;
-      const indice = Math.min(RAMPA.length - 1, Math.max(0, Math.round(nivel * (RAMPA.length - 1))));
-      celdas[f * columnas + c] = RAMPA[indice];
+      if (sumaAlfa / total < UMBRAL_ALFA || opacos === 0) continue;
+      luces[f * columnas + c] = sumaLuz / opacos / 255;
     }
   }
+
+  // Auto-niveles: una cara real ocupa un rango estrecho de luminancia, y
+  // mapeada tal cual toda la foto cae en 3 o 4 caracteres de la rampa. Se
+  // estira entre los percentiles 3 y 97 (para que un brillo suelto no
+  // comprima el resto) y se aplica una curva gamma que separa los tonos
+  // medios, que es donde viven los rasgos.
+  const ordenadas = luces.filter((luz) => luz !== null).sort((a, b) => a - b);
+  const piso = ordenadas[Math.floor(ordenadas.length * PERCENTIL_BAJO)] ?? 0;
+  const techo = ordenadas[Math.floor(ordenadas.length * PERCENTIL_ALTO)] ?? 1;
+  const rango = Math.max(0.05, techo - piso);
+
+  const celdas = luces.map((luz) => {
+    if (luz === null) return ' ';
+    const estirada = Math.min(1, Math.max(0, (luz - piso) / rango)) ** GAMMA;
+    const nivel = invertida ? 1 - estirada : estirada;
+    const indice = Math.min(RAMPA.length - 1, Math.max(0, Math.round(nivel * (RAMPA.length - 1))));
+    return RAMPA[indice];
+  });
 
   return { columnas, filas, celdas };
 }
