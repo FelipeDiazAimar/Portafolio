@@ -51,7 +51,9 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
       className={styles.caja}
       data-desarmado={seDesarma}
       onPointerDown={(evento) => {
-        if (evento.target.tagName === 'CANVAS') onInteraccion?.();
+        // Sólo con mouse: en táctil, tocar el modelo es girarlo (o empezar a
+        // scrollear la columna) y no debe cerrar el detalle.
+        if (evento.pointerType === 'mouse' && evento.target.tagName === 'CANVAS') onInteraccion?.();
       }}
     >
       {usar3D ? (

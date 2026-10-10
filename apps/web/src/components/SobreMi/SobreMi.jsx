@@ -68,7 +68,9 @@ function SobreMiContenido() {
         <div
           className={styles.columna}
           onPointerEnter={(evento) => {
-            if (evento.pointerType !== 'mouse') return;
+            // `buttons !== 0`: si entra con un botón apretado es un arrastre
+            // (girar el modelo) que salió de la columna y volvió.
+            if (evento.pointerType !== 'mouse' || evento.buttons !== 0) return;
             clearTimeout(refEspera.current);
             refEspera.current = setTimeout(() => setDetalleAbierto(true), ESPERA_HOVER_MODELO_MS);
           }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useReducedMotion } from 'framer-motion';
 import LucesAzules from './LucesAzules.jsx';
@@ -16,6 +16,13 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
   const reducido = useReducedMotion();
   const [idMostrado, setIdMostrado] = useState(idHito);
   const [saliendo, setSaliendo] = useState(false);
+  const desmontando = useRef(false);
+  useEffect(() => {
+    desmontando.current = false;
+    return () => {
+      desmontando.current = true;
+    };
+  }, []);
 
   // Cambio de hito: la escena actual se dispersa y recién después se monta la
   // nueva. Si el hito vuelve a cambiar a mitad de camino, el efecto se
@@ -43,7 +50,13 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
       gl={{ alpha: true, antialias: true }}
       style={{ position: 'absolute', inset: 0 }}
       onCreated={({ gl }) => {
-        gl.domElement.addEventListener('webglcontextlost', (evento) => {
+        const lienzo = gl.domElement;
+        lienzo.addEventListener('webglcontextlost', (evento) => {
+          // R3F fuerza la pérdida del contexto (`forceContextLoss`) cuando el
+          // canvas se desmonta, por ejemplo al pasar a un hito sin escena 3D.
+          // Eso no es un fallo: tratarlo como tal dejaba el respaldo ASCII
+          // fijo para siempre, aun al volver al hito.
+          if (desmontando.current || !lienzo.isConnected) return;
           evento.preventDefault();
           onError();
         });
