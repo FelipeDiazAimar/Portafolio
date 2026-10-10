@@ -85,6 +85,12 @@
   transition: opacity 0.18s ease;
 }
 
+/* Se posiciona por JS justo debajo del nombre. */
+.subtitulo {
+  position: absolute;
+  pointer-events: none;
+}
+
 /* El campo se posiciona por JS (left/top/font-size calculados) para caer
    exactamente sobre el texto limpio. */
 .ascii {

@@ -1,0 +1,53 @@
+.linea {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: clamp(0.95rem, 1.45vw, 1.3rem);
+  letter-spacing: 0.04em;
+  white-space: pre;
+  color: var(--color-muted);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Se aparta rápido cuando el nombre se rompe y vuelve igual de rápido. */
+.visible {
+  opacity: 1;
+}
+
+.prompt {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.texto {
+  color: var(--color-fg);
+  opacity: 0.82;
+}
+
+/* Cursor de bloque: parpadea de a pasos, como en una terminal. */
+.cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  margin-left: -0.15em;
+  background: var(--color-accent);
+  animation: parpadeo 1.05s steps(1) infinite;
+}
+
+@keyframes parpadeo {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linea {
+    transition: none;
+  }
+  .cursor {
+    animation: none;
+  }
+}

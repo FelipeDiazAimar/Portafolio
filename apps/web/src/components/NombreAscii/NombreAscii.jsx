@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
+import SubtituloHero from '@/components/SubtituloHero/SubtituloHero.jsx';
 import styles from './NombreAscii.module.css';
 
 // matter-js pesa ~83 KB y el efecto está detrás de un gate de hover fino:
@@ -17,6 +18,8 @@ const ColapsoFisico = dynamic(
 );
 
 const DEMORA_INICIO_MS = 3300;
+// Aire entre la última línea del nombre y el subtítulo.
+const SEPARACION_SUBTITULO_PX = 6;
 
 // Fase 1: se dibuja la onda sonora completa.
 const DISPERSION_ONDA_MS = 550;
@@ -527,6 +530,28 @@ export default function NombreAscii() {
         <span>Felipe</span>
         <span>Diaz Aimar</span>
       </div>
+
+      {/* Bajo la última línea del nombre, a su misma altura de borde izquierdo.
+          Se ubica con las métricas del calco y no con CSS: el nombre es un
+          bloque centrado cuyo alto depende de la tipografía. */}
+      {campo && (
+        <div
+          className={styles.subtitulo}
+          style={{
+            left: `${campo.textoIzquierda}px`,
+            top: `${
+              campo.textoArriba +
+              campo.lineasLimpias[campo.lineasLimpias.length - 1].bordeAbajo +
+              SEPARACION_SUBTITULO_PX
+            }px`,
+          }}
+        >
+          <SubtituloHero
+            texto="Desarrollador Full Stack"
+            visible={fase === 'desvanecido' && !colapso}
+          />
+        </div>
+      )}
 
       {campo && (
         <div
