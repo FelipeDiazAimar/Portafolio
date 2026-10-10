@@ -1,0 +1,66 @@
+/* En escritorio se superpone al escenario (que se desarma debajo). */
+.descripcion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity 0.5s ease 0.15s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+}
+
+.visible {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.texto {
+  max-width: 34rem;
+  margin: 0;
+  font-size: clamp(0.98rem, 1.25vw, 1.12rem);
+  line-height: 1.7;
+  color: var(--color-fg);
+}
+
+.clave {
+  font-weight: 700;
+  color: var(--color-fg);
+  transition: color 0.5s ease, text-shadow 0.5s ease;
+  transition-delay: calc(var(--n) * 90ms + 0.4s);
+}
+
+.visible .clave {
+  color: var(--color-accent);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--color-accent) 50%, transparent);
+}
+
+/* En celular el estado detalle muestra escenario y descripción apilados: la
+   visibilidad la maneja la columna entera, así que acá siempre se ve. */
+@media (max-width: 768px) {
+  .descripcion {
+    position: static;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    margin-top: 1rem;
+  }
+
+  .clave {
+    color: var(--color-accent);
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .descripcion {
+    transform: none;
+    transition-duration: 0.01s;
+    transition-delay: 0s;
+  }
+
+  .clave {
+    transition: none;
+  }
+}

@@ -1,0 +1,51 @@
+.escenario {
+  display: grid;
+  place-items: center;
+  min-height: 16rem;
+}
+
+.bloque {
+  margin: 0;
+  font-family: ui-monospace, 'Cascadia Mono', Menlo, Consolas, monospace;
+  font-size: clamp(0.55rem, 1.05vw, 0.78rem);
+  line-height: 1;
+  color: var(--color-accent);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  transition: opacity 0.5s ease, filter 0.5s ease, letter-spacing 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Desarme: en escritorio el bloque se dispersa y se desvanece para dejar
+   lugar a la descripción. En celular el estado detalle muestra los dos. */
+@media (min-width: 769px) {
+  .desarmado .bloque {
+    opacity: 0;
+    filter: blur(8px);
+    letter-spacing: 0.6em;
+    transform: scale(1.12);
+  }
+}
+
+@media (max-width: 768px) {
+  .escenario {
+    min-height: 0;
+    place-items: start;
+  }
+
+  .bloque {
+    font-size: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bloque {
+    transition: opacity 0.2s ease;
+  }
+
+  @media (min-width: 769px) {
+    .desarmado .bloque {
+      filter: none;
+      letter-spacing: normal;
+      transform: none;
+    }
+  }
+}
