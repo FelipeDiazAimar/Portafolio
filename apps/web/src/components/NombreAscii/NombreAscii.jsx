@@ -43,7 +43,10 @@ const DURACION_DESVANECIDO_MS = 500;
 
 // Máximo de filas de lluvia arriba y abajo del nombre. Cuánto usa cada
 // columna lo decide la envolvente de onda.
-const FILAS_LLUVIA = 18;
+const FILAS_LLUVIA_BASE = 18;
+// En teléfono el nombre queda arriba, pegado al logo: con 18 filas la onda se
+// extiende ~90 px hacia arriba y lo pisa. Menos filas, onda más baja.
+const FILAS_LLUVIA_TELEFONO = 6;
 // Separación horizontal entre columnas, en fracción del alto de celda.
 const SEPARACION_COLUMNAS = 0.6;
 // Cuántas columnas de onda sobresalen a los costados del nombre — sin
@@ -72,7 +75,7 @@ function elegir(alfabeto) {
 // columna. Varias senoidales de distinta frecuencia superpuestas más un
 // jitter, para que el contorno suba y baje como un visualizador de audio
 // en vez de recortarse como un rectángulo.
-function alturaDeOnda(columna, totalColumnas) {
+function alturaDeOnda(columna, totalColumnas, FILAS_LLUVIA) {
   const x = columna / Math.max(1, totalColumnas - 1);
   const perfil =
     0.5 +
@@ -87,6 +90,9 @@ function alturaDeOnda(columna, totalColumnas) {
 // de onda y para la de revelado; el carácter NUNCA cambia, así los pasajes
 // entre fases son fundidos y no letras que aparecen y desaparecen de golpe.
 function generarCampo(calco) {
+  const FILAS_LLUVIA = window.matchMedia('(max-width: 640px)').matches
+    ? FILAS_LLUVIA_TELEFONO
+    : FILAS_LLUVIA_BASE;
   const { pixeles, ancho, alto, tamanoFuente, izquierda, arriba } = calco;
   const { data } = pixeles;
 
@@ -190,7 +196,7 @@ function generarCampo(calco) {
       const fuera = columnaTexto < 0 ? -columnaTexto : columnaTexto - columnasTexto + 1;
       const tBorde = Math.min(1, fuera / margen);
       const techo = FILAS_LLUVIA + (semiAlturaTexto - FILAS_LLUVIA) * (1 - tBorde) ** 1.4;
-      const modulacion = alturaDeOnda(c, totalColumnas) / FILAS_LLUVIA;
+      const modulacion = alturaDeOnda(c, totalColumnas, FILAS_LLUVIA) / FILAS_LLUVIA;
       const alcance = Math.max(1, Math.round(techo * modulacion));
 
       for (let i = 0; i < filasTotales; i++) {
@@ -213,7 +219,7 @@ function generarCampo(calco) {
       continue;
     }
 
-    const alcance = alturaDeOnda(c, totalColumnas);
+    const alcance = alturaDeOnda(c, totalColumnas, FILAS_LLUVIA);
 
     // Apagado lateral base para ESTA columna (1 en el centro del nombre,
     // más oscuro hacia los costados) — se aplica SIEMPRE, en toda la

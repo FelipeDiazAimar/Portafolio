@@ -13,12 +13,14 @@ import { prefiereMovimientoReducido } from '@/lib/entrada.js';
 //   activo    sólo corre mientras es true
 //   clase     una o varias clases (separadas por espacio) a poner
 //   minMs/maxMs  rango del tiempo entre destellos
+//   sentido   'aleatorio' (por defecto) o 'izquierda-derecha' (siempre igual)
 export default function useDestelloAleatorio({
   nodos,
   activo,
   clase,
   minMs = 5000,
   maxMs = 11000,
+  sentido = 'aleatorio',
 }) {
   const refNodos = useRef(nodos);
   refNodos.current = nodos;
@@ -53,7 +55,7 @@ export default function useDestelloAleatorio({
       ultimo = indice;
 
       const duracion = 1.4 + Math.random() * 1.1;
-      const deIzquierda = Math.random() < 0.5;
+      const deIzquierda = sentido === 'izquierda-derecha' ? true : Math.random() < 0.5;
       const nodo = lista[indice];
       nodo.style.setProperty('--destello-dur', `${duracion.toFixed(2)}s`);
       nodo.style.setProperty('--destello-desde', deIzquierda ? '100%' : '0%');
@@ -76,5 +78,5 @@ export default function useDestelloAleatorio({
       clearTimeout(temporizador);
       limpiar();
     };
-  }, [activo, clase, minMs, maxMs]);
+  }, [activo, clase, minMs, maxMs, sentido]);
 }

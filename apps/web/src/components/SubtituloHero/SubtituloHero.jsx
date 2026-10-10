@@ -65,14 +65,17 @@ export default function SubtituloHero({ texto, visible, demoraMs = 400 }) {
     };
   }, [arranco, texto, demoraMs]);
 
-  // Cada tanto un halo luminoso recorre el texto, una vez que ya se escribió
-  // entero (no tiene sentido iluminar letras que todavía son ruido).
+  // Cada tanto una luz recorre el texto POR DENTRO de las letras (el degradado
+  // está recortado a su forma), siempre de izquierda a derecha. Arranca recién
+  // cuando el texto se escribió entero: no tiene sentido iluminar letras que
+  // todavía son ruido.
   useDestelloAleatorio({
     nodos: () => [refTexto.current],
     activo: visible && mostrado === texto,
-    clase: `${destello.texto} ${styles.conHalo}`,
+    clase: `${destello.texto} ${styles.conLuz}`,
     minMs: 5000,
     maxMs: 10000,
+    sentido: 'izquierda-derecha',
   });
 
   return (
