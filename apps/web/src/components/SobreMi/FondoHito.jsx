@@ -20,7 +20,7 @@ export default function FondoHito({ hitos, activo }) {
               alt=""
               fill
               sizes="(max-width: 768px) 100vw, 62vw"
-              priority={i === 0}
+              loading="eager"
               className={styles.imagen}
               onError={() => setFallidas((previas) => ({ ...previas, [hito.id]: true }))}
             />

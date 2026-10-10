@@ -34,14 +34,12 @@ export default function LineaTiempo({ hitos, activo, onSeleccionar, onApuntarAct
                   if (esActivo && evento.pointerType === 'mouse') onApuntarActivo(true);
                 }}
                 onPointerLeave={(evento) => {
-                  if (esActivo && evento.pointerType === 'mouse') onApuntarActivo(false);
+                  if (evento.pointerType === 'mouse') onApuntarActivo(false);
                 }}
                 onFocus={() => {
                   if (esActivo) onApuntarActivo(true);
                 }}
-                onBlur={() => {
-                  if (esActivo) onApuntarActivo(false);
-                }}
+                onBlur={() => onApuntarActivo(false)}
               >
                 <span className={styles.rotulo}>
                   <span className={styles.anio}>{hito.anio}</span>

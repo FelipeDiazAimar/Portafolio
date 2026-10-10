@@ -72,6 +72,13 @@
   pointer-events: none;
 }
 
+/* El media query de celular le devuelve `pointer-events: auto` a todos los
+   botones; sin esto los puntos invisibles (distancia 3) seguirían recibiendo
+   toques en zonas aparentemente vacías. */
+.item[data-distancia='3'] .boton {
+  pointer-events: none;
+}
+
 /* El botón se ancla a la derecha del item y su rótulo cuelga hacia la
    izquierda, sobre la imagen. */
 .boton {

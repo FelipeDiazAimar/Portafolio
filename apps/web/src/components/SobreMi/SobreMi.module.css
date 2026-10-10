@@ -46,7 +46,22 @@
 }
 
 .cerrar {
-  display: none;
+  position: absolute;
+  top: 4.4rem;
+  right: 0.75rem;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-chip-bg);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
@@ -78,34 +93,18 @@
     pointer-events: auto;
   }
 
+  /* El panel no scrollea (el scroll mueve la línea de tiempo) y en el detalle
+     se apilan encabezado, escenario y descripción: en pantallas bajas el final
+     del texto quedaba cortado. La columna scrollea por dentro. */
+  .columna {
+    max-height: calc(100svh - 7.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+
   .zona {
     min-height: 0;
   }
 
-  .cerrar {
-    position: absolute;
-    top: 4.4rem;
-    right: 0.75rem;
-    z-index: 4;
-    display: grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border: 1px solid var(--color-border);
-    border-radius: 50%;
-    background: var(--color-chip-bg);
-    color: var(--color-fg);
-    font: inherit;
-    font-size: 1.2rem;
-    line-height: 1;
-    cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-  }
-
-  .panel[data-detalle='true'] .cerrar {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }

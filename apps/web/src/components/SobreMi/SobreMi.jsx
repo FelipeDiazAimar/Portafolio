@@ -82,14 +82,19 @@ function SobreMiContenido() {
           onToqueHilo={() => setDetalleAbierto(false)}
         />
 
-        <button
-          type="button"
-          className={styles.cerrar}
-          aria-label="Cerrar detalle"
-          onClick={() => setDetalleAbierto(false)}
-        >
-          ×
-        </button>
+        {/* Se decide por "sin hover" y no por ancho: una tablet o un celular en
+            horizontal usan el layout de escritorio pero igual necesitan una
+            forma de cerrar el detalle. Montada sólo cuando hace falta. */}
+        {sinHover && detalleAbierto ? (
+          <button
+            type="button"
+            className={styles.cerrar}
+            aria-label="Cerrar detalle"
+            onClick={() => setDetalleAbierto(false)}
+          >
+            ×
+          </button>
+        ) : null}
       </div>
     </section>
   );
