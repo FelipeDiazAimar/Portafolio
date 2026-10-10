@@ -31,6 +31,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Zona táctil más ancha que el círculo visible (44 px): invisible, no cambia
+   nada de la estética. 12 px extra por lado deja ~68 px, cómodo para el pulgar. */
+.boton::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+}
+
 .boton:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;

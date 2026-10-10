@@ -121,7 +121,14 @@ export default function MenuMovil({ enlaces }) {
         <div className={styles.capaFondo} aria-hidden="true" />
 
         {/* Lo único que se desplaza si el contenido no entra. */}
-        <div id="menu-movil-contenido" className={styles.contenido}>
+        <div
+          id="menu-movil-contenido"
+          className={styles.contenido}
+          onClick={(evento) => {
+            // Tocar el espacio vacío del panel (no un enlace ni el interruptor) cierra.
+            if (evento.target === evento.currentTarget) cerrar();
+          }}
+        >
           <ListaLineas
             alineacion="derecha"
             items={enlaces.map((enlace) => ({ label: enlace.label, href: enlace.href }))}
