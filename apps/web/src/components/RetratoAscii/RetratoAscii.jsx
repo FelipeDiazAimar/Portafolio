@@ -11,8 +11,8 @@ const RUTA_RETRATO = '/Yo.png';
 // `.marco`: la foto es `object-fit: contain` y el ASCII llena la caja entera,
 // así que si el marco tuviera otra proporción las dos capas dejarían de
 // registrar entre sí y el barrido mostraría foto donde el ASCII dibuja sujeto.
-const ANCHO_RETRATO = 433;
-const ALTO_RETRATO = 577;
+const ANCHO_RETRATO = 1792;
+const ALTO_RETRATO = 2390;
 
 // El retrato ocupa casi todo el alto del hero, así que la grilla es más fina
 // que la del tamaño de tarjeta para que el ASCII siga leyéndose como una cara.
@@ -29,6 +29,8 @@ const DURACION_BARRIDO_MS = 700;
 const BORDE_MASCARA_PX = 48;
 // Tiempo máximo de espera por la imagen antes de degradar a la foto.
 const TIEMPO_MAXIMO_DE_CARGA_MS = 8000;
+// Cuántas alturas de pantalla de scroll tarda el retrato en apagarse del todo.
+const ALTURAS_PARA_DESVANECER = 0.85;
 
 function suavizar(t) {
   return 1 - (1 - t) ** 3;
@@ -225,6 +227,31 @@ export default function RetratoAscii() {
       clearTimeout(temporizador);
     };
   }, [reducido, repintarSeguro]);
+
+  // El retrato se difumina con el scroll. Se escribe una variable CSS directo
+  // en el nodo, sin estado de React: cambia en cada cuadro de scroll.
+  useEffect(() => {
+    const marco = refMarco.current;
+    if (!marco) return undefined;
+    let cuadro = 0;
+    function actualizar() {
+      cuadro = 0;
+      const progreso = Math.min(
+        1,
+        Math.max(0, window.scrollY / (window.innerHeight * ALTURAS_PARA_DESVANECER))
+      );
+      marco.style.setProperty('--desvanecido', progreso.toFixed(3));
+    }
+    function alScrollear() {
+      if (!cuadro) cuadro = requestAnimationFrame(actualizar);
+    }
+    actualizar();
+    window.addEventListener('scroll', alScrollear, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', alScrollear);
+      cancelAnimationFrame(cuadro);
+    };
+  }, []);
 
   useEffect(() => {
     const temporizador = setTimeout(() => setEsperaCumplida(true), DEMORA_INICIO_MS);

@@ -15,13 +15,26 @@
      marco tuviera otra proporción, la foto (object-fit: contain) se apaisaría
      dentro de la caja mientras el ASCII la seguiría llenando entera, y las dos
      capas dejarían de registrar. */
-  aspect-ratio: 433 / 577;
+  aspect-ratio: 1792 / 2390;
   --duracion-revelado: 700ms;
   /* La foto viene recortada con bordes verticales rectos a la altura de los
      hombros; sin difuminarlos se lee como un rectángulo pegado. Se aplica al
-     marco entero, así foto y ASCII se funden igual. */
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%);
+     marco entero, así foto y ASCII se funden igual.
+     La segunda capa difumina el borde de abajo a medida que se hace scroll:
+     el retrato está pegado al pie del hero, y al subir ese pie quedaba como un
+     corte seco. `--desvanecido` (0..1) lo escribe el componente según el
+     scroll; con 0 la banda mide 0 y no se nota nada. */
+  --desvanecido: 0;
+  -webkit-mask-image:
+    linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(to top, transparent 0, #000 calc(var(--desvanecido) * 85vh));
+  mask-image:
+    linear-gradient(to right, transparent 0, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(to top, transparent 0, #000 calc(var(--desvanecido) * 85vh));
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  /* Además de la banda, el retrato entero se apaga hacia el final del scroll. */
+  opacity: calc(1 - var(--desvanecido) * var(--desvanecido));
 }
 
 .foto,
