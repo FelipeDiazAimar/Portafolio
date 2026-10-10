@@ -104,6 +104,32 @@
   );
 }
 
+/* Táctil: no hay hover, así que el ASCII aparece con el scroll. A medida que
+   se baja, una línea de escaneo recorre el retrato de arriba hacia abajo y lo
+   convierte en código antes de que se apague del todo. Se SUMA (union) a la
+   máscara radial de la lente, que sigue funcionando con el dedo apoyado.
+   `--desvanecido` (0..1) viene del marco; el escaneo termina antes (x1.7) que
+   el apagado final, así hay un tramo en el que se ve el ASCII completo. */
+.ascii.enmascarado.escaneo {
+  --corte: calc(clamp(0, var(--desvanecido) * 1.7, 1) * 130%);
+  -webkit-mask-image:
+    radial-gradient(
+      circle at var(--origen-x) var(--origen-y),
+      #000 max(0px, calc(var(--radio) - var(--borde))),
+      transparent var(--radio)
+    ),
+    linear-gradient(to bottom, #000 calc(var(--corte) - 30%), transparent var(--corte));
+  mask-image:
+    radial-gradient(
+      circle at var(--origen-x) var(--origen-y),
+      #000 max(0px, calc(var(--radio) - var(--borde))),
+      transparent var(--radio)
+    ),
+    linear-gradient(to bottom, #000 calc(var(--corte) - 30%), transparent var(--corte));
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+}
+
 /* Teléfono: el retrato se corre hacia la derecha y se corta contra el borde
    (el hero recorta lo que sobra), así a la izquierda queda lugar para el
    texto. Dos variables lo gobiernan:

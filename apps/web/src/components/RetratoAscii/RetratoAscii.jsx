@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
+import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
 import { convertirAAscii, leerColoresDelTema, pintarAscii } from './conversionAscii.js';
 import styles from './RetratoAscii.module.css';
 
@@ -34,6 +35,12 @@ const PAUSA_ASCII_MS = 2600;
 const DURACION_REVELADO_FOTO_MS = 700;
 const DURACION_BARRIDO_MS = 700;
 const BORDE_MASCARA_PX = 48;
+// Lente táctil: lo que hay que mantener el dedo quieto para que se abra, el
+// radio al que llega y cuánto puede moverse el dedo antes de que se lo tome
+// por el inicio de un scroll.
+const ESPERA_LENTE_MS = 350;
+const RADIO_LENTE_PX = 125;
+const MARGEN_LENTE_PX = 8;
 // Tiempo máximo de espera por la imagen antes de degradar a la foto.
 const TIEMPO_MAXIMO_DE_CARGA_MS = 8000;
 // Cuántas alturas de pantalla de scroll tarda el retrato en apagarse del todo.
@@ -80,14 +87,16 @@ export default function RetratoAscii() {
   const [reducido, setReducido] = useState(false);
   const [saliendo, setSaliendo] = useState(false);
   const [interactivo, setInteractivo] = useState(false);
+  const [tactil, setTactil] = useState(false);
   const [listoParaHover, setListoParaHover] = useState(false);
 
   const refFase = useRef(fase);
   refFase.current = fase;
 
   useEffect(() => {
-    setReducido(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    setInteractivo(window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+    setReducido(prefiereMovimientoReducido());
+    setInteractivo(tieneHoverFino());
+    setTactil(esTactil());
   }, []);
 
   // Convierte y pinta. Se llama al cargar la imagen, al cambiar el tema (del
@@ -401,6 +410,116 @@ export default function RetratoAscii() {
     };
   }, [listoParaHover, interactivo, reducido, seccionActiva]);
 
+  // Lente táctil: mantener el dedo quieto sobre la foto abre un círculo de ASCII
+  // que sigue al dedo, y se cierra al soltar. Es el equivalente del hover. No usa
+  // la máquina de `transicion` (pensada para el barrido del mouse): maneja sus
+  // propias variables de la máscara, que ya existen en el canvas.
+  //
+  // Igual que el hover, escucha en `window` y compara contra el rect del marco:
+  // el hero está detrás de todo y los toques no le llegan. Si el dedo se mueve
+  // antes de tiempo es un scroll, y el navegador manda `pointercancel`.
+  useEffect(() => {
+    if (!listoParaHover || !tactil || reducido) return undefined;
+    if (seccionActiva !== 'inicio') return undefined;
+
+    const lente = { radio: 0, objetivo: 0, bucle: 0, espera: 0, inicio: null };
+
+    function aplicar() {
+      refLienzo.current?.style.setProperty('--radio', `${lente.radio}px`);
+    }
+
+    function animar() {
+      lente.radio += (lente.objetivo - lente.radio) * 0.22;
+      if (Math.abs(lente.objetivo - lente.radio) < 0.5) {
+        lente.radio = lente.objetivo;
+        aplicar();
+        lente.bucle = 0;
+        return;
+      }
+      aplicar();
+      lente.bucle = requestAnimationFrame(animar);
+    }
+
+    function poner(x, y) {
+      const lienzo = refLienzo.current;
+      if (!lienzo) return;
+      lienzo.style.setProperty('--origen-x', `${x}px`);
+      lienzo.style.setProperty('--origen-y', `${y}px`);
+    }
+
+    function cerrar() {
+      clearTimeout(lente.espera);
+      lente.inicio = null;
+      lente.objetivo = 0;
+      if (lente.radio > 0 && !lente.bucle) lente.bucle = requestAnimationFrame(animar);
+    }
+
+    function alBajar(evento) {
+      if (evento.pointerType !== 'touch' || !evento.isPrimary) return;
+      const marco = refMarco.current;
+      if (!marco) return;
+      const rect = marco.getBoundingClientRect();
+      const adentro =
+        evento.clientX >= rect.left &&
+        evento.clientX <= rect.right &&
+        evento.clientY >= rect.top &&
+        evento.clientY <= rect.bottom;
+      if (!adentro) return;
+
+      lente.inicio = { x: evento.clientX, y: evento.clientY };
+      lente.espera = setTimeout(() => {
+        const marcoActual = refMarco.current;
+        if (!lente.inicio || !marcoActual) return;
+        const r = marcoActual.getBoundingClientRect();
+        poner(lente.inicio.x - r.left, lente.inicio.y - r.top);
+        lente.objetivo = RADIO_LENTE_PX;
+        navigator.vibrate?.(10);
+        if (!lente.bucle) lente.bucle = requestAnimationFrame(animar);
+      }, ESPERA_LENTE_MS);
+    }
+
+    function alMoverse(evento) {
+      if (!lente.inicio || evento.pointerType !== 'touch') return;
+      const abierta = lente.objetivo > 0;
+      if (!abierta) {
+        // Todavía esperando: si el dedo se va, es un gesto (scroll), no una pulsación.
+        const movimiento = Math.hypot(evento.clientX - lente.inicio.x, evento.clientY - lente.inicio.y);
+        if (movimiento > MARGEN_LENTE_PX) cerrar();
+        return;
+      }
+      const marco = refMarco.current;
+      if (!marco) return;
+      const rect = marco.getBoundingClientRect();
+      lente.inicio = { x: evento.clientX, y: evento.clientY };
+      poner(evento.clientX - rect.left, evento.clientY - rect.top);
+    }
+
+    // Con la lente abierta el dedo la arrastra: hay que impedir que el mismo
+    // gesto se convierta en scroll (el navegador lo haría y cancelaría el
+    // puntero). Se puede porque la lente se abre tras 350 ms quieto, o sea antes
+    // de que el scroll haya empezado, y el evento todavía es cancelable. Tiene
+    // que ser un listener NO pasivo.
+    function alMoverElDedo(evento) {
+      if (lente.objetivo > 0 && evento.cancelable) evento.preventDefault();
+    }
+
+    window.addEventListener('pointerdown', alBajar, { passive: true });
+    window.addEventListener('pointermove', alMoverse, { passive: true });
+    window.addEventListener('touchmove', alMoverElDedo, { passive: false });
+    window.addEventListener('pointerup', cerrar, { passive: true });
+    window.addEventListener('pointercancel', cerrar, { passive: true });
+    return () => {
+      window.removeEventListener('touchmove', alMoverElDedo);
+      window.removeEventListener('pointerdown', alBajar);
+      window.removeEventListener('pointermove', alMoverse);
+      window.removeEventListener('pointerup', cerrar);
+      window.removeEventListener('pointercancel', cerrar);
+      clearTimeout(lente.espera);
+      cancelAnimationFrame(lente.bucle);
+      refLienzo.current?.style.setProperty('--radio', '0px');
+    };
+  }, [listoParaHover, tactil, reducido, seccionActiva]);
+
   useEffect(() => {
     if (fase !== 'transicion') return undefined;
     const lienzo = refLienzo.current;
@@ -481,7 +600,7 @@ export default function RetratoAscii() {
         aria-hidden="true"
         className={`${styles.ascii} ${fase === 'revelando' ? styles.desvaneciendo : ''} ${
           listoParaHover || fase === 'foto' ? styles.enmascarado : ''
-        } ${saliendo ? styles.saliendo : ''}`}
+        } ${saliendo ? styles.saliendo : ''} ${tactil && (listoParaHover || fase === 'foto') ? styles.escaneo : ''}`}
       />
     </div>
   );
