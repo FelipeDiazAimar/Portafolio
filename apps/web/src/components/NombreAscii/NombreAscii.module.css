@@ -88,6 +88,10 @@
 /* Se posiciona por JS justo debajo del nombre. */
 .subtitulo {
   position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: min(25rem, 82vw);
   pointer-events: none;
 }
 

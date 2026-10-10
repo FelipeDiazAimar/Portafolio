@@ -106,7 +106,7 @@ export default function RetratoAscii() {
     const ctx = lienzo.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo);
+    pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo, invertida);
 
     // El clip-path depende de en qué fase está la intro, así que se lee de
     // `refFase` (espejo actualizado en cada render) en vez de meter `fase`

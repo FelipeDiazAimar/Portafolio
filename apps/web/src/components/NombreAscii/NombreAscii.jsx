@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
 import SubtituloHero from '@/components/SubtituloHero/SubtituloHero.jsx';
+import TextoTipeado from '@/components/TextoTipeado/TextoTipeado.jsx';
 import styles from './NombreAscii.module.css';
 
 // matter-js pesa ~83 KB y el efecto está detrás de un gate de hover fino:
@@ -20,6 +21,9 @@ const ColapsoFisico = dynamic(
 const DEMORA_INICIO_MS = 3300;
 // Aire entre la última línea del nombre y el subtítulo.
 const SEPARACION_SUBTITULO_PX = 6;
+// Texto de presentación bajo el subtítulo.
+const PRESENTACION =
+  'Construyo aplicaciones web de punta a punta, de la interfaz a la base de datos. Me gusta el código claro y los detalles cuidados.';
 
 // Fase 1: se dibuja la onda sonora completa.
 const DISPERSION_ONDA_MS = 550;
@@ -510,6 +514,7 @@ export default function NombreAscii() {
     return () => window.removeEventListener('mousemove', alMoverse);
   }, [fase, colapso, campo, seccionActiva]);
 
+  const subtituloVisible = fase === 'desvanecido' && letrasRotas.size === 0;
   const zonaClickeableVisible = fase === 'desvanecido' && seccionActiva === 'inicio';
 
   return (
@@ -546,10 +551,11 @@ export default function NombreAscii() {
             }px`,
           }}
         >
-          <SubtituloHero
-            texto="Desarrollador Full Stack"
-            visible={fase === 'desvanecido' && !colapso}
-          />
+          {/* Se aparta sólo si el nombre realmente se rompió. Que el mouse
+              pase por encima y active el colapso no alcanza: puede entrar al
+              rectángulo del nombre sin llegar a tocar ninguna letra. */}
+          <SubtituloHero texto="Desarrollador Full Stack" visible={subtituloVisible} />
+          <TextoTipeado texto={PRESENTACION} visible={subtituloVisible} demoraMs={2200} />
         </div>
       )}
 

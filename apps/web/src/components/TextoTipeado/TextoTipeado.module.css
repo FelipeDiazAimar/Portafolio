@@ -1,0 +1,35 @@
+.texto {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(0.8rem, 1.05vw, 0.95rem);
+  line-height: 1.65;
+  color: var(--color-muted);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.visible {
+  opacity: 1;
+}
+
+/* Las letras que todavía no se escribieron reservan su lugar. */
+.pendiente {
+  visibility: hidden;
+}
+
+/* Cursor fino que acompaña la escritura. No ocupa ancho, así no empuja el
+   texto que viene detrás. */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-right: -2px;
+  vertical-align: text-bottom;
+  background: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .texto {
+    transition: none;
+  }
+}

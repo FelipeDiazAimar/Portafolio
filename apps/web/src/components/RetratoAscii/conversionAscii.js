@@ -8,6 +8,11 @@ const PERCENTIL_BAJO = 0.03;
 const PERCENTIL_ALTO = 0.97;
 // Menor que 1 aclara los tonos medios; la cara es un sujeto de tonos medios.
 const GAMMA = 0.85;
+// En tema claro la rampa se invierte: las zonas claras de la foto (la piel)
+// caen en caracteres casi vacíos y el retrato queda ralo y descolorido sobre
+// el fondo claro. Se les da un piso de tinta para que todo el sujeto lleve
+// caracteres visibles y sólo las sombras lleguen a los más densos.
+const PISO_TINTA_INVERTIDA = 0.32;
 
 // Ancho de un carácter monoespaciado relativo a su alto. Hace falta para que
 // la grilla no deforme la foto: la celda de muestreo tiene que tener la misma
@@ -129,7 +134,9 @@ export function convertirAAscii(imagen, { columnas, invertida }) {
   const celdas = luces.map((luz) => {
     if (luz === null) return ' ';
     const estirada = Math.min(1, Math.max(0, (luz - piso) / rango)) ** GAMMA;
-    const nivel = invertida ? 1 - estirada : estirada;
+    const nivel = invertida
+      ? PISO_TINTA_INVERTIDA + (1 - PISO_TINTA_INVERTIDA) * (1 - estirada)
+      : estirada;
     const indice = Math.min(RAMPA.length - 1, Math.max(0, Math.round(nivel * (RAMPA.length - 1))));
     return RAMPA[indice];
   });
@@ -140,14 +147,16 @@ export function convertirAAscii(imagen, { columnas, invertida }) {
 // El fondo opaco es necesario: sin él la foto se vería por detrás de los
 // caracteres. Como es `--color-bg`, el mismo fondo de `.capa-inicio`, las
 // zonas transparentes del recorte quedan invisibles.
-export function pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo) {
+export function pintarAscii(ctx, ascii, ancho, alto, colorTexto, colorFondo, negrita = false) {
   ctx.fillStyle = colorFondo;
   ctx.fillRect(0, 0, ancho, alto);
 
   const anchoCelda = ancho / ascii.columnas;
   const altoCelda = alto / ascii.filas;
   ctx.fillStyle = colorTexto;
-  ctx.font = `${altoCelda}px monospace`;
+  // Trazo grueso para el tema claro: caracteres oscuros y finos sobre fondo
+  // claro se ven grises por el antialiasing.
+  ctx.font = `${negrita ? 'bold ' : ''}${altoCelda}px monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
