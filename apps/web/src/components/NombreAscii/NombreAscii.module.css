@@ -12,6 +12,14 @@
   }
 }
 
+/* Teléfono: el bloque de texto sube; la cara ocupa desde ~45 % del ancho hacia
+   la derecha, así que el texto tiene que quedar en esa columna angosta. */
+@media (max-width: 640px) {
+  .contenedor {
+    min-height: 6.25rem;
+  }
+}
+
 .soloLectura {
   position: absolute;
   width: 1px;
@@ -110,16 +118,13 @@
   }
 }
 
-/* Teléfono: bio un poco más chica para que no llegue al pelo. */
+/* Teléfono: la bio no puede pasar del borde izquierdo de la cara. La cara
+   arranca en ~46 % del ancho en cualquier teléfono (queda atada al borde
+   derecho), así que 43vw deja un margen. */
 @media (max-width: 640px) {
   .subtitulo {
-    width: 52vw;
-  }
-}
-
-@media (max-width: 380px) {
-  .subtitulo {
-    width: 50vw;
+    width: 43vw;
+    gap: 0.6rem;
   }
 }
 

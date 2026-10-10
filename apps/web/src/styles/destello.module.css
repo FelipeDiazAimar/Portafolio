@@ -1,0 +1,42 @@
+/* Destello: un degradado que cruza el texto una vez y desaparece. El texto se
+   pinta con un gradiente (fondo recortado a la forma de las letras) cuyos
+   extremos son exactamente el color normal, así que al empezar y al terminar
+   no hay salto: sólo se ve la banda del medio al pasar.
+
+   Variables que escribe el hook en cada destello, para que ninguno sea igual
+   al anterior:
+   --destello-dur     cuánto tarda en cruzar
+   --destello-desde   posición inicial del fondo (100% = entra por la izquierda)
+   --destello-hasta   posición final
+   --destello-mezcla  qué tan gris llega a ser la banda: % de gris sobre el fondo
+                      (más alto = más claro, más bajo = se hunde hacia el fondo)
+   --destello-color   color de la banda; por defecto un gris derivado del tema */
+.texto {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-fg) 0%,
+    var(--color-fg) 36%,
+    var(
+        --destello-color,
+        color-mix(in srgb, var(--color-muted) var(--destello-mezcla, 80%), var(--color-bg))
+      )
+      50%,
+    var(--color-fg) 64%,
+    var(--color-fg) 100%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: destello-pasar var(--destello-dur, 1.8s) ease-in-out 1 both;
+}
+
+@keyframes destello-pasar {
+  from {
+    background-position: var(--destello-desde, 100%) 0;
+  }
+  to {
+    background-position: var(--destello-hasta, 0%) 0;
+  }
+}

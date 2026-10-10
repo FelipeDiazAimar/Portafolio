@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import useDestelloAleatorio from '@/hooks/useDestelloAleatorio.js';
+import destello from '@/styles/destello.module.css';
 import styles from './SubtituloHero.module.css';
 
 // Ruido de código: encaja con el logo `</>` y con los caracteres del nombre.
@@ -21,6 +23,7 @@ function glifoAlAzar() {
 export default function SubtituloHero({ texto, visible, demoraMs = 400 }) {
   const [mostrado, setMostrado] = useState('');
   const [arranco, setArranco] = useState(false);
+  const refTexto = useRef(null);
 
   useEffect(() => {
     if (visible) setArranco(true);
@@ -62,10 +65,22 @@ export default function SubtituloHero({ texto, visible, demoraMs = 400 }) {
     };
   }, [arranco, texto, demoraMs]);
 
+  // Cada tanto un halo luminoso recorre el texto, una vez que ya se escribió
+  // entero (no tiene sentido iluminar letras que todavía son ruido).
+  useDestelloAleatorio({
+    nodos: () => [refTexto.current],
+    activo: visible && mostrado === texto,
+    clase: `${destello.texto} ${styles.conHalo}`,
+    minMs: 5000,
+    maxMs: 10000,
+  });
+
   return (
     <p className={`${styles.linea} ${visible ? styles.visible : ''}`} aria-hidden="true">
       <span className={styles.prompt}>›</span>
-      <span className={styles.texto}>{mostrado}</span>
+      <span className={styles.texto} ref={refTexto}>
+        {mostrado}
+      </span>
       <span className={styles.cursor} />
     </p>
   );

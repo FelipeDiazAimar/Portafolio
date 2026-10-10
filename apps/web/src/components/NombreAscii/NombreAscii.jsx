@@ -7,6 +7,8 @@ import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
 import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
 import useToqueSobre from '@/hooks/useToqueSobre.js';
+import useDestelloAleatorio from '@/hooks/useDestelloAleatorio.js';
+import destello from '@/styles/destello.module.css';
 import SubtituloHero from '@/components/SubtituloHero/SubtituloHero.jsx';
 import TextoTipeado from '@/components/TextoTipeado/TextoTipeado.jsx';
 import styles from './NombreAscii.module.css';
@@ -362,6 +364,8 @@ export default function NombreAscii() {
   const [colapso, setColapso] = useState(null);
   // Pantalla táctil: no hay hover, así que el nombre se rompe con un toque.
   const [tactil, setTactil] = useState(false);
+  // Dónde va el subtítulo, relativo al contenedor. Null hasta medir el nombre.
+  const [posSubtitulo, setPosSubtitulo] = useState(null);
   // Tras un colapso hay que salir del área y volver a entrar para
   // re-disparar: si no, quedarse quieto encima lo relanzaría en loop.
   const refEsperandoSalida = useRef(false);
@@ -372,6 +376,8 @@ export default function NombreAscii() {
   // Espejo de `fase` para leerla desde listeners sin re-suscribirlos.
   const refFase = useRef(fase);
   refFase.current = fase;
+  const refColapsoActivo = useRef(colapso);
+  refColapsoActivo.current = colapso;
 
   useEffect(() => {
     setTactil(esTactil());
@@ -394,6 +400,54 @@ export default function NombreAscii() {
     setCampo(nuevoCampo);
     setCajasLetras(nuevoCampo ? cajasDeLetras(nuevoCampo, refContenedor.current) : []);
     setCicloCampo((id) => id + 1);
+  }, []);
+
+  const medirSubtitulo = useCallback(() => {
+    const contenedor = refContenedor.current;
+    const limpio = refLimpio.current;
+    if (!contenedor || !limpio || !limpio.firstElementChild || !limpio.lastElementChild) return;
+    const rectContenedor = contenedor.getBoundingClientRect();
+    const primera = limpio.firstElementChild.getBoundingClientRect();
+    const ultima = limpio.lastElementChild.getBoundingClientRect();
+    setPosSubtitulo({
+      left: primera.left - rectContenedor.left,
+      top: ultima.bottom - rectContenedor.top + SEPARACION_SUBTITULO_PX,
+    });
+  }, []);
+
+  // Se mide al montar, cuando las fuentes terminan de cargar y en cada cambio
+  // de tamaño de pantalla.
+  useEffect(() => {
+    medirSubtitulo();
+    let cancelado = false;
+    document.fonts.ready.then(() => {
+      if (!cancelado) medirSubtitulo();
+    });
+    let cuadro = 0;
+    function alRedimensionar() {
+      cancelAnimationFrame(cuadro);
+      cuadro = requestAnimationFrame(medirSubtitulo);
+    }
+    window.addEventListener('resize', alRedimensionar);
+    return () => {
+      cancelado = true;
+      cancelAnimationFrame(cuadro);
+      window.removeEventListener('resize', alRedimensionar);
+    };
+  }, [medirSubtitulo, campo]);
+
+  // Igual que `construirCampo` pero SIN reiniciar la cadena de fases. Sirve para
+  // cuando el tamaño de la pantalla cambia después de la intro (girar el
+  // teléfono, el modo responsive de DevTools): el campo, las hitboxes y el
+  // colapso se calcularon con medidas viejas. En 'desvanecido' todas las
+  // celdas están en opacidad 0, así que reemplazarlo no se ve.
+  const reconstruirCampoSilencioso = useCallback(() => {
+    if (!refContenedor.current || !refLimpio.current) return;
+    const calco = calcarTextoLimpio(refLimpio.current, refContenedor.current);
+    if (!calco) return;
+    const nuevoCampo = generarCampo(calco);
+    setCampo(nuevoCampo);
+    setCajasLetras(nuevoCampo ? cajasDeLetras(nuevoCampo, refContenedor.current) : []);
   }, []);
 
   // Ojo: `fase` NO puede estar acá. Al construir el campo se dispara la
@@ -419,16 +473,23 @@ export default function NombreAscii() {
   useEffect(() => {
     let temporizador;
     function alRedimensionar() {
-      if (refFase.current !== 'oculto' && refFase.current !== 'onda') return;
       clearTimeout(temporizador);
-      temporizador = setTimeout(construirCampo, 150);
+      if (refFase.current === 'oculto' || refFase.current === 'onda') {
+        temporizador = setTimeout(construirCampo, 150);
+        return;
+      }
+      // Ya asentado: sólo se recalcula si no hay un colapso corriendo, que
+      // usa el campo actual y se desarmaría.
+      if (refFase.current === 'desvanecido' && !refColapsoActivo.current) {
+        temporizador = setTimeout(reconstruirCampoSilencioso, 200);
+      }
     }
     window.addEventListener('resize', alRedimensionar);
     return () => {
       window.removeEventListener('resize', alRedimensionar);
       clearTimeout(temporizador);
     };
-  }, [construirCampo]);
+  }, [construirCampo, reconstruirCampoSilencioso]);
 
   // Encadena las fases. El primer salto va en un frame aparte para que el
   // navegador tenga un estado inicial (opacidad 0) desde donde transicionar.
@@ -537,6 +598,15 @@ export default function NombreAscii() {
   );
 
   const subtituloVisible = fase === 'desvanecido' && letrasRotas.size === 0;
+
+  // Destello ocasional del nombre: cruza el degradado a gris, cada vez distinto.
+  useDestelloAleatorio({
+    nodos: () => [refLimpio.current],
+    activo: subtituloVisible,
+    clase: destello.texto,
+    minMs: 6000,
+    maxMs: 13000,
+  });
   // En táctil las hitboxes de letra no existen: tocar el nombre lo rompe en
   // vez de llevar a contacto.
   const zonaClickeableVisible = fase === 'desvanecido' && seccionActiva === 'inicio' && !tactil;
@@ -560,20 +630,13 @@ export default function NombreAscii() {
         <span>Diaz Aimar</span>
       </div>
 
-      {/* Bajo la última línea del nombre, a su misma altura de borde izquierdo.
-          Se ubica con las métricas del calco y no con CSS: el nombre es un
-          bloque centrado cuyo alto depende de la tipografía. */}
-      {campo && (
+      {/* Bajo la última línea del nombre, alineado con su borde izquierdo. Se mide
+          del DOM (no de las métricas del calco): el calco puede estar viejo si
+          la pantalla cambió de tamaño, y el subtítulo quedaría flotando lejos. */}
+      {posSubtitulo && (
         <div
           className={styles.subtitulo}
-          style={{
-            left: `${campo.textoIzquierda}px`,
-            top: `${
-              campo.textoArriba +
-              campo.lineasLimpias[campo.lineasLimpias.length - 1].bordeAbajo +
-              SEPARACION_SUBTITULO_PX
-            }px`,
-          }}
+          style={{ left: `${posSubtitulo.left}px`, top: `${posSubtitulo.top}px` }}
         >
           {/* Se aparta sólo si el nombre realmente se rompió. Que el mouse
               pase por encima y active el colapso no alcanza: puede entrar al

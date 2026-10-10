@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import useDestelloAleatorio from '@/hooks/useDestelloAleatorio.js';
+import destello from '@/styles/destello.module.css';
 import styles from './TextoTipeado.module.css';
 
 const MS_BASE_POR_LETRA = 22;
@@ -59,6 +61,7 @@ export default function TextoTipeado({ texto, visible, demoraMs = 0, className =
   const plano = useMemo(() => segmentos.map((segmento) => segmento.texto).join(''), [segmentos]);
   const [escritas, setEscritas] = useState(0);
   const [arranco, setArranco] = useState(false);
+  const refParrafo = useRef(null);
 
   useEffect(() => {
     if (visible) setArranco(true);
@@ -93,8 +96,20 @@ export default function TextoTipeado({ texto, visible, demoraMs = 0, className =
 
   const escribiendo = arranco && escritas < largo;
 
+  // De vez en cuando resalta UNA de las negritas con un degradado a gris,
+  // distinta cada vez. Recién cuando termina de escribirse: antes las negritas
+  // pueden estar partidas entre lo escrito y lo pendiente.
+  useDestelloAleatorio({
+    nodos: () => Array.from(refParrafo.current?.querySelectorAll('strong') ?? []),
+    activo: arranco && !escribiendo && visible,
+    clase: destello.texto,
+    minMs: 4500,
+    maxMs: 9000,
+  });
+
   return (
     <p
+      ref={refParrafo}
       className={`${styles.texto} ${visible ? styles.visible : ''} ${className}`}
       aria-hidden="true"
     >
