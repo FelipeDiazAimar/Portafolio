@@ -6,7 +6,7 @@
   min-height: 15rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-width: 1024px) and (orientation: portrait) {
   .contenedor {
     min-height: 9.5rem;
   }
@@ -104,9 +104,28 @@
 
 /* En teléfono la cara ocupa la derecha: el texto se queda en la columna
    izquierda. */
+@media (max-width: 640px), (max-width: 1024px) and (orientation: portrait) {
+  .subtitulo {
+    width: 52vw;
+  }
+}
+
+/* Teléfono: bio un poco más chica para que no llegue al pelo. */
 @media (max-width: 640px) {
   .subtitulo {
-    width: 54vw;
+    width: 52vw;
+  }
+}
+
+@media (max-width: 380px) {
+  .subtitulo {
+    width: 50vw;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) and (orientation: portrait) {
+  .subtitulo {
+    width: 44vw;
   }
 }
 

@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
-import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
+import {
+  esDisenoVertical,
+  esTactil,
+  prefiereMovimientoReducido,
+  tieneHoverFino,
+} from '@/lib/entrada.js';
 import { convertirAAscii, leerColoresDelTema, pintarAscii } from './conversionAscii.js';
 import styles from './RetratoAscii.module.css';
 
@@ -108,7 +113,7 @@ export default function RetratoAscii() {
     if (!lienzo || !marco || !imagen) return false;
 
     const { colorTexto, colorFondo, invertida } = leerColoresDelTema();
-    const columnas = window.matchMedia('(max-width: 640px)').matches
+    const columnas = esDisenoVertical()
       ? COLUMNAS_ASCII_MOVIL
       : COLUMNAS_ASCII;
     const ascii = convertirAAscii(imagen, { columnas, invertida });

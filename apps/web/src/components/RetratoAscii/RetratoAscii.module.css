@@ -136,7 +136,7 @@
    --alto     altura del marco
    --visible  fracción del ancho de la foto que queda en pantalla; el resto
               sale por el borde derecho. 1 = foto entera, 0.5 = media foto. */
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-width: 1024px) and (orientation: portrait) {
   .marco {
     --alto: 82svh;
     --visible: 0.66;
@@ -144,6 +144,15 @@
     --difuminado-izq: 34%;
     height: var(--alto);
     right: calc(var(--ancho) * (var(--visible) - 1));
+  }
+}
+
+/* Tablet en vertical: hay más ancho, así que la foto puede ser más chica en
+   proporción y quedar con la cara completa. */
+@media (min-width: 641px) and (max-width: 1024px) and (orientation: portrait) {
+  .marco {
+    --alto: 76svh;
+    --visible: 0.82;
   }
 }
 

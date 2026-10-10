@@ -37,6 +37,13 @@
   background: var(--color-accent);
 }
 
+@media (max-width: 640px) {
+  .texto {
+    font-size: 0.78rem;
+    line-height: 1.6;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .texto {
     transition: none;

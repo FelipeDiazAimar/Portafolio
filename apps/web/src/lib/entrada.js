@@ -14,3 +14,11 @@ export function esTactil() {
 export function prefiereMovimientoReducido() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
+
+// Diseño "vertical" del hero: teléfono, o tablet en vertical. Tiene que
+// coincidir con las media queries de los CSS del hero (RetratoAscii,
+// HeroInmersivo, NombreAscii).
+export function esDisenoVertical() {
+  return window.matchMedia('(max-width: 640px), (max-width: 1024px) and (orientation: portrait)')
+    .matches;
+}
