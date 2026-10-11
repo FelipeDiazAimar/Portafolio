@@ -100,48 +100,91 @@ export function ModulosRAM({ materiales }) {
   );
 }
 
-// Tarjeta gráfica: carcasa redondeada con tres ventiladores, placa trasera,
-// bracket de acero y conectores de energía en el borde.
+// Tarjeta gráfica: carcasa metálica con tres aberturas cromadas para los
+// ventiladores, acentos luminosos, bloque de aletas visible en un extremo, placa
+// trasera, conectores de energía y bracket con puertos. Los ventiladores miran
+// hacia +y (la cara que se ve desde arriba).
 export function TarjetaGrafica({ materiales, refAspas }) {
   const largo = 1.95;
   const grosor = 0.44;
   const alto = 0.85;
+  const largoCarcasa = largo - 0.18;
   const z = ZONAS.pcie1;
   return (
-    <group position={[-0.075, z.cy + 0.0, Z0 + 0.1 + alto / 2 - 0.03]}>
-      <RoundedBox args={[largo, grosor, alto]} radius={0.04} smoothness={4} material={materiales.plasticoNegro} />
-      <mesh position={[0, -grosor / 2 - 0.004, 0]} material={materiales.anodizado}>
+    <group position={[-0.075, z.cy, Z0 + 0.1 + alto / 2 - 0.03]}>
+      <RoundedBox args={[largoCarcasa, grosor, alto]} radius={0.045} smoothness={5} position={[-0.09, 0, 0]} material={materiales.carcasa} />
+
+      {/* Bloque de aletas en el extremo derecho, visible entre la carcasa y el borde. */}
+      <PilaAletas
+        n={16}
+        largo={grosor - 0.06}
+        eje="y"
+        tamano={[0.15, 0.011, alto - 0.08]}
+        material={materiales.aluminio}
+        posicion={[largo / 2 - 0.085, 0, 0]}
+      />
+      {[-1, 1].map((lado) => (
+        <mesh key={lado} position={[largo / 2 - 0.085, lado * (grosor / 2 - 0.012), 0]} material={materiales.carcasa}>
+          <boxGeometry args={[0.16, 0.024, alto - 0.04]} />
+        </mesh>
+      ))}
+
+      {/* Placa trasera (cara -y) con un panel hundido y un logo luminoso. */}
+      <mesh position={[0, -grosor / 2 - 0.005, 0]} material={materiales.anodizado}>
         <boxGeometry args={[largo - 0.04, 0.012, alto - 0.04]} />
       </mesh>
+      <mesh position={[0.2, -grosor / 2 - 0.012, 0]} material={cianEmisivo}>
+        <boxGeometry args={[0.5, 0.004, 0.05]} />
+      </mesh>
+
+      {/* Tres aberturas: disco oscuro hundido, aro cromado y el ventilador. */}
       {[-0.64, 0, 0.64].map((x, i) => (
-        <group key={x} position={[x, grosor / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <mesh position={[0, 0, -0.01]} material={materiales.plasticoGris}>
-            <cylinderGeometry args={[0.285, 0.285, 0.02, 40]} />
+        <group key={x} position={[x - 0.09, grosor / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <mesh position={[0, 0, -0.006]} material={materiales.plasticoNegro}>
+            <cylinderGeometry args={[0.285, 0.285, 0.012, 48]} />
+          </mesh>
+          <mesh material={materiales.acero}>
+            <torusGeometry args={[0.285, 0.014, 12, 56]} />
           </mesh>
           <Ventilador radio={0.25} refAspas={refAspas[i]} materiales={materiales} />
         </group>
       ))}
-      {/* Barra de luz en el borde que mira al frente. */}
-      <mesh position={[-0.05, 0, alto / 2 + 0.003]} material={cianEmisivo}>
-        <boxGeometry args={[1.5, 0.05, 0.012]} />
-      </mesh>
-      <mesh position={[0.78, 0, alto / 2 + 0.02]} material={materiales.plasticoGris}>
-        <boxGeometry args={[0.2, 0.2, 0.04]} />
-      </mesh>
-      {[-0.05, 0.05].map((y) => (
-        <mesh key={y} position={[0.78, y, alto / 2 + 0.042]} material={materiales.oro}>
-          <boxGeometry args={[0.15, 0.03, 0.006]} />
+
+      {/* Acentos luminosos diagonales entre los ventiladores. */}
+      {[-0.32, 0.32].map((x) => (
+        <mesh key={x} position={[x - 0.09, grosor / 2 + 0.004, 0]} rotation={[0, 0.5, 0]} material={cianEmisivo}>
+          <boxGeometry args={[0.012, 0.006, 0.7]} />
         </mesh>
       ))}
+
+      {/* Borde que mira al frente: barra de luz, placa con logo y conectores. */}
+      <mesh position={[-0.2, 0, alto / 2 + 0.004]} material={cianEmisivo}>
+        <boxGeometry args={[1.3, 0.05, 0.012]} />
+      </mesh>
+      <mesh position={[-0.2, 0, alto / 2 + 0.002]} material={materiales.anodizado}>
+        <boxGeometry args={[1.5, 0.12, 0.008]} />
+      </mesh>
+      <mesh position={[0.62, 0, alto / 2 + 0.024]} material={materiales.plasticoGris}>
+        <boxGeometry args={[0.24, 0.22, 0.045]} />
+      </mesh>
+      {[-0.07, 0.07].flatMap((y) => [-0.07, 0, 0.07].map((x) => (
+        <mesh key={`${x}${y}`} position={[0.62 + x, y, alto / 2 + 0.048]} material={materiales.oro}>
+          <boxGeometry args={[0.04, 0.05, 0.006]} />
+        </mesh>
+      )))}
+
       {/* Bracket trasero con los puertos de video. */}
       <mesh position={[-largo / 2 - 0.02, 0, 0.01]} material={materiales.acero}>
         <boxGeometry args={[0.03, grosor + 0.1, alto + 0.04]} />
       </mesh>
-      {[-0.12, 0, 0.12].map((dy) => (
-        <mesh key={dy} position={[-largo / 2 - 0.038, dy, 0.1]} material={materiales.plasticoNegro}>
-          <boxGeometry args={[0.012, 0.08, 0.05]} />
+      {[-0.13, 0, 0.13].map((dy) => (
+        <mesh key={dy} position={[-largo / 2 - 0.038, dy, 0.12]} material={materiales.plasticoNegro}>
+          <boxGeometry args={[0.012, 0.08, 0.055]} />
         </mesh>
       ))}
+      <mesh position={[-largo / 2 - 0.038, 0, -0.1]} material={materiales.plasticoNegro}>
+        <boxGeometry args={[0.012, 0.3, 0.2]} />
+      </mesh>
     </group>
   );
 }
@@ -167,30 +210,6 @@ export function SSD({ materiales }) {
       </mesh>
       <mesh position={[0.46, 0, 0.038]} rotation={[Math.PI / 2, 0, 0]} material={materiales.acero}>
         <cylinderGeometry args={[0.018, 0.018, 0.012, 14]} />
-      </mesh>
-    </group>
-  );
-}
-
-// Fuente de poder modular: chasis negro, rejilla con ventilador y etiqueta.
-export function FuentePoder({ materiales, refAspas }) {
-  return (
-    <group position={[0, -1.78, Z0 + 0.34]}>
-      <RoundedBox args={[1.5, 0.55, 0.78]} radius={0.03} smoothness={3} material={materiales.plasticoNegro} />
-      <mesh position={[-0.28, 0, 0.395]} rotation={[Math.PI / 2, 0, 0]} material={materiales.anodizado}>
-        <torusGeometry args={[0.23, 0.014, 10, 40]} />
-      </mesh>
-      <group position={[-0.28, 0, 0.385]}>
-        <Ventilador radio={0.2} refAspas={refAspas} materiales={materiales} />
-      </group>
-      <mesh position={[0.4, 0.12, 0.392]} material={azulEmisivo}>
-        <boxGeometry args={[0.5, 0.05, 0.006]} />
-      </mesh>
-      <mesh position={[0.4, -0.08, 0.392]} material={materiales.anodizado}>
-        <boxGeometry args={[0.5, 0.2, 0.006]} />
-      </mesh>
-      <mesh position={[0.76, 0, 0]} material={materiales.plasticoGris}>
-        <boxGeometry args={[0.03, 0.36, 0.5]} />
       </mesh>
     </group>
   );

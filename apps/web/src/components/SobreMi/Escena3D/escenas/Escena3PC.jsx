@@ -7,7 +7,7 @@ import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { fraccionExplosion } from '../cicloPC.js';
 import { crearMateriales, liberarMateriales } from './pc/materialesPC.js';
 import Placa from './pc/Placa.jsx';
-import { ChipCPU, CoolerCPU, FuentePoder, ModulosRAM, SSD, TarjetaGrafica } from './pc/PiezasMoviles.jsx';
+import { ChipCPU, CoolerCPU, ModulosRAM, SSD, TarjetaGrafica } from './pc/PiezasMoviles.jsx';
 
 // Cuánto se separa cada pieza de su lugar en la vista explotada, en la dirección
 // `dir` de cada una (pensadas para que no choquen entre sí).
@@ -31,7 +31,6 @@ export default function Escena3PC({ activa, reducido }) {
   const tiempo = useRef(0);
   const aspasCooler = useRef(null);
   const aspasGpu = [useRef(null), useRef(null), useRef(null)];
-  const aspasFuente = useRef(null);
 
   useEffect(() => () => liberarMateriales(recursos), [recursos]);
 
@@ -49,11 +48,10 @@ export default function Escena3PC({ activa, reducido }) {
     aspasGpu.forEach((ref, i) => {
       if (ref.current) ref.current.rotation.z = -giro * 1.2 + i;
     });
-    if (aspasFuente.current) aspasFuente.current.rotation.z = giro * 0.8;
   });
 
   return (
-    <group position={[0.15, 0.3, 0]} rotation={[0.42, -0.45, 0]} scale={0.74}>
+    <group position={[0.15, 0.05, 0]} rotation={[0.42, -0.45, 0]} scale={0.82}>
       {/* Iluminación de estudio: cuatro paneles de luz que se reflejan en los
           metales (sin esto el aluminio y el acero se ven planos). Se dibuja una
           sola vez. */}
@@ -104,12 +102,6 @@ export default function Escena3PC({ activa, reducido }) {
       <PiezaDesarmable semilla={6}>
         <Flotante dir={[-0.7, -0.6, 0.6]} fraccion={fraccion}>
           <SSD materiales={materiales} />
-        </Flotante>
-      </PiezaDesarmable>
-
-      <PiezaDesarmable semilla={7}>
-        <Flotante dir={[0.1, -1, 0.3]} fraccion={fraccion}>
-          <FuentePoder materiales={materiales} refAspas={aspasFuente} />
         </Flotante>
       </PiezaDesarmable>
     </group>

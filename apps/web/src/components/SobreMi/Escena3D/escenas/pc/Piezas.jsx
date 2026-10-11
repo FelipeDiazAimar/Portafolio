@@ -27,35 +27,38 @@ export function PilaAletas({ n, largo, eje = 'x', tamano, material, posicion = [
   );
 }
 
-// Ventilador: marco, aro, aspas curvas y cubo con luz. Su eje es el z local; las
-// aspas giran con `refAspas` (la escena les pone la rotación en cada cuadro).
+// Ventilador: aro exterior, aspas curvas con ángulo de ataque y cubo con luz. Su
+// eje es el z local; las aspas giran con `refAspas` (la escena les pone la
+// rotación en cada cuadro). La geometría del aspa es una sola, compartida.
 export function Ventilador({ radio = 0.3, refAspas, materiales }) {
   const aspas = 9;
+  const radioCubo = radio * 0.2;
   return (
     <group>
-      <mesh rotation={[Math.PI / 2, 0, 0]} material={materiales.plasticoNegro}>
-        <torusGeometry args={[radio, radio * 0.07, 12, 48]} />
+      <mesh material={materiales.plasticoNegro}>
+        <torusGeometry args={[radio * 1.0, radio * 0.05, 14, 56]} />
       </mesh>
       <group ref={refAspas}>
-        {Array.from({ length: aspas }, (_, i) => {
-          const angulo = (i / aspas) * Math.PI * 2;
-          return (
+        {Array.from({ length: aspas }, (_, i) => (
+          <group key={i} rotation={[0, 0, (i / aspas) * Math.PI * 2]}>
             <mesh
-              key={i}
-              position={[Math.cos(angulo) * radio * 0.55, Math.sin(angulo) * radio * 0.55, 0]}
-              rotation={[0.55, 0, angulo]}
-              material={materiales.plasticoGris}
-            >
-              <boxGeometry args={[radio * 0.82, radio * 0.34, 0.012]} />
-            </mesh>
-          );
-        })}
+              position={[radioCubo * 0.7, 0, 0]}
+              rotation={[0.62, 0, 0.12]}
+              scale={radio * 0.9}
+              geometry={materiales.geometriaAspa}
+              material={materiales.aspa}
+            />
+          </group>
+        ))}
+        <mesh rotation={[Math.PI / 2, 0, 0]} material={materiales.plasticoNegro}>
+          <cylinderGeometry args={[radioCubo, radioCubo * 1.08, 0.05, 28]} />
+        </mesh>
+        <mesh position={[0, 0, 0.027]} rotation={[Math.PI / 2, 0, 0]} material={materiales.acero}>
+          <cylinderGeometry args={[radioCubo * 0.55, radioCubo * 0.55, 0.006, 24]} />
+        </mesh>
       </group>
-      <mesh rotation={[Math.PI / 2, 0, 0]} material={materiales.plasticoNegro}>
-        <cylinderGeometry args={[radio * 0.24, radio * 0.24, 0.045, 24]} />
-      </mesh>
-      <mesh position={[0, 0, 0.024]} rotation={[Math.PI / 2, 0, 0]} material={cianEmisivo}>
-        <torusGeometry args={[radio * 0.15, radio * 0.018, 8, 24]} />
+      <mesh position={[0, 0, 0.026]} material={cianEmisivo}>
+        <torusGeometry args={[radioCubo * 0.92, radio * 0.012, 8, 32]} />
       </mesh>
     </group>
   );

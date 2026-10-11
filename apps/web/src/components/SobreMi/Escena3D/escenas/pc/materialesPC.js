@@ -14,6 +14,28 @@ function textura(ancho, alto, dibujar, { datos = false, repetir = false } = {}) 
   return l.textura;
 }
 
+// Aspa de ventilador en coordenadas unitarias: una hoz (borde de ataque curvo que
+// ensancha hacia afuera y borde de fuga que vuelve) extruida con un poco de grosor
+// y bisel. Se escala al radio de cada ventilador y se comparte entre todos.
+function crearAspa() {
+  const forma = new THREE.Shape();
+  forma.moveTo(0.16, -0.05);
+  forma.bezierCurveTo(0.42, -0.13, 0.78, -0.22, 1.0, -0.1);
+  forma.bezierCurveTo(1.03, 0.04, 0.92, 0.2, 0.6, 0.27);
+  forma.bezierCurveTo(0.4, 0.31, 0.2, 0.24, 0.16, 0.1);
+  forma.closePath();
+  const geometria = new THREE.ExtrudeGeometry(forma, {
+    depth: 0.025,
+    bevelEnabled: true,
+    bevelThickness: 0.012,
+    bevelSize: 0.012,
+    bevelSegments: 2,
+    curveSegments: 18,
+  });
+  geometria.translate(0, 0, -0.0125);
+  return geometria;
+}
+
 // Texturas y materiales (PBR) de toda la PC. Se crean una vez por escena y se
 // liberan juntos con `liberarMateriales`.
 export function crearMateriales() {
@@ -38,6 +60,11 @@ export function crearMateriales() {
     tapaChip: new THREE.MeshStandardMaterial({ map: ihs, metalness: 0.92, roughness: 0.3, envMapIntensity: 1.4 }),
     sustratoChip: new THREE.MeshStandardMaterial({ color: '#1f5a36', roughness: 0.6, metalness: 0.1, envMapIntensity: 0.4 }),
     ram: new THREE.MeshStandardMaterial({ color: '#0e131a', roughness: 0.5, metalness: 0.1, envMapIntensity: 0.4 }),
+    // Carcasa de la tarjeta gráfica: metal oscuro con brillo, y aspas de plástico
+    // oscuro semibrillante.
+    carcasa: new THREE.MeshStandardMaterial({ color: '#1b1e25', metalness: 0.75, roughness: 0.34, envMapIntensity: 1.1 }),
+    aspa: new THREE.MeshStandardMaterial({ color: '#171a20', metalness: 0.15, roughness: 0.32, envMapIntensity: 0.9, side: THREE.DoubleSide }),
+    geometriaAspa: crearAspa(),
     azulUSB: new THREE.MeshStandardMaterial({ color: '#1f5cff', roughness: 0.45, metalness: 0.1 }),
   };
   return { materiales, texturas: [pcbColor, pcbRelieve, ihs, pines, cepillado] };
