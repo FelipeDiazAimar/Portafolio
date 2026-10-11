@@ -11,6 +11,7 @@ import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { paletaEscena, valorMultimetro } from './paletas.js';
 import { CAJAS, CICLO, LARGO, PAUSA, RUTA, S_ESCANER, VELOCIDAD, distanciaCaja, estadoPlanta, progresoEscaneo, puntoEnRuta, tiempoCinta } from './cicloPlanta.js';
+import { CENTRO, NODOS, RADIO, enlaces, fasePulso, posicionNodo, puntoDe, puntoEnTramo } from './constelacion.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -600,31 +601,34 @@ test('progresoEscaneo: sólo hay láser justo bajo el escáner', () => {
 test('estadoPlanta: fuera de la pausa todo está en reposo', () => {
   const e = estadoPlanta(0.5);
   assert.equal(e.pausa, false);
-  for (const clave of ['zoom', 'etiqueta', 'escaneo', 'lectura', 'subida', 'sap', 'registro']) assert.equal(e[clave], 0, clave);
+  for (const clave of ['zoom', 'etiqueta', 'escaneo', 'lectura', 'subida', 'sap', 'registro', 'tablero', 'construccion']) assert.equal(e[clave], 0, clave);
 });
 
 test('estadoPlanta: la secuencia ocurre en orden y todo queda entre 0 y 1', () => {
   const inicio = S_ESCANER / VELOCIDAD;
   const momento = (p) => estadoPlanta(inicio + p);
+  const claves = ['zoom', 'etiqueta', 'escaneo', 'lectura', 'subida', 'sap', 'registro', 'tablero', 'construccion'];
   // Zoom primero, después la etiqueta, el escaneo, la lectura, la subida y el panel de SAP.
   assert.ok(momento(1.5).zoom > 0.99);
   assert.ok(momento(2).etiqueta > 0.99 && momento(2).escaneo === 0);
-  assert.ok(momento(3.8).escaneo > 0.3 && momento(3.8).escaneo < 0.7 && momento(3.8).lectura === 0);
-  assert.ok(momento(5).lectura > 0 && momento(5).lectura < 1 && momento(5).escaneo === 1);
-  assert.ok(momento(6).subida > 0 && momento(6).subida < 1 && momento(6).sap === 0);
-  assert.ok(momento(7.2).sap > 0.99 && momento(7.2).registro > 0 && momento(7.2).registro < 1);
-  assert.ok(momento(7.7).registro === 1);
+  assert.ok(momento(3).escaneo > 0.3 && momento(3).escaneo < 0.7 && momento(3).lectura === 0);
+  assert.ok(momento(4).lectura > 0 && momento(4).lectura < 1 && momento(4).escaneo === 1);
+  assert.ok(momento(5).subida > 0 && momento(5).subida < 1 && momento(5).sap === 0);
+  assert.ok(momento(6.2).sap > 0.99 && momento(6.2).registro > 0 && momento(6.2).registro < 1);
+  assert.equal(momento(6.7).registro, 1);
+  // Después del registro, SAP se va y se arma el tablero de trazabilidad.
+  assert.ok(momento(8.8).sap === 0 && momento(8.8).tablero > 0.99);
+  assert.ok(momento(9.5).construccion > 0 && momento(9.5).construccion < 1);
+  assert.equal(momento(11.5).construccion, 1);
+  assert.equal(momento(5).tablero, 0);
   // Al terminar vuelve todo al estado inicial.
   const fin = momento(PAUSA + 0.1);
-  assert.equal(fin.zoom + fin.etiqueta + fin.sap, 0);
+  assert.equal(claves.reduce((suma, clave) => suma + fin[clave], 0), 0);
   for (let p = -1; p <= PAUSA + 1; p += 0.05) {
     const e = momento(p);
-    for (const valor of [e.zoom, e.etiqueta, e.escaneo, e.lectura, e.subida, e.sap, e.registro]) {
-      assert.ok(valor >= 0 && valor <= 1, `fuera de rango en p=${p}: ${valor}`);
-    }
+    for (const clave of claves) assert.ok(e[clave] >= 0 && e[clave] <= 1, `${clave} fuera de rango en p=${p}: ${e[clave]}`);
   }
 });
-
 test('estadoPlanta: el zoom entra y sale sin saltos', () => {
   let anterior = estadoPlanta(0).zoom;
   for (let t = 0.02; t < CICLO * 2; t += 0.02) {
@@ -638,4 +642,52 @@ test('escenas: la planta de 2026 existe y gira sólo dentro de un rango', () => 
   assert.ok(idsConEscena.has(5));
   assert.equal(esEscenaFija(5), false);
   assert.ok(limiteDeGiro(5) > 0);
+});
+
+test('constelación: los nodos están sobre un anillo, parejos y sin pisarse', () => {
+  const puntos = Array.from({ length: NODOS }, (_, i) => posicionNodo(i));
+  for (const [x, , z] of puntos) cerca(Math.hypot(x, z), RADIO);
+  const distancias = puntos.map((p, i) => Math.hypot(p[0] - puntos[(i + 1) % NODOS][0], p[2] - puntos[(i + 1) % NODOS][2]));
+  for (const d of distancias) {
+    cerca(d, distancias[0]);
+    assert.ok(d > 1.5, `nodos muy juntos: ${d}`);
+  }
+  assert.ok(puntos[0][1] > 0 && puntos[1][1] < 0, 'el anillo sube y baja');
+});
+
+test('constelación: enlaces en cadena hasta el núcleo y un hilo de cada nodo al centro', () => {
+  const lista = enlaces();
+  const cadena = lista.filter((e) => e.tipo === 'cadena');
+  assert.equal(cadena.length, NODOS);
+  assert.deepEqual(cadena[0], { desde: 0, hasta: 1, tipo: 'cadena' });
+  assert.deepEqual(cadena.at(-1), { desde: NODOS - 1, hasta: CENTRO, tipo: 'cadena' });
+  assert.equal(lista.filter((e) => e.tipo === 'hilo').length, NODOS);
+  for (const e of lista) {
+    assert.ok(e.desde >= 0 && e.desde < NODOS);
+    assert.ok(e.hasta === CENTRO || (e.hasta >= 0 && e.hasta < NODOS));
+  }
+  assert.deepEqual(puntoDe(CENTRO), [0, 0, 0]);
+});
+
+test('constelación: los pulsos recorren el enlace de punta a punta y se repiten', () => {
+  const a = puntoDe(0);
+  const b = puntoDe(1);
+  assert.deepEqual(puntoEnTramo(a, b, 0), a);
+  for (let i = 0; i < 3; i += 1) cerca(puntoEnTramo(a, b, 1)[i], b[i]);
+  const medio = puntoEnTramo(a, b, 0.5);
+  for (let i = 0; i < 3; i += 1) cerca(medio[i], (a[i] + b[i]) / 2);
+  for (let t = 0; t < 30; t += 0.13) {
+    for (let k = 0; k < 12; k += 1) {
+      const f = fasePulso(t, k);
+      assert.ok(f >= 0 && f < 1, `fuera de rango: ${f}`);
+    }
+  }
+  assert.notEqual(fasePulso(1, 0), fasePulso(1, 1));
+  cerca(fasePulso(0, 0), fasePulso(1 / 0.32, 0), 1e-9);
+});
+
+test('escenas: la constelación de Hoy existe y gira libre', () => {
+  assert.ok(idsConEscena.has(6));
+  assert.equal(esEscenaFija(6), false);
+  assert.equal(limiteDeGiro(6), null);
 });

@@ -8,6 +8,7 @@ const ESCENAS = {
   3: () => import('./Escena3PC.jsx'),
   4: () => import('./Escena4Banco.jsx'),
   5: () => import('./Escena5Planta.jsx'),
+  6: () => import('./Escena6Constelacion.jsx'),
 };
 
 // Escenas que NO giran: ni con el mouse ni solas. La cámara se queda de frente y

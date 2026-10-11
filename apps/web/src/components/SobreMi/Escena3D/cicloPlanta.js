@@ -21,18 +21,21 @@ export const S_ESCANER = 1.6;
 const RADIO_GIRO = 0.25;
 
 // Momentos de la secuencia, en segundos desde que la caja llega al escáner.
-export const PAUSA = 10;
+export const PAUSA = 14;
 const T = {
-  zoomEntra: [0, 1.4],
-  etiquetaEntra: [0.9, 1.8],
-  escaneo: [3, 4.6],
-  lectura: [4.6, 5.4],
-  subida: [5.4, 6.8],
-  sapEntra: [6.2, 7],
-  registro: [6.8, 7.6],
-  etiquetaSale: [8, 8.8],
-  sapSale: [8.8, 9.6],
-  zoomSale: [8.6, 10],
+  zoomEntra: [0, 1.3],
+  etiquetaEntra: [0.8, 1.5],
+  escaneo: [2.3, 3.7],
+  lectura: [3.7, 4.4],
+  subida: [4.4, 5.6],
+  sapEntra: [5.2, 5.9],
+  registro: [5.8, 6.6],
+  etiquetaSale: [6.8, 7.5],
+  sapSale: [7.4, 8],
+  tableroEntra: [7.6, 8.3],
+  construccion: [8.1, 11.3],
+  tableroSale: [12.3, 13],
+  zoomSale: [12.6, 14],
 };
 
 // Segundos de cinta en marcha antes de frenar y duración de una vuelta completa.
@@ -100,11 +103,13 @@ export function progresoEscaneo(s) {
 //  subida      el dato viaja hacia SAP
 //  sap         el panel de SAP a la vista
 //  registro    el nuevo registro se carga en el panel
+//  tablero     el tablero de trazabilidad a la vista
+//  construccion  avance de la creación del tablero (los widgets aparecen de a uno)
 export function estadoPlanta(t) {
   const u = t - Math.floor(t / CICLO) * CICLO;
   const p = u - T_FRENA;
   if (p < 0 || p > PAUSA) {
-    return { pausa: false, zoom: 0, etiqueta: 0, escaneo: 0, lectura: 0, subida: 0, sap: 0, registro: 0 };
+    return { pausa: false, zoom: 0, etiqueta: 0, escaneo: 0, lectura: 0, subida: 0, sap: 0, registro: 0, tablero: 0, construccion: 0 };
   }
   const entra = (r) => suave(tramo(p, r));
   return {
@@ -116,5 +121,7 @@ export function estadoPlanta(t) {
     subida: tramo(p, T.subida),
     sap: entra(T.sapEntra) * (1 - entra(T.sapSale)),
     registro: tramo(p, T.registro),
+    tablero: entra(T.tableroEntra) * (1 - entra(T.tableroSale)),
+    construccion: tramo(p, T.construccion),
   };
 }

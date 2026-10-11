@@ -13,7 +13,7 @@ const RUTA_RAM = '/modelos/ram-ddr5.glb';
 const RUTA_GPU = '/modelos/grafica-rtx3080.glb';
 const ANCHO = 2.7;
 // Cuánto se separa cada pieza de la placa en la vista explotada.
-const SEPARACION = 2.1;
+const SEPARACION = 1.7;
 
 // Posiciones en el espacio de la placa (unidades del modelo, y hacia arriba, z
 // hacia el frente). Se midieron sobre el modelo: socket, ranuras de RAM y PCIe.
@@ -76,7 +76,7 @@ export default function Escena3PC({ activa, reducido }) {
         colocarPieza(moduloRam, { nombre: `ram${i}`, escala: 2.06, rotacion: [0, 0, -Math.PI / 2], base, elevacion: 0.8 + i * 0.1, soloVertical: true })
       ),
       // Gráfica parada en la ranura PCIe, con los ventiladores hacia el frente.
-      colocarPieza(gpu, { nombre: 'gpu', escala: 12, rotacion: [-Math.PI / 2, 0, 0], espejoY: true, base: BASE_GPU, elevacion: 0.7, soloVertical: true }),
+      colocarPieza(gpu, { nombre: 'gpu', escala: 12, rotacion: [-Math.PI / 2, 0, 0], espejoY: true, base: BASE_GPU, elevacion: 0.55, soloVertical: true }),
     ];
     return separarPiezas(placa, { anchoObjetivo: ANCHO, elegirPiezas, extras });
   }, [placa, cpu, ram, gpu]);

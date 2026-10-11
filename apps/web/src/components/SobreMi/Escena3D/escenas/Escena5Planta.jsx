@@ -19,6 +19,7 @@ import {
   tiempoCinta,
 } from '../cicloPlanta.js';
 import { dibujarCinta, dibujarCodigo, dibujarEtiquetaAmpliada, dibujarPanelSap } from '../texturasPlanta.js';
+import { dibujarTablero } from '../dibujarTablero.js';
 
 // Medidas de la planta (marco de la escena: y hacia arriba, x a la derecha, z al frente).
 const ALTO_CINTA = 0.45;
@@ -27,7 +28,7 @@ const TAM_CAJA = 0.4;
 // Cuántas veces se repite la textura de la cinta por unidad de largo.
 const REPETICION = 2.5;
 // Reloj con movimiento reducido: una foto fija de la secuencia ya completa.
-const T_QUIETO = S_ESCANER / VELOCIDAD + 7.2;
+const T_QUIETO = S_ESCANER / VELOCIDAD + 11.5;
 
 const X_ESCANER = RUTA[0][0] + S_ESCANER;
 const Z_ESCANER = RUTA[0][1];
@@ -48,8 +49,10 @@ const GIRO_INVERSO = new THREE.Quaternion().setFromEuler(GIRO).invert();
 const enEscena = (x, y, z = 0) => new THREE.Vector3(x, y, z).applyQuaternion(GIRO_INVERSO).divideScalar(ESCALA_ZOOM).add(FOCO);
 const POS_ETIQUETA = enEscena(-1.0, 0.95);
 const POS_SAP = enEscena(1.2, 1.85);
+const POS_TABLERO = enEscena(1.05, 1.75);
 const TAM_ETIQUETA = [1.7, 1.06];
 const TAM_SAP = [2.1, 1.31];
+const TAM_TABLERO = [2.5, 1.53];
 // Dónde está el QR dentro de la etiqueta (a la derecha, un poco arriba del centro).
 const POS_QR = enEscena(-1.0 + 0.36, 0.95 + 0.1);
 
@@ -113,6 +116,7 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
     };
     const etiquetaAmpliada = crear(1024, 640, (ctx, w, h) => dibujarEtiquetaAmpliada(ctx, w, h));
     const panelSap = crear(1280, 800, (ctx, w, h) => dibujarPanelSap(ctx, w, h));
+    const tablero = crear(1400, 860, (ctx, w, h) => dibujarTablero(ctx, w, h));
     const codigo = crear(512, 256, dibujarCodigo).textura;
     const std = (opciones) => new THREE.MeshStandardMaterial(opciones);
     const mats = {
@@ -124,6 +128,7 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
       etiquetaCaja: new THREE.MeshBasicMaterial({ map: codigo, toneMapped: false }),
       etiquetaAmpliada: new THREE.MeshBasicMaterial({ map: etiquetaAmpliada.textura, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }),
       panelSap: new THREE.MeshBasicMaterial({ map: panelSap.textura, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }),
+      tablero: new THREE.MeshBasicMaterial({ map: tablero.textura, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }),
       dato: new THREE.MeshBasicMaterial({ color: '#3de0c0', depthTest: false, toneMapped: false }),
       marco: new THREE.LineBasicMaterial({ color: '#6fa8ff', transparent: true, opacity: 0 }),
       laser: new THREE.MeshBasicMaterial({
@@ -143,11 +148,12 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
       mats,
       etiquetaAmpliada,
       panelSap,
+      tablero,
       cintas: SEGMENTOS.map((s) => cinta(s.largo)),
       marcoCaja: new THREE.EdgesGeometry(new THREE.BoxGeometry(TAM_CAJA * 1.18, TAM_CAJA * 1.18, TAM_CAJA * 1.18)),
     };
   }, [claro]);
-  const { mats, cintas, etiquetaAmpliada, panelSap, marcoCaja } = recursos;
+  const { mats, cintas, etiquetaAmpliada, panelSap, tablero, marcoCaja } = recursos;
 
   const tiempo = useRef(reducido ? T_QUIETO : 0);
   const refEscena = useRef(null);
@@ -155,9 +161,10 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
   const refLaser = useRef(null);
   const refEtiqueta = useRef(null);
   const refSap = useRef(null);
+  const refTablero = useRef(null);
   const refConexion = useRef(null);
   const refDatos = useRef([]);
-  const claves = useRef({ etiqueta: '', sap: '' });
+  const claves = useRef({ etiqueta: '', sap: '', tablero: '' });
 
   useEffect(
     () => () => {
@@ -218,6 +225,17 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
     mats.panelSap.opacity = estado.sap;
     refSap.current.visible = estado.sap > 0.01;
     refSap.current.scale.setScalar(0.85 + 0.15 * estado.sap);
+
+    // Tablero de trazabilidad: se arma widget por widget.
+    const claveTablero = `${estado.tablero > 0}|${Math.round(estado.construccion * 90)}`;
+    if (claveTablero !== claves.current.tablero) {
+      claves.current.tablero = claveTablero;
+      dibujarTablero(tablero.ctx, tablero.ancho, tablero.alto, estado);
+      tablero.textura.needsUpdate = true;
+    }
+    mats.tablero.opacity = estado.tablero;
+    refTablero.current.visible = estado.tablero > 0.01;
+    refTablero.current.scale.setScalar(0.88 + 0.12 * estado.tablero);
 
     // Dato: sale del QR y sube al panel de SAP, con una estela de puntos.
     refDatos.current.forEach((punto, k) => {
@@ -321,6 +339,15 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
             <group ref={refSap} visible={false}>
               <mesh material={mats.panelSap} renderOrder={11}>
                 <planeGeometry args={TAM_SAP.map((v) => v / ESCALA_ZOOM)} />
+              </mesh>
+            </group>
+          </Billboard>
+        </group>
+        <group position={POS_TABLERO.toArray()}>
+          <Billboard>
+            <group ref={refTablero} visible={false}>
+              <mesh material={mats.tablero} renderOrder={11}>
+                <planeGeometry args={TAM_TABLERO.map((v) => v / ESCALA_ZOOM)} />
               </mesh>
             </group>
           </Billboard>
