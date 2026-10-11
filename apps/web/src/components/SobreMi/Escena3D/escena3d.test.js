@@ -9,6 +9,7 @@ import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vi
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
 import { esEscenaFija, idsConEscena } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
+import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { PLACA, ZONAS, condensadores, tornillos, aletas } from './disposicionPlaca.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -505,4 +506,68 @@ test('aletas: n posiciones equiespaciadas y centradas', () => {
   const paso = posiciones[1] - posiciones[0];
   for (let i = 2; i < posiciones.length; i += 1) cerca(posiciones[i] - posiciones[i - 1], paso);
   assert.ok(posiciones.at(-1) - posiciones[0] <= 1.0 + 1e-9);
+});
+
+test('materias: doce nombres distintos y cortos (entran en la tarjeta)', () => {
+  assert.equal(MATERIAS.length, 12);
+  assert.equal(new Set(MATERIAS).size, 12);
+  for (const nombre of MATERIAS) assert.ok(nombre.length > 3 && nombre.length <= 34, nombre);
+});
+
+test('progresoTilde: se tildan de a una, en orden, y todas terminan', () => {
+  assert.equal(progresoTilde(0, 0), 0);
+  // la primera ya empezó cuando la última todavía no
+  const t = 1.2;
+  assert.ok(progresoTilde(0, t) > 0);
+  assert.equal(progresoTilde(MATERIAS.length - 1, t), 0);
+  // el orden se respeta: en todo instante, tilde i va igual o más adelantada que la i+1
+  for (let tiempo = 0; tiempo < T_FIN_TILDES + 1; tiempo += 0.05) {
+    for (let i = 0; i < MATERIAS.length - 1; i += 1) {
+      assert.ok(progresoTilde(i, tiempo) >= progresoTilde(i + 1, tiempo) - 1e-12);
+    }
+  }
+  for (let i = 0; i < MATERIAS.length; i += 1) assert.equal(progresoTilde(i, T_FIN_TILDES), 1);
+  assert.equal(progresoTilde(5, 999), 1);
+});
+
+test('progresoTilde: cada una sólo avanza', () => {
+  for (let i = 0; i < MATERIAS.length; i += 1) {
+    let anterior = 0;
+    for (let t = 0; t <= T_FIN_TILDES + 0.5; t += 0.03) {
+      const p = progresoTilde(i, t);
+      assert.ok(p >= anterior - 1e-12 && p >= 0 && p <= 1);
+      anterior = p;
+    }
+  }
+});
+
+test('progresoSello: aparece recién cuando se tildó la última materia y sólo crece', () => {
+  assert.equal(progresoSello(0), 0);
+  assert.equal(progresoSello(T_FIN_TILDES), 0);
+  // hay una breve pausa tras la última tilde y recién ahí aparece
+  assert.equal(progresoSello(T_FIN_TILDES + 0.3), 0);
+  assert.ok(progresoSello(T_FIN_TILDES + 1.0) > 0);
+  assert.equal(progresoSello(T_FIN_TILDES + 5), 1);
+  let anterior = 0;
+  for (let t = 0; t < T_FIN_TILDES + 3; t += 0.04) {
+    const p = progresoSello(t);
+    assert.ok(p >= anterior - 1e-12);
+    anterior = p;
+  }
+});
+
+test('escalaTilde y brilloTarjeta: nacen en 0, la tilde se pasa un poco y el brillo queda tenue', () => {
+  assert.equal(escalaTilde(0), 0);
+  cerca(escalaTilde(1), 1, 1e-9);
+  let maximo = 0;
+  for (let p = 0; p <= 1; p += 0.01) maximo = Math.max(maximo, escalaTilde(p));
+  assert.ok(maximo > 1.03 && maximo < 1.4, `rebote ${maximo}`);
+  assert.equal(brilloTarjeta(0), 0);
+  assert.ok(brilloTarjeta(0.5) > 0.8);
+  cerca(brilloTarjeta(1), 0.25, 1e-9);
+});
+
+test('escenas: las materias de 2023 giran libres', () => {
+  assert.ok(idsConEscena.has(2));
+  assert.equal(esEscenaFija(2), false);
 });

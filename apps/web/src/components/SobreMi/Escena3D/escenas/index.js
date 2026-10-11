@@ -4,6 +4,7 @@
 const ESCENAS = {
   0: () => import('./Escena0Notebook.jsx'),
   1: () => import('./Escena1Bandera.jsx'),
+  2: () => import('./Escena2Materias.jsx'),
   3: () => import('./Escena3PC.jsx'),
 };
 
