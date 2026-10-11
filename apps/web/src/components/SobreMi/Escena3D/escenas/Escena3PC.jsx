@@ -2,19 +2,19 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { Environment, Lightformer } from '@react-three/drei';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
-import { cuerpoOscuro, azulEmisivo, cianEmisivo } from '../materiales.js';
-import { crearPantalla } from '../pantallaCanvas.js';
-import { dibujarPlaca } from '../dibujarPlaca.js';
 import { fraccionExplosion } from '../cicloPC.js';
+import { crearMateriales, liberarMateriales } from './pc/materialesPC.js';
+import Placa from './pc/Placa.jsx';
+import { ChipCPU, CoolerCPU, FuentePoder, ModulosRAM, SSD, TarjetaGrafica } from './pc/PiezasMoviles.jsx';
 
-// Cuánto se separa cada pieza de su lugar en la vista explotada. Cada pieza sale
-// en su propia dirección (`dir`), pensada para que no choquen entre sí.
-const SEPARACION = 1.3;
+// Cuánto se separa cada pieza de su lugar en la vista explotada, en la dirección
+// `dir` de cada una (pensadas para que no choquen entre sí).
+const SEPARACION = 1.25;
 
-// Grupo que se desplaza `dir * fracción * SEPARACION` y, opcionalmente, hace girar
-// algo (ventiladores). La fracción la calcula la escena una vez por cuadro y se
-// comparte por referencia.
+// Grupo que se desplaza `dir * fracción * SEPARACION`. La fracción la calcula la
+// escena una vez por cuadro y se comparte por referencia.
 function Flotante({ dir, fraccion, children }) {
   const grupo = useRef(null);
   useFrame(() => {
@@ -24,46 +24,16 @@ function Flotante({ dir, fraccion, children }) {
   return <group ref={grupo}>{children}</group>;
 }
 
-// Ventilador: aspas (cajas finas) sobre un aro. Gira en `useFrame` con el tiempo.
-function Ventilador({ radio = 0.36, refAspas }) {
-  return (
-    <group>
-      <mesh rotation={[Math.PI / 2, 0, 0]} material={cuerpoOscuro}>
-        <torusGeometry args={[radio, 0.035, 12, 40]} />
-      </mesh>
-      <group ref={refAspas}>
-        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-          <mesh
-            key={i}
-            position={[Math.cos((i / 7) * Math.PI * 2) * radio * 0.52, Math.sin((i / 7) * Math.PI * 2) * radio * 0.52, 0]}
-            rotation={[0.5, 0, (i / 7) * Math.PI * 2]}
-            material={cianEmisivo}
-          >
-            <boxGeometry args={[radio * 0.8, radio * 0.2, 0.015]} />
-          </mesh>
-        ))}
-      </group>
-      <mesh rotation={[Math.PI / 2, 0, 0]} material={azulEmisivo}>
-        <cylinderGeometry args={[radio * 0.18, radio * 0.18, 0.05, 20]} />
-      </mesh>
-    </group>
-  );
-}
-
 export default function Escena3PC({ activa, reducido }) {
-  const placa = useMemo(() => {
-    const l = crearPantalla(512, 512);
-    dibujarPlaca(l.ctx, l.ancho, l.alto);
-    l.textura.needsUpdate = true;
-    return l;
-  }, []);
+  const recursos = useMemo(crearMateriales, []);
+  const { materiales } = recursos;
   const fraccion = useRef(0);
   const tiempo = useRef(0);
-  const refAspasCpu = useRef(null);
-  const refAspasGpuA = useRef(null);
-  const refAspasGpuB = useRef(null);
+  const aspasCooler = useRef(null);
+  const aspasGpu = [useRef(null), useRef(null), useRef(null)];
+  const aspasFuente = useRef(null);
 
-  useEffect(() => () => placa.textura.dispose(), [placa]);
+  useEffect(() => () => liberarMateriales(recursos), [recursos]);
 
   useFrame((_, delta) => {
     if (!activa) return;
@@ -75,118 +45,71 @@ export default function Escena3PC({ activa, reducido }) {
     tiempo.current += Math.min(delta, 0.05);
     fraccion.current = fraccionExplosion(tiempo.current);
     const giro = tiempo.current * 9;
-    if (refAspasCpu.current) refAspasCpu.current.rotation.z = giro;
-    if (refAspasGpuA.current) refAspasGpuA.current.rotation.z = -giro * 1.2;
-    if (refAspasGpuB.current) refAspasGpuB.current.rotation.z = -giro * 1.2 + 1;
+    if (aspasCooler.current) aspasCooler.current.rotation.z = giro;
+    aspasGpu.forEach((ref, i) => {
+      if (ref.current) ref.current.rotation.z = -giro * 1.2 + i;
+    });
+    if (aspasFuente.current) aspasFuente.current.rotation.z = giro * 0.8;
   });
 
   return (
-    <group position={[0.1, 0.4, 0]} rotation={[0, -0.45, 0]} scale={0.78}>
-      {/* Placa madre: el fondo de todo; no se mueve en la vista explotada. */}
+    <group position={[0.15, 0.3, 0]} rotation={[0.42, -0.45, 0]} scale={0.74}>
+      {/* Iluminación de estudio: cuatro paneles de luz que se reflejan en los
+          metales (sin esto el aluminio y el acero se ven planos). Se dibuja una
+          sola vez. */}
+      <Environment resolution={512} frames={1} environmentIntensity={1.7}>
+        {/* Fondo del entorno: da un reflejo base a los metales (sin él, lo que no
+            apunta a un panel de luz se refleja negro). */}
+        <color attach="background" args={['#8190a6']} />
+        <Lightformer form="rect" intensity={9} color="#ffffff" position={[0, 6, 5]} rotation-x={Math.PI / 2.2} scale={[14, 6, 1]} />
+        <Lightformer form="rect" intensity={6} color="#f4f7ff" position={[0, 1, 9]} scale={[16, 9, 1]} />
+        <Lightformer form="rect" intensity={4} color="#7fe6ff" position={[-7, 1, 1]} rotation-y={Math.PI / 2} scale={[9, 5, 1]} />
+        <Lightformer form="rect" intensity={4} color="#b9ccff" position={[7, 1, 2]} rotation-y={-Math.PI / 2} scale={[9, 5, 1]} />
+        <Lightformer form="ring" intensity={5} color="#ffffff" position={[0, -3, 5]} rotation-x={-Math.PI / 3} scale={5} />
+      </Environment>
+
+      {/* Luz neutra de estudio: la iluminación base del sitio es azul y teñía los
+          metales; con luz blanca el aluminio y el acero se ven plateados. */}
+      <directionalLight position={[3, 6, 7]} intensity={2.4} color="#ffffff" />
+      <directionalLight position={[-5, 2, 4]} intensity={0.8} color="#dfe8ff" />
+
       <PiezaDesarmable semilla={1}>
-        <mesh>
-          <boxGeometry args={[2.5, 2.5, 0.07]} />
-          <meshStandardMaterial map={placa.textura} emissiveMap={placa.textura} emissive="#ffffff" emissiveIntensity={0.55} roughness={0.6} metalness={0.2} />
-        </mesh>
-        <mesh position={[0, 0, 0.04]} material={azulEmisivo}>
-          <boxGeometry args={[2.5, 0.015, 0.012]} />
-        </mesh>
+        <Placa materiales={materiales} />
       </PiezaDesarmable>
 
-      {/* CPU con su cooler: sale hacia el frente */}
       <PiezaDesarmable semilla={2}>
-        <Flotante dir={[0.1, 0.55, 1]} fraccion={fraccion}>
-          <group position={[0.1, 0.55, 0.07]}>
-            <mesh material={cuerpoOscuro}>
-              <boxGeometry args={[0.62, 0.62, 0.06]} />
-            </mesh>
-            <mesh position={[0, 0, 0.035]} material={azulEmisivo}>
-              <boxGeometry args={[0.34, 0.34, 0.012]} />
-            </mesh>
-            <group position={[0, 0, 0.17]}>
-              <mesh material={cuerpoOscuro}>
-                <boxGeometry args={[0.78, 0.78, 0.2]} />
-              </mesh>
-              <group position={[0, 0, 0.115]}>
-                <Ventilador radio={0.3} refAspas={refAspasCpu} />
-              </group>
-            </group>
-          </group>
+        <Flotante dir={[0.05, 0.1, 0.5]} fraccion={fraccion}>
+          <ChipCPU materiales={materiales} />
         </Flotante>
       </PiezaDesarmable>
 
-      {/* RAM: dos módulos, salen a la derecha y al frente */}
       <PiezaDesarmable semilla={3}>
-        <Flotante dir={[1, 0.25, 0.8]} fraccion={fraccion}>
-          {[0, 1].map((i) => (
-            <group key={i} position={[0.92 + i * 0.17, 0.62, 0.1]}>
-              <mesh material={cuerpoOscuro}>
-                <boxGeometry args={[0.1, 1.2, 0.05]} />
-              </mesh>
-              <mesh position={[0, 0.5, 0.03]} material={i ? cianEmisivo : azulEmisivo}>
-                <boxGeometry args={[0.06, 0.12, 0.012]} />
-              </mesh>
-              {[-0.35, -0.1, 0.15].map((y) => (
-                <mesh key={y} position={[0, y, 0.03]} material={cuerpoOscuro}>
-                  <boxGeometry args={[0.07, 0.16, 0.02]} />
-                </mesh>
-              ))}
-            </group>
-          ))}
+        <Flotante dir={[0.05, 0.35, 1]} fraccion={fraccion}>
+          <CoolerCPU materiales={materiales} refAspas={aspasCooler} />
         </Flotante>
       </PiezaDesarmable>
 
-      {/* GPU: placa ancha con dos ventiladores, sale hacia abajo y al frente */}
       <PiezaDesarmable semilla={4}>
-        <Flotante dir={[-0.2, -0.8, 1.1]} fraccion={fraccion}>
-          <group position={[-0.1, -0.5, 0.22]}>
-            <mesh material={cuerpoOscuro}>
-              <boxGeometry args={[2.0, 0.55, 0.3]} />
-            </mesh>
-            <mesh position={[0, 0.285, 0]} material={azulEmisivo}>
-              <boxGeometry args={[2.0, 0.015, 0.31]} />
-            </mesh>
-            <group position={[-0.5, 0, 0.17]}>
-              <Ventilador radio={0.22} refAspas={refAspasGpuA} />
-            </group>
-            <group position={[0.5, 0, 0.17]}>
-              <Ventilador radio={0.22} refAspas={refAspasGpuB} />
-            </group>
-          </group>
+        <Flotante dir={[0.8, 0.25, 0.9]} fraccion={fraccion}>
+          <ModulosRAM materiales={materiales} />
         </Flotante>
       </PiezaDesarmable>
 
-      {/* SSD M.2: sale a la izquierda */}
       <PiezaDesarmable semilla={5}>
-        <Flotante dir={[-1, 0.35, 0.7]} fraccion={fraccion}>
-          <group position={[-0.8, 0.35, 0.08]}>
-            <mesh material={cuerpoOscuro}>
-              <boxGeometry args={[0.85, 0.2, 0.04]} />
-            </mesh>
-            <mesh position={[-0.25, 0, 0.025]} material={cianEmisivo}>
-              <boxGeometry args={[0.22, 0.12, 0.012]} />
-            </mesh>
-            <mesh position={[0.18, 0, 0.025]} material={azulEmisivo}>
-              <boxGeometry args={[0.3, 0.12, 0.012]} />
-            </mesh>
-          </group>
+        <Flotante dir={[-0.3, -0.9, 0.8]} fraccion={fraccion}>
+          <TarjetaGrafica materiales={materiales} refAspas={aspasGpu} />
         </Flotante>
       </PiezaDesarmable>
 
-      {/* Fuente de poder: sale hacia abajo */}
       <PiezaDesarmable semilla={6}>
+        <Flotante dir={[-0.7, -0.6, 0.6]} fraccion={fraccion}>
+          <SSD materiales={materiales} />
+        </Flotante>
+      </PiezaDesarmable>
+
+      <PiezaDesarmable semilla={7}>
         <Flotante dir={[0.1, -1, 0.3]} fraccion={fraccion}>
-          <group position={[0, -1.45, 0.05]}>
-            <mesh material={cuerpoOscuro}>
-              <boxGeometry args={[1.5, 0.5, 0.7]} />
-            </mesh>
-            <mesh position={[0, 0, 0.36]} material={azulEmisivo}>
-              <boxGeometry args={[0.6, 0.06, 0.012]} />
-            </mesh>
-            <mesh position={[0.55, 0, 0.36]} material={cianEmisivo}>
-              <boxGeometry args={[0.14, 0.14, 0.012]} />
-            </mesh>
-          </group>
+          <FuentePoder materiales={materiales} refAspas={aspasFuente} />
         </Flotante>
       </PiezaDesarmable>
     </group>
