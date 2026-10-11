@@ -96,7 +96,9 @@
   padding: 0.4rem 0;
   border: 0;
   background: none;
-  color: var(--color-fg);
+  /* Blanco fijo (no `--color-fg`): los rótulos van sobre la imagen oscurecida y en
+     tema claro `--color-fg` es casi negro y no se leía. */
+  color: #fff;
   font: inherit;
   cursor: pointer;
 }
@@ -105,7 +107,7 @@
   display: grid;
   max-width: 18rem;
   text-align: right;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 14px rgba(0, 0, 0, 0.55);
   /* SF Pro sólo existe en dispositivos Apple (su licencia no permite
      distribuirla en una web): ahí se usa; en el resto cae a Inter. */
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', var(--font-inter), system-ui, sans-serif;
@@ -119,7 +121,7 @@
   font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: var(--color-muted);
+  color: rgba(255, 255, 255, 0.78);
   transition: color 0.3s ease;
 }
 
@@ -166,7 +168,9 @@
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.activo .anio {
+.activo .anio,
+.activo .nombre {
+  /* El hito que se está viendo, resaltado en azul. */
   color: var(--color-accent);
 }
 

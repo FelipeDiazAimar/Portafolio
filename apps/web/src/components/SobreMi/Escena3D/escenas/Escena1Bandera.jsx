@@ -39,6 +39,8 @@ const ALTO_SIMBOLO = 1.2;
 const PROFUNDIDAD_BARRAS = 0.085;
 const PROFUNDIDAD_ARCOS = 0.08;
 const RETRASO_SIMBOLO = 3.6;
+// Vueltas del símbolo sobre sí mismo, en radianes por segundo.
+const VELOCIDAD_GIRO_SIMBOLO = 0.9;
 const DURACION_SIMBOLO = 1.1;
 
 // Una parte del símbolo (barra o medio anillo) como forma 2D de three.
@@ -354,30 +356,38 @@ export default function Escena1Bandera({ activa, reducido }) {
     if (refSimbolo.current) {
       refSimbolo.current.visible = entrada > 0.001;
       refSimbolo.current.scale.setScalar(ALTO_SIMBOLO * (0.7 + 0.3 * entrada));
+      // Gira sobre su propio eje vertical (la escena entera está fija). Con
+      // movimiento reducido queda quieto, un poco de costado para que se note el volumen.
+      refSimbolo.current.rotation.y = reducido ? 0.5 : tiempoSim.current * VELOCIDAD_GIRO_SIMBOLO;
     }
   });
 
-  // El grupo va desplazado a la derecha del título para no taparlo: el título va
-  // por encima del canvas, pero sobre franjas celestes casi no se lee.
+  // Escena fija (no gira, ver `escenas/index.js`): todo está colocado en pantalla.
+  // La bandera va a la derecha del título para no taparlo (el título va por
+  // encima del canvas, pero sobre franjas celestes casi no se lee) y el símbolo
+  // de la UTN, separado de ella, abajo a la izquierda.
   return (
-    <group position={[0.62, 0, 0]} rotation={[0, -0.25, 0]}>
+    <group>
       {/* Bandera: tela simulada colgada desde arriba del borde de la pantalla,
-          sin varilla. Se puede agarrar y empujar con el mouse. */}
-      <PiezaDesarmable semilla={3}>
-        <mesh ref={refMalla} geometry={geometria} frustumCulled={false}>
-          <meshStandardMaterial
-            map={lienzo.textura}
-            emissiveMap={lienzo.textura}
-            emissive="#ffffff"
-            emissiveIntensity={0.35}
-            roughness={0.85}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </PiezaDesarmable>
+          sin varilla y de frente. Se puede agarrar y empujar con el mouse. */}
+      <group position={[0.95, 0, 0]}>
+        <PiezaDesarmable semilla={3}>
+          <mesh ref={refMalla} geometry={geometria} frustumCulled={false}>
+            <meshStandardMaterial
+              map={lienzo.textura}
+              emissiveMap={lienzo.textura}
+              emissive="#ffffff"
+              emissiveIntensity={0.35}
+              roughness={0.85}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </PiezaDesarmable>
+      </group>
 
-      {/* Símbolo de la UTN: sólo las formas, extruidas y en negro, al lado de la bandera */}
-      <PiezaDesarmable posicion={[1.75, 0.2, 0]} semilla={5}>
+      {/* Símbolo de la UTN: sólo las formas, extruidas y en negro. Fijo abajo a
+          la izquierda, girando sobre sí mismo. */}
+      <PiezaDesarmable posicion={[-1.25, -0.5, 0]} semilla={5}>
         <group ref={refSimbolo} visible={false}>
           {simbolo.map((forma, i) => (
             <mesh key={i} geometry={forma} material={materialSimbolo} />

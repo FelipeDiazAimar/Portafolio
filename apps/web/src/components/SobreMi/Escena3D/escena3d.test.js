@@ -7,6 +7,7 @@ import { desplazamientoBandera, AMPLITUD_MAXIMA } from './ondaBandera.js';
 import { progresoEntrada } from './entrada.js';
 import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vista.js';
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
+import { esEscenaFija, idsConEscena } from './escenas/index.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
@@ -405,4 +406,11 @@ test('vistaParaAltura: un canvas alto aleja la cámara para que los modelos no c
 test('vistaParaAltura: la mitad del alto visible coincide con el campo de visión', () => {
   const { distancia, mitadAlto } = vistaParaAltura(900);
   cerca(mitadAlto, distancia * Math.tan((FOV * Math.PI) / 360));
+});
+
+test('escenas: la notebook gira libre y la bandera de 2022 es fija', () => {
+  assert.ok(idsConEscena.has(0) && idsConEscena.has(1));
+  assert.equal(esEscenaFija(0), false);
+  assert.equal(esEscenaFija(1), true);
+  assert.equal(esEscenaFija(99), false);
 });

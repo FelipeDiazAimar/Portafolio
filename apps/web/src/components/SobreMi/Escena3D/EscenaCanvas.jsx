@@ -9,7 +9,7 @@ import DistanciaCamara from './DistanciaCamara.jsx';
 import EscalaResponsiva from './EscalaResponsiva.jsx';
 import { DISTANCIA_MINIMA, FOV } from './vista.js';
 import { ProveedorDesarme } from './useDesarme.jsx';
-import { cargadorEscena } from './escenas/index.js';
+import { cargadorEscena, esEscenaFija } from './escenas/index.js';
 
 // Cuánto se dispersa la escena saliente antes de montar la del hito nuevo.
 const MS_SALIDA = 700;
@@ -67,7 +67,7 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
       <DistanciaCamara />
       <LucesAzules />
       <ProveedorDesarme desarmado={desarmado || saliendo} reducido={Boolean(reducido)}>
-        <ControlGiro quieto={Boolean(reducido)}>
+        <ControlGiro quieto={Boolean(reducido)} girable={!esEscenaFija(idMostrado)}>
           <EscalaResponsiva>
             <Suspense fallback={null}>
               <Escena key={idMostrado} activa={visible} reducido={Boolean(reducido)} />

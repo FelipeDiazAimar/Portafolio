@@ -6,6 +6,15 @@ const ESCENAS = {
   1: () => import('./Escena1Bandera.jsx'),
 };
 
+// Escenas que NO giran: ni con el mouse ni solas. La cámara se queda de frente y
+// los elementos están fijos en pantalla (por ejemplo, la bandera de 2022 colgada
+// desde arriba).
+const FIJAS = new Set([1]);
+
+export function esEscenaFija(id) {
+  return FIJAS.has(id);
+}
+
 export const idsConEscena = new Set(Object.keys(ESCENAS).map(Number));
 
 export function cargadorEscena(id) {
