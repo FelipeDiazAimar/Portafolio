@@ -75,7 +75,7 @@ function Dientes({ material }) {
   );
 }
 
-export default function Escena2Materias({ activa, reducido }) {
+export default function Escena2Materias({ activa, reducido, claro = false }) {
   // El escudo de Cambridge es una imagen PNG con transparencia (la escena espera
   // a que cargue; ver el <Suspense> de EscenaCanvas).
   const escudo = useLoader(THREE.TextureLoader, '/cambridge-escudo.png');
@@ -103,12 +103,12 @@ export default function Escena2Materias({ activa, reducido }) {
     const barraTex = crear(512, 48, dibujarBarraLlena);
     const haloTex = crear(512, Math.round((512 * ALTO_T) / ANCHO_T), dibujarHaloTarjeta);
 
-    const cuerpo = new THREE.MeshStandardMaterial({ color: '#0a1020', metalness: 0.55, roughness: 0.38 });
+    const cuerpo = new THREE.MeshStandardMaterial({ color: claro ? '#dfe5f3' : '#0a1020', metalness: claro ? 0.2 : 0.55, roughness: 0.38 });
     const relleno = new THREE.MeshBasicMaterial({ map: rellenoTex, transparent: true, depthWrite: false, toneMapped: false });
 
     const tarjetas = MATERIAS.map((nombre, i) => {
       const frente = new THREE.MeshStandardMaterial({
-        map: crear(ancho, alto, (ctx, w, h) => dibujarTarjeta(ctx, w, h, nombre, i)),
+        map: crear(ancho, alto, (ctx, w, h) => dibujarTarjeta(ctx, w, h, nombre, i, claro)),
         transparent: true,
         roughness: 0.42,
         metalness: 0.15,
@@ -172,7 +172,7 @@ export default function Escena2Materias({ activa, reducido }) {
       materialEscudo,
       geometriaRevelado: geometriaDeRevelado(),
     };
-  }, [escudo]);
+  }, [escudo, claro]);
 
   const tiempo = useRef(reducido ? T_FIN_TILDES + 20 : 0);
   const refsTarjeta = useRef([]);
@@ -255,7 +255,10 @@ export default function Escena2Materias({ activa, reducido }) {
   });
 
   return (
-    <group rotation={[0.1, -0.22, 0]} scale={0.8}>
+    // `key` por variante: al cambiar de tema se recrean los materiales de las tarjetas.
+    <group key={claro ? 'claro' : 'oscuro'} rotation={[0.1, -0.22, 0]} scale={0.8}>
+      {/* La luz azul del sitio tiñe los blancos: en la variante clara se suma una luz neutra. */}
+      {claro ? <directionalLight position={[2, 4, 6]} intensity={1.8} color="#ffffff" /> : null}
       {MATERIAS.map((nombre, i) => (
         <PiezaDesarmable key={nombre} posicion={posicionTarjeta(i)} semilla={i + 1}>
           <group ref={(g) => { refsTarjeta.current[i] = g; }}>

@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { aletas } from '../../disposicionPlaca.js';
-import { azulEmisivo, cianEmisivo } from '../../materiales.js';
+import { AnilloRGB } from './RGB.jsx';
 
 // Pila de aletas: una malla instanciada (una sola llamada de dibujo) con `n`
 // láminas finas repartidas a lo largo de `eje` ('x' o 'y') en un largo `largo`.
@@ -57,9 +57,7 @@ export function Ventilador({ radio = 0.3, refAspas, materiales }) {
           <cylinderGeometry args={[radioCubo * 0.55, radioCubo * 0.55, 0.006, 24]} />
         </mesh>
       </group>
-      <mesh position={[0, 0, 0.026]} material={cianEmisivo}>
-        <torusGeometry args={[radioCubo * 0.92, radio * 0.012, 8, 32]} />
-      </mesh>
+      <AnilloRGB radio={radioCubo * 0.92} tubo={radio * 0.014} posicion={[0, 0, 0.026]} />
     </group>
   );
 }
@@ -81,4 +79,3 @@ export function Tornillo({ posicion, radio = 0.028, materiales }) {
   );
 }
 
-export { azulEmisivo, cianEmisivo };

@@ -34,15 +34,15 @@ const circulo = (ctx, x, y, lado) => {
 // casilla vacía a la izquierda, número decorativo y riel de la barra de
 // progreso. La casilla llena, la tilde y la barra llena son objetos aparte que
 // la escena anima encima. Lo que queda fuera del panel es transparente.
-export function dibujarTarjeta(ctx, w, h, nombre, indice) {
+export function dibujarTarjeta(ctx, w, h, nombre, indice, claro = false) {
   const radio = h * 0.1;
   ctx.clearRect(0, 0, w, h);
 
   // Panel.
   const fondo = ctx.createLinearGradient(0, 0, w, h);
-  fondo.addColorStop(0, '#16213a');
-  fondo.addColorStop(0.55, '#0d1526');
-  fondo.addColorStop(1, '#090e1b');
+  fondo.addColorStop(0, claro ? '#ffffff' : '#16213a');
+  fondo.addColorStop(0.55, claro ? '#f1f5fd' : '#0d1526');
+  fondo.addColorStop(1, claro ? '#e3eaf9' : '#090e1b');
   ctx.fillStyle = fondo;
   ctx.beginPath();
   ctx.roundRect(0, 0, w, h, radio);
@@ -54,14 +54,14 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   ctx.roundRect(0, 0, w, h, radio);
   ctx.clip();
   const brillo = ctx.createLinearGradient(0, 0, w * 0.7, h * 1.1);
-  brillo.addColorStop(0, 'rgba(180, 210, 255, 0.16)');
-  brillo.addColorStop(0.45, 'rgba(180, 210, 255, 0.03)');
-  brillo.addColorStop(1, 'rgba(180, 210, 255, 0)');
+  brillo.addColorStop(0, claro ? 'rgba(255, 255, 255, 0.7)' : 'rgba(180, 210, 255, 0.16)');
+  brillo.addColorStop(0.45, claro ? 'rgba(255, 255, 255, 0.15)' : 'rgba(180, 210, 255, 0.03)');
+  brillo.addColorStop(1, claro ? 'rgba(255, 255, 255, 0)' : 'rgba(180, 210, 255, 0)');
   ctx.fillStyle = brillo;
   ctx.fillRect(0, 0, w, h);
 
   // Número grande y tenue como textura de fondo.
-  ctx.fillStyle = 'rgba(120, 160, 255, 0.07)';
+  ctx.fillStyle = claro ? 'rgba(60, 100, 200, 0.09)' : 'rgba(120, 160, 255, 0.07)';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
   ctx.font = `800 ${h * 0.62}px "Segoe UI", system-ui, sans-serif`;
@@ -70,9 +70,9 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
 
   // Borde con degradado.
   const borde = ctx.createLinearGradient(0, 0, w, h);
-  borde.addColorStop(0, 'rgba(120, 170, 255, 0.95)');
-  borde.addColorStop(0.5, 'rgba(70, 110, 220, 0.35)');
-  borde.addColorStop(1, 'rgba(61, 224, 255, 0.85)');
+  borde.addColorStop(0, claro ? 'rgba(58, 111, 224, 0.95)' : 'rgba(120, 170, 255, 0.95)');
+  borde.addColorStop(0.5, claro ? 'rgba(58, 111, 224, 0.35)' : 'rgba(70, 110, 220, 0.35)');
+  borde.addColorStop(1, claro ? 'rgba(20, 170, 200, 0.9)' : 'rgba(61, 224, 255, 0.85)');
   ctx.strokeStyle = borde;
   ctx.lineWidth = 5;
   ctx.beginPath();
@@ -84,14 +84,14 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   const cx = w * CASILLA.x;
   const cy = h / 2;
   const hueco = ctx.createLinearGradient(cx, cy - lado / 2, cx, cy + lado / 2);
-  hueco.addColorStop(0, '#060a14');
-  hueco.addColorStop(1, '#0f1a30');
+  hueco.addColorStop(0, claro ? '#dfe6f4' : '#060a14');
+  hueco.addColorStop(1, claro ? '#f6f8fd' : '#0f1a30');
   ctx.fillStyle = hueco;
   circulo(ctx, cx, cy, lado);
   ctx.fill();
   const aro = ctx.createLinearGradient(cx - lado / 2, cy - lado / 2, cx + lado / 2, cy + lado / 2);
-  aro.addColorStop(0, 'rgba(140, 185, 255, 0.95)');
-  aro.addColorStop(1, 'rgba(61, 224, 255, 0.7)');
+  aro.addColorStop(0, claro ? 'rgba(58, 111, 224, 0.95)' : 'rgba(140, 185, 255, 0.95)');
+  aro.addColorStop(1, claro ? 'rgba(20, 170, 200, 0.85)' : 'rgba(61, 224, 255, 0.7)');
   ctx.strokeStyle = aro;
   ctx.lineWidth = 6;
   circulo(ctx, cx, cy, lado);
@@ -99,7 +99,7 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
 
   // Etiqueta pequeña con espaciado.
   const x = w * 0.27;
-  ctx.fillStyle = 'rgba(110, 215, 255, 0.85)';
+  ctx.fillStyle = claro ? 'rgba(40, 100, 210, 0.95)' : 'rgba(110, 215, 255, 0.85)';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.font = `700 ${h * 0.062}px "Segoe UI", system-ui, sans-serif`;
@@ -108,7 +108,7 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   ctx.letterSpacing = '0px';
 
   // Nombre, en hasta tres líneas.
-  ctx.fillStyle = '#f0f5ff';
+  ctx.fillStyle = claro ? '#16203a' : '#f0f5ff';
   const fuente = Math.round(h * 0.125);
   ctx.font = `700 ${fuente}px "Segoe UI", system-ui, sans-serif`;
   const lineas = envolver(ctx, nombre, w * 0.66 - 10);
@@ -117,7 +117,7 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   lineas.forEach((linea, i) => ctx.fillText(linea, x, centro + (i - (lineas.length - 1) / 2) * salto));
 
   // Riel de la barra de progreso.
-  ctx.fillStyle = 'rgba(160, 190, 255, 0.14)';
+  ctx.fillStyle = claro ? 'rgba(40, 70, 140, 0.14)' : 'rgba(160, 190, 255, 0.14)';
   ctx.beginPath();
   ctx.roundRect(w * BARRA.x0, h * BARRA.y - (h * BARRA.alto) / 2, w * (BARRA.x1 - BARRA.x0), h * BARRA.alto, h * BARRA.alto);
   ctx.fill();

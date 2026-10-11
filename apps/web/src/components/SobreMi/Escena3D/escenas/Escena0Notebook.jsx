@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
-import { cuerpoOscuro, azulEmisivo } from '../materiales.js';
+import { azulEmisivo } from '../materiales.js';
+import { paletaEscena } from '../paletas.js';
 import { crearPantalla } from '../pantallaCanvas.js';
 import { dibujarPantalla, dibujarLogo } from '../dibujarPantalla.js';
 import { dibujarTeclas } from '../dibujarTeclas.js';
@@ -19,7 +20,6 @@ import {
   teclaPresionada,
 } from '../pantallaNotebook.js';
 
-const COLOR_TECLA = new THREE.Color('#1c2433');
 const COLOR_PRESIONADA = new THREE.Color('#5b8cff');
 const RELACION = 2.95 / 1.95;
 const PIXELES_ANCHO = 1024;
@@ -43,7 +43,7 @@ function posicionTecla(i) {
 // Las 60 teclas son UNA malla instanciada (una sola draw call). Cada cuadro,
 // sólo si cambió la tecla hundida, se baja esa instancia y se tiñe de azul.
 // Encima va una lámina transparente con las letras (QWERTY).
-function Teclado({ refPresionada, leyendas }) {
+function Teclado({ refPresionada, leyendas, colorTecla }) {
   const malla = useRef(null);
   const auxiliar = useMemo(() => new THREE.Object3D(), []);
   const anterior = useRef(-1);
@@ -58,7 +58,7 @@ function Teclado({ refPresionada, leyendas }) {
   }
 
   useEffect(() => {
-    for (let i = 0; i < TOTAL_TECLAS; i += 1) poner(i, 0, COLOR_TECLA);
+    for (let i = 0; i < TOTAL_TECLAS; i += 1) poner(i, 0, colorTecla);
     malla.current.instanceMatrix.needsUpdate = true;
     malla.current.instanceColor.needsUpdate = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,7 +67,7 @@ function Teclado({ refPresionada, leyendas }) {
   useFrame(() => {
     const actual = refPresionada.current;
     if (actual === anterior.current) return;
-    poner(anterior.current, 0, COLOR_TECLA);
+    poner(anterior.current, 0, colorTecla);
     poner(actual, -0.03, COLOR_PRESIONADA);
     anterior.current = actual;
     malla.current.instanceMatrix.needsUpdate = true;
@@ -89,20 +89,27 @@ function Teclado({ refPresionada, leyendas }) {
   );
 }
 
-export default function Escena0Notebook({ activa, reducido }) {
+export default function Escena0Notebook({ activa, reducido, claro = false }) {
+  const paleta = paletaEscena(claro);
+  const colorTecla = useMemo(() => new THREE.Color(paleta.tecla), [paleta]);
+  // Chasis y tapa de la variante: oscuro con detalles azules, o blanco (tema claro).
+  const chasis = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: paleta.chasis, metalness: claro ? 0.25 : 0.35, roughness: claro ? 0.4 : 0.4 }),
+    [paleta, claro]
+  );
   const pantalla = useMemo(() => crearPantalla(PIXELES_ANCHO, Math.round(PIXELES_ANCHO / RELACION)), []);
   const leyendas = useMemo(() => {
     const lienzo = crearPantalla(960, 392);
-    dibujarTeclas(lienzo.ctx, lienzo.ancho, lienzo.alto);
+    dibujarTeclas(lienzo.ctx, lienzo.ancho, lienzo.alto, paleta.teclaTexto);
     lienzo.textura.needsUpdate = true;
     return lienzo;
-  }, []);
+  }, [paleta]);
   const logoTapa = useMemo(() => {
     const lienzo = crearPantalla(256, 256);
-    dibujarLogo(lienzo.ctx, 128, 128, 150, '#eaf2ff');
+    dibujarLogo(lienzo.ctx, 128, 128, 150, claro ? '#7d8799' : '#eaf2ff');
     lienzo.textura.needsUpdate = true;
     return lienzo;
-  }, []);
+  }, [claro]);
   const objetivoLuz = useMemo(() => new THREE.Object3D(), []);
 
   const refTapa = useRef(null);
@@ -124,8 +131,9 @@ export default function Escena0Notebook({ activa, reducido }) {
       pantalla.textura.dispose();
       leyendas.textura.dispose();
       logoTapa.textura.dispose();
+      chasis.dispose();
     },
-    [pantalla, leyendas, logoTapa]
+    [pantalla, leyendas, logoTapa, chasis]
   );
 
   useFrame((_, delta) => {
@@ -167,9 +175,12 @@ export default function Escena0Notebook({ activa, reducido }) {
   });
 
   return (
-    <group position={[0, -0.2, 0]} rotation={[0, -0.5, 0]}>
+    // `key` por variante: al cambiar de tema las teclas (malla instanciada) se arman de nuevo.
+    <group key={claro ? 'claro' : 'oscuro'} position={[0, -0.2, 0]} rotation={[0, -0.5, 0]}>
+      {/* La luz azul del sitio tiñe los blancos: en la variante clara se suma una luz neutra. */}
+      {claro ? <directionalLight position={[3, 5, 4]} intensity={2.4} color="#ffffff" /> : null}
       <PiezaDesarmable semilla={1}>
-        <mesh position={[0, -0.5, 0]} material={cuerpoOscuro}>
+        <mesh position={[0, -0.5, 0]} material={chasis}>
           <boxGeometry args={[3.2, 0.14, 2.2]} />
         </mesh>
         <mesh position={[0, -0.575, 1.1]} material={azulEmisivo}>
@@ -178,13 +189,13 @@ export default function Escena0Notebook({ activa, reducido }) {
       </PiezaDesarmable>
 
       <PiezaDesarmable posicion={[0, -0.405, 0]} semilla={2}>
-        <Teclado refPresionada={refTecla} leyendas={leyendas} />
+        <Teclado refPresionada={refTecla} leyendas={leyendas} colorTecla={colorTecla} />
       </PiezaDesarmable>
 
       <PiezaDesarmable posicion={[0, -0.428, 0.78]} semilla={3}>
         <mesh>
           <boxGeometry args={[1.0, 0.012, 0.6]} />
-          <meshStandardMaterial color="#030405" metalness={0.2} roughness={0.55} />
+          <meshStandardMaterial color={claro ? '#d3d8e2' : '#030405'} metalness={0.2} roughness={0.55} />
         </mesh>
       </PiezaDesarmable>
 
@@ -196,7 +207,7 @@ export default function Escena0Notebook({ activa, reducido }) {
           rotation={[ANGULO_ABIERTA * aperturaInicial, 0, 0]}
           position={[0, ALTURA_TAPA_CERRADA * (1 - aperturaInicial), 0]}
         >
-          <mesh position={[0, 0.03, 1.1]} material={cuerpoOscuro}>
+          <mesh position={[0, 0.03, 1.1]} material={chasis}>
             <boxGeometry args={[3.2, 0.06, 2.2]} />
           </mesh>
           {/* Pantalla (cara interior de la tapa). */}

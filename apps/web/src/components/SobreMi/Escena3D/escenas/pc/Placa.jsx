@@ -3,8 +3,8 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { PLACA, ZONAS, RANURAS_DIMM, condensadores, tornillos } from '../../disposicionPlaca.js';
-import { azulEmisivo, cianEmisivo } from '../../materiales.js';
 import { PilaAletas, Tornillo } from './Piezas.jsx';
+import { AnilloRGB, TiraRGB } from './RGB.jsx';
 
 // La cara con componentes de la placa está en z = Z0.
 const Z0 = PLACA.grosor / 2;
@@ -109,9 +109,7 @@ function Vrm({ materiales }) {
         material={materiales.anodizado}
         posicion={[s.cx, s.cy, Z0 + 0.12]}
       />
-      <mesh position={[s.cx, s.cy - s.alto / 2 + 0.012, Z0 + 0.075]} material={cianEmisivo}>
-        <boxGeometry args={[s.ancho * 0.9, 0.012, 0.012]} />
-      </mesh>
+      <TiraRGB posicion={[s.cx, s.cy - s.alto / 2 + 0.012, Z0 + 0.075]} tamano={[s.ancho * 0.9, 0.014, 0.014]} eje="x" />
 
       <mesh position={[i.cx, i.cy, Z0 + 0.035]} material={materiales.anodizado}>
         <boxGeometry args={[i.ancho, i.alto, 0.07]} />
@@ -239,9 +237,7 @@ function Chipset({ materiales }) {
         <boxGeometry args={[z.ancho, z.alto, 0.06]} />
       </mesh>
       <PilaAletas n={11} largo={z.ancho - 0.1} eje="x" tamano={[0.03, z.alto - 0.1, 0.045]} material={materiales.anodizado} posicion={[0, 0, 0.082]} />
-      <mesh position={[0, 0, 0.112]} material={azulEmisivo}>
-        <torusGeometry args={[0.12, 0.012, 10, 40]} />
-      </mesh>
+      <AnilloRGB radio={0.12} tubo={0.014} posicion={[0, 0, 0.112]} />
       <mesh position={[0, 0, 0.112]} material={materiales.acero}>
         <cylinderGeometry args={[0.07, 0.07, 0.012, 24]} />
       </mesh>

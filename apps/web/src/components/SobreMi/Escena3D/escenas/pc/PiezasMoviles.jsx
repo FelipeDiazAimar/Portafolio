@@ -2,8 +2,8 @@
 
 import { RoundedBox } from '@react-three/drei';
 import { PLACA, ZONAS, RANURAS_DIMM } from '../../disposicionPlaca.js';
-import { azulEmisivo, cianEmisivo } from '../../materiales.js';
 import { PilaAletas, Ventilador } from './Piezas.jsx';
+import { TiraRGB } from './RGB.jsx';
 
 const Z0 = PLACA.grosor / 2;
 
@@ -88,9 +88,7 @@ export function ModulosRAM({ materiales }) {
               <boxGeometry args={[0.016, 1.12, alto - 0.05]} />
             </mesh>
           ))}
-          <mesh position={[0, 0, alto / 2 + 0.002]} material={i ? cianEmisivo : azulEmisivo}>
-            <boxGeometry args={[0.05, 1.08, 0.014]} />
-          </mesh>
+          <TiraRGB posicion={[0, 0, alto / 2 + 0.002]} tamano={[0.05, 1.08, 0.016]} eje="y" fase={i * 0.18} />
           <mesh position={[0, 0.35, -0.02]} material={materiales.plasticoNegro}>
             <boxGeometry args={[0.04, 0.32, 0.12]} />
           </mesh>
@@ -133,9 +131,7 @@ export function TarjetaGrafica({ materiales, refAspas }) {
       <mesh position={[0, -grosor / 2 - 0.005, 0]} material={materiales.anodizado}>
         <boxGeometry args={[largo - 0.04, 0.012, alto - 0.04]} />
       </mesh>
-      <mesh position={[0.2, -grosor / 2 - 0.012, 0]} material={cianEmisivo}>
-        <boxGeometry args={[0.5, 0.004, 0.05]} />
-      </mesh>
+      <TiraRGB posicion={[0.2, -grosor / 2 - 0.012, 0]} tamano={[0.5, 0.005, 0.05]} eje="x" fase={0.3} />
 
       {/* Tres aberturas: disco oscuro hundido, aro cromado y el ventilador. */}
       {[-0.64, 0, 0.64].map((x, i) => (
@@ -152,15 +148,11 @@ export function TarjetaGrafica({ materiales, refAspas }) {
 
       {/* Acentos luminosos diagonales entre los ventiladores. */}
       {[-0.32, 0.32].map((x) => (
-        <mesh key={x} position={[x - 0.09, grosor / 2 + 0.004, 0]} rotation={[0, 0.5, 0]} material={cianEmisivo}>
-          <boxGeometry args={[0.012, 0.006, 0.7]} />
-        </mesh>
+        <TiraRGB key={x} posicion={[x - 0.09, grosor / 2 + 0.004, 0]} rotacion={[0, 0.5, 0]} tamano={[0.014, 0.007, 0.7]} eje="z" fase={x > 0 ? 0.5 : 0} />
       ))}
 
       {/* Borde que mira al frente: barra de luz, placa con logo y conectores. */}
-      <mesh position={[-0.2, 0, alto / 2 + 0.004]} material={cianEmisivo}>
-        <boxGeometry args={[1.3, 0.05, 0.012]} />
-      </mesh>
+      <TiraRGB posicion={[-0.2, 0, alto / 2 + 0.004]} tamano={[1.3, 0.05, 0.014]} eje="x" />
       <mesh position={[-0.2, 0, alto / 2 + 0.002]} material={materiales.anodizado}>
         <boxGeometry args={[1.5, 0.12, 0.008]} />
       </mesh>
@@ -205,9 +197,7 @@ export function SSD({ materiales }) {
       <mesh position={[0.26, 0, 0.022]} material={materiales.anodizado}>
         <boxGeometry args={[0.46, 0.2, 0.026]} />
       </mesh>
-      <mesh position={[0.26, 0, 0.036]} material={cianEmisivo}>
-        <boxGeometry args={[0.36, 0.014, 0.004]} />
-      </mesh>
+      <TiraRGB posicion={[0.26, 0, 0.037]} tamano={[0.36, 0.014, 0.005]} eje="x" fase={0.6} />
       <mesh position={[0.46, 0, 0.038]} rotation={[Math.PI / 2, 0, 0]} material={materiales.acero}>
         <cylinderGeometry args={[0.018, 0.018, 0.012, 14]} />
       </mesh>
