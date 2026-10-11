@@ -22,7 +22,7 @@ const BASES_RAM = [
   [1.36, 0.3, -0.781],
   [1.53, 0.3, -0.781],
 ];
-const BASE_GPU = [-0.45, 0.02, 1.25];
+const BASE_GPU = [-0.45, -0.08, 1.25];
 
 // Las piezas de la placa son los hijos de "motherboard" más la ranura mini PCIe.
 // La placa en sí (el circuito impreso) es la pieza `Object_4`.
@@ -44,9 +44,11 @@ function hash(texto) {
 function Flotante({ centro, objeto, fraccion, fijo, children }) {
   const grupo = useRef(null);
   const elevacion = useMemo(() => objeto.userData.elevacion ?? 0.35 + hash(objeto.name) * 0.9, [objeto]);
+  // Las piezas que encajan en la placa (procesador, memorias, gráfica) sólo suben, sin correrse de lado.
+  const lateral = objeto.userData.soloVertical ? 0 : 0.35;
   useFrame(() => {
     const f = fijo ? 0 : fraccion.current;
-    grupo.current.position.set(centro[0] * f * 0.35, f * SEPARACION * elevacion, centro[2] * f * 0.35);
+    grupo.current.position.set(centro[0] * f * lateral, f * SEPARACION * elevacion, centro[2] * f * lateral);
   });
   return <group ref={grupo}>{children}</group>;
 }
@@ -68,13 +70,13 @@ export default function Escena3PC({ activa, reducido }) {
     });
     const extras = [
       // Procesador apoyado en el socket (queda plano, igual que la placa).
-      colocarPieza(cpu, { nombre: 'cpu', escala: 0.2, base: BASE_CPU, elevacion: 0.55 }),
+      colocarPieza(cpu, { nombre: 'cpu', escala: 0.2, base: BASE_CPU, elevacion: 0.55, soloVertical: true }),
       // Memorias paradas en sus ranuras: giradas para quedar de canto, con los contactos abajo.
       ...BASES_RAM.map((base, i) =>
-        colocarPieza(moduloRam, { nombre: `ram${i}`, escala: 2.06, rotacion: [0, 0, -Math.PI / 2], base, elevacion: 0.85 + i * 0.12 })
+        colocarPieza(moduloRam, { nombre: `ram${i}`, escala: 2.06, rotacion: [0, 0, -Math.PI / 2], base, elevacion: 0.8 + i * 0.1, soloVertical: true })
       ),
       // Gráfica parada en la ranura PCIe, con los ventiladores hacia el frente.
-      colocarPieza(gpu, { nombre: 'gpu', escala: 12, rotacion: [-Math.PI / 2, 0, 0], espejoY: true, base: BASE_GPU, elevacion: 1.15 }),
+      colocarPieza(gpu, { nombre: 'gpu', escala: 12, rotacion: [-Math.PI / 2, 0, 0], espejoY: true, base: BASE_GPU, elevacion: 0.7, soloVertical: true }),
     ];
     return separarPiezas(placa, { anchoObjetivo: ANCHO, elegirPiezas, extras });
   }, [placa, cpu, ram, gpu]);

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Line } from '@react-three/drei';
+import { Billboard, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { crearPantalla } from '../pantallaCanvas.js';
@@ -12,23 +12,46 @@ import {
   RUTA,
   S_ESCANER,
   VELOCIDAD,
-  brilloSap,
   distanciaCaja,
-  faseCodigo,
+  estadoPlanta,
   progresoEscaneo,
   puntoEnRuta,
+  tiempoCinta,
 } from '../cicloPlanta.js';
-import { dibujarCinta, dibujarCodigo, dibujarSap, dibujarSuelo } from '../texturasPlanta.js';
+import { dibujarCinta, dibujarCodigo, dibujarEtiquetaAmpliada, dibujarPanelSap } from '../texturasPlanta.js';
 
 // Medidas de la planta (marco de la escena: y hacia arriba, x a la derecha, z al frente).
 const ALTO_CINTA = 0.45;
 const ANCHO_CINTA = 0.7;
 const TAM_CAJA = 0.4;
-const SAP = new THREE.Vector3(-0.9, 2.15, -1.05);
 // Cuántas veces se repite la textura de la cinta por unidad de largo.
 const REPETICION = 2.5;
-// Reloj inicial con movimiento reducido: una foto fija con cajas repartidas.
-const T_QUIETO = 3.4;
+// Reloj con movimiento reducido: una foto fija de la secuencia ya completa.
+const T_QUIETO = S_ESCANER / VELOCIDAD + 7.2;
+
+const X_ESCANER = RUTA[0][0] + S_ESCANER;
+const Z_ESCANER = RUTA[0][1];
+
+// Cámara: la escena se acerca a la caja que está en el escáner (en vez de mover la
+// cámara, que ya la maneja el control de giro). `FOCO` es esa caja.
+const GIRO = new THREE.Euler(0.62, -0.62, 0);
+const ESCALA_BASE = 0.68;
+const ESCALA_ZOOM = 1.3;
+const POSICION_BASE = new THREE.Vector3(0.25, -0.3, 0);
+const FOCO = new THREE.Vector3(X_ESCANER, ALTO_CINTA + TAM_CAJA / 2, Z_ESCANER);
+// Dónde queda el foco en pantalla cuando el zoom está al máximo.
+const FOCO_EN_PANTALLA = new THREE.Vector3(-0.05, -0.85, 0);
+const POSICION_ZOOM = FOCO_EN_PANTALLA.clone().sub(FOCO.clone().multiplyScalar(ESCALA_ZOOM).applyEuler(GIRO));
+
+// Convierte un desplazamiento en pantalla (con el zoom al máximo) a coordenadas de la escena.
+const GIRO_INVERSO = new THREE.Quaternion().setFromEuler(GIRO).invert();
+const enEscena = (x, y, z = 0) => new THREE.Vector3(x, y, z).applyQuaternion(GIRO_INVERSO).divideScalar(ESCALA_ZOOM).add(FOCO);
+const POS_ETIQUETA = enEscena(-1.0, 0.95);
+const POS_SAP = enEscena(1.2, 1.85);
+const TAM_ETIQUETA = [1.7, 1.06];
+const TAM_SAP = [2.1, 1.31];
+// Dónde está el QR dentro de la etiqueta (a la derecha, un poco arriba del centro).
+const POS_QR = enEscena(-1.0 + 0.36, 0.95 + 0.1);
 
 const SEGMENTOS = RUTA.slice(1).map(([x1, z1], i) => {
   const [x0, z0] = RUTA[i];
@@ -36,14 +59,14 @@ const SEGMENTOS = RUTA.slice(1).map(([x1, z1], i) => {
 });
 
 const suavizar = (f) => f * f * (3 - 2 * f);
+const aux = new THREE.Vector3();
 
-// Tramo de cinta: marco de acero, rodillos en los extremos y la banda con ranuras que se mueve.
+// Tramo de cinta: marco de acero, la banda con ranuras que se mueve y luces de borde.
 function Cinta({ segmento, textura, mats }) {
   const { x0, z0, x1, z1, largo, giro } = segmento;
   const largoTotal = largo + ANCHO_CINTA;
   return (
     <group position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} rotation={[0, giro, 0]}>
-      {/* Patas y larguero. */}
       {[-1, 1].flatMap((lado) =>
         [-0.4, 0.4].map((f) => (
           <mesh key={`${lado}${f}`} position={[f * largo, ALTO_CINTA / 2 - 0.02, lado * (ANCHO_CINTA / 2 + 0.02)]} material={mats.acero}>
@@ -59,12 +82,10 @@ function Cinta({ segmento, textura, mats }) {
       <mesh position={[0, ALTO_CINTA - 0.1, 0]} material={mats.oscuro}>
         <boxGeometry args={[largoTotal - 0.04, 0.06, ANCHO_CINTA]} />
       </mesh>
-      {/* Banda. */}
       <mesh position={[0, ALTO_CINTA - 0.065, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[largoTotal - 0.04, ANCHO_CINTA - 0.04]} />
         <meshStandardMaterial map={textura} roughness={0.8} />
       </mesh>
-      {/* Luces de borde. */}
       {[-1, 1].map((lado) => (
         <mesh key={lado} position={[0, ALTO_CINTA - 0.012, lado * (ANCHO_CINTA / 2 + 0.02)]} material={mats.luz}>
           <boxGeometry args={[largoTotal - 0.1, 0.012, 0.012]} />
@@ -90,22 +111,21 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
       l.textura.repeat.set(largo * REPETICION, 1);
       return l.textura;
     };
-    const sap = crear(512, 512, dibujarSap).textura;
+    const etiquetaAmpliada = crear(1024, 640, (ctx, w, h) => dibujarEtiquetaAmpliada(ctx, w, h));
+    const panelSap = crear(1280, 800, (ctx, w, h) => dibujarPanelSap(ctx, w, h));
     const codigo = crear(512, 256, dibujarCodigo).textura;
     const std = (opciones) => new THREE.MeshStandardMaterial(opciones);
     const mats = {
-      suelo: std({ map: crear(1400, 1000, (ctx, w, h) => dibujarSuelo(ctx, w, h, claro)).textura, roughness: 0.9 }),
       acero: std({ color: claro ? '#8a96ab' : '#3a4458', metalness: 0.6, roughness: 0.45 }),
       oscuro: std({ color: '#161a23', roughness: 0.7 }),
       luz: new THREE.MeshBasicMaterial({ color: '#5aa2ff', toneMapped: false }),
       carton: std({ color: '#c79a62', roughness: 0.8 }),
       cintaCaja: std({ color: '#efe9d6', roughness: 0.6 }),
-      etiqueta: new THREE.MeshBasicMaterial({ map: codigo, toneMapped: false }),
-      codigoVuela: new THREE.MeshBasicMaterial({ map: codigo, transparent: true, depthWrite: false, toneMapped: false }),
-      sapLado: std({ color: '#0b3a9e', emissive: '#1a5cff', emissiveIntensity: 1, metalness: 0.3, roughness: 0.4 }),
-      sapCara: new THREE.MeshBasicMaterial({ map: sap, toneMapped: false }),
-      anillo: new THREE.MeshBasicMaterial({ color: '#6fa8ff', transparent: true, opacity: 0.55, toneMapped: false }),
-      pod: std({ color: '#0f2f6e', emissive: '#3de0c0', emissiveIntensity: 0.9, roughness: 0.35 }),
+      etiquetaCaja: new THREE.MeshBasicMaterial({ map: codigo, toneMapped: false }),
+      etiquetaAmpliada: new THREE.MeshBasicMaterial({ map: etiquetaAmpliada.textura, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }),
+      panelSap: new THREE.MeshBasicMaterial({ map: panelSap.textura, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }),
+      dato: new THREE.MeshBasicMaterial({ color: '#3de0c0', depthTest: false, toneMapped: false }),
+      marco: new THREE.LineBasicMaterial({ color: '#6fa8ff', transparent: true, opacity: 0 }),
       laser: new THREE.MeshBasicMaterial({
         color: '#7fb4ff',
         transparent: true,
@@ -115,34 +135,50 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
         blending: THREE.AdditiveBlending,
         toneMapped: false,
       }),
-      cabina: std({ color: claro ? '#b9c3d6' : '#232c3e', roughness: 0.6 }),
-      ventana: new THREE.MeshBasicMaterial({ color: '#7fb4ff', toneMapped: false }),
       contenedor: std({ color: '#1f6bff', metalness: 0.2, roughness: 0.55 }),
+      ventana: new THREE.MeshBasicMaterial({ color: '#0b1220', toneMapped: false }),
     };
-    return { texturas, mats, cintas: SEGMENTOS.map((s) => cinta(s.largo)) };
+    return {
+      texturas,
+      mats,
+      etiquetaAmpliada,
+      panelSap,
+      cintas: SEGMENTOS.map((s) => cinta(s.largo)),
+      marcoCaja: new THREE.EdgesGeometry(new THREE.BoxGeometry(TAM_CAJA * 1.18, TAM_CAJA * 1.18, TAM_CAJA * 1.18)),
+    };
   }, [claro]);
-  const { mats, cintas } = recursos;
+  const { mats, cintas, etiquetaAmpliada, panelSap, marcoCaja } = recursos;
 
   const tiempo = useRef(reducido ? T_QUIETO : 0);
+  const refEscena = useRef(null);
   const refCajas = useRef([]);
-  const refCodigos = useRef([]);
   const refLaser = useRef(null);
+  const refEtiqueta = useRef(null);
   const refSap = useRef(null);
-  const refPods = useRef([]);
-  const refAnillo = useRef(null);
+  const refConexion = useRef(null);
+  const refDatos = useRef([]);
+  const claves = useRef({ etiqueta: '', sap: '' });
 
   useEffect(
     () => () => {
       recursos.texturas.forEach((t) => t.dispose());
       Object.values(recursos.mats).forEach((m) => m.dispose());
+      recursos.marcoCaja.dispose();
     },
     [recursos]
   );
 
-  useFrame((estado, delta) => {
+  useFrame((_, delta) => {
     if (!activa) return;
     if (!reducido) tiempo.current += Math.min(delta, 0.05);
     const t = tiempo.current;
+    const estado = estadoPlanta(t);
+
+    // Zoom: la escena crece y se corre para dejar la caja del escáner al centro.
+    const z = estado.zoom;
+    const grupo = refEscena.current;
+    grupo.scale.setScalar(ESCALA_BASE + (ESCALA_ZOOM - ESCALA_BASE) * z);
+    grupo.position.lerpVectors(POSICION_BASE, POSICION_ZOOM, z);
 
     // Cajas: avanzan por la ruta; aparecen y desaparecen achicándose en los extremos.
     let laser = 0;
@@ -155,57 +191,58 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
       caja.rotation.y = p.giro;
       caja.scale.setScalar(Math.max(escala, 0.001));
       laser = Math.max(laser, progresoEscaneo(s));
-
-      // Código de trazabilidad: sale de la caja ya leída y vuela hacia el nodo SAP.
-      const codigo = refCodigos.current[i];
-      const fase = faseCodigo(s);
-      codigo.visible = fase > 0;
-      if (fase > 0) {
-        const f = suavizar(fase);
-        codigo.position.set(
-          p.x + (SAP.x - p.x) * f,
-          ALTO_CINTA + TAM_CAJA + 0.25 + (SAP.y - (ALTO_CINTA + TAM_CAJA + 0.25)) * f + Math.sin(Math.PI * fase) * 0.6,
-          p.z + (SAP.z - p.z) * f
-        );
-        codigo.scale.setScalar(0.62 * (1 - 0.55 * fase));
-        codigo.quaternion.copy(estado.camera.quaternion);
-      }
     }
-    mats.laser.opacity = laser * 0.85;
-    if (refLaser.current) refLaser.current.scale.y = 0.4 + 0.6 * laser;
+    mats.laser.opacity = Math.max(laser, estado.escaneo > 0 && estado.escaneo < 1 ? 0.9 : 0) * 0.85;
+    if (refLaser.current) refLaser.current.scale.y = 0.4 + 0.6 * mats.laser.opacity;
+    // Marco azul alrededor de la caja que se analiza.
+    mats.marco.opacity = estado.etiqueta;
 
-    // Nodo SAP: gira despacio y destella cuando llega un código; los "pods" orbitan.
-    const brillo = brilloSap(t);
-    mats.sapLado.emissiveIntensity = 0.7 + 2.2 * brillo;
-    mats.anillo.opacity = 0.35 + 0.5 * brillo;
-    if (refSap.current) refSap.current.rotation.y = t * 0.5;
-    if (refAnillo.current) refAnillo.current.rotation.z = t * 0.6;
-    refPods.current.forEach((pod, i) => {
-      const a = t * 0.9 + (i * Math.PI * 2) / 3;
-      pod.position.set(Math.cos(a) * 0.95, 0.12 * Math.sin(t * 1.3 + i), Math.sin(a) * 0.95);
-      pod.rotation.set(t * 0.8, t * 0.6, 0);
+    // Etiqueta ampliada: aparece junto a la caja y se redibuja sólo si cambió algo.
+    const claveEtiqueta = `${estado.etiqueta > 0}|${Math.round(estado.escaneo * 60)}|${Math.round(estado.lectura * 30)}`;
+    if (claveEtiqueta !== claves.current.etiqueta) {
+      claves.current.etiqueta = claveEtiqueta;
+      dibujarEtiquetaAmpliada(etiquetaAmpliada.ctx, etiquetaAmpliada.ancho, etiquetaAmpliada.alto, estado);
+      etiquetaAmpliada.textura.needsUpdate = true;
+    }
+    mats.etiquetaAmpliada.opacity = estado.etiqueta;
+    refEtiqueta.current.visible = estado.etiqueta > 0.01;
+    refEtiqueta.current.scale.setScalar(0.85 + 0.15 * estado.etiqueta);
+
+    // Panel de SAP.
+    const claveSap = `${estado.sap > 0}|${Math.round(estado.registro * 40)}`;
+    if (claveSap !== claves.current.sap) {
+      claves.current.sap = claveSap;
+      dibujarPanelSap(panelSap.ctx, panelSap.ancho, panelSap.alto, estado);
+      panelSap.textura.needsUpdate = true;
+    }
+    mats.panelSap.opacity = estado.sap;
+    refSap.current.visible = estado.sap > 0.01;
+    refSap.current.scale.setScalar(0.85 + 0.15 * estado.sap);
+
+    // Dato: sale del QR y sube al panel de SAP, con una estela de puntos.
+    refDatos.current.forEach((punto, k) => {
+      const f = Math.min(1, Math.max(0, estado.subida * 1.25 - k * 0.1));
+      const visible = f > 0 && f < 1;
+      punto.visible = visible;
+      if (!visible) return;
+      aux.lerpVectors(POS_QR, POS_SAP, suavizar(f));
+      aux.y += Math.sin(Math.PI * f) * 0.35;
+      punto.position.copy(aux);
+      punto.scale.setScalar((1 - k * 0.18) * (1 - 0.4 * f));
     });
+    if (refConexion.current) refConexion.current.material.opacity = estado.etiqueta * 0.45;
 
     // La banda parece avanzar: la textura se desplaza a la velocidad de las cajas.
+    const desplazamiento = -((tiempoCinta(t) * VELOCIDAD * REPETICION) % 1);
     cintas.forEach((textura) => {
-      textura.offset.x = -((t * VELOCIDAD * REPETICION) % 1);
+      textura.offset.x = desplazamiento;
     });
   });
 
-  const xEscaner = RUTA[0][0] + S_ESCANER;
-  const zEscaner = RUTA[0][1];
-
   return (
     // `key` por variante: al cambiar de tema se recrean materiales y texturas.
-    <group key={claro ? 'claro' : 'oscuro'} position={[0.2, -0.3, 0]} rotation={[0.62, -0.62, 0]} scale={0.6}>
+    <group ref={refEscena} key={claro ? 'claro' : 'oscuro'} position={POSICION_BASE.toArray()} rotation={[GIRO.x, GIRO.y, GIRO.z]} scale={ESCALA_BASE}>
       <directionalLight position={[3, 6, 4]} intensity={claro ? 2.2 : 1.5} color="#ffffff" />
-
-      {/* Piso de la planta. */}
-      <PiezaDesarmable semilla={1}>
-        <mesh position={[0, -0.06, -0.2]} material={mats.suelo}>
-          <boxGeometry args={[5.4, 0.12, 4.6]} />
-        </mesh>
-      </PiezaDesarmable>
 
       {/* Cintas transportadoras. */}
       <PiezaDesarmable semilla={2}>
@@ -217,7 +254,7 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
 
       {/* Escáner: pórtico sobre la cinta, con un lector y el láser que destella. */}
       <PiezaDesarmable semilla={4}>
-        <group position={[xEscaner, 0, zEscaner]}>
+        <group position={[X_ESCANER, 0, Z_ESCANER]}>
           {[-1, 1].map((lado) => (
             <mesh key={lado} position={[0, 0.8, lado * 0.5]} material={mats.acero}>
               <boxGeometry args={[0.12, 1.6, 0.1]} />
@@ -238,51 +275,20 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
         </group>
       </PiezaDesarmable>
 
-      {/* Cabina de control y contenedor de salida. */}
+      {/* Contenedor de salida. */}
       <PiezaDesarmable semilla={5}>
-        <group position={[-2.35, 0, -1.55]}>
-          <mesh position={[0, 0.45, 0]} material={mats.cabina}>
-            <boxGeometry args={[0.9, 0.9, 0.7]} />
-          </mesh>
-          <mesh position={[0.2, 0.55, 0.36]} material={mats.ventana}>
-            <boxGeometry args={[0.36, 0.22, 0.02]} />
-          </mesh>
-          <mesh position={[0, 0.94, 0]} material={mats.acero}>
-            <boxGeometry args={[1.0, 0.06, 0.8]} />
-          </mesh>
-        </group>
         <group position={[RUTA.at(-1)[0], 0, RUTA.at(-1)[1] - 0.8]}>
           <mesh position={[0, 0.45, 0]} material={mats.contenedor}>
             <boxGeometry args={[1.0, 0.9, 1.0]} />
           </mesh>
-          <mesh position={[0, 0.45, 0.51]} material={mats.oscuro}>
+          <mesh position={[0, 0.45, 0.51]} material={mats.ventana}>
             <boxGeometry args={[0.8, 0.6, 0.02]} />
           </mesh>
         </group>
       </PiezaDesarmable>
 
-      {/* Nodo SAP: prisma hexagonal con el cartel, anillo de datos y los pods que orbitan. */}
+      {/* Cajas: cada una con su etiqueta; la que está en el escáner se marca con un recuadro. */}
       <PiezaDesarmable semilla={6}>
-        <group position={SAP.toArray()}>
-          <group ref={refSap}>
-            <mesh material={[mats.sapLado, mats.sapCara, mats.sapLado]}>
-              <cylinderGeometry args={[0.55, 0.55, 0.26, 6]} />
-            </mesh>
-          </group>
-          <mesh ref={refAnillo} rotation={[Math.PI / 2.6, 0, 0]} material={mats.anillo}>
-            <torusGeometry args={[0.8, 0.012, 8, 64]} />
-          </mesh>
-          {[0, 1, 2].map((i) => (
-            <mesh key={i} ref={(nodo) => { refPods.current[i] = nodo; }} material={mats.pod}>
-              <boxGeometry args={[0.15, 0.15, 0.15]} />
-            </mesh>
-          ))}
-        </group>
-        <Line points={[[xEscaner, 1.45, zEscaner], SAP.toArray()]} color="#6fa8ff" lineWidth={1.5} transparent opacity={0.4} />
-      </PiezaDesarmable>
-
-      {/* Cajas con su etiqueta y los códigos que viajan al nodo. */}
-      <PiezaDesarmable semilla={7}>
         {Array.from({ length: CAJAS }, (_, i) => (
           <group key={i} ref={(nodo) => { refCajas.current[i] = nodo; }}>
             <mesh material={mats.carton}>
@@ -291,14 +297,38 @@ export default function Escena5Planta({ activa, reducido, claro = false }) {
             <mesh position={[0, TAM_CAJA / 2 + 0.002, 0]} material={mats.cintaCaja}>
               <boxGeometry args={[0.07, 0.004, TAM_CAJA]} />
             </mesh>
-            <mesh position={[0.07, TAM_CAJA / 2 + 0.004, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]} material={mats.etiqueta}>
+            <mesh position={[0.07, TAM_CAJA / 2 + 0.004, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 2]} material={mats.etiquetaCaja}>
               <planeGeometry args={[0.2, 0.1]} />
             </mesh>
+            {i === 0 ? <lineSegments geometry={marcoCaja} material={mats.marco} /> : null}
           </group>
         ))}
-        {Array.from({ length: CAJAS }, (_, i) => (
-          <mesh key={i} ref={(nodo) => { refCodigos.current[i] = nodo; }} visible={false} material={mats.codigoVuela}>
-            <planeGeometry args={[0.7, 0.35]} />
+      </PiezaDesarmable>
+
+      {/* Etiqueta ampliada, panel de SAP y el dato que sube de uno al otro. */}
+      <PiezaDesarmable semilla={7}>
+        <group position={POS_ETIQUETA.toArray()}>
+          <Billboard>
+            <group ref={refEtiqueta} visible={false}>
+              <mesh material={mats.etiquetaAmpliada} renderOrder={10}>
+                <planeGeometry args={TAM_ETIQUETA.map((v) => v / ESCALA_ZOOM)} />
+              </mesh>
+            </group>
+          </Billboard>
+        </group>
+        <group position={POS_SAP.toArray()}>
+          <Billboard>
+            <group ref={refSap} visible={false}>
+              <mesh material={mats.panelSap} renderOrder={11}>
+                <planeGeometry args={TAM_SAP.map((v) => v / ESCALA_ZOOM)} />
+              </mesh>
+            </group>
+          </Billboard>
+        </group>
+        <Line ref={refConexion} points={[FOCO.toArray(), POS_ETIQUETA.toArray()]} color="#6fa8ff" lineWidth={1.5} transparent opacity={0} />
+        {[0, 1, 2, 3].map((k) => (
+          <mesh key={k} ref={(nodo) => { refDatos.current[k] = nodo; }} visible={false} material={mats.dato} renderOrder={12}>
+            <sphereGeometry args={[0.05, 12, 12]} />
           </mesh>
         ))}
       </PiezaDesarmable>

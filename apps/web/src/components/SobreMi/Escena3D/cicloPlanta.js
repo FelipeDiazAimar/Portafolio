@@ -1,7 +1,8 @@
-// Guion de la planta de 2026: las cajas recorren una cinta en L (x, z sobre el
-// piso de la planta), pasan bajo el escáner y, ya leídas, mandan un código de
-// trazabilidad hacia el nodo SAP. Todo es función del tiempo `t` (segundos),
-// así la escena no guarda estado y se puede probar sin gráficos.
+// Guion de la planta de 2026, como función del tiempo `t` (segundos): las cajas
+// recorren una cinta en L; cada ciclo la cinta se frena cuando una caja llega al
+// escáner y ahí corre la secuencia: zoom a la caja, su etiqueta ampliada, el
+// escaneo del QR, la lectura, la subida del dato y el registro en SAP. La escena
+// no guarda estado: todo sale de `estadoPlanta(t)`, así se puede probar sin gráficos.
 
 // Recorrido de las cajas: de la entrada, a lo largo de x, y al final de la L, a lo largo de -z.
 export const RUTA = [
@@ -13,20 +14,50 @@ const LARGOS = RUTA.slice(1).map(([x, z], i) => Math.hypot(x - RUTA[i][0], z - R
 export const LARGO = LARGOS.reduce((a, b) => a + b, 0);
 
 export const CAJAS = 6;
-// Velocidad de la cinta (unidades por segundo).
-export const VELOCIDAD = 0.5;
-// Distancia (sobre la ruta) donde está el escáner y donde el código llega al nodo SAP.
+// Velocidad de la cinta (unidades por segundo) y distancia (sobre la ruta) del escáner.
+export const VELOCIDAD = 0.8;
 export const S_ESCANER = 1.6;
-export const S_LLEGADA = 2.7;
-// Cuánto dura el destello del nodo cuando llega un código.
-const DURACION_DESTELLO = 0.6;
 // Cuánto antes de doblar empieza a girar la caja.
 const RADIO_GIRO = 0.25;
 
-// Distancia recorrida por la caja `i` en el instante `t` (de 0 a LARGO, y vuelve a empezar).
+// Momentos de la secuencia, en segundos desde que la caja llega al escáner.
+export const PAUSA = 10;
+const T = {
+  zoomEntra: [0, 1.4],
+  etiquetaEntra: [0.9, 1.8],
+  escaneo: [3, 4.6],
+  lectura: [4.6, 5.4],
+  subida: [5.4, 6.8],
+  sapEntra: [6.2, 7],
+  registro: [6.8, 7.6],
+  etiquetaSale: [8, 8.8],
+  sapSale: [8.8, 9.6],
+  zoomSale: [8.6, 10],
+};
+
+// Segundos de cinta en marcha antes de frenar y duración de una vuelta completa.
+const T_FRENA = S_ESCANER / VELOCIDAD;
+const T_VUELTA = LARGO / VELOCIDAD;
+export const CICLO = T_VUELTA + PAUSA;
+
+const tramo = (x, [a, b]) => Math.min(1, Math.max(0, (x - a) / (b - a)));
+const suave = (f) => f * f * (3 - 2 * f);
+
+// Tiempo "de cinta": avanza con el reloj salvo mientras la cinta está frenada.
+export function tiempoCinta(t) {
+  const vueltas = Math.floor(t / CICLO);
+  const u = t - vueltas * CICLO;
+  let dentro;
+  if (u < T_FRENA) dentro = u;
+  else if (u < T_FRENA + PAUSA) dentro = T_FRENA;
+  else dentro = u - PAUSA;
+  return vueltas * T_VUELTA + dentro;
+}
+
+// Distancia recorrida por la caja `i` (de 0 a LARGO, y vuelve a empezar).
 export function distanciaCaja(i, t) {
   const separacion = LARGO / CAJAS;
-  const s = (t * VELOCIDAD + i * separacion) % LARGO;
+  const s = (tiempoCinta(t) * VELOCIDAD + i * separacion) % LARGO;
   return s < 0 ? s + LARGO : s;
 }
 
@@ -34,17 +65,17 @@ export function distanciaCaja(i, t) {
 export function puntoEnRuta(s) {
   const d = Math.min(Math.max(s, 0), LARGO);
   let resto = d;
-  let tramo = 0;
-  while (tramo < LARGOS.length - 1 && resto > LARGOS[tramo]) {
-    resto -= LARGOS[tramo];
-    tramo += 1;
+  let indice = 0;
+  while (indice < LARGOS.length - 1 && resto > LARGOS[indice]) {
+    resto -= LARGOS[indice];
+    indice += 1;
   }
-  const [x0, z0] = RUTA[tramo];
-  const [x1, z1] = RUTA[tramo + 1];
-  const f = resto / LARGOS[tramo];
+  const [x0, z0] = RUTA[indice];
+  const [x1, z1] = RUTA[indice + 1];
+  const f = resto / LARGOS[indice];
   // Orientación: 0 mirando a +x y π/2 mirando a -z.
   const angulos = [0, Math.PI / 2];
-  let giro = angulos[tramo];
+  let giro = angulos[indice];
   // Cerca de la esquina la caja gira de a poco en vez de pegar el salto.
   const hastaEsquina = LARGOS[0] - d;
   if (Math.abs(hastaEsquina) < RADIO_GIRO) {
@@ -54,27 +85,36 @@ export function puntoEnRuta(s) {
   return { x: x0 + (x1 - x0) * f, z: z0 + (z1 - z0) * f, giro };
 }
 
-// Pulso del láser del escáner: 0 lejos, 1 justo debajo, y baja de nuevo.
+// Pulso del láser del escáner cuando una caja pasa justo debajo: 0 lejos, 1 debajo.
 export function progresoEscaneo(s) {
   const ancho = 0.25;
   const d = Math.abs(s - S_ESCANER);
   return d >= ancho ? 0 : 1 - d / ancho;
 }
 
-// Avance del código de trazabilidad de una caja: 0 si todavía no se leyó (o ya llegó
-// al nodo), y de casi 0 a casi 1 mientras viaja hacia el nodo SAP.
-export function faseCodigo(s) {
-  if (s < S_ESCANER) return 0;
-  const f = (s - S_ESCANER) / (S_LLEGADA - S_ESCANER);
-  return f >= 1 ? 0 : f;
-}
-
-// Brillo del nodo SAP (0 a 1): destella cuando llega un código y se apaga de a poco.
-export function brilloSap(t) {
-  let brillo = 0;
-  for (let i = 0; i < CAJAS; i += 1) {
-    const desde = (distanciaCaja(i, t) - S_LLEGADA) / VELOCIDAD;
-    if (desde >= 0 && desde < DURACION_DESTELLO) brillo = Math.max(brillo, 1 - desde / DURACION_DESTELLO);
+// Todo lo que cambia durante el ciclo, de 0 a 1 cada cosa:
+//  zoom        acercamiento a la caja que está en el escáner
+//  etiqueta    la etiqueta ampliada junto a la caja
+//  escaneo     avance del láser sobre el QR
+//  lectura     el QR ya se leyó y se muestra el dato
+//  subida      el dato viaja hacia SAP
+//  sap         el panel de SAP a la vista
+//  registro    el nuevo registro se carga en el panel
+export function estadoPlanta(t) {
+  const u = t - Math.floor(t / CICLO) * CICLO;
+  const p = u - T_FRENA;
+  if (p < 0 || p > PAUSA) {
+    return { pausa: false, zoom: 0, etiqueta: 0, escaneo: 0, lectura: 0, subida: 0, sap: 0, registro: 0 };
   }
-  return brillo;
+  const entra = (r) => suave(tramo(p, r));
+  return {
+    pausa: true,
+    zoom: entra(T.zoomEntra) * (1 - entra(T.zoomSale)),
+    etiqueta: entra(T.etiquetaEntra) * (1 - entra(T.etiquetaSale)),
+    escaneo: tramo(p, T.escaneo),
+    lectura: tramo(p, T.lectura),
+    subida: tramo(p, T.subida),
+    sap: entra(T.sapEntra) * (1 - entra(T.sapSale)),
+    registro: tramo(p, T.registro),
+  };
 }

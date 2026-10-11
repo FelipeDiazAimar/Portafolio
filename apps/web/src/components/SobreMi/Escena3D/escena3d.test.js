@@ -10,7 +10,7 @@ import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrol
 import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { paletaEscena, valorMultimetro } from './paletas.js';
-import { CAJAS, LARGO, RUTA, S_ESCANER, S_LLEGADA, VELOCIDAD, brilloSap, distanciaCaja, faseCodigo, progresoEscaneo, puntoEnRuta } from './cicloPlanta.js';
+import { CAJAS, CICLO, LARGO, PAUSA, RUTA, S_ESCANER, VELOCIDAD, distanciaCaja, estadoPlanta, progresoEscaneo, puntoEnRuta, tiempoCinta } from './cicloPlanta.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -560,51 +560,78 @@ test('puntoEnRuta: la caja gira un cuarto de vuelta al doblar, sin saltos brusco
   }
 });
 
-test('distanciaCaja: las cajas van parejas, avanzan con la velocidad de la cinta y dan la vuelta', () => {
+test('tiempoCinta: avanza con el reloj salvo mientras la cinta está frenada', () => {
+  const inicio = S_ESCANER / VELOCIDAD;
+  cerca(tiempoCinta(1) - tiempoCinta(0), 1);
+  cerca(tiempoCinta(inicio + 0.1), inicio);
+  cerca(tiempoCinta(inicio + PAUSA - 0.1), inicio, 1e-9);
+  cerca(tiempoCinta(inicio + PAUSA + 1) - tiempoCinta(inicio + PAUSA), 1);
+  let anterior = 0;
+  for (let t = 0; t < CICLO * 3; t += 0.05) {
+    const valor = tiempoCinta(t);
+    assert.ok(valor >= anterior - 1e-12, `retrocede en t=${t}`);
+    anterior = valor;
+  }
+});
+
+test('distanciaCaja: la caja 0 queda frenada justo bajo el escáner en cada ciclo, y las cajas van parejas', () => {
+  for (let ciclo = 0; ciclo < 3; ciclo += 1) {
+    const durante = ciclo * CICLO + S_ESCANER / VELOCIDAD + PAUSA / 2;
+    cerca(distanciaCaja(0, durante), S_ESCANER, 1e-6);
+  }
   const separacion = LARGO / CAJAS;
-  cerca(distanciaCaja(0, 0), 0);
-  cerca(distanciaCaja(1, 0), separacion);
-  cerca(distanciaCaja(0, 1) - distanciaCaja(0, 0), VELOCIDAD);
-  for (let t = 0; t < 30; t += 0.7) {
+  cerca(distanciaCaja(1, 0) - distanciaCaja(0, 0), separacion);
+  for (let t = 0; t < CICLO * 2; t += 0.37) {
     for (let i = 0; i < CAJAS; i += 1) {
       const s = distanciaCaja(i, t);
       assert.ok(s >= 0 && s < LARGO, `caja ${i} fuera de la ruta: ${s}`);
     }
   }
-  cerca(distanciaCaja(2, LARGO / VELOCIDAD), distanciaCaja(2, 0), 1e-6);
+  // Pasado un ciclo completo todo vuelve a la misma posición.
+  cerca(distanciaCaja(3, 5), distanciaCaja(3, 5 + CICLO), 1e-6);
 });
 
 test('progresoEscaneo: sólo hay láser justo bajo el escáner', () => {
   assert.equal(progresoEscaneo(0), 0);
   cerca(progresoEscaneo(S_ESCANER), 1);
   assert.equal(progresoEscaneo(S_ESCANER + 1), 0);
-  assert.ok(progresoEscaneo(S_ESCANER + 0.1) > 0 && progresoEscaneo(S_ESCANER + 0.1) < 1);
 });
 
-test('faseCodigo: no hay código antes de leer, viaja hasta el nodo y se apaga al llegar', () => {
-  assert.equal(faseCodigo(S_ESCANER - 0.5), 0);
-  assert.ok(faseCodigo(S_ESCANER + 0.01) > 0);
-  assert.ok(faseCodigo((S_ESCANER + S_LLEGADA) / 2) > 0.4 && faseCodigo((S_ESCANER + S_LLEGADA) / 2) < 0.6);
-  assert.equal(faseCodigo(S_LLEGADA + 0.1), 0);
-  let anterior = 0;
-  for (let s = S_ESCANER; s < S_LLEGADA; s += 0.02) {
-    const f = faseCodigo(s);
-    assert.ok(f >= anterior - 1e-12, `retrocede en s=${s}`);
-    anterior = f;
+test('estadoPlanta: fuera de la pausa todo está en reposo', () => {
+  const e = estadoPlanta(0.5);
+  assert.equal(e.pausa, false);
+  for (const clave of ['zoom', 'etiqueta', 'escaneo', 'lectura', 'subida', 'sap', 'registro']) assert.equal(e[clave], 0, clave);
+});
+
+test('estadoPlanta: la secuencia ocurre en orden y todo queda entre 0 y 1', () => {
+  const inicio = S_ESCANER / VELOCIDAD;
+  const momento = (p) => estadoPlanta(inicio + p);
+  // Zoom primero, después la etiqueta, el escaneo, la lectura, la subida y el panel de SAP.
+  assert.ok(momento(1.5).zoom > 0.99);
+  assert.ok(momento(2).etiqueta > 0.99 && momento(2).escaneo === 0);
+  assert.ok(momento(3.8).escaneo > 0.3 && momento(3.8).escaneo < 0.7 && momento(3.8).lectura === 0);
+  assert.ok(momento(5).lectura > 0 && momento(5).lectura < 1 && momento(5).escaneo === 1);
+  assert.ok(momento(6).subida > 0 && momento(6).subida < 1 && momento(6).sap === 0);
+  assert.ok(momento(7.2).sap > 0.99 && momento(7.2).registro > 0 && momento(7.2).registro < 1);
+  assert.ok(momento(7.7).registro === 1);
+  // Al terminar vuelve todo al estado inicial.
+  const fin = momento(PAUSA + 0.1);
+  assert.equal(fin.zoom + fin.etiqueta + fin.sap, 0);
+  for (let p = -1; p <= PAUSA + 1; p += 0.05) {
+    const e = momento(p);
+    for (const valor of [e.zoom, e.etiqueta, e.escaneo, e.lectura, e.subida, e.sap, e.registro]) {
+      assert.ok(valor >= 0 && valor <= 1, `fuera de rango en p=${p}: ${valor}`);
+    }
   }
 });
 
-test('brilloSap: siempre entre 0 y 1, destella al llegar cada código y se apaga entre uno y otro', () => {
-  let maximo = 0;
-  let minimo = 1;
-  for (let t = 0; t < 40; t += 0.02) {
-    const b = brilloSap(t);
-    assert.ok(b >= 0 && b <= 1, `fuera de rango: ${b}`);
-    maximo = Math.max(maximo, b);
-    minimo = Math.min(minimo, b);
+test('estadoPlanta: el zoom entra y sale sin saltos', () => {
+  let anterior = estadoPlanta(0).zoom;
+  for (let t = 0.02; t < CICLO * 2; t += 0.02) {
+    const z = estadoPlanta(t).zoom;
+    assert.ok(Math.abs(z - anterior) < 0.08, `salto de zoom en t=${t}`);
+    anterior = z;
   }
-  assert.ok(maximo > 0.9, `no destella: ${maximo}`);
-  assert.equal(minimo, 0);
 });
 
 test('escenas: la planta de 2026 existe y gira sólo dentro de un rango', () => {

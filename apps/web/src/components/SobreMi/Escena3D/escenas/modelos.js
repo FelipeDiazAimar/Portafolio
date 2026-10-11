@@ -43,10 +43,11 @@ export function separarPiezas(escena, { anchoObjetivo, elegirPiezas, extras = []
 
 // Clona un modelo y lo deja listo para encajar en otro: lo escala y gira, y apoya
 // el centro de su base en "base" (en el espacio del modelo que lo recibe).
-export function colocarPieza(escena, { nombre, escala = 1, rotacion = [0, 0, 0], base, elevacion, espejoY = false }) {
+export function colocarPieza(escena, { nombre, escala = 1, rotacion = [0, 0, 0], base, elevacion, soloVertical = false, espejoY = false }) {
   const pivote = new THREE.Group();
   pivote.name = nombre;
   pivote.userData.elevacion = elevacion;
+  pivote.userData.soloVertical = soloVertical;
   const contenido = escena.clone(true);
   // Espejo en el eje y del modelo: para darle la vuelta a una pieza sin que
   // cambie de lado lo que ya miraba al frente.
@@ -103,7 +104,8 @@ export function construirRam(escena) {
 
   // Cuerpo del disipador: un poco más corto del lado de los contactos, que quedan a la vista.
   const cuerpo = new THREE.Mesh(
-    new THREE.BoxGeometry(tamano.x * 0.93, grosor, tamano.z * 0.99),
+    // Más fino que la distancia entre las láminas: si no, comparten plano con ellas y parpadean.
+    new THREE.BoxGeometry(tamano.x * 0.93, grosor * 0.9, tamano.z * 0.99),
     new THREE.MeshStandardMaterial({ color: "#14151a", roughness: 0.45, metalness: 0.6 })
   );
   cuerpo.position.set(c.x - tamano.x * 0.035, c.y - grosor / 2 + grosor / 2, c.z);
