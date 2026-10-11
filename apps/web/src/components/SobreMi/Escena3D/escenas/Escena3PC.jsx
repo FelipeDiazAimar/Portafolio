@@ -5,7 +5,6 @@ import { useFrame } from '@react-three/fiber';
 import { Environment, Lightformer, useGLTF } from '@react-three/drei';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { fraccionExplosion } from '../cicloPC.js';
-import { ajusteGpu } from '../ajusteGpu.js';
 import { colocarPieza, construirRam, separarPiezas } from './modelos.js';
 
 const RUTA_PLACA = '/modelos/placa-am4.glb';
@@ -23,7 +22,7 @@ const BASES_RAM = [
   [1.36, 0.3, -0.781],
   [1.53, 0.3, -0.781],
 ];
-const BASE_GPU = [-0.45, -0.08, 1.25];
+const BASE_GPU = [-0.45, -0.338, 1.25];
 
 // Las piezas de la placa son los hijos de "motherboard" más la ranura mini PCIe.
 // La placa en sí (el circuito impreso) es la pieza `Object_4`.
@@ -50,12 +49,6 @@ function Flotante({ centro, objeto, fraccion, fijo, children }) {
   useFrame(() => {
     const f = fijo ? 0 : fraccion.current;
     grupo.current.position.set(centro[0] * f * lateral, f * SEPARACION * elevacion, centro[2] * f * lateral);
-    // TEMPORAL: ajuste manual de la gráfica.
-    if (objeto.name === 'gpu') {
-      grupo.current.position.x += ajusteGpu.x;
-      grupo.current.position.y += ajusteGpu.y;
-      grupo.current.position.z += ajusteGpu.z;
-    }
   });
   return <group ref={grupo}>{children}</group>;
 }
@@ -98,11 +91,10 @@ export default function Escena3PC({ activa, reducido }) {
       return;
     }
     tiempo.current += Math.min(delta, 0.05);
-    fraccion.current = ajusteGpu.congelar ? 0 : fraccionExplosion(tiempo.current);
+    fraccion.current = fraccionExplosion(tiempo.current);
   });
 
   const { escala, centro, piezas } = modelo;
-  ajusteGpu.escala = escala; // TEMPORAL
   return (
     <group position={[0.1, 0.05, 0]} rotation={[0.42, -0.45, 0]}>
       {/* Iluminación de estudio: paneles de luz que se reflejan en los metales. */}

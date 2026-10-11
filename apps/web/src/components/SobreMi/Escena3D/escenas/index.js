@@ -24,7 +24,7 @@ export function esEscenaFija(id) {
 // (radianes): no tiene sentido verles la parte de atrás, sea una pared de
 // tarjetas o una placa. En vez de dar vueltas, se mecen suavemente. Sin entrada =
 // giro libre (la notebook).
-const LIMITES_GIRO = { 2: 0.7, 3: 0.7, 4: 0.7, 5: 0.7 };
+const LIMITES_GIRO = { 2: 0.7, 3: 0.7, 4: 0.7, 5: 0.7, 6: 0.9 };
 
 export function limiteDeGiro(id) {
   return LIMITES_GIRO[id] ?? null;

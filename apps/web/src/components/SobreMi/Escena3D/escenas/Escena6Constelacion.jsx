@@ -1,20 +1,50 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Billboard, Line, RoundedBox } from '@react-three/drei';
+import { useFrame, useLoader } from '@react-three/fiber';
+import { Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { crearPantalla } from '../pantallaCanvas.js';
-import { enlaces, fasePulso, posicionNodo, puntoDe, puntoEnTramo } from '../constelacion.js';
+import {
+  T_COLAPSO,
+  aparicion,
+  aparicionNucleo,
+  colapso,
+  enlaces,
+  expansion,
+  fasePulso,
+  posicionNodo,
+  progresoEnlace,
+  puntoDe,
+  puntoEnTramo,
+} from '../constelacion.js';
 import { dibujarBandera } from '../dibujarBandera.js';
 import { MATERIAS } from '../cicloMaterias.js';
 import { dibujarTarjeta } from '../texturasMaterias.js';
 import { dibujarManzanaEn } from '../manzanaPath.js';
+import { dibujarLogoSap, dibujarLogoUtn } from '../dibujarLogos.js';
+import { MINIATURAS, Peana } from './hoy/Miniaturas.jsx';
+import RedNeuronal from './hoy/RedNeuronal.jsx';
 
 // Un nombre por hito del anillo (el último hito, "Hoy", es el núcleo).
 const NOMBRES = ['Origen', '2022', '2023', '2024', '2025', '2026'];
 const ENLACES = enlaces();
+// Con movimiento reducido: la red ya expandida, sin animación.
+const T_QUIETO = 20;
+
+const suave = (x) => x * x * (3 - 2 * x);
+const limitar = (x) => Math.min(1, Math.max(0, x));
+// Entrada con un pequeño rebote.
+const conRebote = (x) => {
+  const c1 = 1.70158;
+  return x <= 0 ? 0 : x >= 1 ? 1 : 1 + (c1 + 1) * (x - 1) ** 3 + c1 * (x - 1) ** 2;
+};
+
+const ARRIBA = new THREE.Vector3(0, 1, 0);
+const a = new THREE.Vector3();
+const b = new THREE.Vector3();
+const direccion = new THREE.Vector3();
 
 // Etiqueta: texto blanco sobre una pastilla azul.
 function dibujarEtiqueta(ctx, w, h, texto, nucleo = false) {
@@ -33,185 +63,8 @@ function dibujarEtiqueta(ctx, w, h, texto, nucleo = false) {
   ctx.fillText(texto, w / 2, h * 0.53);
 }
 
-// Aro de luz bajo cada miniatura y su etiqueta flotando arriba.
-function Peana({ mats, etiqueta }) {
-  return (
-    <>
-      <mesh position={[0, -0.04, 0]} rotation={[Math.PI / 2, 0, 0]} material={mats.aro}>
-        <torusGeometry args={[0.66, 0.012, 8, 64]} />
-      </mesh>
-      <Billboard position={[0, 1.05, 0]}>
-        <mesh material={etiqueta}>
-          <planeGeometry args={[0.62, 0.2]} />
-        </mesh>
-      </Billboard>
-    </>
-  );
-}
-
-// 0 — Origen: la notebook, abierta, con la manzana en la pantalla.
-function MiniNotebook({ mats }) {
-  return (
-    <group position={[0, 0, 0.05]}>
-      <RoundedBox args={[1, 0.05, 0.7]} radius={0.02} smoothness={3} position={[0, 0.025, 0]} material={mats.aluminio} />
-      <mesh position={[0, 0.053, -0.06]} material={mats.oscuro}>
-        <boxGeometry args={[0.86, 0.008, 0.3]} />
-      </mesh>
-      <mesh position={[0, 0.052, 0.22]} material={mats.claro}>
-        <boxGeometry args={[0.32, 0.006, 0.17]} />
-      </mesh>
-      <group position={[0, 0.05, -0.35]} rotation={[-1.75, 0, 0]}>
-        <RoundedBox args={[1, 0.035, 0.7]} radius={0.015} smoothness={3} position={[0, 0, 0.35]} material={mats.aluminio} />
-        <mesh position={[0, -0.019, 0.35]} rotation={[Math.PI / 2, 0, 0]} material={mats.pantallaMini}>
-          <planeGeometry args={[0.92, 0.6]} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
-// 1 — 2022: la bandera en su asta, con un leve flameo.
-function MiniBandera({ mats, refBandera }) {
-  return (
-    <group position={[-0.3, 0, 0]}>
-      <mesh position={[0, 0.58, 0]} material={mats.aluminio}>
-        <cylinderGeometry args={[0.018, 0.022, 1.16, 12]} />
-      </mesh>
-      <mesh position={[0, 1.17, 0]} material={mats.oro}>
-        <sphereGeometry args={[0.04, 12, 12]} />
-      </mesh>
-      <mesh ref={refBandera} position={[0.4, 0.85, 0]} material={mats.bandera}>
-        <planeGeometry args={[0.78, 0.5, 14, 6]} />
-      </mesh>
-      <mesh position={[0, 0.02, 0]} material={mats.aluminio}>
-        <cylinderGeometry args={[0.1, 0.12, 0.04, 20]} />
-      </mesh>
-    </group>
-  );
-}
-
-// 2 — 2023: tres tarjetas de materias en abanico.
-function MiniTarjetas({ mats }) {
-  return (
-    <group position={[0, 0.5, 0]}>
-      {mats.tarjetas.map((material, i) => (
-        <mesh key={i} position={[(i - 1) * 0.18, (1 - i) * 0.06, i * 0.07]} rotation={[0, (1 - i) * 0.18, (i - 1) * 0.08]} material={material}>
-          <planeGeometry args={[0.8, 0.5]} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-// 3 — 2024: la placa con procesador, memorias y gráfica.
-function MiniPlaca({ mats }) {
-  return (
-    <group>
-      <mesh position={[0, 0.02, 0]} material={mats.pcb}>
-        <boxGeometry args={[1, 0.04, 1]} />
-      </mesh>
-      <mesh position={[0.02, 0.06, -0.12]} material={mats.acero}>
-        <boxGeometry args={[0.26, 0.04, 0.26]} />
-      </mesh>
-      <mesh position={[0.02, 0.085, -0.12]} material={mats.niquel}>
-        <boxGeometry args={[0.18, 0.015, 0.18]} />
-      </mesh>
-      {[0.36, 0.44].map((x) => (
-        <mesh key={x} position={[x, 0.2, -0.1]} material={mats.oscuro}>
-          <boxGeometry args={[0.035, 0.32, 0.6]} />
-        </mesh>
-      ))}
-      <mesh position={[-0.36, 0.1, -0.28]} material={mats.acero}>
-        <boxGeometry args={[0.2, 0.12, 0.3]} />
-      </mesh>
-      <group position={[-0.12, 0.2, 0.34]}>
-        <mesh material={mats.tarjeta}>
-          <boxGeometry args={[0.86, 0.3, 0.12]} />
-        </mesh>
-        {[-0.2, 0.2].map((x) => (
-          <mesh key={x} position={[x, 0, 0.065]} rotation={[Math.PI / 2, 0, 0]} material={mats.ventilador}>
-            <cylinderGeometry args={[0.1, 0.1, 0.012, 20]} />
-          </mesh>
-        ))}
-      </group>
-    </group>
-  );
-}
-
-// 4 — 2025: el banco de trabajo, con el multímetro y el celular.
-function MiniBanco({ mats }) {
-  return (
-    <group>
-      <mesh position={[0, 0.015, 0]} material={mats.tapete}>
-        <boxGeometry args={[1.2, 0.03, 0.85]} />
-      </mesh>
-      <mesh position={[-0.05, 0.05, -0.05]} material={mats.pcb}>
-        <boxGeometry args={[0.46, 0.03, 0.46]} />
-      </mesh>
-      <group position={[0.4, 0.06, -0.08]} rotation={[0, 0.4, 0]}>
-        <mesh material={mats.amarillo}>
-          <boxGeometry args={[0.22, 0.06, 0.45]} />
-        </mesh>
-        <mesh position={[0, 0.032, -0.12]} material={mats.lcd}>
-          <boxGeometry args={[0.15, 0.004, 0.08]} />
-        </mesh>
-        <mesh position={[0, 0.034, 0.08]} material={mats.oscuro}>
-          <cylinderGeometry args={[0.06, 0.06, 0.008, 16]} />
-        </mesh>
-      </group>
-      <group position={[-0.42, 0.03, 0.22]} rotation={[0, 0.5, 0]}>
-        <RoundedBox args={[0.2, 0.025, 0.4]} radius={0.02} smoothness={3} material={mats.telefono} />
-        <mesh position={[0, 0.014, 0]} rotation={[-Math.PI / 2, 0, 0]} material={mats.pantallaTelefono}>
-          <planeGeometry args={[0.17, 0.36]} />
-        </mesh>
-      </group>
-      <mesh position={[-0.35, 0.14, -0.28]} rotation={[0, 0.3, 0]} material={mats.aluminio}>
-        <boxGeometry args={[0.4, 0.22, 0.03]} />
-      </mesh>
-    </group>
-  );
-}
-
-// 5 — 2026: la cinta en L con cajas y el escáner.
-function MiniPlanta({ mats }) {
-  return (
-    <group>
-      <mesh position={[-0.1, 0.2, 0.3]} material={mats.cinta}>
-        <boxGeometry args={[0.95, 0.07, 0.22]} />
-      </mesh>
-      <mesh position={[0.38, 0.2, -0.12]} material={mats.cinta}>
-        <boxGeometry args={[0.22, 0.07, 0.8]} />
-      </mesh>
-      {[[-0.5, 0.2], [0.3, 0.4], [0.4, -0.45], [0.4, 0.4]].map(([x, z], i) => (
-        <mesh key={i} position={[x, 0.1, z]} material={mats.acero}>
-          <boxGeometry args={[0.04, 0.2, 0.04]} />
-        </mesh>
-      ))}
-      {[[-0.35, 0.3], [0.05, 0.3], [0.38, -0.1]].map(([x, z], i) => (
-        <mesh key={i} position={[x, 0.31, z]} material={mats.carton}>
-          <boxGeometry args={[0.15, 0.15, 0.15]} />
-        </mesh>
-      ))}
-      <group position={[-0.15, 0, 0.3]}>
-        {[-1, 1].map((l) => (
-          <mesh key={l} position={[0, 0.34, l * 0.17]} material={mats.acero}>
-            <boxGeometry args={[0.04, 0.6, 0.04]} />
-          </mesh>
-        ))}
-        <mesh position={[0, 0.64, 0]} material={mats.acero}>
-          <boxGeometry args={[0.05, 0.04, 0.4]} />
-        </mesh>
-        <mesh position={[0, 0.46, 0]} material={mats.laser}>
-          <boxGeometry args={[0.005, 0.3, 0.3]} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
-const MINIATURAS = [MiniNotebook, MiniBandera, MiniTarjetas, MiniPlaca, MiniBanco, MiniPlanta];
-
 export default function Escena6Constelacion({ activa, reducido, claro = false }) {
+  const escudo = useLoader(THREE.TextureLoader, '/cambridge-escudo.png');
   const recursos = useMemo(() => {
     const texturas = [];
     const crear = (ancho, alto, dibujar) => {
@@ -223,8 +76,12 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
     };
     const std = (opciones) => new THREE.MeshStandardMaterial(opciones);
     const luz = claro ? '#2f6fe6' : '#6fa8ff';
+    // La mezcla aditiva sobre un fondo claro se vería blanca: ahí se usa la normal.
+    const mezcla = claro ? THREE.NormalBlending : THREE.AdditiveBlending;
     const etiqueta = (texto, nucleo) =>
       new THREE.MeshBasicMaterial({ map: crear(320, 104, (ctx, w, h) => dibujarEtiqueta(ctx, w, h, texto, nucleo)), transparent: true, depthWrite: false, toneMapped: false });
+    const logo = (textura) => new THREE.MeshBasicMaterial({ map: textura, transparent: true, depthWrite: false, toneMapped: false });
+    escudo.colorSpace = THREE.SRGBColorSpace;
     const mats = {
       aluminio: std({ color: '#c3c9d4', metalness: 0.7, roughness: 0.35 }),
       oscuro: std({ color: '#151821', roughness: 0.6 }),
@@ -246,7 +103,10 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
       aro: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.7, toneMapped: false }),
       nucleo: new THREE.MeshBasicMaterial({ color: '#4d8dff', transparent: true, opacity: 0.8, toneMapped: false }),
       aroNucleo: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.6, toneMapped: false }),
-      pulso: new THREE.MeshBasicMaterial({ color: '#c9e0ff', toneMapped: false }),
+      onda: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0, depthWrite: false, blending: mezcla, toneMapped: false }),
+      cadena: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.85, depthWrite: false, blending: mezcla, toneMapped: false }),
+      hilo: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.22, depthWrite: false, blending: mezcla, toneMapped: false }),
+      pulso: new THREE.MeshBasicMaterial({ color: claro ? '#0b3d91' : '#c9e0ff', toneMapped: false }),
       bandera: new THREE.MeshBasicMaterial({ map: crear(512, 330, (ctx, w, h) => dibujarBandera(ctx, w, h)), side: THREE.DoubleSide, toneMapped: false }),
       pantallaMini: new THREE.MeshBasicMaterial({
         map: crear(512, 330, (ctx, w, h) => {
@@ -259,6 +119,9 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
       tarjetas: MATERIAS.slice(0, 3).map(
         (nombre, i) => new THREE.MeshBasicMaterial({ map: crear(640, 400, (ctx, w, h) => dibujarTarjeta(ctx, w, h, nombre, i, claro)), side: THREE.DoubleSide, toneMapped: false })
       ),
+      logoUtn: logo(crear(300, 340, (ctx, w, h) => dibujarLogoUtn(ctx, w, h, claro ? '#16254d' : '#f2f6ff'))),
+      logoSap: logo(crear(512, 250, (ctx, w, h) => dibujarLogoSap(ctx, w, h))),
+      logoCambridge: logo(escudo),
     };
     return {
       texturas,
@@ -267,64 +130,125 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
       etiquetaNucleo: etiqueta('HOY', true),
       luz,
       nucleoBorde: new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.42, 0)),
+      geoEnlace: new THREE.CylinderGeometry(1, 1, 1, 6, 1, true),
+      geoPulso: new THREE.SphereGeometry(1, 10, 10),
     };
-  }, [claro]);
-  const { mats, etiquetas, etiquetaNucleo, luz, nucleoBorde } = recursos;
+  }, [claro, escudo]);
+  const { mats, etiquetas, etiquetaNucleo, luz, nucleoBorde, geoEnlace, geoPulso } = recursos;
 
-  const tiempo = useRef(0);
+  const tiempo = useRef(reducido ? T_QUIETO : 0);
+  const refConstelacion = useRef(null);
   const refAnillo = useRef(null);
+  const refNodos = useRef([]);
   const refMiniaturas = useRef([]);
   const refNucleo = useRef(null);
+  const refEtiquetaNucleo = useRef(null);
+  const refEnlaces = useRef([]);
   const refPulsos = useRef([]);
+  const refOnda = useRef(null);
+  const refRed = useRef(null);
   const refBandera = useRef(null);
 
   useEffect(
     () => () => {
       recursos.texturas.forEach((t) => t.dispose());
       const liberar = (m) => (Array.isArray(m) ? m.forEach(liberar) : m.dispose?.());
-      Object.values(recursos.mats).forEach(liberar);
+      Object.entries(recursos.mats).forEach(([clave, m]) => {
+        if (clave !== 'logoCambridge') liberar(m);
+      });
       etiquetas.forEach((m) => m.dispose());
       etiquetaNucleo.dispose();
       nucleoBorde.dispose();
+      geoEnlace.dispose();
+      geoPulso.dispose();
     },
-    [recursos, etiquetas, etiquetaNucleo, nucleoBorde]
+    [recursos, etiquetas, etiquetaNucleo, nucleoBorde, geoEnlace, geoPulso]
   );
 
   useFrame((_, delta) => {
     if (!activa) return;
     if (!reducido) tiempo.current += Math.min(delta, 0.05);
     const t = tiempo.current;
+    const recogida = suave(colapso(t));
+    const red = expansion(t);
 
-    // El anillo gira despacio y cada miniatura gira sobre sí misma.
-    if (refAnillo.current) refAnillo.current.rotation.y = t * 0.14;
-    refMiniaturas.current.forEach((grupo, i) => {
-      if (grupo) grupo.rotation.y = t * 0.45 + i * 1.3;
-    });
-    if (refNucleo.current) {
-      refNucleo.current.rotation.y = t * 0.6;
-      refNucleo.current.rotation.x = t * 0.35;
+    // Mientras la constelación existe: nodos que van apareciendo, enlaces que se dibujan.
+    const constelacion = refConstelacion.current;
+    constelacion.visible = colapso(t) < 1;
+    if (constelacion.visible) {
+      if (refAnillo.current) refAnillo.current.rotation.y = t * 0.14;
+      refNodos.current.forEach((nodo, i) => {
+        if (!nodo) return;
+        const escala = conRebote(aparicion(i, t)) * (1 - recogida);
+        nodo.visible = escala > 0.002;
+        nodo.scale.setScalar(Math.max(escala, 0.0001));
+        const [x, y, z] = posicionNodo(i);
+        nodo.position.set(-x * recogida, -y * recogida, -z * recogida);
+        if (refMiniaturas.current[i]) refMiniaturas.current[i].rotation.y = t * 0.45 + i * 1.3;
+      });
+
+      ENLACES.forEach((enlace, k) => {
+        const cilindro = refEnlaces.current[k];
+        const pulso = refPulsos.current[k];
+        const progreso = progresoEnlace(enlace, t);
+        const visible = progreso > 0.001 && recogida < 0.995;
+        cilindro.visible = visible;
+        if (visible) {
+          const pa = puntoDe(enlace.desde);
+          const pb = puntoDe(enlace.hasta);
+          a.set(pa[0], pa[1], pa[2]).multiplyScalar(1 - recogida);
+          b.set(pb[0], pb[1], pb[2]).multiplyScalar(1 - recogida);
+          direccion.subVectors(b, a);
+          const largo = direccion.length();
+          cilindro.position.copy(a).addScaledVector(direccion, progreso / 2);
+          cilindro.scale.set(enlace.tipo === 'cadena' ? 0.02 : 0.008, Math.max(largo * progreso, 0.0001), enlace.tipo === 'cadena' ? 0.02 : 0.008);
+          if (largo > 1e-6) cilindro.quaternion.setFromUnitVectors(ARRIBA, direccion.normalize());
+        }
+        // Pulso de luz: sólo cuando el enlace ya está completo.
+        const pulsa = progreso >= 1 && recogida < 0.5;
+        pulso.visible = pulsa;
+        if (pulsa) {
+          const p = puntoEnTramo(puntoDe(enlace.desde), puntoDe(enlace.hasta), fasePulso(t, k));
+          pulso.position.set(p[0] * (1 - recogida), p[1] * (1 - recogida), p[2] * (1 - recogida));
+        }
+      });
+      mats.cadena.opacity = 0.85 * (1 - recogida);
+      mats.hilo.opacity = 0.22 * (1 - recogida);
     }
-    mats.nucleo.opacity = 0.6 + 0.25 * Math.sin(t * 2);
 
-    // La bandera flamea: se ondula el plano con una onda que viaja de la punta al asta.
+    // Bandera: se ondula con una onda que viaja de la punta al asta.
     const bandera = refBandera.current;
-    if (bandera) {
+    if (bandera && constelacion.visible) {
       const pos = bandera.geometry.attributes.position;
       for (let k = 0; k < pos.count; k += 1) {
         const x = pos.getX(k);
-        const peso = (x + 0.39) / 0.78;
-        pos.setZ(k, Math.sin(x * 7 - t * 4) * 0.05 * peso);
+        pos.setZ(k, Math.sin(x * 7 - t * 4) * 0.05 * ((x + 0.39) / 0.78));
       }
       pos.needsUpdate = true;
     }
 
-    // Pulsos de luz que recorren los enlaces.
-    ENLACES.forEach((enlace, k) => {
-      const pulso = refPulsos.current[k];
-      if (!pulso) return;
-      const p = puntoEnTramo(puntoDe(enlace.desde), puntoDe(enlace.hasta), fasePulso(t, k));
-      pulso.position.set(p[0], p[1], p[2]);
-    });
+    // Núcleo: aparece primero, destella al terminar de recogerse y se disuelve en la red.
+    const nucleo = refNucleo.current;
+    const destello = Math.sin(Math.PI * limitar((t - (T_COLAPSO[1] - 0.6)) / 1.2));
+    const escalaNucleo = aparicionNucleo(t) * (1 - suave(limitar(red * 2.4))) * (1 + 0.9 * destello + 0.25 * recogida);
+    nucleo.scale.setScalar(Math.max(escalaNucleo, 0.0001));
+    nucleo.rotation.y = t * 0.6;
+    nucleo.rotation.x = t * 0.35;
+    mats.nucleo.opacity = 0.6 + 0.25 * Math.sin(t * 2);
+    refEtiquetaNucleo.current.scale.setScalar(Math.max(aparicionNucleo(t) * (1 - recogida), 0.0001));
+
+    // Onda expansiva: un aro de luz que sale del núcleo cuando nace la red.
+    const onda = refOnda.current;
+    onda.visible = red > 0 && red < 1;
+    if (onda.visible) {
+      onda.scale.setScalar(0.3 + 5.5 * (1 - (1 - red) ** 2));
+      mats.onda.opacity = 0.9 * (1 - red) ** 1.5;
+    }
+
+    // La red neuronal gira muy despacio una vez que existe.
+    const grupoRed = refRed.current;
+    grupoRed.visible = red > 0;
+    if (grupoRed.visible) grupoRed.rotation.y = t * 0.1;
   });
 
   return (
@@ -332,63 +256,76 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
       <directionalLight position={[3, 5, 4]} intensity={claro ? 2.2 : 1.6} color="#ffffff" />
       <directionalLight position={[-4, 2, -3]} intensity={0.6} color="#9fc2ff" />
 
-      {/* Anillo de miniaturas: una por hito, cada una con su aro y su etiqueta. */}
-      <group ref={refAnillo}>
-        {NOMBRES.map((nombre, i) => {
-          const Miniatura = MINIATURAS[i];
-          const posicion = posicionNodo(i);
-          return (
-            <PiezaDesarmable key={nombre} posicion={posicion} semilla={i + 1}>
-              <group ref={(nodo) => { refMiniaturas.current[i] = nodo; }}>
-                <Miniatura mats={mats} refBandera={refBandera} />
-              </group>
-              <Peana mats={mats} etiqueta={etiquetas[i]} />
-            </PiezaDesarmable>
-          );
-        })}
+      {/* Constelación: una miniatura por hito, cada una con su aro, su etiqueta y su logo. */}
+      <group ref={refConstelacion}>
+        <group ref={refAnillo}>
+          {NOMBRES.map((nombre, i) => {
+            const Miniatura = MINIATURAS[i];
+            return (
+              <PiezaDesarmable key={nombre} posicion={posicionNodo(i)} semilla={i + 1}>
+                <group ref={(nodo) => { refNodos.current[i] = nodo; }}>
+                  <group ref={(nodo) => { refMiniaturas.current[i] = nodo; }}>
+                    <Miniatura mats={mats} refBandera={refBandera} />
+                  </group>
+                  <Peana mats={mats} etiqueta={etiquetas[i]} />
+                </group>
+              </PiezaDesarmable>
+            );
+          })}
 
-        {/* Enlaces de luz y los pulsos que viajan por ellos. */}
-        <PiezaDesarmable semilla={8}>
-          {ENLACES.map((e, k) => (
-            <Line
-              key={k}
-              points={[puntoDe(e.desde), puntoDe(e.hasta)]}
-              color={luz}
-              lineWidth={e.tipo === 'cadena' ? 2 : 1}
-              transparent
-              opacity={e.tipo === 'cadena' ? 0.85 : 0.22}
-            />
-          ))}
-          {ENLACES.map((e, k) => (
-            <mesh key={k} ref={(nodo) => { refPulsos.current[k] = nodo; }} material={mats.pulso}>
-              <sphereGeometry args={[e.tipo === 'cadena' ? 0.055 : 0.032, 10, 10]} />
-            </mesh>
-          ))}
-        </PiezaDesarmable>
+          {/* Enlaces de luz (cilindros finos que crecen) y los pulsos que viajan por ellos. */}
+          <PiezaDesarmable semilla={8}>
+            {ENLACES.map((e, k) => (
+              <mesh key={`e${k}`} ref={(nodo) => { refEnlaces.current[k] = nodo; }} geometry={geoEnlace} material={e.tipo === 'cadena' ? mats.cadena : mats.hilo} visible={false} />
+            ))}
+            {ENLACES.map((e, k) => (
+              <mesh
+                key={`p${k}`}
+                ref={(nodo) => { refPulsos.current[k] = nodo; }}
+                geometry={geoPulso}
+                material={mats.pulso}
+                scale={e.tipo === 'cadena' ? 0.055 : 0.032}
+                visible={false}
+              />
+            ))}
+          </PiezaDesarmable>
+        </group>
+      </group>
 
-        {/* Núcleo: "Hoy". */}
-        <PiezaDesarmable semilla={7}>
-          <group ref={refNucleo}>
-            <mesh material={mats.nucleo}>
-              <icosahedronGeometry args={[0.3, 1]} />
-            </mesh>
-            <lineSegments geometry={nucleoBorde}>
-              <lineBasicMaterial color={luz} />
-            </lineSegments>
-          </group>
+      {/* Núcleo "Hoy" y su onda expansiva. */}
+      <PiezaDesarmable semilla={7}>
+        <group ref={refNucleo} scale={0.0001}>
+          <mesh material={mats.nucleo}>
+            <icosahedronGeometry args={[0.3, 1]} />
+          </mesh>
+          <lineSegments geometry={nucleoBorde}>
+            <lineBasicMaterial color={luz} />
+          </lineSegments>
           <mesh rotation={[Math.PI / 2.4, 0, 0]} material={mats.aroNucleo}>
             <torusGeometry args={[0.62, 0.012, 8, 64]} />
           </mesh>
           <mesh rotation={[Math.PI / 2.4, 0.9, 0.5]} material={mats.aroNucleo}>
             <torusGeometry args={[0.82, 0.008, 8, 64]} />
           </mesh>
-          <Billboard position={[0, 0.75, 0]}>
+        </group>
+        <Billboard position={[0, 0.75, 0]}>
+          <group ref={refEtiquetaNucleo} scale={0.0001}>
             <mesh material={etiquetaNucleo}>
               <planeGeometry args={[0.62, 0.2]} />
             </mesh>
-          </Billboard>
-        </PiezaDesarmable>
-      </group>
+          </group>
+        </Billboard>
+        <mesh ref={refOnda} rotation={[Math.PI / 2.4, 0, 0]} material={mats.onda} visible={false}>
+          <torusGeometry args={[1, 0.02, 8, 96]} />
+        </mesh>
+      </PiezaDesarmable>
+
+      {/* La red neuronal en que se expande el núcleo. */}
+      <PiezaDesarmable semilla={9}>
+        <group ref={refRed} visible={false} scale={0.78}>
+          <RedNeuronal tiempo={tiempo} claro={claro} luz={luz} />
+        </group>
+      </PiezaDesarmable>
     </group>
   );
 }

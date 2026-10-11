@@ -11,7 +11,28 @@ import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { paletaEscena, valorMultimetro } from './paletas.js';
 import { CAJAS, CICLO, LARGO, PAUSA, RUTA, S_ESCANER, VELOCIDAD, distanciaCaja, estadoPlanta, progresoEscaneo, puntoEnRuta, tiempoCinta } from './cicloPlanta.js';
-import { CENTRO, NODOS, RADIO, enlaces, fasePulso, posicionNodo, puntoDe, puntoEnTramo } from './constelacion.js';
+import {
+  CAPAS,
+  CENTRO,
+  NODOS,
+  RADIO,
+  T_COLAPSO,
+  T_RED,
+  activacion,
+  aparicion,
+  aparicionNucleo,
+  colapso,
+  conexionesRed,
+  enlaces,
+  expansion,
+  expansionCapa,
+  fasePulso,
+  nodosRed,
+  posicionNodo,
+  progresoEnlace,
+  puntoDe,
+  puntoEnTramo,
+} from './constelacion.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -686,8 +707,94 @@ test('constelación: los pulsos recorren el enlace de punta a punta y se repiten
   cerca(fasePulso(0, 0), fasePulso(1 / 0.32, 0), 1e-9);
 });
 
-test('escenas: la constelación de Hoy existe y gira libre', () => {
+test('escenas: la constelación de Hoy existe y no gira 360°', () => {
   assert.ok(idsConEscena.has(6));
   assert.equal(esEscenaFija(6), false);
-  assert.equal(limiteDeGiro(6), null);
+  assert.ok(limiteDeGiro(6) > 0, 'no da la vuelta entera');
+});
+
+test('guion de Hoy: el núcleo aparece primero y los nodos de a uno, en orden', () => {
+  assert.equal(aparicionNucleo(0), 0);
+  assert.equal(aparicionNucleo(5), 1);
+  assert.equal(aparicion(0, 0), 0);
+  for (let i = 0; i < NODOS - 1; i += 1) {
+    // Cada nodo empieza después que el anterior y todos terminan de aparecer.
+    let t = 0;
+    while (aparicion(i + 1, t) === 0) t += 0.01;
+    assert.ok(aparicion(i, t) > 0, `el nodo ${i} debería haber empezado antes que el ${i + 1}`);
+  }
+  assert.equal(aparicion(NODOS - 1, 20), 1);
+  for (let i = 0; i < NODOS; i += 1) {
+    let anterior = 0;
+    for (let t = 0; t < 12; t += 0.05) {
+      assert.ok(aparicion(i, t) >= anterior - 1e-12);
+      anterior = aparicion(i, t);
+    }
+  }
+});
+
+test('guion de Hoy: la constelación se completa antes de recogerse y la red sale después', () => {
+  assert.equal(aparicion(NODOS - 1, T_COLAPSO[0]), 1);
+  assert.equal(colapso(T_COLAPSO[0] - 0.01), 0);
+  assert.equal(colapso(T_COLAPSO[1]), 1);
+  assert.equal(expansion(T_RED[0] - 0.01), 0);
+  assert.equal(expansion(T_RED[1]), 1);
+  assert.ok(T_RED[0] >= T_COLAPSO[0] && T_RED[0] <= T_COLAPSO[1], 'la red nace mientras la constelación se recoge');
+  assert.ok(T_RED[1] > T_COLAPSO[1]);
+});
+
+test('guion de Hoy: los enlaces se dibujan al aparecer su nodo', () => {
+  const lista = enlaces();
+  for (const e of lista) {
+    assert.equal(progresoEnlace(e, 0), 0);
+    assert.equal(progresoEnlace(e, 30), 1);
+  }
+  const primero = lista.find((e) => e.tipo === 'cadena' && e.desde === 0);
+  assert.ok(progresoEnlace(primero, 0.7 + 1.2) > 0, 'el primer enlace sale con el segundo nodo');
+});
+
+test('red neuronal: capas de tamaño fijo, ordenadas en x y con todos los nodos distintos', () => {
+  const nodos = nodosRed();
+  assert.equal(nodos.length, CAPAS.reduce((a, b) => a + b, 0));
+  for (let c = 0; c < CAPAS.length; c += 1) assert.equal(nodos.filter((n) => n.capa === c).length, CAPAS[c]);
+  for (const n of nodos) assert.ok(n.posicion.every(Number.isFinite));
+  const xs = CAPAS.map((_, c) => nodos.find((n) => n.capa === c).posicion[0]);
+  for (let c = 1; c < xs.length; c += 1) assert.ok(xs[c] > xs[c - 1]);
+  cerca(xs[0], -xs.at(-1));
+  for (let i = 0; i < nodos.length; i += 1) {
+    for (let j = i + 1; j < nodos.length; j += 1) {
+      const d = Math.hypot(...nodos[i].posicion.map((v, k) => v - nodos[j].posicion[k]));
+      assert.ok(d > 0.3, `nodos ${i} y ${j} casi superpuestos (${d})`);
+    }
+  }
+});
+
+test('red neuronal: cada nodo se conecta con todos los de la capa siguiente', () => {
+  const nodos = nodosRed();
+  const conexiones = conexionesRed();
+  const esperadas = CAPAS.slice(0, -1).reduce((suma, n, c) => suma + n * CAPAS[c + 1], 0);
+  assert.equal(conexiones.length, esperadas);
+  for (const { capa, a, b } of conexiones) {
+    assert.equal(nodos[a].capa, capa);
+    assert.equal(nodos[b].capa, capa + 1);
+  }
+});
+
+test('red neuronal: las capas se expanden en orden desde el medio y la activación es una onda', () => {
+  const t = (T_RED[0] + T_RED[1]) / 2;
+  const medio = (CAPAS.length - 1) / 2;
+  assert.ok(expansionCapa(medio, t) > expansionCapa(0, t), 'el medio sale primero');
+  for (let c = 0; c < CAPAS.length; c += 1) {
+    assert.equal(expansionCapa(c, T_RED[0] - 0.1), 0);
+    assert.equal(expansionCapa(c, T_RED[1] + 1), 1);
+  }
+  let maximo = 0;
+  for (let tt = 0; tt < 20; tt += 0.05) {
+    for (let c = 0; c < CAPAS.length; c += 1) {
+      const a = activacion(c, tt);
+      assert.ok(a >= 0 && a <= 1);
+      maximo = Math.max(maximo, a);
+    }
+  }
+  assert.ok(maximo > 0.95, 'la onda llega a pleno');
 });
