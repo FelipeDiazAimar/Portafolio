@@ -14,7 +14,7 @@ import { cargadorEscena, esEscenaFija, limiteDeGiro } from './escenas/index.js';
 // Cuánto se dispersa la escena saliente antes de montar la del hito nuevo.
 const MS_SALIDA = 700;
 
-export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
+export default function EscenaCanvas({ idHito, desarmado, claro = false, visible, onError }) {
   const reducido = useReducedMotion();
   const [idMostrado, setIdMostrado] = useState(idHito);
   const [saliendo, setSaliendo] = useState(false);
@@ -70,7 +70,7 @@ export default function EscenaCanvas({ idHito, desarmado, visible, onError }) {
         <ControlGiro quieto={Boolean(reducido)} girable={!esEscenaFija(idMostrado)} limiteAzimut={limiteDeGiro(idMostrado)}>
           <EscalaResponsiva>
             <Suspense fallback={null}>
-              <Escena key={idMostrado} activa={visible} reducido={Boolean(reducido)} />
+              <Escena key={idMostrado} activa={visible} reducido={Boolean(reducido)} claro={claro} />
             </Suspense>
           </EscalaResponsiva>
         </ControlGiro>

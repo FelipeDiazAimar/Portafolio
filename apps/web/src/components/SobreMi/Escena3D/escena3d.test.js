@@ -9,6 +9,8 @@ import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vi
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
 import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
+import { PLACA_REPARACION, ZONAS_REPARACION, resistenciasSMD, capacitoresPlaca, ledsReparacion } from './disposicionReparacion.js';
+import { paletaEscena, colorArcoiris, valorMultimetro } from './paletas.js';
 import { CANTIDAD_LEDS, ledEncendido, alturaDestornillador, giroDestornillador, DURACION_DESTORNILLADOR } from './cicloBanco.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { PLACA, ZONAS, condensadores, tornillos, aletas } from './disposicionPlaca.js';
@@ -639,4 +641,96 @@ test('escenas: el banco de 2025 existe y gira sólo dentro de un rango', () => {
   assert.equal(esEscenaFija(4), false);
   const limite = limiteDeGiro(4);
   assert.ok(limite > 0.3 && limite < Math.PI / 2);
+});
+
+test('paletaEscena: clara y oscura tienen las mismas claves y la clara es más luminosa', () => {
+  const clara = paletaEscena(true);
+  const oscura = paletaEscena(false);
+  assert.deepEqual(Object.keys(clara).sort(), Object.keys(oscura).sort());
+  const luz = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114;
+  };
+  for (const clave of ['chasis', 'tarjeta', 'tapete']) {
+    assert.ok(luz(clara[clave]) > luz(oscura[clave]) + 40, `${clave}: la variante clara debe ser mucho más clara`);
+  }
+  for (const valor of [...Object.values(clara), ...Object.values(oscura)]) assert.match(valor, /^#[0-9a-f]{6}$/i);
+});
+
+test('colorArcoiris: fijo, hexadecimal y recorre todo el espectro', () => {
+  assert.equal(colorArcoiris(0.3), colorArcoiris(0.3));
+  const colores = Array.from({ length: 24 }, (_, i) => colorArcoiris(i / 24));
+  for (const c of colores) assert.match(c, /^#[0-9a-f]{6}$/);
+  assert.ok(new Set(colores).size >= 20, 'colores muy repetidos');
+  // el primero es rojizo y a la mitad es azul-verdoso
+  assert.ok(parseInt(colores[0].slice(1, 3), 16) > 200);
+  assert.ok(parseInt(colores[12].slice(5, 7), 16) > 150 || parseInt(colores[12].slice(3, 5), 16) > 150);
+  assert.equal(colorArcoiris(1), colorArcoiris(0), 'es cíclico');
+});
+
+test('valorMultimetro: lectura plausible, estable y con formato fijo', () => {
+  for (let t = 0; t < 30; t += 0.7) {
+    const v = valorMultimetro(t);
+    assert.match(v, /^\d\.\d{3}$/, v);
+    assert.ok(parseFloat(v) > 4.9 && parseFloat(v) < 5.1, `fuera de rango: ${v}`);
+  }
+  assert.equal(valorMultimetro(2), valorMultimetro(2));
+});
+
+// --- Placa en reparación ------------------------------------------------------
+const dentroDe = (x, z, zona, margen = 0) =>
+  Math.abs(x - zona.x) <= zona.ancho / 2 + margen && Math.abs(z - zona.z) <= zona.fondo / 2 + margen;
+
+test('disposicionReparacion: las zonas caben en la placa y no se pisan', () => {
+  const nombres = Object.keys(ZONAS_REPARACION);
+  assert.ok(nombres.length >= 6);
+  for (const n of nombres) {
+    const zona = ZONAS_REPARACION[n];
+    assert.ok(Math.abs(zona.x) + zona.ancho / 2 <= PLACA_REPARACION.ancho / 2 - 0.03, `${n} se sale a los costados`);
+    assert.ok(Math.abs(zona.z) + zona.fondo / 2 <= PLACA_REPARACION.fondo / 2 - 0.03, `${n} se sale por adelante o atrás`);
+  }
+  for (let i = 0; i < nombres.length; i += 1) {
+    for (let j = i + 1; j < nombres.length; j += 1) {
+      const a = ZONAS_REPARACION[nombres[i]];
+      const b = ZONAS_REPARACION[nombres[j]];
+      const sePisan = Math.abs(a.x - b.x) < (a.ancho + b.ancho) / 2 && Math.abs(a.z - b.z) < (a.fondo + b.fondo) / 2;
+      assert.equal(sePisan, false, `${nombres[i]} y ${nombres[j]} se superponen`);
+    }
+  }
+});
+
+test('resistencias y capacitores: muchos, dentro de la placa, fuera de las zonas y sin tocarse', () => {
+  const resistencias = resistenciasSMD();
+  const capacitores = capacitoresPlaca();
+  assert.ok(resistencias.length >= 24, `resistencias: ${resistencias.length}`);
+  assert.ok(capacitores.length >= 8, `capacitores: ${capacitores.length}`);
+  const todos = [...resistencias, ...capacitores.map((c) => ({ ...c, ancho: c.r * 2, fondo: c.r * 2 }))];
+  for (const c of todos) {
+    assert.ok(Math.abs(c.x) + c.ancho / 2 <= PLACA_REPARACION.ancho / 2 - 0.04, 'fuera de la placa (x)');
+    assert.ok(Math.abs(c.z) + c.fondo / 2 <= PLACA_REPARACION.fondo / 2 - 0.04, 'fuera de la placa (z)');
+    for (const n of Object.keys(ZONAS_REPARACION)) {
+      assert.equal(dentroDe(c.x, c.z, ZONAS_REPARACION[n], Math.max(c.ancho, c.fondo) / 2), false, `un componente cae dentro de ${n}`);
+    }
+  }
+  for (let i = 0; i < todos.length; i += 1) {
+    for (let j = i + 1; j < todos.length; j += 1) {
+      const a = todos[i];
+      const b = todos[j];
+      const sePisan = Math.abs(a.x - b.x) < (a.ancho + b.ancho) / 2 && Math.abs(a.z - b.z) < (a.fondo + b.fondo) / 2;
+      assert.equal(sePisan, false, 'dos componentes se solapan');
+    }
+  }
+  assert.deepEqual(resistenciasSMD(), resistencias);
+});
+
+test('ledsReparacion: 12 posiciones sobre la placa, separadas y fuera de las zonas', () => {
+  const leds = ledsReparacion();
+  assert.equal(leds.length, 12);
+  for (const led of leds) {
+    assert.ok(Math.abs(led.x) < PLACA_REPARACION.ancho / 2 - 0.05 && Math.abs(led.z) < PLACA_REPARACION.fondo / 2 - 0.05);
+    for (const n of Object.keys(ZONAS_REPARACION)) assert.equal(dentroDe(led.x, led.z, ZONAS_REPARACION[n], 0.04), false, `un LED cae en ${n}`);
+  }
+  for (let i = 0; i < leds.length; i += 1) {
+    for (let j = i + 1; j < leds.length; j += 1) assert.ok(Math.hypot(leds[i].x - leds[j].x, leds[i].z - leds[j].z) >= 0.088);
+  }
 });

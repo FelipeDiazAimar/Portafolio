@@ -1,51 +1,47 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { crearPantalla } from '../pantallaCanvas.js';
-import { CANTIDAD_LEDS, alturaDestornillador, giroDestornillador, ledEncendido } from '../cicloBanco.js';
-import { dibujarDiagnostico, dibujarPlacaReparacion, dibujarTapete } from '../texturasBanco.js';
+import { alturaDestornillador, giroDestornillador, ledEncendido, CANTIDAD_LEDS } from '../cicloBanco.js';
+import { paletaEscena, valorMultimetro } from '../paletas.js';
+import { dibujarTeclas } from '../dibujarTeclas.js';
+import {
+  dibujarDiagnostico,
+  dibujarLcd,
+  dibujarPantallaTelefono,
+  dibujarPlacaReparacion,
+  dibujarSelector,
+  dibujarTapete,
+} from '../texturasBanco.js';
+import Notebook from './banco/Notebook.jsx';
+import Multimetro, { Cable, Punta, JACKS, Y_JACKS, Z_JACKS } from './banco/Multimetro.jsx';
+import PlacaReparacion from './banco/PlacaReparacion.jsx';
+import { MemoriaRAM, Palanca, Pinzas, Telefono } from './banco/Accesorios.jsx';
 
-const COLORES_LED = ['#ff4a4a', '#46f0cd', '#ffcf4a', '#5b8cff'];
-const POSICION_TORNILLO = [0.95, 0.04, 0.5];
-// Cuánto sube el destornillador cuando está levantado.
+// Posiciones sobre el tapete (marco del banco: x a la derecha, z hacia el frente).
+const POS_MULTIMETRO = [1.55, 0, -0.45];
+const POS_PLACA = [0.35, 0.02, 0.2];
+// Tornillo de la placa que aprieta el destornillador (ya en coordenadas del banco).
+const POS_TORNILLO = [0.95, 0.075, 0.72];
 const ALTURA_LEVANTADO = 0.5;
+// Puntas de prueba sobre los contactos del conector flex.
+const PUNTA_ROJA = [0.62, 0.07, 0.6];
+const PUNTA_NEGRA = [0.15, 0.07, 0.62];
+const REPOSO_LCD = 0.25;
 
-// Mallas instanciadas de los LEDs de la placa: una sola llamada de dibujo y un
-// color por instancia; el brillo se apaga o prende cambiando el color.
-function Leds({ material, refLeds }) {
-  const malla = useRef(null);
-  const colores = useMemo(() => Array.from({ length: CANTIDAD_LEDS }, (_, i) => new THREE.Color(COLORES_LED[i % COLORES_LED.length])), []);
-  const apagado = useMemo(() => new THREE.Color('#10151c'), []);
-  useLayoutEffect(() => {
-    const aux = new THREE.Object3D();
-    for (let i = 0; i < CANTIDAD_LEDS; i += 1) {
-      const fila = Math.floor(i / 6);
-      const columna = i % 6;
-      aux.position.set(-0.5 + columna * 0.2, fila === 0 ? 0.3 : -0.3, 0.05);
-      aux.updateMatrix();
-      malla.current.setMatrixAt(i, aux.matrix);
-      malla.current.setColorAt(i, apagado);
-    }
-    malla.current.instanceMatrix.needsUpdate = true;
-    malla.current.instanceColor.needsUpdate = true;
-  }, [apagado]);
-  // La escena le pasa a esta malla una función para refrescar los colores.
-  refLeds.current = (t) => {
-    for (let i = 0; i < CANTIDAD_LEDS; i += 1) malla.current.setColorAt(i, ledEncendido(i, t) ? colores[i] : apagado);
-    malla.current.instanceColor.needsUpdate = true;
-  };
-  return (
-    <instancedMesh ref={malla} args={[undefined, material, CANTIDAD_LEDS]}>
-      <sphereGeometry args={[0.04, 14, 14]} />
-    </instancedMesh>
-  );
-}
+// Los puntos de cada cable: desde la banana del multímetro, tendido sobre la
+// mesa, hasta el extremo del mango de su punta de prueba.
+const jack = (i) => [POS_MULTIMETRO[0] + JACKS[i].x, Y_JACKS + 0.03, POS_MULTIMETRO[2] + Z_JACKS];
+const CABLE_ROJO = [jack(2), [1.76, 0.1, 0.3], [1.5, 0.04, 0.7], [1.1, 0.05, 1.0], [0.8, 0.25, 0.95], [0.504, 0.457, 0.8375]];
+const CABLE_NEGRO = [jack(1), [1.5, 0.1, 0.45], [1.0, 0.04, 1.05], [0.5, 0.05, 1.05], [0.2, 0.25, 0.95], [0.034, 0.457, 0.8575]];
 
-export default function Escena4Banco({ activa, reducido }) {
+export default function Escena4Banco({ activa, reducido, claro = false }) {
+  const paleta = paletaEscena(claro);
+
   const recursos = useMemo(() => {
     const texturas = [];
     const crear = (ancho, alto, dibujar) => {
@@ -53,40 +49,66 @@ export default function Escena4Banco({ activa, reducido }) {
       dibujar(l.ctx, ancho, alto);
       l.textura.needsUpdate = true;
       texturas.push(l.textura);
-      return l.textura;
+      return l;
     };
-    return {
-      texturas,
-      tapete: (() => {
-        const mapa = crear(1536, 1000, dibujarTapete);
-        // Emisión verde: la luz azul del sitio lo teñía y se veía azul, no verde.
-        return new THREE.MeshStandardMaterial({ map: mapa, emissiveMap: mapa, emissive: '#2fbf80', emissiveIntensity: 0.55, roughness: 0.85, metalness: 0 });
-      })(),
-      diagnostico: new THREE.MeshBasicMaterial({ map: crear(1024, 640, dibujarDiagnostico), toneMapped: false }),
-      placa: new THREE.MeshStandardMaterial({ map: crear(768, 512, dibujarPlacaReparacion), roughness: 0.55, metalness: 0.15 }),
-      carcasa: new THREE.MeshStandardMaterial({ color: '#1d2230', metalness: 0.6, roughness: 0.4 }),
-      metal: new THREE.MeshStandardMaterial({ color: '#c9d1de', metalness: 0.9, roughness: 0.28, emissive: '#2a313f', emissiveIntensity: 0.4 }),
-      oscuro: new THREE.MeshStandardMaterial({ color: '#0c0e14', metalness: 0.3, roughness: 0.5 }),
-      mango: new THREE.MeshStandardMaterial({ color: '#1f6bff', metalness: 0.2, roughness: 0.35, emissive: '#1240a8', emissiveIntensity: 0.5 }),
-      goma: new THREE.MeshStandardMaterial({ color: '#12151c', roughness: 0.8, metalness: 0 }),
-      led: new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }),
-      amarillo: new THREE.MeshStandardMaterial({ color: '#f5c518', metalness: 0.2, roughness: 0.45, emissive: '#7a5c00', emissiveIntensity: 0.4 }),
-      pantallaMulti: new THREE.MeshBasicMaterial({ color: '#9ff0b0', toneMapped: false }),
+    const lcd = crear(512, 256, (ctx, w, h) => dibujarLcd(ctx, w, h, valorMultimetro(0)));
+    const tapeteTex = crear(1536, 1000, (ctx, w, h) => dibujarTapete(ctx, w, h, claro)).textura;
+    const std = (opciones) => new THREE.MeshStandardMaterial(opciones);
+    const mats = {
+      tapete: std({ map: tapeteTex, emissiveMap: tapeteTex, emissive: claro ? '#000000' : '#2fbf80', emissiveIntensity: claro ? 0 : 0.55, roughness: 0.85 }),
+      chasis: std({ color: paleta.chasis, metalness: claro ? 0.2 : 0.6, roughness: claro ? 0.45 : 0.4 }),
+      hueco: std({ color: claro ? '#b9c0cd' : '#07090e', roughness: 0.7 }),
+      tecla: std({ color: '#ffffff', metalness: 0.1, roughness: 0.45 }),
+      leyendas: new THREE.MeshBasicMaterial({
+        map: crear(960, 343, (ctx, w, h) => dibujarTeclas(ctx, w, h, paleta.teclaTexto)).textura,
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+      trackpad: std({ color: claro ? '#d5dae3' : '#10131a', metalness: 0.3, roughness: 0.5 }),
+      diagnostico: new THREE.MeshBasicMaterial({ map: crear(1024, 640, (ctx, w, h) => dibujarDiagnostico(ctx, w, h, claro)).textura, toneMapped: false }),
+      logo: new THREE.MeshBasicMaterial({ color: claro ? '#8d96a8' : '#3a4560', toneMapped: false }),
+      oscuro: std({ color: '#0c0e14', metalness: 0.3, roughness: 0.5 }),
+      led: new THREE.MeshBasicMaterial({ color: '#3de0c0', toneMapped: false }),
+      goma: std({ color: '#15171c', roughness: 0.85 }),
+      amarillo: std({ color: '#f5c518', metalness: 0.15, roughness: 0.42, emissive: '#7a5c00', emissiveIntensity: 0.35 }),
+      lcd: new THREE.MeshBasicMaterial({ map: lcd.textura, toneMapped: false }),
+      rojo: std({ color: '#c4151c', roughness: 0.45 }),
+      boton: std({ color: '#3a3f4a', roughness: 0.5, metalness: 0.2 }),
+      selector: new THREE.MeshBasicMaterial({ map: crear(512, 512, dibujarSelector).textura, toneMapped: false }),
+      perilla: std({ color: '#25282f', metalness: 0.5, roughness: 0.4 }),
+      blanco: std({ color: '#f5f5ee', roughness: 0.5, emissive: '#707068', emissiveIntensity: 0.3 }),
+      acero: std({ color: '#c9d1de', metalness: 0.9, roughness: 0.28, emissive: '#2a313f', emissiveIntensity: 0.4 }),
+      placa: std({ map: crear(768, 512, dibujarPlacaReparacion).textura, roughness: 0.5, metalness: 0.1 }),
+      oro: std({ color: '#e0bc4a', metalness: 1, roughness: 0.3, emissive: '#6a5410', emissiveIntensity: 0.5 }),
+      azulUSB: std({ color: '#1f5cff', roughness: 0.45 }),
+      chip: std({ color: '#0b0c10', roughness: 0.45, metalness: 0.15 }),
+      marca: new THREE.MeshBasicMaterial({ color: '#4b505c', toneMapped: false }),
+      plasticoClaro: std({ color: '#e5e2d6', roughness: 0.55 }),
+      cobre: std({ color: '#c9783a', metalness: 0.9, roughness: 0.35, emissive: '#4a2410', emissiveIntensity: 0.5 }),
+      resistencia: std({ color: '#ffffff', roughness: 0.5, metalness: 0.1 }),
+      capacitor: std({ color: '#171c2e', roughness: 0.4, metalness: 0.35 }),
+      telefono: std({ color: claro ? '#c7cbd6' : '#262932', metalness: 0.8, roughness: 0.3, emissive: '#1a1e28', emissiveIntensity: 0.4 }),
+      pantallaTelefono: new THREE.MeshBasicMaterial({ map: crear(512, 1024, (ctx, w, h) => dibujarPantallaTelefono(ctx, w, h, claro)).textura, toneMapped: false }),
+      mango: std({ color: '#1f6bff', roughness: 0.35, emissive: '#1240a8', emissiveIntensity: 0.5 }),
+      ram: std({ color: '#0f1a14', roughness: 0.5, metalness: 0.1 }),
     };
-  }, []);
+    return { texturas, mats, lcd };
+  }, [claro, paleta]);
 
+  const { mats, lcd } = recursos;
   const tiempo = useRef(0);
   const refDestornillador = useRef(null);
   const refGiro = useRef(null);
+  const refSelector = useRef(null);
   const refLeds = useRef(null);
   const ultimaClave = useRef('');
+  const ultimoLcd = useRef('');
 
   useEffect(
     () => () => {
       recursos.texturas.forEach((t) => t.dispose());
-      Object.entries(recursos).forEach(([clave, valor]) => {
-        if (clave !== 'texturas') valor.dispose();
-      });
+      Object.values(recursos.mats).forEach((m) => m.dispose());
     },
     [recursos]
   );
@@ -103,79 +125,66 @@ export default function Escena4Banco({ activa, reducido }) {
       refLeds.current(reducido ? 1.7 : t);
     }
 
+    // La lectura del multímetro oscila un poco; sólo se redibuja si cambió.
+    const valor = valorMultimetro(reducido ? REPOSO_LCD : t);
+    if (valor !== ultimoLcd.current) {
+      ultimoLcd.current = valor;
+      const ctx = lcd.ctx;
+      dibujarLcd(ctx, lcd.ancho, lcd.alto, valor);
+      lcd.textura.needsUpdate = true;
+    }
+
     // Destornillador: baja al tornillo, lo aprieta girando y vuelve a subir. Con
     // movimiento reducido queda apoyado sobre el tornillo.
     const altura = reducido ? 0 : alturaDestornillador(t);
-    if (refDestornillador.current) refDestornillador.current.position.y = POSICION_TORNILLO[1] + altura * ALTURA_LEVANTADO;
+    if (refDestornillador.current) refDestornillador.current.position.y = POS_TORNILLO[1] + altura * ALTURA_LEVANTADO;
     if (refGiro.current) refGiro.current.rotation.y = reducido ? 0 : giroDestornillador(t);
+    if (refSelector.current) refSelector.current.rotation.y = 0.9;
   });
 
   return (
-    <group position={[0.05, -0.1, 0]} rotation={[0.62, -0.28, 0]} scale={0.78}>
+    // `key` por variante: al cambiar de tema se recrean los materiales y las mallas
+    // instanciadas (teclas, capacitores…) tienen que armarse de nuevo desde cero.
+    <group key={claro ? 'claro' : 'oscuro'} position={[0.05, -0.1, 0]} rotation={[0.62, -0.28, 0]} scale={0.74}>
+      {/* La luz azul del sitio tiñe los blancos: en la variante clara se suma una luz neutra. */}
+      {claro ? <directionalLight position={[3, 6, 5]} intensity={2.2} color="#ffffff" /> : null}
       {/* Tapete de corte: la base de todo. */}
       <PiezaDesarmable semilla={1}>
-        <RoundedBox args={[3.9, 0.05, 2.5]} radius={0.02} smoothness={3} position={[0, -0.025, 0]} material={recursos.tapete} />
+        <RoundedBox args={[3.9, 0.05, 2.5]} radius={0.02} smoothness={3} position={[0, -0.025, 0]} material={mats.tapete} />
       </PiezaDesarmable>
 
-      {/* Notebook abierta, mostrando el diagnóstico. */}
+      {/* Notebook con teclado, abierta y mostrando el diagnóstico. */}
       <PiezaDesarmable semilla={2}>
         <group position={[-0.95, 0, -0.35]} rotation={[0, 0.18, 0]}>
-          <RoundedBox args={[1.5, 0.05, 1.0]} radius={0.02} smoothness={3} position={[0, 0.025, 0.2]} material={recursos.carcasa} />
-          <mesh position={[0, 0.052, 0.34]} material={recursos.oscuro}>
-            <boxGeometry args={[1.25, 0.004, 0.46]} />
-          </mesh>
-          <mesh position={[0, 0.054, 0.62]} material={recursos.metal}>
-            <boxGeometry args={[0.45, 0.003, 0.26]} />
-          </mesh>
-          <group position={[0, 0.05, -0.3]} rotation={[-1.2, 0, 0]}>
-            <RoundedBox args={[1.5, 0.95, 0.04]} radius={0.02} smoothness={3} position={[0, 0.475, 0]} material={recursos.carcasa} />
-            <mesh position={[0, 0.475, 0.022]} material={recursos.diagnostico}>
-              <planeGeometry args={[1.38, 0.82]} />
-            </mesh>
-          </group>
+          <Notebook mats={mats} paleta={paleta} />
         </group>
       </PiezaDesarmable>
 
-      {/* Placa en reparación con LEDs que parpadean. */}
+      {/* Placa en reparación. */}
       <PiezaDesarmable semilla={3}>
-        <group position={[0.35, 0.02, 0.2]} rotation={[0, -0.22, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} material={recursos.placa}>
-            <boxGeometry args={[1.6, 1.07, 0.04]} />
-          </mesh>
-          <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.022, 0]}>
-            <Leds material={recursos.led} refLeds={refLeds} />
-          </group>
-          {/* Chips sobre la placa. */}
-          {[[-0.45, 0, 0.3], [0.1, 0, -0.1], [0.5, 0, 0.1]].map(([x, , z], i) => (
-            <mesh key={i} position={[x, 0.07, z]} material={recursos.oscuro}>
-              <boxGeometry args={[0.28 - i * 0.04, 0.06, 0.24 - i * 0.03]} />
-            </mesh>
-          ))}
-          {/* Tornillo que aprieta el destornillador. */}
-          <mesh position={[POSICION_TORNILLO[0] - 0.35, 0.045, POSICION_TORNILLO[2] - 0.2]} material={recursos.metal}>
-            <cylinderGeometry args={[0.06, 0.06, 0.05, 20]} />
-          </mesh>
+        <group position={POS_PLACA} rotation={[0, -0.22, 0]}>
+          <PlacaReparacion mats={mats} refLeds={refLeds} />
         </group>
       </PiezaDesarmable>
 
       {/* Destornillador: baja y aprieta el tornillo de la placa. */}
       <PiezaDesarmable semilla={4}>
-        <group ref={refDestornillador} position={POSICION_TORNILLO}>
+        <group ref={refDestornillador} position={POS_TORNILLO}>
           <group ref={refGiro}>
-            <mesh position={[0, 0.07, 0]} material={recursos.metal}>
+            <mesh position={[0, 0.07, 0]} material={mats.acero}>
               <cylinderGeometry args={[0.012, 0.012, 0.3, 14]} />
             </mesh>
-            <mesh position={[0, 0.02, 0]} material={recursos.metal}>
+            <mesh position={[0, 0.02, 0]} material={mats.acero}>
               <boxGeometry args={[0.045, 0.02, 0.012]} />
             </mesh>
-            <mesh position={[0, 0.42, 0]} material={recursos.mango}>
+            <mesh position={[0, 0.42, 0]} material={mats.mango}>
               <cylinderGeometry args={[0.07, 0.06, 0.5, 24]} />
             </mesh>
-            <mesh position={[0, 0.7, 0]} material={recursos.goma}>
+            <mesh position={[0, 0.7, 0]} material={mats.goma}>
               <sphereGeometry args={[0.07, 20, 20]} />
             </mesh>
             {[0.3, 0.38, 0.46, 0.54].map((y) => (
-              <mesh key={y} position={[0, y, 0]} material={recursos.goma}>
+              <mesh key={y} position={[0, y, 0]} material={mats.goma}>
                 <cylinderGeometry args={[0.073, 0.073, 0.02, 24]} />
               </mesh>
             ))}
@@ -183,41 +192,33 @@ export default function Escena4Banco({ activa, reducido }) {
         </group>
       </PiezaDesarmable>
 
-      {/* Multímetro. */}
+      {/* Multímetro con sus dos cables y puntas de prueba sobre la placa. */}
       <PiezaDesarmable semilla={5}>
-        <group position={[1.5, 0, -0.55]} rotation={[0, -0.4, 0]}>
-          <RoundedBox args={[0.7, 0.14, 1.0]} radius={0.04} smoothness={3} position={[0, 0.07, 0]} material={recursos.amarillo} />
-          <mesh position={[0, 0.145, -0.27]} material={recursos.oscuro}>
-            <boxGeometry args={[0.5, 0.01, 0.3]} />
-          </mesh>
-          <mesh position={[0, 0.152, -0.27]} material={recursos.pantallaMulti}>
-            <planeGeometry args={[0.4, 0.2]} />
-          </mesh>
-          <mesh position={[0, 0.16, 0.18]} material={recursos.goma}>
-            <cylinderGeometry args={[0.16, 0.16, 0.03, 28]} />
-          </mesh>
-          <mesh position={[0, 0.18, 0.18]} material={recursos.metal}>
-            <boxGeometry args={[0.04, 0.012, 0.15]} />
-          </mesh>
-          {[-0.2, 0, 0.2].map((x) => (
-            <mesh key={x} position={[x, 0.12, 0.46]} material={recursos.oscuro}>
-              <cylinderGeometry args={[0.035, 0.035, 0.1, 14]} />
-            </mesh>
-          ))}
+        <group position={POS_MULTIMETRO}>
+          <Multimetro mats={mats} refSelector={refSelector} />
         </group>
+        <Cable puntos={CABLE_ROJO} color="#c4151c" />
+        <Cable puntos={CABLE_NEGRO} color="#101114" />
+        <Punta posicion={PUNTA_ROJA} color="#c4151c" mats={mats} />
+        <Punta posicion={PUNTA_NEGRA} color="#15171c" mats={mats} />
       </PiezaDesarmable>
 
-      {/* Pinzas y tornillos sueltos. */}
+      {/* Teléfono en reparación, palanca, memoria RAM suelta, pinzas y tornillos. */}
       <PiezaDesarmable semilla={6}>
-        <group position={[-0.1, 0.02, 0.95]} rotation={[0, 0.5, 0]}>
-          {[-0.014, 0.014].map((z) => (
-            <mesh key={z} position={[0, 0.012, z]} rotation={[0, z * 5, 0]} material={recursos.metal}>
-              <boxGeometry args={[0.8, 0.012, 0.018]} />
-            </mesh>
-          ))}
+        <group position={[-1.35, 0, 0.95]} rotation={[0, 0.5, 0]}>
+          <Telefono mats={mats} />
         </group>
-        {[[0.45, 0.88], [0.58, 0.97], [0.72, 0.86], [0.64, 1.07]].map(([x, z], i) => (
-          <mesh key={i} position={[x, 0.016, z]} rotation={[Math.PI / 2, 0, i]} material={recursos.metal}>
+        <group position={[-0.8, 0, 0.62]} rotation={[0, -0.1, 0]}>
+          <Palanca mats={mats} />
+        </group>
+        <group position={[-0.3, 0, 1.02]} rotation={[0, -0.12, 0]}>
+          <MemoriaRAM mats={mats} />
+        </group>
+        <group position={[0.2, 0, -0.95]} rotation={[0, 0.5, 0]}>
+          <Pinzas mats={mats} />
+        </group>
+        {[[-0.4, -0.9], [-0.28, -1.0], [-0.52, -1.0], [-0.34, -0.8]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.016, z]} rotation={[Math.PI / 2, 0, i]} material={mats.acero}>
             <cylinderGeometry args={[0.03, 0.03, 0.02, 16]} />
           </mesh>
         ))}

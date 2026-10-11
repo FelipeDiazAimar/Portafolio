@@ -3,13 +3,13 @@ import { DISPOSICION, COLUMNAS } from './tecladoQwerty.js';
 // Dibuja las leyendas del teclado en un lienzo transparente que se pone como
 // una lámina sobre las teclas: una celda por tecla, en el mismo orden que
 // `DISPOSICION` (fila 0 arriba, hacia el fondo de la notebook).
-export function dibujarTeclas(ctx, w, h) {
+export function dibujarTeclas(ctx, w, h, color = '#bcd2ff') {
   ctx.clearRect(0, 0, w, h);
   const celdaAncho = w / COLUMNAS;
   const celdaAlto = h / DISPOSICION.length;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#bcd2ff';
+  ctx.fillStyle = color;
   DISPOSICION.forEach((fila, f) => {
     fila.forEach((tecla, c) => {
       if (!tecla) return;

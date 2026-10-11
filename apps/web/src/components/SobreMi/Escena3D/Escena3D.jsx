@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import EscenarioHito from '../EscenarioHito.jsx';
 import LimiteErrores from './LimiteErrores.jsx';
 import useConsulta from '@/hooks/useConsulta.js';
+import useTema from '@/hooks/useTema.js';
 import { hayWebGL } from './soporteWebGL.js';
 import { idsConEscena } from './escenas/index.js';
 import styles from './Escena3D.module.css';
@@ -25,6 +26,8 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
   // armado y visible. Sólo en escritorio se desarma para dejar lugar al texto.
   const esMovil = useConsulta('(max-width: 768px)');
   const seDesarma = desarmado && !esMovil;
+  // Algunas escenas tienen variante clara para el tema claro del sitio.
+  const claro = useTema().tema === 'light';
 
   useEffect(() => {
     setWebgl(hayWebGL());
@@ -82,6 +85,7 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
             <EscenaCanvas
               idHito={hito.id}
               desarmado={seDesarma}
+              claro={claro}
               visible={visible}
               onError={() => setFallo(true)}
             />
