@@ -4,6 +4,7 @@ import { hayWebGL } from './soporteWebGL.js';
 import { calcularDispersion } from './desarme.js';
 import { PARTES, ANCHO, ALTO } from './simboloUtn.js';
 import { desplazamientoBandera, AMPLITUD_MAXIMA } from './ondaBandera.js';
+import { progresoEntrada } from './entrada.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
@@ -227,4 +228,39 @@ test('desplazamientoBandera: ondula en el tiempo en la punta y es determinista',
     enLaPunta = Math.max(enLaPunta, Math.abs(desplazamientoBandera(1, 0.5, t)));
   }
   assert.ok(enLaPunta > cercaDelAsta * 3);
+});
+
+test('desplazamientoBandera: la tela se mueve también a lo alto (no es una onda rígida)', () => {
+  // Con u fijo, puntos a distinta altura (v) deben moverse distinto: eso es lo que
+  // la hace flexible y no una chapa que sube y baja entera.
+  let diferencia = 0;
+  for (let t = 0; t < 6; t += 0.1) {
+    diferencia = Math.max(diferencia, Math.abs(desplazamientoBandera(0.8, 0.05, t) - desplazamientoBandera(0.8, 0.95, t)));
+  }
+  assert.ok(diferencia > 0.08, `diferencia entre arriba y abajo: ${diferencia}`);
+});
+
+test('progresoEntrada: 0 antes del retraso, 1 al terminar y sólo avanza', () => {
+  assert.equal(progresoEntrada(0, 1.6, 1.1), 0);
+  assert.equal(progresoEntrada(1.6, 1.6, 1.1), 0);
+  assert.equal(progresoEntrada(2.7, 1.6, 1.1), 1);
+  assert.equal(progresoEntrada(99, 1.6, 1.1), 1);
+  let anterior = 0;
+  for (let t = 1.6; t <= 2.7; t += 0.05) {
+    const valor = progresoEntrada(t, 1.6, 1.1);
+    assert.ok(valor >= anterior - 1e-12);
+    anterior = valor;
+  }
+  assert.ok(progresoEntrada(2.1, 1.6, 1.1) > 0 && progresoEntrada(2.1, 1.6, 1.1) < 1);
+});
+
+test('desplazamientoBandera: flamea con la amplitud de una tela suelta', () => {
+  let maximo = 0;
+  for (let u = 0.5; u <= 1; u += 0.05) {
+    for (let v = 0; v <= 1; v += 0.1) {
+      for (let t = 0; t < 12; t += 0.05) maximo = Math.max(maximo, Math.abs(desplazamientoBandera(u, v, t)));
+    }
+  }
+  assert.ok(maximo >= 0.25, `amplitud máxima alcanzada: ${maximo}`);
+  assert.ok(maximo <= AMPLITUD_MAXIMA + 1e-9);
 });
