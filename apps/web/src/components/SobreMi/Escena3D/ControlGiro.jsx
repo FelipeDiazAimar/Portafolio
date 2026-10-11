@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 
 const ESPERA_TRAS_SOLTAR_MS = 3000;
 
 // Giro con arrastre (la cámara orbita), sin zoom ni desplazamiento. Gira solo y
 // despacio cuando nadie lo toca, y retoma unos segundos después de soltar.
-export default function ControlGiro({ quieto = false, girable = true, children }) {
+// `limiteAzimut` (radianes, o null): si se da, el modelo sólo gira hasta ese ángulo
+// a cada lado del frente y, en lugar de dar vueltas solo, se mece despacio.
+export default function ControlGiro({ quieto = false, girable = true, limiteAzimut = null, children }) {
+  const limitado = limiteAzimut != null;
+  const reloj = useRef(0);
   const camera = useThree((estado) => estado.camera);
   const refControles = useRef(null);
   const refEspera = useRef(0);
@@ -23,17 +27,28 @@ export default function ControlGiro({ quieto = false, girable = true, children }
     return () => clearTimeout(refEspera.current);
   }, []);
 
-  // En una escena fija (que no gira) se vuelve a la vista de frente: la cámara
-  // pudo haber quedado girada por la escena anterior.
+  // En una escena fija o de giro limitado se vuelve a la vista de frente: la
+  // cámara pudo haber quedado girada por la escena anterior.
   useEffect(() => {
-    if (girable) return;
+    if (girable && !limitado) return;
     const controles = refControles.current;
     if (!controles) return;
     const distancia = camera.position.length();
     camera.position.set(0, distancia * 0.116, distancia * 0.993);
     camera.lookAt(0, 0, 0);
     controles.update();
-  }, [girable, camera]);
+  }, [girable, limitado, camera]);
+
+  // Meceo: sigue un vaivén lento alrededor del frente. Se acerca de a poco a ese
+  // vaivén (no salta) para retomarlo con suavidad después de que se lo suelta.
+  useFrame((_, delta) => {
+    const controles = refControles.current;
+    if (!limitado || !girable || !girando || quieto || !controles) return;
+    reloj.current += Math.min(delta, 0.05);
+    const objetivo = Math.sin(reloj.current * 0.45) * limiteAzimut * 0.55;
+    const actual = controles.getAzimuthalAngle();
+    controles.setAzimuthalAngle(actual + (objetivo - actual) * Math.min(1, delta * 2));
+  });
 
   return (
     <>
@@ -46,7 +61,9 @@ export default function ControlGiro({ quieto = false, girable = true, children }
         enableRotate={girable}
         enablePan={false}
         enableDamping
-        autoRotate={girando && !quieto && girable}
+        autoRotate={girando && !quieto && girable && !limitado}
+        minAzimuthAngle={limitado ? -limiteAzimut : -Infinity}
+        maxAzimuthAngle={limitado ? limiteAzimut : Infinity}
         autoRotateSpeed={1.1}
         minPolarAngle={Math.PI / 2.7}
         maxPolarAngle={Math.PI / 1.9}

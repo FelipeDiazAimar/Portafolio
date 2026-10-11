@@ -17,6 +17,16 @@ export function esEscenaFija(id) {
   return FIJAS.has(id);
 }
 
+// Escenas que se pueden girar sólo dentro de un rango a cada lado del frente
+// (radianes): no tiene sentido verles la parte de atrás, sea una pared de
+// tarjetas o una placa. En vez de dar vueltas, se mecen suavemente. Sin entrada =
+// giro libre (la notebook).
+const LIMITES_GIRO = { 2: 0.7, 3: 0.7 };
+
+export function limiteDeGiro(id) {
+  return LIMITES_GIRO[id] ?? null;
+}
+
 export const idsConEscena = new Set(Object.keys(ESCENAS).map(Number));
 
 export function cargadorEscena(id) {

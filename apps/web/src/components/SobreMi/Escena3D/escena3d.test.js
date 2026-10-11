@@ -7,7 +7,7 @@ import { desplazamientoBandera, AMPLITUD_MAXIMA } from './ondaBandera.js';
 import { progresoEntrada } from './entrada.js';
 import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vista.js';
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
-import { esEscenaFija, idsConEscena } from './escenas/index.js';
+import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { PLACA, ZONAS, condensadores, tornillos, aletas } from './disposicionPlaca.js';
@@ -570,4 +570,17 @@ test('escalaTilde y brilloTarjeta: nacen en 0, la tilde se pasa un poco y el bri
 test('escenas: las materias de 2023 giran libres', () => {
   assert.ok(idsConEscena.has(2));
   assert.equal(esEscenaFija(2), false);
+});
+
+test('limiteDeGiro: las escenas planas (2023) y de objeto con frente (2024) no dan la vuelta entera', () => {
+  for (const id of [2, 3]) {
+    const limite = limiteDeGiro(id);
+    assert.ok(limite > 0.3 && limite < Math.PI / 2, `límite de la escena ${id}: ${limite}`);
+  }
+});
+
+test('limiteDeGiro: la notebook gira libre y las escenas fijas no tienen límite', () => {
+  assert.equal(limiteDeGiro(0), null);
+  assert.equal(limiteDeGiro(1), null);
+  assert.equal(limiteDeGiro(99), null);
 });
