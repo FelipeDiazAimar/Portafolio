@@ -23,9 +23,10 @@ function envolver(ctx, texto, ancho) {
   return lineas;
 }
 
-const cuadradoRedondeado = (ctx, x, y, lado, radio) => {
+// Círculo de diámetro `lado` centrado en (x, y): las casillas son redondas.
+const circulo = (ctx, x, y, lado) => {
   ctx.beginPath();
-  ctx.roundRect(x - lado / 2, y - lado / 2, lado, lado, radio);
+  ctx.arc(x, y, lado / 2, 0, Math.PI * 2);
 };
 
 // Tarjeta de una materia: panel de vidrio oscuro con esquinas redondeadas, brillo
@@ -78,7 +79,7 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   ctx.roundRect(4, 4, w - 8, h - 8, radio - 3);
   ctx.stroke();
 
-  // Casilla vacía: vidrio hundido con aro de degradado.
+  // Casilla vacía: círculo de vidrio hundido con aro de degradado.
   const lado = h * CASILLA.lado;
   const cx = w * CASILLA.x;
   const cy = h / 2;
@@ -86,14 +87,14 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   hueco.addColorStop(0, '#060a14');
   hueco.addColorStop(1, '#0f1a30');
   ctx.fillStyle = hueco;
-  cuadradoRedondeado(ctx, cx, cy, lado, lado * 0.27);
+  circulo(ctx, cx, cy, lado);
   ctx.fill();
   const aro = ctx.createLinearGradient(cx - lado / 2, cy - lado / 2, cx + lado / 2, cy + lado / 2);
   aro.addColorStop(0, 'rgba(140, 185, 255, 0.95)');
   aro.addColorStop(1, 'rgba(61, 224, 255, 0.7)');
   ctx.strokeStyle = aro;
   ctx.lineWidth = 6;
-  cuadradoRedondeado(ctx, cx, cy, lado, lado * 0.27);
+  circulo(ctx, cx, cy, lado);
   ctx.stroke();
 
   // Etiqueta pequeña con espaciado.
@@ -122,8 +123,8 @@ export function dibujarTarjeta(ctx, w, h, nombre, indice) {
   ctx.fill();
 }
 
-// Relleno de la casilla: cuadrado redondeado con degradado verde azulado, brillo
-// interior y un resplandor suave alrededor (por eso ocupa sólo el 62 % del lienzo).
+// Relleno de la casilla: círculo con degradado verde azulado, brillo interior y
+// un resplandor suave alrededor (por eso ocupa sólo el 62 % del lienzo).
 export function dibujarRellenoCasilla(ctx, w, h) {
   ctx.clearRect(0, 0, w, h);
   const lado = w * 0.62;
@@ -135,17 +136,19 @@ export function dibujarRellenoCasilla(ctx, w, h) {
   g.addColorStop(0, '#0fae8a');
   g.addColorStop(1, '#5af0c8');
   ctx.fillStyle = g;
-  cuadradoRedondeado(ctx, x, y, lado, lado * 0.27);
+  circulo(ctx, x, y, lado);
   ctx.fill();
   ctx.shadowBlur = 0;
-  // Reflejo en la mitad de arriba.
+  // Reflejo en la mitad de arriba, recortado al círculo.
+  ctx.save();
+  circulo(ctx, x, y, lado - 8);
+  ctx.clip();
   const reflejo = ctx.createLinearGradient(0, y - lado / 2, 0, y);
-  reflejo.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+  reflejo.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
   reflejo.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = reflejo;
-  ctx.beginPath();
-  ctx.roundRect(x - lado / 2 + 5, y - lado / 2 + 5, lado - 10, lado / 2 - 5, [lado * 0.24, lado * 0.24, 0, 0]);
-  ctx.fill();
+  ctx.fillRect(x - lado / 2, y - lado / 2, lado, lado / 2);
+  ctx.restore();
 }
 
 // Tilde blanca de trazo grueso y redondeado. Se revela de izquierda a derecha.
@@ -190,32 +193,33 @@ export function dibujarHaloTarjeta(ctx, w, h) {
   ctx.fill();
 }
 
-// Base del sello: disco azul con anillos y texto en arco. El escudo va aparte,
+// Base del sello, con los colores del escudo de Cambridge (rojo, blanco y oro):
+// disco rojo con anillos dorados y texto en arco en crema. El escudo va aparte,
 // encima, en el centro.
 export function dibujarBaseSello(ctx, w, h) {
   const cx = w / 2;
   const cy = h / 2;
   const r = w / 2;
-  const fondo = ctx.createRadialGradient(cx, cy * 0.85, r * 0.1, cx, cy, r);
-  fondo.addColorStop(0, '#244a9e');
-  fondo.addColorStop(0.7, '#12296b');
-  fondo.addColorStop(1, '#091647');
+  const fondo = ctx.createRadialGradient(cx, cy * 0.8, r * 0.1, cx, cy, r);
+  fondo.addColorStop(0, '#d12a30');
+  fondo.addColorStop(0.7, '#a3141b');
+  fondo.addColorStop(1, '#6e0b12');
   ctx.fillStyle = fondo;
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(214, 228, 255, 0.85)';
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(247, 214, 96, 0.95)';
+  ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.arc(cx, cy, r * 0.93, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.arc(cx, cy, r * 0.66, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.fillStyle = '#eaf1ff';
+  ctx.fillStyle = '#fff4d4';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -237,10 +241,9 @@ export function dibujarBaseSello(ctx, w, h) {
 
   // Abajo, recorrido al revés para que también se lea al derecho.
   const abajo = 'FIRST  ·  B2';
-  const pasoAbajo = (tam * 0.86) / radioTexto;
-  const inicioAbajo = Math.PI / 2 + ((abajo.length - 1) * pasoAbajo) / 2;
+  const inicioAbajo = Math.PI / 2 + ((abajo.length - 1) * paso) / 2;
   [...abajo].forEach((letra, i) => {
-    const a = inicioAbajo - i * pasoAbajo;
+    const a = inicioAbajo - i * paso;
     ctx.save();
     ctx.translate(cx + Math.cos(a) * radioTexto, cy + Math.sin(a) * radioTexto);
     ctx.rotate(a - Math.PI / 2);
@@ -248,7 +251,7 @@ export function dibujarBaseSello(ctx, w, h) {
     ctx.restore();
   });
 
-  // Estrellas a los costados.
+  // Estrellas doradas a los costados.
   const estrella = (x, y, rad) => {
     ctx.beginPath();
     for (let i = 0; i < 10; i += 1) {
@@ -259,7 +262,7 @@ export function dibujarBaseSello(ctx, w, h) {
     ctx.closePath();
     ctx.fill();
   };
-  ctx.fillStyle = '#ffd86b';
+  ctx.fillStyle = '#ffe27a';
   estrella(cx - r * 0.8, cy, r * 0.065);
   estrella(cx + r * 0.8, cy, r * 0.065);
 }
@@ -267,9 +270,10 @@ export function dibujarBaseSello(ctx, w, h) {
 // Resplandor: mancha circular que se desvanece hacia afuera, para sumar al fondo.
 export function dibujarResplandor(ctx, w, h) {
   const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-  g.addColorStop(0, 'rgba(120, 170, 255, 0.95)');
-  g.addColorStop(0.35, 'rgba(70, 120, 255, 0.45)');
-  g.addColorStop(1, 'rgba(40, 80, 255, 0)');
+  // Resplandor cálido (oro y rojo), a tono con el escudo.
+  g.addColorStop(0, 'rgba(255, 214, 110, 0.95)');
+  g.addColorStop(0.35, 'rgba(255, 120, 70, 0.42)');
+  g.addColorStop(1, 'rgba(230, 50, 40, 0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 }

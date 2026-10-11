@@ -18,7 +18,6 @@ import {
   dibujarTarjeta,
   dibujarTilde,
 } from '../texturasMaterias.js';
-import { azulEmisivo, cianEmisivo } from '../materiales.js';
 
 const COLUMNAS = 4;
 const FILAS = 3;
@@ -28,6 +27,12 @@ const HUECO = 0.13;
 const GROSOR_T = 0.05;
 const DIENTES = 44;
 const RADIO_SELLO = 0.5;
+// Orden de dibujo de las capas transparentes de cada tarjeta. Three las ordena por
+// la distancia al centro de cada objeto, y la casilla (a la izquierda del centro)
+// puede quedar "más lejos" que el frente según el ángulo de la cámara: sin un
+// orden explícito el frente la tapaba. Menor se dibuja antes.
+const ORDEN = { halo: 0, frente: 1, relleno: 2, barra: 2, tilde: 3, resplandor: 5 };
+
 // Altura del escudo sobre el disco del sello (su ancho sale de la proporción de la imagen).
 const ALTO_ESCUDO = 0.7;
 const PROPORCION_ESCUDO = 1181 / 1483;
@@ -135,9 +140,11 @@ export default function Escena2Materias({ activa, reducido }) {
       depthWrite: false,
       toneMapped: false,
     });
-    const metal = new THREE.MeshStandardMaterial({ color: '#b9c6e6', metalness: 1, roughness: 0.3, envMapIntensity: 1 });
+    // Oro del escudo (con un poco de emisión: sin entorno de reflejos un metal puro se vería negro).
+    const metal = new THREE.MeshStandardMaterial({ color: '#f2c230', metalness: 0.7, roughness: 0.32, emissive: '#9a6f00', emissiveIntensity: 0.5 });
+    const oroBrillante = new THREE.MeshStandardMaterial({ color: '#ffd84d', metalness: 0.5, roughness: 0.25, emissive: '#ffb400', emissiveIntensity: 0.9 });
     const baseSello = new THREE.MeshStandardMaterial({ map: crear(512, 512, dibujarBaseSello), roughness: 0.42, metalness: 0.35 });
-    const dorso = new THREE.MeshStandardMaterial({ color: '#16295f', metalness: 0.5, roughness: 0.4 });
+    const dorso = new THREE.MeshStandardMaterial({ color: '#7a0d14', metalness: 0.4, roughness: 0.45 });
 
     escudo.colorSpace = THREE.SRGBColorSpace;
     escudo.anisotropy = 8;
@@ -159,6 +166,7 @@ export default function Escena2Materias({ activa, reducido }) {
       tarjetas,
       resplandor,
       metal,
+      oroBrillante,
       baseSello,
       dorso,
       materialEscudo,
@@ -179,7 +187,7 @@ export default function Escena2Materias({ activa, reducido }) {
     () => () => {
       recursos.texturas.forEach((t) => t.dispose());
       recursos.tarjetas.forEach((t) => [t.frente, t.tilde, t.barra, t.halo].forEach((m) => m.dispose()));
-      [recursos.cuerpo, recursos.relleno, recursos.resplandor, recursos.metal, recursos.baseSello, recursos.dorso, recursos.materialEscudo].forEach((m) => m.dispose());
+      [recursos.cuerpo, recursos.relleno, recursos.resplandor, recursos.metal, recursos.oroBrillante, recursos.baseSello, recursos.dorso, recursos.materialEscudo].forEach((m) => m.dispose());
       recursos.geometriaRevelado.dispose();
       // El escudo lo cachea `useLoader` y se reutiliza si la escena vuelve a montarse: no se libera acá.
     },
@@ -252,17 +260,18 @@ export default function Escena2Materias({ activa, reducido }) {
         <PiezaDesarmable key={nombre} posicion={posicionTarjeta(i)} semilla={i + 1}>
           <group ref={(g) => { refsTarjeta.current[i] = g; }}>
             {/* Halo luminoso detrás: se enciende al tildarse. */}
-            <mesh position={[0, 0, -GROSOR_T / 2 - 0.01]} material={recursos.tarjetas[i].halo}>
+            <mesh position={[0, 0, -GROSOR_T / 2 - 0.01]} material={recursos.tarjetas[i].halo} renderOrder={ORDEN.halo}>
               <planeGeometry args={[ANCHO_T * 1.22, ALTO_T * 1.22]} />
             </mesh>
             <RoundedBox args={[ANCHO_T, ALTO_T, GROSOR_T]} radius={0.065} smoothness={4} material={recursos.cuerpo} />
-            <mesh position={[0, 0, GROSOR_T / 2 + 0.002]} material={recursos.tarjetas[i].frente}>
+            <mesh position={[0, 0, GROSOR_T / 2 + 0.002]} material={recursos.tarjetas[i].frente} renderOrder={ORDEN.frente}>
               <planeGeometry args={[ANCHO_T, ALTO_T]} />
             </mesh>
             <mesh
               ref={(m) => { refsRelleno.current[i] = m; }}
               position={[xCasilla, 0, GROSOR_T / 2 + 0.006]}
               material={recursos.relleno}
+              renderOrder={ORDEN.relleno}
               visible={false}
             >
               <planeGeometry args={[1, 1]} />
@@ -272,6 +281,7 @@ export default function Escena2Materias({ activa, reducido }) {
               position={[xCasilla - (ladoCasilla * 0.95) / 2, 0, GROSOR_T / 2 + 0.01]}
               geometry={recursos.geometriaRevelado}
               material={recursos.tarjetas[i].tilde}
+              renderOrder={ORDEN.tilde}
               visible={false}
             />
             <mesh
@@ -279,6 +289,7 @@ export default function Escena2Materias({ activa, reducido }) {
               position={[xBarra, yBarra, GROSOR_T / 2 + 0.006]}
               geometry={recursos.geometriaRevelado}
               material={recursos.tarjetas[i].barra}
+              renderOrder={ORDEN.barra}
               visible={false}
             />
           </group>
@@ -287,24 +298,24 @@ export default function Escena2Materias({ activa, reducido }) {
 
       {/* Sello de Cambridge con su escudo: aparece cuando todas las materias están tildadas. */}
       <PiezaDesarmable posicion={[0, 0, 0.55]} semilla={20}>
-        <mesh ref={refResplandor} position={[0, 0, -0.08]} material={recursos.resplandor} visible={false}>
+        <mesh ref={refResplandor} position={[0, 0, -0.08]} material={recursos.resplandor} renderOrder={ORDEN.resplandor} visible={false}>
           <planeGeometry args={[3.2, 3.2]} />
         </mesh>
         <group ref={refSello} visible={false}>
           <mesh rotation={[Math.PI / 2, 0, 0]} material={[recursos.metal, recursos.baseSello, recursos.dorso]}>
             <cylinderGeometry args={[RADIO_SELLO, RADIO_SELLO, 0.07, 64]} />
           </mesh>
-          <mesh material={azulEmisivo}>
+          <mesh material={recursos.oroBrillante}>
             <torusGeometry args={[RADIO_SELLO, 0.03, 14, 72]} />
           </mesh>
-          <mesh material={cianEmisivo}>
+          <mesh material={recursos.oroBrillante}>
             <torusGeometry args={[RADIO_SELLO * 0.66, 0.008, 8, 64]} />
           </mesh>
           <Dientes material={recursos.metal} />
           <mesh position={[0, 0, 0.044]} material={recursos.materialEscudo}>
             <planeGeometry args={[ALTO_ESCUDO * PROPORCION_ESCUDO, ALTO_ESCUDO]} />
           </mesh>
-          <pointLight ref={refLuz} position={[0, 0, 1.2]} color="#7fa6ff" intensity={0} distance={7} />
+          <pointLight ref={refLuz} position={[0, 0, 1.2]} color="#ffcf80" intensity={0} distance={7} />
         </group>
       </PiezaDesarmable>
     </group>
