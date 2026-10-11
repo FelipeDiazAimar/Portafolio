@@ -20,6 +20,13 @@ export default function DescripcionHito({ hito, visible }) {
   return (
     <div className={`${styles.descripcion} ${visible ? styles.visible : ''}`}>
       <p className={styles.texto}>{partes}</p>
+      {hito.credito ? (
+        <p className={styles.credito}>
+          <a href={hito.credito.url} target="_blank" rel="noopener noreferrer">
+            {hito.credito.texto}
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }

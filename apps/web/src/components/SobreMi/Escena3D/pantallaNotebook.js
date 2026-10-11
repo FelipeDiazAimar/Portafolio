@@ -9,8 +9,6 @@ export const CARACTERES_POR_SEGUNDO = 12;
 
 const PAUSA_TRAS_COMANDO = 0.5;
 const PAUSA_TRAS_SALIDA = 0.7;
-// Cuánto dura "hundida" una tecla después de escribirse su letra.
-const VENTANA_TECLA = 0.09;
 
 // Apertura de la tapa (la primera vez que aparece la escena). La pantalla
 // arranca un poco antes de que termine de abrirse, así no hay un hueco negro.
@@ -70,18 +68,6 @@ export function estadoPantalla(t) {
     lineas,
     cursorVisible: Math.floor(t * 2) % 2 === 0,
   };
-}
-
-// Letra que está hundida en el instante `t` (o '' si ninguna). La notebook la
-// busca en su distribución para hundir esa tecla.
-export function teclaPresionada(t) {
-  for (const entrada of HORARIO) {
-    for (let k = 0; k < entrada.comando.length; k += 1) {
-      const instante = entrada.inicio + (k + 1) / CARACTERES_POR_SEGUNDO;
-      if (t >= instante && t < instante + VENTANA_TECLA) return entrada.comando[k];
-    }
-  }
-  return '';
 }
 
 // Cuánto se abrió la tapa en el instante `t`: de 0 (cerrada) a 1 (abierta), con

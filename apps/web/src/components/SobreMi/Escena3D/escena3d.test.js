@@ -10,14 +10,12 @@ import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrol
 import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { PLACA_REPARACION, ZONAS_REPARACION, resistenciasSMD, capacitoresPlaca, ledsReparacion } from './disposicionReparacion.js';
-import { paletaEscena, colorArcoiris, valorMultimetro } from './paletas.js';
+import { paletaEscena, valorMultimetro } from './paletas.js';
 import { CANTIDAD_LEDS, ledEncendido, alturaDestornillador, giroDestornillador, DURACION_DESTORNILLADOR } from './cicloBanco.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
-import { PLACA, ZONAS, condensadores, tornillos, aletas } from './disposicionPlaca.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
-  teclaPresionada,
   progresoApertura,
   factorLuzPantalla,
   DURACION_APERTURA,
@@ -79,13 +77,6 @@ test('estadoPantalla: al terminar quedan todas las líneas', () => {
   const final = estadoPantalla(DURACION_TOTAL + 5);
   assert.equal(final.lineas.length, LINEAS.length * 2);
   assert.equal(final.lineas.at(-1), 'beep beep beep');
-});
-
-test('teclaPresionada: devuelve la letra que se está tecleando, o vacío', () => {
-  assert.equal(teclaPresionada(0), '');
-  assert.equal(teclaPresionada(7.0), '');
-  // primera letra de "whoami"
-  assert.equal(teclaPresionada(5.8 + 1 / 12 + 0.01), 'w');
 });
 
 test('tecladoQwerty: 5 filas de 12 teclas y letras en su sitio', () => {
@@ -454,63 +445,6 @@ test('escenas: la PC de 2024 gira libre', () => {
   assert.equal(esEscenaFija(3), false);
 });
 
-const dentro = (x, y, zona, margen = 0) =>
-  Math.abs(x - zona.cx) <= zona.ancho / 2 + margen && Math.abs(y - zona.cy) <= zona.alto / 2 + margen;
-
-test('disposicionPlaca: las zonas principales caben en la placa y no se pisan entre sí', () => {
-  const nombres = Object.keys(ZONAS);
-  assert.ok(nombres.length >= 8);
-  for (const nombre of nombres) {
-    const z = ZONAS[nombre];
-    assert.ok(Math.abs(z.cx) + z.ancho / 2 <= PLACA.ancho / 2 + 1e-9, `${nombre} se sale por los costados`);
-    assert.ok(Math.abs(z.cy) + z.alto / 2 <= PLACA.alto / 2 + 1e-9, `${nombre} se sale por arriba o abajo`);
-  }
-  for (let i = 0; i < nombres.length; i += 1) {
-    for (let j = i + 1; j < nombres.length; j += 1) {
-      const a = ZONAS[nombres[i]];
-      const b = ZONAS[nombres[j]];
-      const sePisan =
-        Math.abs(a.cx - b.cx) < (a.ancho + b.ancho) / 2 - 1e-9 && Math.abs(a.cy - b.cy) < (a.alto + b.alto) / 2 - 1e-9;
-      assert.equal(sePisan, false, `${nombres[i]} y ${nombres[j]} se superponen`);
-    }
-  }
-});
-
-test('condensadores: muchos, dentro de la placa, fuera de las zonas y sin tocarse', () => {
-  const lista = condensadores();
-  assert.ok(lista.length >= 40, `sólo ${lista.length}`);
-  for (const c of lista) {
-    assert.ok(Math.abs(c.x) + c.r <= PLACA.ancho / 2 - 0.04 && Math.abs(c.y) + c.r <= PLACA.alto / 2 - 0.04, 'fuera de la placa');
-    for (const nombre of Object.keys(ZONAS)) {
-      assert.equal(dentro(c.x, c.y, ZONAS[nombre], c.r), false, `un condensador cae dentro de ${nombre}`);
-    }
-  }
-  for (let i = 0; i < lista.length; i += 1) {
-    for (let j = i + 1; j < lista.length; j += 1) {
-      assert.ok(Math.hypot(lista[i].x - lista[j].x, lista[i].y - lista[j].y) >= lista[i].r + lista[j].r - 1e-9, 'dos condensadores se solapan');
-    }
-  }
-  assert.deepEqual(condensadores(), lista);
-});
-
-test('tornillos: seis, dentro de la placa y fuera de las zonas', () => {
-  const lista = tornillos();
-  assert.equal(lista.length, 6);
-  for (const t of lista) {
-    assert.ok(Math.abs(t.x) <= PLACA.ancho / 2 - 0.05 && Math.abs(t.y) <= PLACA.alto / 2 - 0.05);
-    for (const nombre of Object.keys(ZONAS)) assert.equal(dentro(t.x, t.y, ZONAS[nombre], 0.04), false, `un tornillo cae en ${nombre}`);
-  }
-});
-
-test('aletas: n posiciones equiespaciadas y centradas', () => {
-  const posiciones = aletas(10, 1.0);
-  assert.equal(posiciones.length, 10);
-  cerca(posiciones[0], -posiciones.at(-1));
-  const paso = posiciones[1] - posiciones[0];
-  for (let i = 2; i < posiciones.length; i += 1) cerca(posiciones[i] - posiciones[i - 1], paso);
-  assert.ok(posiciones.at(-1) - posiciones[0] <= 1.0 + 1e-9);
-});
-
 test('materias: doce nombres distintos y cortos (entran en la tarjeta)', () => {
   assert.equal(MATERIAS.length, 12);
   assert.equal(new Set(MATERIAS).size, 12);
@@ -655,17 +589,6 @@ test('paletaEscena: clara y oscura tienen las mismas claves y la clara es más l
     assert.ok(luz(clara[clave]) > luz(oscura[clave]) + 40, `${clave}: la variante clara debe ser mucho más clara`);
   }
   for (const valor of [...Object.values(clara), ...Object.values(oscura)]) assert.match(valor, /^#[0-9a-f]{6}$/i);
-});
-
-test('colorArcoiris: fijo, hexadecimal y recorre todo el espectro', () => {
-  assert.equal(colorArcoiris(0.3), colorArcoiris(0.3));
-  const colores = Array.from({ length: 24 }, (_, i) => colorArcoiris(i / 24));
-  for (const c of colores) assert.match(c, /^#[0-9a-f]{6}$/);
-  assert.ok(new Set(colores).size >= 20, 'colores muy repetidos');
-  // el primero es rojizo y a la mitad es azul-verdoso
-  assert.ok(parseInt(colores[0].slice(1, 3), 16) > 200);
-  assert.ok(parseInt(colores[12].slice(5, 7), 16) > 150 || parseInt(colores[12].slice(3, 5), 16) > 150);
-  assert.equal(colorArcoiris(1), colorArcoiris(0), 'es cíclico');
 });
 
 test('valorMultimetro: lectura plausible, estable y con formato fijo', () => {

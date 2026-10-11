@@ -14,7 +14,9 @@ const REPOSO = () => ({ p: [0, 0, 0], v: [0, 0, 0], r: [0, 0, 0], w: [0, 0, 0], 
 // pieza simplemente está en su lugar o fuera de vista.
 // Si la pieza necesita su propia rotación fija, ponerla en un <group> hijo: la
 // rotación de este grupo la pisa mientras la pieza no está armada.
-export default function PiezaDesarmable({ posicion = [0, 0, 0], semilla = 1, children }) {
+// `centro` (opcional) es el punto desde el que sale disparada: por defecto su
+// posición. Sirve cuando la pieza vive en un grupo con su propio desplazamiento.
+export default function PiezaDesarmable({ posicion = [0, 0, 0], centro, semilla = 1, children }) {
   const grupo = useRef(null);
   const control = useDesarme();
   // fase: 'armada' (en su lugar) | 'cayendo' | 'volviendo'
@@ -38,7 +40,7 @@ export default function PiezaDesarmable({ posicion = [0, 0, 0], semilla = 1, chi
       if (fase.current !== 'cayendo') {
         fase.current = 'cayendo';
         // Parte de donde esté (puede estar volviendo): la caída es continua.
-        estado.current = { ...estado.current, ...velocidadInicial(posicion, semilla), quieto: false };
+        estado.current = { ...estado.current, ...velocidadInicial(centro ?? posicion, semilla), quieto: false };
       }
       if (!estado.current.quieto) {
         estado.current = avanzarCaida(estado.current, dt);

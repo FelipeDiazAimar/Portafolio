@@ -30,7 +30,11 @@
     "resumen": "Laboratorio, docencia y freelance.",
     "descripcion": "Sentí la necesidad de ganar experiencia. Fui **ayudante de laboratorio** en la UTN, donde participé en la **reparación, instalación y desarme de equipos**. Fui **profesor de ingreso** de Programación: Python, C, **diagramas de flujo** y **lógica de procesos**. Empecé a hacer **trabajo freelance**: **JustPhones**, **Calidad Esencia**, **AlgoBonitoSV** y **AsistenteInteligente**.",
     "imagen": "/hito4.jpeg",
-    "video": "/videohito4.mp4"
+    "video": "/videohito4.mp4",
+    "credito": {
+      "texto": "Modelo 3D «motherboard am4» de Temoor, licencia CC BY 4.0",
+      "url": "https://sketchfab.com/3d-models/motherboard-am4-783d063a29424571bfb4c9b7b490b75f"
+    }
   },
   {
     "id": 4,

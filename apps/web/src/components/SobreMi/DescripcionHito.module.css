@@ -122,3 +122,16 @@
     color: var(--color-accent);
   }
 }
+
+/* Crédito de un modelo 3D con licencia que lo exige (CC BY). */
+.credito {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.credito a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
