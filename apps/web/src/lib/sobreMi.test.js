@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dividirResaltado } from './resaltado.js';
 import { indiceDeHito, progresoDeHito } from './hitoActivo.js';
+import { mostrarVideo } from './fondoHito.js';
 
 test('dividirResaltado: texto sin marcas es un único fragmento normal', () => {
   assert.deepEqual(dividirResaltado('hola mundo'), [{ texto: 'hola mundo', resaltado: false }]);
@@ -55,4 +56,14 @@ test('progresoDeHito: cae dentro del tramo de su propio hito', () => {
   for (let i = 0; i < 7; i += 1) {
     assert.equal(indiceDeHito(progresoDeHito(i, 7), 7), i);
   }
+});
+
+test('mostrarVideo: sin foto el video va directo; con foto espera; sin video nunca', () => {
+  const espera = 3;
+  assert.equal(mostrarVideo({ imagen: '/a.jpg', video: '/a.mp4' }, 0, espera), false);
+  assert.equal(mostrarVideo({ imagen: '/a.jpg', video: '/a.mp4' }, 2.9, espera), false);
+  assert.equal(mostrarVideo({ imagen: '/a.jpg', video: '/a.mp4' }, 3, espera), true);
+  assert.equal(mostrarVideo({ video: '/a.mp4' }, 0, espera), true);
+  assert.equal(mostrarVideo({ imagen: '/a.jpg' }, 99, espera), false);
+  assert.equal(mostrarVideo({}, 99, espera), false);
 });

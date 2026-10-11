@@ -387,7 +387,7 @@ export default function Escena1Bandera({ activa, reducido }) {
 
       {/* Símbolo de la UTN: sólo las formas, extruidas y en negro. Fijo abajo a
           la izquierda, girando sobre sí mismo. */}
-      <PiezaDesarmable posicion={[-1.25, -0.5, 0]} semilla={5}>
+      <PiezaDesarmable posicion={[-1.25, -0.1, 0]} semilla={5}>
         <group ref={refSimbolo} visible={false}>
           {simbolo.map((forma, i) => (
             <mesh key={i} geometry={forma} material={materialSimbolo} />
