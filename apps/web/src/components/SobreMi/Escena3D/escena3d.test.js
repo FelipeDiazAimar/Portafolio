@@ -10,6 +10,7 @@ import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrol
 import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { paletaEscena, valorMultimetro } from './paletas.js';
+import { CAJAS, LARGO, RUTA, S_ESCANER, S_LLEGADA, VELOCIDAD, brilloSap, distanciaCaja, faseCodigo, progresoEscaneo, puntoEnRuta } from './cicloPlanta.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -533,3 +534,81 @@ test('valorMultimetro: lectura plausible, estable y con formato fijo', () => {
 const dentroDe = (x, z, zona, margen = 0) =>
   Math.abs(x - zona.x) <= zona.ancho / 2 + margen && Math.abs(z - zona.z) <= zona.fondo / 2 + margen;
 
+test('puntoEnRuta: arranca en la entrada, termina al final de la L y no da saltos', () => {
+  const inicio = puntoEnRuta(0);
+  cerca(inicio.x, RUTA[0][0]);
+  cerca(inicio.z, RUTA[0][1]);
+  const fin = puntoEnRuta(LARGO);
+  cerca(fin.x, RUTA.at(-1)[0]);
+  cerca(fin.z, RUTA.at(-1)[1]);
+  let anterior = puntoEnRuta(0);
+  for (let s = 0.01; s <= LARGO; s += 0.01) {
+    const p = puntoEnRuta(s);
+    assert.ok(Math.hypot(p.x - anterior.x, p.z - anterior.z) < 0.011, `salto en s=${s}`);
+    anterior = p;
+  }
+});
+
+test('puntoEnRuta: la caja gira un cuarto de vuelta al doblar, sin saltos bruscos', () => {
+  cerca(puntoEnRuta(0.2).giro, 0);
+  cerca(puntoEnRuta(LARGO - 0.2).giro, Math.PI / 2);
+  let anterior = puntoEnRuta(0).giro;
+  for (let s = 0.01; s <= LARGO; s += 0.01) {
+    const g = puntoEnRuta(s).giro;
+    assert.ok(Math.abs(g - anterior) < 0.1, `giro brusco en s=${s}`);
+    anterior = g;
+  }
+});
+
+test('distanciaCaja: las cajas van parejas, avanzan con la velocidad de la cinta y dan la vuelta', () => {
+  const separacion = LARGO / CAJAS;
+  cerca(distanciaCaja(0, 0), 0);
+  cerca(distanciaCaja(1, 0), separacion);
+  cerca(distanciaCaja(0, 1) - distanciaCaja(0, 0), VELOCIDAD);
+  for (let t = 0; t < 30; t += 0.7) {
+    for (let i = 0; i < CAJAS; i += 1) {
+      const s = distanciaCaja(i, t);
+      assert.ok(s >= 0 && s < LARGO, `caja ${i} fuera de la ruta: ${s}`);
+    }
+  }
+  cerca(distanciaCaja(2, LARGO / VELOCIDAD), distanciaCaja(2, 0), 1e-6);
+});
+
+test('progresoEscaneo: sólo hay láser justo bajo el escáner', () => {
+  assert.equal(progresoEscaneo(0), 0);
+  cerca(progresoEscaneo(S_ESCANER), 1);
+  assert.equal(progresoEscaneo(S_ESCANER + 1), 0);
+  assert.ok(progresoEscaneo(S_ESCANER + 0.1) > 0 && progresoEscaneo(S_ESCANER + 0.1) < 1);
+});
+
+test('faseCodigo: no hay código antes de leer, viaja hasta el nodo y se apaga al llegar', () => {
+  assert.equal(faseCodigo(S_ESCANER - 0.5), 0);
+  assert.ok(faseCodigo(S_ESCANER + 0.01) > 0);
+  assert.ok(faseCodigo((S_ESCANER + S_LLEGADA) / 2) > 0.4 && faseCodigo((S_ESCANER + S_LLEGADA) / 2) < 0.6);
+  assert.equal(faseCodigo(S_LLEGADA + 0.1), 0);
+  let anterior = 0;
+  for (let s = S_ESCANER; s < S_LLEGADA; s += 0.02) {
+    const f = faseCodigo(s);
+    assert.ok(f >= anterior - 1e-12, `retrocede en s=${s}`);
+    anterior = f;
+  }
+});
+
+test('brilloSap: siempre entre 0 y 1, destella al llegar cada código y se apaga entre uno y otro', () => {
+  let maximo = 0;
+  let minimo = 1;
+  for (let t = 0; t < 40; t += 0.02) {
+    const b = brilloSap(t);
+    assert.ok(b >= 0 && b <= 1, `fuera de rango: ${b}`);
+    maximo = Math.max(maximo, b);
+    minimo = Math.min(minimo, b);
+  }
+  assert.ok(maximo > 0.9, `no destella: ${maximo}`);
+  assert.equal(minimo, 0);
+});
+
+test('escenas: la planta de 2026 existe y gira sólo dentro de un rango', () => {
+  assert.ok(idsConEscena.has(5));
+  assert.equal(esEscenaFija(5), false);
+  assert.ok(limiteDeGiro(5) > 0);
+});
