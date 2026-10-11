@@ -5,6 +5,8 @@ import { calcularDispersion } from './desarme.js';
 import { PARTES, ANCHO, ALTO } from './simboloUtn.js';
 import { desplazamientoBandera, AMPLITUD_MAXIMA } from './ondaBandera.js';
 import { progresoEntrada } from './entrada.js';
+import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vista.js';
+import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
@@ -263,4 +265,144 @@ test('desplazamientoBandera: flamea con la amplitud de una tela suelta', () => {
   }
   assert.ok(maximo >= 0.25, `amplitud máxima alcanzada: ${maximo}`);
   assert.ok(maximo <= AMPLITUD_MAXIMA + 1e-9);
+});
+
+// --- Tela simulada -----------------------------------------------------------
+const MEDIDAS = { columnas: 20, filas: 14, ancho: 2.4, alto: 1.5, yTope: 1 };
+const simular = (tela, pasos, opciones = {}) => {
+  for (let i = 0; i < pasos; i += 1) pasoTela(tela, PASO, { t: i * PASO, ...opciones });
+};
+const punto = (tela, i) => [tela.p[i * 3], tela.p[i * 3 + 1], tela.p[i * 3 + 2]];
+const distancia = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const indice = (tela, fila, columna) => fila * tela.columnas + columna;
+
+test('tela: arranca colgada de la varilla, con la fila de arriba fija', () => {
+  const tela = crearTela(MEDIDAS);
+  assert.equal(tela.n, MEDIDAS.columnas * MEDIDAS.filas);
+  for (let c = 0; c < MEDIDAS.columnas; c += 1) {
+    assert.equal(tela.fijas[indice(tela, 0, c)], 1);
+    cerca(punto(tela, indice(tela, 0, c))[1], MEDIDAS.yTope);
+  }
+  assert.equal(tela.fijas[indice(tela, 1, 0)], 0);
+  // la tela queda centrada en x
+  cerca(punto(tela, indice(tela, 0, 0))[0], -MEDIDAS.ancho / 2);
+  cerca(punto(tela, indice(tela, 0, MEDIDAS.columnas - 1))[0], MEDIDAS.ancho / 2);
+});
+
+test('tela: la fila de arriba no se mueve y no aparecen NaN aunque haya viento', () => {
+  const tela = crearTela(MEDIDAS);
+  const antes = punto(tela, indice(tela, 0, 5));
+  simular(tela, 600, { viento: 1 });
+  assert.deepEqual(punto(tela, indice(tela, 0, 5)), antes);
+  assert.ok(Array.from(tela.p).every(Number.isFinite));
+});
+
+test('tela: cuelga casi estirada y sin estirarse de más', () => {
+  const tela = crearTela(MEDIDAS);
+  simular(tela, 600);
+  const abajo = punto(tela, indice(tela, MEDIDAS.filas - 1, 10));
+  const colgado = MEDIDAS.yTope - abajo[1];
+  assert.ok(colgado > MEDIDAS.alto * 0.88 && colgado < MEDIDAS.alto * 1.12, `colgado ${colgado}`);
+  // ningún resorte se estira más de un 12 %
+  for (let k = 0; k < tela.rl.length; k += 1) {
+    const largo = distancia(punto(tela, tela.ra[k]), punto(tela, tela.rb[k]));
+    assert.ok(largo < tela.rl[k] * 1.12, `resorte ${k} estirado a ${largo / tela.rl[k]}`);
+  }
+});
+
+test('tela: enrollada, se desenrolla de a poco hasta colgar completa', () => {
+  const tela = crearTela({ ...MEDIDAS, enrollada: true });
+  const altoColgado = () => MEDIDAS.yTope - punto(tela, indice(tela, MEDIDAS.filas - 1, 10))[1];
+  simular(tela, 5, { estiramiento: 0.04 });
+  assert.ok(altoColgado() < MEDIDAS.alto * 0.1, `enrollada mide ${altoColgado()}`);
+  // rampa de 150 pasos (2,5 s), igual que en la escena
+  const RAMPA = 150;
+  for (let i = 0; i < RAMPA; i += 1) {
+    const x = i / RAMPA;
+    pasoTela(tela, PASO, { estiramiento: 0.04 + 0.96 * (1 - (1 - x) ** 3), t: i * PASO });
+  }
+  simular(tela, 400, { estiramiento: 1 });
+  assert.ok(altoColgado() > MEDIDAS.alto * 0.9, `desenrollada mide ${altoColgado()}`);
+});
+
+test('tela: agarrada, la partícula sigue al puntero y arrastra a las vecinas', () => {
+  const tela = crearTela(MEDIDAS);
+  simular(tela, 300);
+  const i = indice(tela, MEDIDAS.filas - 1, 10);
+  const vecina = indice(tela, MEDIDAS.filas - 2, 11);
+  const antes = punto(tela, vecina);
+  const objetivo = [0.9, -0.2, 0.4];
+  simular(tela, 200, { agarre: { indice: i, x: objetivo[0], y: objetivo[1], z: objetivo[2] } });
+  assert.ok(distancia(punto(tela, i), objetivo) < 1e-3);
+  assert.ok(distancia(punto(tela, vecina), antes) > 0.1, 'las vecinas acompañan');
+});
+
+test('tela: al soltarla vuelve a colgar', () => {
+  const tela = crearTela(MEDIDAS);
+  simular(tela, 300);
+  const i = indice(tela, MEDIDAS.filas - 1, 10);
+  const colgando = punto(tela, i);
+  simular(tela, 120, { agarre: { indice: i, x: 1.2, y: -0.3, z: 0.5 } });
+  simular(tela, 700);
+  assert.ok(distancia(punto(tela, i), colgando) < 0.15, `quedó a ${distancia(punto(tela, i), colgando)} del reposo`);
+});
+
+test('tela: empujar mueve las partículas cercanas y no las lejanas', () => {
+  const tela = crearTela(MEDIDAS);
+  simular(tela, 300);
+  const cerco = indice(tela, 8, 10);
+  const lejos = indice(tela, 8, 1);
+  const [x, y, z] = punto(tela, cerco);
+  const cercaAntes = punto(tela, cerco);
+  const lejosAntes = punto(tela, lejos);
+  empujar(tela, x, y, z, 0, 0, -0.3, 0.4);
+  pasoTela(tela, PASO, {});
+  const seMovioCerca = distancia(punto(tela, cerco), cercaAntes);
+  const seMovioLejos = distancia(punto(tela, lejos), lejosAntes);
+  assert.ok(seMovioCerca > 1e-2, 'la cercana se movió');
+  // la lejana sólo se entera por los resortes: se mueve mucho menos
+  assert.ok(seMovioLejos < seMovioCerca * 0.05, `cerca ${seMovioCerca}, lejos ${seMovioLejos}`);
+});
+
+test('tela: particulaMasCercana elige la más próxima y nunca una fija', () => {
+  const tela = crearTela(MEDIDAS);
+  simular(tela, 200);
+  const i = indice(tela, 5, 7);
+  const [x, y, z] = punto(tela, i);
+  assert.equal(particulaMasCercana(tela, x + 0.001, y, z), i);
+  // pegado a la varilla, la más cercana no fija es de la segunda fila
+  assert.ok(particulaMasCercana(tela, 0, MEDIDAS.yTope + 0.5, 0) >= tela.columnas);
+});
+
+test('estiramientoDesenrollado: arranca enrollada, termina completa y sólo crece', () => {
+  assert.equal(estiramientoDesenrollado(0, 0.35, 2.6), 0.04);
+  assert.equal(estiramientoDesenrollado(0.35, 0.35, 2.6), 0.04);
+  assert.equal(estiramientoDesenrollado(0.35 + 2.6, 0.35, 2.6), 1);
+  assert.equal(estiramientoDesenrollado(50, 0.35, 2.6), 1);
+  let anterior = 0;
+  for (let t = 0; t <= 3.2; t += 0.05) {
+    const valor = estiramientoDesenrollado(t, 0.35, 2.6);
+    assert.ok(valor >= anterior - 1e-12);
+    anterior = valor;
+  }
+});
+
+test('vistaParaAltura: un canvas bajo conserva la distancia mínima de cámara', () => {
+  assert.equal(vistaParaAltura(224).distancia, DISTANCIA_MINIMA); // celular
+  assert.equal(vistaParaAltura(780).distancia, DISTANCIA_MINIMA); // el alto de antes
+});
+
+test('vistaParaAltura: un canvas alto aleja la cámara para que los modelos no crezcan', () => {
+  const alto = vistaParaAltura(1164);
+  assert.ok(alto.distancia > DISTANCIA_MINIMA * 1.4, `distancia ${alto.distancia}`);
+  // la escala en pantalla (píxeles por unidad de escena) se mantiene constante
+  const pxPorUnidad = 1164 / (alto.mitadAlto * 2);
+  cerca(pxPorUnidad, PIXELES_POR_UNIDAD, 0.5);
+  // y cuanto más alto el canvas, más lejos la cámara
+  assert.ok(vistaParaAltura(1400).distancia > alto.distancia);
+});
+
+test('vistaParaAltura: la mitad del alto visible coincide con el campo de visión', () => {
+  const { distancia, mitadAlto } = vistaParaAltura(900);
+  cerca(mitadAlto, distancia * Math.tan((FOV * Math.PI) / 360));
 });

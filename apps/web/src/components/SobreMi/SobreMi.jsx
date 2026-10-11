@@ -12,9 +12,10 @@ import Escena3D from './Escena3D/Escena3D.jsx';
 import DescripcionHito from './DescripcionHito.jsx';
 import styles from './SobreMi.module.css';
 
-// Para arrastrar el modelo hay que estar con el cursor encima, así que abrir el
-// detalle al instante en cuanto entra el mouse lo abriría a mitad de cada
-// arrastre. Se espera un momento; un `pointerdown` sobre el canvas lo cancela.
+// Para arrastrar el modelo (o agarrar la tela de la bandera) hay que estar con
+// el cursor encima, así que abrir el detalle en cuanto entra el mouse lo abriría
+// a mitad de cada gesto. Hay que dejar el mouse QUIETO este tiempo: cada
+// movimiento reinicia la espera, y un `pointerdown` sobre el canvas la cancela.
 const ESPERA_HOVER_MODELO_MS = 900;
 
 function SobreMiContenido() {
@@ -25,6 +26,8 @@ function SobreMiContenido() {
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const sinHover = !useConsulta('(hover: hover) and (pointer: fine)');
   const refEspera = useRef(0);
+  const refAbierto = useRef(false);
+  refAbierto.current = detalleAbierto;
   useEffect(() => () => clearTimeout(refEspera.current), []);
 
   const { scrollYProgress } = useScroll({
@@ -71,6 +74,13 @@ function SobreMiContenido() {
             // `buttons !== 0`: si entra con un botón apretado es un arrastre
             // (girar el modelo) que salió de la columna y volvió.
             if (evento.pointerType !== 'mouse' || evento.buttons !== 0) return;
+            clearTimeout(refEspera.current);
+            refEspera.current = setTimeout(() => setDetalleAbierto(true), ESPERA_HOVER_MODELO_MS);
+          }}
+          onPointerMove={(evento) => {
+            // Mover el mouse reinicia la espera (no se desarma mientras se juega
+            // con el modelo). Con el detalle ya abierto no hace falta nada.
+            if (evento.pointerType !== 'mouse' || evento.buttons !== 0 || refAbierto.current) return;
             clearTimeout(refEspera.current);
             refEspera.current = setTimeout(() => setDetalleAbierto(true), ESPERA_HOVER_MODELO_MS);
           }}

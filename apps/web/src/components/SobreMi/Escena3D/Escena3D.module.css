@@ -19,10 +19,13 @@
 
 @media (min-width: 769px) {
   /* El canvas sobresale de la zona para que el modelo no se recorte al girar y
-     pase POR DEBAJO del título (que va por encima, ver EncabezadoHito). Es
-     simétrico arriba y abajo: el centro del modelo sigue siendo el de la zona. */
+     pase POR DEBAJO del título (que va por encima, ver EncabezadoHito). Arriba
+     llega hasta el borde de la sección (lo que sobra lo recorta el panel), así
+     algo puede colgar desde ahí, como la bandera de 2022. Es simétrico arriba y
+     abajo: el centro del modelo sigue siendo el de la zona, y la cámara se aleja
+     según el alto para que el tamaño de los modelos no cambie (ver vista.js). */
   .caja {
-    inset: -10rem -14rem -10rem -10rem;
+    inset: -22rem -14rem -22rem -10rem;
   }
 }
 

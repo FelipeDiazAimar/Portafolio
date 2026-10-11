@@ -23,8 +23,11 @@ export default function ControlGiro({ quieto = false, children }) {
 
   return (
     <>
+      {/* makeDefault: las escenas lo buscan (`get().controls`) para apagar el giro
+          mientras el usuario agarra algo, como la tela de la bandera. */}
       <OrbitControls
         ref={refControles}
+        makeDefault
         enableZoom={false}
         enablePan={false}
         enableDamping

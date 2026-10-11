@@ -19,6 +19,8 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
   const [montado, setMontado] = useState(false);
   const [visible, setVisible] = useState(false);
   const [fallo, setFallo] = useState(false);
+  const refInteraccion = useRef(onInteraccion);
+  refInteraccion.current = onInteraccion;
   // En celular la descripción va DEBAJO del modelo, no encima: el modelo se queda
   // armado y visible. Sólo en escritorio se desarma para dejar lugar al texto.
   const esMovil = useConsulta('(max-width: 768px)');
@@ -26,6 +28,17 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
 
   useEffect(() => {
     setWebgl(hayWebGL());
+  }, []);
+
+  // Las escenas avisan con el evento 'interaccion3d' cuando el usuario juega con
+  // algo (por ejemplo, pasa el cursor sobre la tela de la bandera): no debe contar
+  // como "mouse quieto" para el desarme por hover.
+  useEffect(() => {
+    const caja = refCaja.current;
+    if (!caja) return undefined;
+    const alInteractuar = () => refInteraccion.current?.();
+    caja.addEventListener('interaccion3d', alInteractuar);
+    return () => caja.removeEventListener('interaccion3d', alInteractuar);
   }, []);
 
   useEffect(() => {
