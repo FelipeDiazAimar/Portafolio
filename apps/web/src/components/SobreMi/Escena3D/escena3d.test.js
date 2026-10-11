@@ -8,6 +8,7 @@ import { progresoEntrada } from './entrada.js';
 import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vista.js';
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
 import { esEscenaFija, idsConEscena } from './escenas/index.js';
+import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
@@ -413,4 +414,37 @@ test('escenas: la notebook gira libre y la bandera de 2022 es fija', () => {
   assert.equal(esEscenaFija(0), false);
   assert.equal(esEscenaFija(1), true);
   assert.equal(esEscenaFija(99), false);
+});
+
+test('fraccionExplosion: arranca armada, llega a estar desarmada del todo y es periódica', () => {
+  assert.equal(fraccionExplosion(0), 0);
+  let maximo = 0;
+  let minimo = 1;
+  for (let t = 0; t < DURACION_CICLO; t += 0.02) {
+    const f = fraccionExplosion(t);
+    assert.ok(f >= 0 && f <= 1, `fuera de rango en t=${t}: ${f}`);
+    maximo = Math.max(maximo, f);
+    minimo = Math.min(minimo, f);
+  }
+  assert.equal(maximo, 1);
+  assert.equal(minimo, 0);
+  cerca(fraccionExplosion(1.3), fraccionExplosion(1.3 + DURACION_CICLO), 1e-9);
+  cerca(fraccionExplosion(4.2), fraccionExplosion(4.2 + 3 * DURACION_CICLO), 1e-9);
+});
+
+test('fraccionExplosion: se queda quieta un rato armada y un rato desarmada (no oscila sin parar)', () => {
+  const quietaEnCero = [];
+  const quietaEnUno = [];
+  for (let t = 0; t < DURACION_CICLO; t += 0.05) {
+    const f = fraccionExplosion(t);
+    if (f === 0) quietaEnCero.push(t);
+    if (f === 1) quietaEnUno.push(t);
+  }
+  assert.ok(quietaEnCero.length * 0.05 >= 1, 'al menos 1 s armada');
+  assert.ok(quietaEnUno.length * 0.05 >= 1, 'al menos 1 s desarmada');
+});
+
+test('escenas: la PC de 2024 gira libre', () => {
+  assert.ok(idsConEscena.has(3));
+  assert.equal(esEscenaFija(3), false);
 });
