@@ -43,11 +43,15 @@ export function separarPiezas(escena, { anchoObjetivo, elegirPiezas, extras = []
 
 // Clona un modelo y lo deja listo para encajar en otro: lo escala y gira, y apoya
 // el centro de su base en "base" (en el espacio del modelo que lo recibe).
-export function colocarPieza(escena, { nombre, escala = 1, rotacion = [0, 0, 0], base, elevacion }) {
+export function colocarPieza(escena, { nombre, escala = 1, rotacion = [0, 0, 0], base, elevacion, espejoY = false }) {
   const pivote = new THREE.Group();
   pivote.name = nombre;
   pivote.userData.elevacion = elevacion;
-  pivote.add(escena.clone(true));
+  const contenido = escena.clone(true);
+  // Espejo en el eje y del modelo: para darle la vuelta a una pieza sin que
+  // cambie de lado lo que ya miraba al frente.
+  if (espejoY) contenido.scale.y *= -1;
+  pivote.add(contenido);
   pivote.scale.setScalar(escala);
   pivote.rotation.set(...rotacion);
   pivote.updateMatrixWorld(true);
@@ -67,4 +71,43 @@ export function anclarEnMesa(escena) {
   const caja = new THREE.Box3().setFromObject(raiz);
   const centro = caja.getCenter(new THREE.Vector3());
   return { raiz, caja, cx: centro.x, cz: centro.z, minY: caja.min.y };
+}
+
+// Módulo de memoria RAM con volumen. El modelo es una lámina sin espesor con la
+// imagen del módulo: se le arma un cuerpo de disipador (una caja oscura) y la
+// imagen va en las dos caras, cada una derecha vista desde su lado. El resultado
+// es un grupo plano en x–z (largo en z) con los contactos del lado +x.
+export function construirRam(escena) {
+  const frente = escena.clone(true);
+  frente.updateMatrixWorld(true);
+  const caja = new THREE.Box3().setFromObject(frente);
+  const tamano = caja.getSize(new THREE.Vector3());
+  const c = caja.getCenter(new THREE.Vector3());
+  const grosor = tamano.x * 0.2;
+
+  const grupo = new THREE.Group();
+  grupo.name = "ram";
+  const cara = new THREE.Group();
+  cara.add(frente);
+  cara.position.y = grosor / 2;
+  grupo.add(cara);
+
+  // El dorso es la misma lámina girada media vuelta sobre su eje largo.
+  const dorso = new THREE.Group();
+  const lamina = escena.clone(true);
+  lamina.position.set(-c.x, -c.y, -c.z);
+  dorso.add(lamina);
+  dorso.position.set(c.x, c.y - grosor / 2, c.z);
+  dorso.rotation.z = Math.PI;
+  grupo.add(dorso);
+
+  // Cuerpo del disipador: un poco más corto del lado de los contactos, que quedan a la vista.
+  const cuerpo = new THREE.Mesh(
+    new THREE.BoxGeometry(tamano.x * 0.93, grosor, tamano.z * 0.99),
+    new THREE.MeshStandardMaterial({ color: "#14151a", roughness: 0.45, metalness: 0.6 })
+  );
+  cuerpo.position.set(c.x - tamano.x * 0.035, c.y - grosor / 2 + grosor / 2, c.z);
+  cuerpo.position.y = c.y;
+  grupo.add(cuerpo);
+  return grupo;
 }

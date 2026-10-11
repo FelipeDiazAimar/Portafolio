@@ -8,7 +8,7 @@ import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { crearPantalla } from '../pantallaCanvas.js';
 import { valorMultimetro } from '../paletas.js';
 import { dibujarDiagnostico, dibujarLcd, dibujarPantallaTelefono, dibujarTapete } from '../texturasBanco.js';
-import { anclarEnMesa } from './modelos.js';
+import { anclarEnMesa, construirRam } from './modelos.js';
 import { RELACION_PANTALLA, agregarManzana, crearManzana, materialManzana, prepararPantalla } from './macbook.js';
 import { Banana, Cable, LARGO_PUNTA, Punta } from './banco/Cables.jsx';
 import { Destornillador, Palanca, Pinzas } from './banco/Accesorios.jsx';
@@ -28,14 +28,14 @@ const ESCALA_RAM = 0.8 / 1.383;
 const ESCALA_TELEFONO = 0.9 / 226;
 
 // Posiciones sobre el tapete (marco del banco: x a la derecha, z hacia el frente).
-const POS_MAC = [-1.25, 0, -0.55];
+const POS_MAC = [-1.2, 0, -0.6];
 const GIRO_MAC = 0.35;
 const POS_PLACA = [0.7, 0, 0.6];
 const GIRO_PLACA = 0.25;
 const POS_MULTIMETRO = [2.1, 0, -0.5];
 const GIRO_MULTIMETRO = -0.5;
 const POS_RAM = [-0.55, 0, 1.2];
-const POS_TELEFONO = [-1.55, 0, 0.95];
+const POS_TELEFONO = [-1.95, 0, 1.2];
 // Capa de pantalla sobre el vidrio del teléfono (unidades del modelo).
 const PANTALLA_TELEFONO = { ancho: 98, alto: 212 };
 
@@ -102,7 +102,6 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
         alphaTest: 0.5,
         toneMapped: false,
       }),
-      ramBase: std({ color: '#0b0c10', roughness: 0.5 }),
     };
     return { texturas, mats, lcd };
   }, [claro]);
@@ -116,14 +115,11 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
     pantallaMac.panel.material = mats.pantallaMac;
     const tapa = macBanco.raiz.getObjectByName('VCQqxpxkUlzqcJI');
     agregarManzana(tapa, pantallaMac, mats.manzana);
-    ram.traverse((nodo) => {
-      if (nodo.isMesh) nodo.material.side = THREE.DoubleSide;
-    });
     return {
       mac: macBanco,
       placa: anclarEnMesa(placa),
       multimetro: anclarEnMesa(multimetro),
-      ram: anclarEnMesa(ram),
+      ram: anclarEnMesa(construirRam(ram)),
       telefono: anclarEnMesa(telefono),
     };
   }, [mac, placa, multimetro, ram, telefono, mats]);
@@ -180,7 +176,7 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
 
   return (
     // `key` por variante: al cambiar de tema se recrean los materiales y las texturas.
-    <group key={claro ? 'claro' : 'oscuro'} position={[0.05, -0.1, 0]} rotation={[0.62, -0.28, 0]} scale={0.68}>
+    <group key={claro ? 'claro' : 'oscuro'} position={[0.05, -0.25, 0]} rotation={[0.62, -0.28, 0]} scale={0.63}>
       <Environment resolution={512} frames={1} environmentIntensity={0.75}>
         <color attach="background" args={['#8190a6']} />
         <Lightformer form="rect" intensity={9} color="#ffffff" position={[0, 6, 5]} rotation-x={Math.PI / 2.2} scale={[14, 6, 1]} />
@@ -236,8 +232,7 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
       {/* Memoria RAM suelta sobre la mesa. */}
       <PiezaDesarmable semilla={6}>
         <group position={POS_RAM} rotation={[0, -0.15, 0]}>
-          <RoundedBox args={[0.8, 0.012, 0.19]} radius={0.004} smoothness={2} position={[0, 0.006, 0]} material={mats.ramBase} />
-          <group scale={ESCALA_RAM} position={[0, 0.0125, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <group scale={ESCALA_RAM} rotation={[0, Math.PI / 2, 0]}>
             <group position={encaje(modelos.ram, 1)}>
               <primitive object={modelos.ram.raiz} />
             </group>
@@ -261,7 +256,7 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
         <group position={[0.45, 0, -1.1]} rotation={[0, 0.5, 0]}>
           <Pinzas mats={mats} />
         </group>
-        <group position={[1.9, 0, 1.2]} rotation={[0, -0.15, 0]}>
+        <group position={[1.8, 0, 1.0]} rotation={[0, -0.15, 0]}>
           <Destornillador mats={mats} />
         </group>
       </PiezaDesarmable>
