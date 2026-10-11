@@ -16,16 +16,10 @@ import {
   progresoApertura,
 } from '../pantallaNotebook.js';
 import { separarPiezas } from './modelos.js';
+import { BASE, BISAGRA, RELACION_PANTALLA, TAPA, agregarManzana, crearManzana, materialManzana, prepararPantalla } from './macbook.js';
 
 const RUTA = '/modelos/macbook.glb';
 const ANCHO = 2.9;
-// Nombres de los nodos del modelo (vienen como códigos del original).
-const BASE = 'BoBvWqDHZjAeVrp';
-const TAPA = 'VCQqxpxkUlzqcJI';
-const BISAGRA = 'aXVtPPoMqmRgmzr';
-const PANTALLA = 'VQmfhbMzfNAuKAD';
-// Relación de aspecto de la pantalla (MacBook Pro de 16": 3456 × 2234).
-const RELACION = 3456 / 2234;
 const PIXELES_ANCHO = 1280;
 // Cuánto se levanta la tapa del teclado mientras está cerrada (unidades del
 // modelo) para no atravesar las teclas.
@@ -44,67 +38,23 @@ function elegirPiezas(raiz) {
   return [tapa, ...base.children].filter(Boolean);
 }
 
-// Pone en el panel de la pantalla las coordenadas de textura (0–1 de punta a
-// punta, derecho visto de frente) y mide su orientación: centro, la dirección
-// "hacia arriba" sobre la tapa y la normal hacia donde mira. El panel se
-// clona: la geometría original queda intacta en la caché de useGLTF.
-function prepararPantalla(tapa) {
-  const panel = tapa.getObjectByName(PANTALLA);
-  panel.updateWorldMatrix(true, false);
-  const geometria = panel.geometry.clone();
-  panel.geometry = geometria;
-  const posicion = geometria.attributes.position;
-  const puntos = [];
-  for (let i = 0; i < posicion.count; i += 1) {
-    puntos.push(new THREE.Vector3().fromBufferAttribute(posicion, i).applyMatrix4(panel.matrixWorld));
-  }
-
-  // Eje principal del panel en el plano (y, z): la tapa gira alrededor de x.
-  const media = puntos.reduce((s, p) => s.add(p), new THREE.Vector3()).divideScalar(puntos.length);
-  let cyy = 0;
-  let czz = 0;
-  let cyz = 0;
-  puntos.forEach((p) => {
-    cyy += (p.y - media.y) ** 2;
-    czz += (p.z - media.z) ** 2;
-    cyz += (p.y - media.y) * (p.z - media.z);
-  });
-  const angulo = 0.5 * Math.atan2(2 * cyz, cyy - czz);
-  const arriba = new THREE.Vector3(0, Math.cos(angulo), Math.sin(angulo));
-  if (arriba.y < 0) arriba.negate();
-  // Sentido hacia donde mira la pantalla: el que apunta hacia el frente (+z).
-  const normal = new THREE.Vector3(0, -arriba.z, arriba.y);
-  if (normal.z < 0) normal.negate();
-
-  const caja = new THREE.Box3().setFromPoints(puntos);
-  const proyecciones = puntos.map((p) => p.y * arriba.y + p.z * arriba.z);
-  const minV = Math.min(...proyecciones);
-  const maxV = Math.max(...proyecciones);
-  const uv = new Float32Array(posicion.count * 2);
-  puntos.forEach((p, i) => {
-    uv[i * 2] = (p.x - caja.min.x) / (caja.max.x - caja.min.x);
-    uv[i * 2 + 1] = (proyecciones[i] - minV) / (maxV - minV);
-  });
-  geometria.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-
-  return { panel, centroPantalla: caja.getCenter(new THREE.Vector3()), normal };
-}
-
 export default function Escena0Notebook({ activa, reducido, claro = false }) {
   const { scene } = useGLTF(RUTA);
+  const manzana = useMemo(() => crearManzana(), []);
   const modelo = useMemo(() => {
     const separado = separarPiezas(scene, { anchoObjetivo: ANCHO, elegirPiezas });
     const tapa = separado.piezas.find(({ objeto }) => objeto.name === TAPA).objeto;
     const pantalla = prepararPantalla(tapa);
+    agregarManzana(tapa, pantalla, materialManzana(manzana.textura));
     // La bisagra marca el eje de giro de la tapa.
     const bisagra = new THREE.Box3().setFromObject(tapa.getObjectByName(BISAGRA)).getCenter(new THREE.Vector3());
     // Ángulo con que la tapa queda apoyada sobre el teclado: el que lleva el
     // centro de la pantalla a la horizontal, hacia el frente, desde la bisagra.
     const v = pantalla.centroPantalla.clone().sub(bisagra);
     return { ...separado, ...pantalla, tapa, bisagra, anguloCerrada: Math.atan2(v.y, v.z) };
-  }, [scene]);
+  }, [scene, manzana]);
 
-  const pantallaCanvas = useMemo(() => crearPantalla(PIXELES_ANCHO, Math.round(PIXELES_ANCHO / RELACION)), []);
+  const pantallaCanvas = useMemo(() => crearPantalla(PIXELES_ANCHO, Math.round(PIXELES_ANCHO / RELACION_PANTALLA)), []);
   const materialPantalla = useMemo(
     () => new THREE.MeshBasicMaterial({ map: pantallaCanvas.textura, toneMapped: false }),
     [pantallaCanvas]
@@ -126,9 +76,10 @@ export default function Escena0Notebook({ activa, reducido, claro = false }) {
     modelo.panel.material = materialPantalla;
     return () => {
       pantallaCanvas.textura.dispose();
+      manzana.textura.dispose();
       materialPantalla.dispose();
     };
-  }, [modelo, materialPantalla, pantallaCanvas]);
+  }, [modelo, materialPantalla, pantallaCanvas, manzana]);
 
   useFrame((_, delta) => {
     if (!activa) return;

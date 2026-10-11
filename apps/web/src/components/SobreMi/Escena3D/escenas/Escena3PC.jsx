@@ -1,18 +1,31 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Environment, Lightformer, useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
 import { fraccionExplosion } from '../cicloPC.js';
-import { separarPiezas } from './modelos.js';
+import { colocarPieza, separarPiezas } from './modelos.js';
 
-const RUTA = '/modelos/placa-am4.glb';
+const RUTA_PLACA = '/modelos/placa-am4.glb';
+const RUTA_CPU = '/modelos/cpu-9800x3d.glb';
+const RUTA_RAM = '/modelos/ram-ddr5.glb';
+const RUTA_GPU = '/modelos/grafica-rtx3080.glb';
 const ANCHO = 2.7;
 // Cuánto se separa cada pieza de la placa en la vista explotada.
 const SEPARACION = 2.1;
 
-// Las piezas son los hijos de la placa ("motherboard") más la ranura mini PCIe.
+// Posiciones en el espacio de la placa (unidades del modelo, y hacia arriba, z
+// hacia el frente). Se midieron sobre el modelo: socket, ranuras de RAM y PCIe.
+const BASE_CPU = [0.325, 0.162, -0.757];
+const BASES_RAM = [
+  [1.36, 0.3, -0.781],
+  [1.53, 0.3, -0.781],
+];
+const BASE_GPU = [-0.45, 0.36, 1.25];
+
+// Las piezas de la placa son los hijos de "motherboard" más la ranura mini PCIe.
 // La placa en sí (el circuito impreso) es la pieza `Object_4`.
 function elegirPiezas(raiz) {
   const placa = raiz.getObjectByName('motherboard_65');
@@ -20,7 +33,7 @@ function elegirPiezas(raiz) {
   return [...placa.children, mini].filter(Boolean);
 }
 
-// Número estable a partir del nombre (para repartir alturas y sentidos sin azar).
+// Número estable a partir del nombre (para repartir alturas sin azar).
 function hash(texto) {
   let h = 0;
   for (let i = 0; i < texto.length; i += 1) h = (h * 31 + texto.charCodeAt(i)) % 9973;
@@ -29,9 +42,9 @@ function hash(texto) {
 
 // Pieza que se separa de la placa en vertical (y un poco hacia afuera) durante
 // la vista explotada. La fracción la calcula la escena una vez por cuadro.
-function Flotante({ centro, nombre, fraccion, fijo, children }) {
+function Flotante({ centro, objeto, fraccion, fijo, children }) {
   const grupo = useRef(null);
-  const elevacion = useMemo(() => 0.35 + hash(nombre) * 0.9, [nombre]);
+  const elevacion = useMemo(() => objeto.userData.elevacion ?? 0.35 + hash(objeto.name) * 0.9, [objeto]);
   useFrame(() => {
     const f = fijo ? 0 : fraccion.current;
     grupo.current.position.set(centro[0] * f * 0.35, f * SEPARACION * elevacion, centro[2] * f * 0.35);
@@ -40,16 +53,36 @@ function Flotante({ centro, nombre, fraccion, fijo, children }) {
 }
 
 export default function Escena3PC({ activa, reducido }) {
-  const { scene } = useGLTF(RUTA);
-  const modelo = useMemo(() => separarPiezas(scene, { anchoObjetivo: ANCHO, elegirPiezas }), [scene]);
+  const placa = useGLTF(RUTA_PLACA).scene;
+  const cpu = useGLTF(RUTA_CPU).scene;
+  const ram = useGLTF(RUTA_RAM).scene;
+  const gpu = useGLTF(RUTA_GPU).scene;
+  const modelo = useMemo(() => {
+    // El módulo de RAM es una lámina sin espesor: se ve de los dos lados.
+    ram.traverse((nodo) => {
+      if (nodo.isMesh) nodo.material.side = THREE.DoubleSide;
+    });
+    // La carcasa de la gráfica es de metal claro y la luz de estudio la lava: se oscurece un poco.
+    gpu.traverse((nodo) => {
+      if (nodo.isMesh && !nodo.material.userData.atenuado) {
+        nodo.material.color.multiplyScalar(0.55);
+        nodo.material.userData.atenuado = true;
+      }
+    });
+    const extras = [
+      // Procesador apoyado en el socket (queda plano, igual que la placa).
+      colocarPieza(cpu, { nombre: 'cpu', escala: 0.2, base: BASE_CPU, elevacion: 0.55 }),
+      // Memorias paradas en sus ranuras: giradas para quedar de canto, con los contactos abajo.
+      ...BASES_RAM.map((base, i) =>
+        colocarPieza(ram, { nombre: `ram${i}`, escala: 2.06, rotacion: [0, 0, -Math.PI / 2], base, elevacion: 0.85 + i * 0.12 })
+      ),
+      // Gráfica parada en la ranura PCIe, con los ventiladores hacia el frente.
+      colocarPieza(gpu, { nombre: 'gpu', escala: 12, rotacion: [Math.PI / 2, 0, 0], base: BASE_GPU, elevacion: 1.15 }),
+    ];
+    return separarPiezas(placa, { anchoObjetivo: ANCHO, elegirPiezas, extras });
+  }, [placa, cpu, ram, gpu]);
   const fraccion = useRef(0);
   const tiempo = useRef(0);
-
-  useEffect(() => {
-    // El clon comparte geometrías y materiales con el original (que useGLTF
-    // guarda en caché): no se liberan acá.
-    return undefined;
-  }, [modelo]);
 
   useFrame((_, delta) => {
     if (!activa) return;
@@ -77,7 +110,7 @@ export default function Escena3PC({ activa, reducido }) {
       <directionalLight position={[-5, 2, 4]} intensity={0.35} color="#dfe8ff" />
 
       {piezas.map(({ objeto, centro: c }, i) => (
-        <Flotante key={objeto.uuid} centro={c} nombre={objeto.name} fraccion={fraccion} fijo={objeto.name === 'Object_4'}>
+        <Flotante key={objeto.uuid} centro={c} objeto={objeto} fraccion={fraccion} fijo={objeto.name === 'Object_4'}>
           <PiezaDesarmable centro={c} semilla={i + 1}>
             <group scale={escala} position={[-centro.x * escala, -centro.y * escala, -centro.z * escala]}>
               <primitive object={objeto} />

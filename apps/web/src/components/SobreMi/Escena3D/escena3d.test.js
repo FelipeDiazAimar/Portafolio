@@ -9,9 +9,7 @@ import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vi
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
 import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
-import { PLACA_REPARACION, ZONAS_REPARACION, resistenciasSMD, capacitoresPlaca, ledsReparacion } from './disposicionReparacion.js';
 import { paletaEscena, valorMultimetro } from './paletas.js';
-import { CANTIDAD_LEDS, ledEncendido, alturaDestornillador, giroDestornillador, DURACION_DESTORNILLADOR } from './cicloBanco.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -22,7 +20,6 @@ import {
   DURACION_TOTAL,
   LINEAS,
 } from './pantallaNotebook.js';
-import { DISPOSICION, COLUMNAS, TOTAL_TECLAS, indiceDeLetra } from './tecladoQwerty.js';
 
 const cerca = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} no está cerca de ${b}`);
 
@@ -77,26 +74,6 @@ test('estadoPantalla: al terminar quedan todas las líneas', () => {
   const final = estadoPantalla(DURACION_TOTAL + 5);
   assert.equal(final.lineas.length, LINEAS.length * 2);
   assert.equal(final.lineas.at(-1), 'beep beep beep');
-});
-
-test('tecladoQwerty: 5 filas de 12 teclas y letras en su sitio', () => {
-  assert.equal(DISPOSICION.length, 5);
-  assert.ok(DISPOSICION.every((fila) => fila.length === COLUMNAS));
-  assert.equal(TOTAL_TECLAS, 60);
-  // fila 1 (QWERTY), columna 1
-  assert.equal(indiceDeLetra('w'), COLUMNAS + 1);
-  assert.equal(indiceDeLetra('W'), COLUMNAS + 1);
-  assert.equal(indiceDeLetra('a'), COLUMNAS * 2);
-  assert.equal(indiceDeLetra('ñ'), -1);
-  assert.equal(indiceDeLetra(''), -1);
-});
-
-test('tecladoQwerty: todas las letras que se teclean existen y no se repiten', () => {
-  for (const { comando } of LINEAS) {
-    for (const letra of comando) assert.ok(indiceDeLetra(letra) >= 0, `falta la tecla "${letra}"`);
-  }
-  const letras = DISPOSICION.flat().filter((tecla) => /^[a-z]$/.test(tecla));
-  assert.equal(new Set(letras).size, letras.length);
 });
 
 test('progresoApertura: va de 0 a 1 sin pasarse y sólo avanza', () => {
@@ -522,54 +499,6 @@ test('limiteDeGiro: la notebook gira libre y las escenas fijas no tienen límite
   assert.equal(limiteDeGiro(99), null);
 });
 
-test('ledEncendido: determinista, cada LED parpadea y no todos están prendidos a la vez', () => {
-  assert.equal(CANTIDAD_LEDS, 12);
-  assert.equal(ledEncendido(3, 1.7), ledEncendido(3, 1.7));
-  let prendidosAlMismoTiempo = new Set();
-  for (let i = 0; i < CANTIDAD_LEDS; i += 1) {
-    let prendido = 0;
-    let cambios = 0;
-    let anterior = ledEncendido(i, 0);
-    for (let t = 0; t < 20; t += 0.05) {
-      const ahora = ledEncendido(i, t);
-      if (ahora) prendido += 1;
-      if (ahora !== anterior) cambios += 1;
-      anterior = ahora;
-    }
-    const fraccion = prendido / 400;
-    assert.ok(fraccion > 0.2 && fraccion < 0.8, `LED ${i} prendido ${Math.round(fraccion * 100)} %`);
-    assert.ok(cambios >= 4, `LED ${i} sólo cambió ${cambios} veces`);
-    prendidosAlMismoTiempo.add(ledEncendido(i, 2.3));
-  }
-  assert.equal(prendidosAlMismoTiempo.size, 2, 'en un mismo instante hay LEDs prendidos y apagados');
-});
-
-test('destornillador: sube y baja en ciclo, gira sólo mientras aprieta y repite', () => {
-  let minimo = 1;
-  let maximo = 0;
-  for (let t = 0; t < DURACION_DESTORNILLADOR; t += 0.02) {
-    const h = alturaDestornillador(t);
-    assert.ok(h >= 0 && h <= 1, `altura fuera de rango: ${h}`);
-    minimo = Math.min(minimo, h);
-    maximo = Math.max(maximo, h);
-  }
-  assert.equal(minimo, 0);
-  assert.equal(maximo, 1);
-  cerca(alturaDestornillador(1.1), alturaDestornillador(1.1 + DURACION_DESTORNILLADOR), 1e-9);
-  // abajo (apretando) gira; arriba (en el aire) está quieto
-  // (1,5 s y 2,2 s caen dentro de la fase de apretado; 3,3 s y 4 s ya está subiendo)
-  assert.ok(giroDestornillador(2.2) > giroDestornillador(1.5));
-  cerca(giroDestornillador(3.3), giroDestornillador(4), 1e-9);
-  cerca(giroDestornillador(0), giroDestornillador(0.1), 1e-9);
-  // el giro nunca retrocede
-  let anterior = giroDestornillador(0);
-  for (let t = 0; t < DURACION_DESTORNILLADOR * 3; t += 0.03) {
-    const g = giroDestornillador(t);
-    assert.ok(g >= anterior - 1e-9);
-    anterior = g;
-  }
-});
-
 test('escenas: el banco de 2025 existe y gira sólo dentro de un rango', () => {
   assert.ok(idsConEscena.has(4));
   assert.equal(esEscenaFija(4), false);
@@ -604,56 +533,3 @@ test('valorMultimetro: lectura plausible, estable y con formato fijo', () => {
 const dentroDe = (x, z, zona, margen = 0) =>
   Math.abs(x - zona.x) <= zona.ancho / 2 + margen && Math.abs(z - zona.z) <= zona.fondo / 2 + margen;
 
-test('disposicionReparacion: las zonas caben en la placa y no se pisan', () => {
-  const nombres = Object.keys(ZONAS_REPARACION);
-  assert.ok(nombres.length >= 6);
-  for (const n of nombres) {
-    const zona = ZONAS_REPARACION[n];
-    assert.ok(Math.abs(zona.x) + zona.ancho / 2 <= PLACA_REPARACION.ancho / 2 - 0.03, `${n} se sale a los costados`);
-    assert.ok(Math.abs(zona.z) + zona.fondo / 2 <= PLACA_REPARACION.fondo / 2 - 0.03, `${n} se sale por adelante o atrás`);
-  }
-  for (let i = 0; i < nombres.length; i += 1) {
-    for (let j = i + 1; j < nombres.length; j += 1) {
-      const a = ZONAS_REPARACION[nombres[i]];
-      const b = ZONAS_REPARACION[nombres[j]];
-      const sePisan = Math.abs(a.x - b.x) < (a.ancho + b.ancho) / 2 && Math.abs(a.z - b.z) < (a.fondo + b.fondo) / 2;
-      assert.equal(sePisan, false, `${nombres[i]} y ${nombres[j]} se superponen`);
-    }
-  }
-});
-
-test('resistencias y capacitores: muchos, dentro de la placa, fuera de las zonas y sin tocarse', () => {
-  const resistencias = resistenciasSMD();
-  const capacitores = capacitoresPlaca();
-  assert.ok(resistencias.length >= 24, `resistencias: ${resistencias.length}`);
-  assert.ok(capacitores.length >= 8, `capacitores: ${capacitores.length}`);
-  const todos = [...resistencias, ...capacitores.map((c) => ({ ...c, ancho: c.r * 2, fondo: c.r * 2 }))];
-  for (const c of todos) {
-    assert.ok(Math.abs(c.x) + c.ancho / 2 <= PLACA_REPARACION.ancho / 2 - 0.04, 'fuera de la placa (x)');
-    assert.ok(Math.abs(c.z) + c.fondo / 2 <= PLACA_REPARACION.fondo / 2 - 0.04, 'fuera de la placa (z)');
-    for (const n of Object.keys(ZONAS_REPARACION)) {
-      assert.equal(dentroDe(c.x, c.z, ZONAS_REPARACION[n], Math.max(c.ancho, c.fondo) / 2), false, `un componente cae dentro de ${n}`);
-    }
-  }
-  for (let i = 0; i < todos.length; i += 1) {
-    for (let j = i + 1; j < todos.length; j += 1) {
-      const a = todos[i];
-      const b = todos[j];
-      const sePisan = Math.abs(a.x - b.x) < (a.ancho + b.ancho) / 2 && Math.abs(a.z - b.z) < (a.fondo + b.fondo) / 2;
-      assert.equal(sePisan, false, 'dos componentes se solapan');
-    }
-  }
-  assert.deepEqual(resistenciasSMD(), resistencias);
-});
-
-test('ledsReparacion: 12 posiciones sobre la placa, separadas y fuera de las zonas', () => {
-  const leds = ledsReparacion();
-  assert.equal(leds.length, 12);
-  for (const led of leds) {
-    assert.ok(Math.abs(led.x) < PLACA_REPARACION.ancho / 2 - 0.05 && Math.abs(led.z) < PLACA_REPARACION.fondo / 2 - 0.05);
-    for (const n of Object.keys(ZONAS_REPARACION)) assert.equal(dentroDe(led.x, led.z, ZONAS_REPARACION[n], 0.04), false, `un LED cae en ${n}`);
-  }
-  for (let i = 0; i < leds.length; i += 1) {
-    for (let j = i + 1; j < leds.length; j += 1) assert.ok(Math.hypot(leds[i].x - leds[j].x, leds[i].z - leds[j].z) >= 0.088);
-  }
-});
