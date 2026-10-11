@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hayWebGL } from './soporteWebGL.js';
 import { calcularDispersion } from './desarme.js';
+import { PARTES, ANCHO, ALTO } from './simboloUtn.js';
+import { desplazamientoBandera, AMPLITUD_MAXIMA } from './ondaBandera.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
   estadoPantalla,
@@ -169,4 +171,60 @@ test('volverAlOrigen: con la rotación envuelta no da vueltas de más', () => {
   // 2π + 0.1 equivale a 0.1 de giro real: el primer paso no debe acercarse a 2π.
   const { estado } = volverAlOrigen({ ...cero(), r: [Math.PI * 2 + 0.1, 0, 0] }, 0.016, 6);
   assert.ok(Math.abs(estado.r[0]) < 0.2);
+});
+
+test('simboloUtn: cuatro partes (dos barras y dos arcos) dentro del cuadro y centradas', () => {
+  const barras = PARTES.filter((parte) => parte.tipo === 'rect');
+  const arcos = PARTES.filter((parte) => parte.tipo === 'anillo');
+  assert.equal(barras.length, 2);
+  assert.equal(arcos.length, 2);
+  const [vertical, horizontal] = [...barras].sort((a, b) => (b.y1 - b.y0) - (a.y1 - a.y0));
+  // la barra vertical atraviesa todo el alto y está centrada
+  cerca(vertical.y1 - vertical.y0, ALTO);
+  cerca(vertical.x0, -vertical.x1);
+  // la horizontal está centrada en ambos ejes y es la más ancha del símbolo (casi todo el ancho)
+  cerca(horizontal.y0, -horizontal.y1);
+  cerca(horizontal.x0, -horizontal.x1);
+  assert.ok(horizontal.x1 - horizontal.x0 > ANCHO * 0.9);
+  for (const arco of arcos) {
+    assert.ok(arco.r0 < arco.r1);
+    cerca(arco.cx, 0);
+    cerca(arco.r1, ANCHO / 2); // el arco exterior ocupa todo el ancho
+  }
+});
+
+test('simboloUtn: los dos arcos son espejo uno del otro', () => {
+  const [a, b] = PARTES.filter((parte) => parte.tipo === 'anillo');
+  cerca(a.cy, -b.cy);
+  cerca(a.r0, b.r0);
+  cerca(a.r1, b.r1);
+  assert.notEqual(a.mitad, b.mitad);
+  // el de arriba es la mitad inferior de su círculo (abre hacia arriba) y viceversa
+  const arriba = a.cy > 0 ? a : b;
+  assert.equal(arriba.mitad, 'inferior');
+});
+
+test('desplazamientoBandera: el borde del asta no se mueve y el resto está acotado', () => {
+  for (const t of [0, 0.7, 3.3, 11]) {
+    for (const v of [0, 0.5, 1]) assert.ok(desplazamientoBandera(0, v, t) === 0); // (-0 === 0)
+  }
+  for (let u = 0; u <= 1; u += 0.1) {
+    for (let t = 0; t < 10; t += 0.37) {
+      assert.ok(Math.abs(desplazamientoBandera(u, 0.4, t)) <= AMPLITUD_MAXIMA + 1e-9);
+    }
+  }
+});
+
+test('desplazamientoBandera: ondula en el tiempo en la punta y es determinista', () => {
+  const a = desplazamientoBandera(1, 0.5, 1);
+  assert.equal(a, desplazamientoBandera(1, 0.5, 1));
+  assert.notEqual(a, desplazamientoBandera(1, 0.5, 1.4));
+  // la amplitud crece hacia la punta: cerca del asta se mueve menos que en el extremo
+  let cercaDelAsta = 0;
+  let enLaPunta = 0;
+  for (let t = 0; t < 6; t += 0.05) {
+    cercaDelAsta = Math.max(cercaDelAsta, Math.abs(desplazamientoBandera(0.1, 0.5, t)));
+    enLaPunta = Math.max(enLaPunta, Math.abs(desplazamientoBandera(1, 0.5, t)));
+  }
+  assert.ok(enLaPunta > cercaDelAsta * 3);
 });

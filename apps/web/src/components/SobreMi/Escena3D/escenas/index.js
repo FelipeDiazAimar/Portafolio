@@ -3,6 +3,7 @@
 // que se puede usar desde fuera del chunk diferido.
 const ESCENAS = {
   0: () => import('./Escena0Notebook.jsx'),
+  1: () => import('./Escena1Bandera.jsx'),
 };
 
 export const idsConEscena = new Set(Object.keys(ESCENAS).map(Number));
