@@ -9,6 +9,7 @@ import { vistaParaAltura, DISTANCIA_MINIMA, PIXELES_POR_UNIDAD, FOV } from './vi
 import { crearTela, pasoTela, empujar, particulaMasCercana, estiramientoDesenrollado, PASO } from './tela.js';
 import { esEscenaFija, idsConEscena, limiteDeGiro } from './escenas/index.js';
 import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
+import { CANTIDAD_LEDS, ledEncendido, alturaDestornillador, giroDestornillador, DURACION_DESTORNILLADOR } from './cicloBanco.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { PLACA, ZONAS, condensadores, tornillos, aletas } from './disposicionPlaca.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
@@ -583,4 +584,59 @@ test('limiteDeGiro: la notebook gira libre y las escenas fijas no tienen límite
   assert.equal(limiteDeGiro(0), null);
   assert.equal(limiteDeGiro(1), null);
   assert.equal(limiteDeGiro(99), null);
+});
+
+test('ledEncendido: determinista, cada LED parpadea y no todos están prendidos a la vez', () => {
+  assert.equal(CANTIDAD_LEDS, 12);
+  assert.equal(ledEncendido(3, 1.7), ledEncendido(3, 1.7));
+  let prendidosAlMismoTiempo = new Set();
+  for (let i = 0; i < CANTIDAD_LEDS; i += 1) {
+    let prendido = 0;
+    let cambios = 0;
+    let anterior = ledEncendido(i, 0);
+    for (let t = 0; t < 20; t += 0.05) {
+      const ahora = ledEncendido(i, t);
+      if (ahora) prendido += 1;
+      if (ahora !== anterior) cambios += 1;
+      anterior = ahora;
+    }
+    const fraccion = prendido / 400;
+    assert.ok(fraccion > 0.2 && fraccion < 0.8, `LED ${i} prendido ${Math.round(fraccion * 100)} %`);
+    assert.ok(cambios >= 4, `LED ${i} sólo cambió ${cambios} veces`);
+    prendidosAlMismoTiempo.add(ledEncendido(i, 2.3));
+  }
+  assert.equal(prendidosAlMismoTiempo.size, 2, 'en un mismo instante hay LEDs prendidos y apagados');
+});
+
+test('destornillador: sube y baja en ciclo, gira sólo mientras aprieta y repite', () => {
+  let minimo = 1;
+  let maximo = 0;
+  for (let t = 0; t < DURACION_DESTORNILLADOR; t += 0.02) {
+    const h = alturaDestornillador(t);
+    assert.ok(h >= 0 && h <= 1, `altura fuera de rango: ${h}`);
+    minimo = Math.min(minimo, h);
+    maximo = Math.max(maximo, h);
+  }
+  assert.equal(minimo, 0);
+  assert.equal(maximo, 1);
+  cerca(alturaDestornillador(1.1), alturaDestornillador(1.1 + DURACION_DESTORNILLADOR), 1e-9);
+  // abajo (apretando) gira; arriba (en el aire) está quieto
+  // (1,5 s y 2,2 s caen dentro de la fase de apretado; 3,3 s y 4 s ya está subiendo)
+  assert.ok(giroDestornillador(2.2) > giroDestornillador(1.5));
+  cerca(giroDestornillador(3.3), giroDestornillador(4), 1e-9);
+  cerca(giroDestornillador(0), giroDestornillador(0.1), 1e-9);
+  // el giro nunca retrocede
+  let anterior = giroDestornillador(0);
+  for (let t = 0; t < DURACION_DESTORNILLADOR * 3; t += 0.03) {
+    const g = giroDestornillador(t);
+    assert.ok(g >= anterior - 1e-9);
+    anterior = g;
+  }
+});
+
+test('escenas: el banco de 2025 existe y gira sólo dentro de un rango', () => {
+  assert.ok(idsConEscena.has(4));
+  assert.equal(esEscenaFija(4), false);
+  const limite = limiteDeGiro(4);
+  assert.ok(limite > 0.3 && limite < Math.PI / 2);
 });
