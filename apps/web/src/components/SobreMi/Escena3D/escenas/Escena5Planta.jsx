@@ -37,24 +37,24 @@ const Z_ESCANER = RUTA[0][1];
 // cámara, que ya la maneja el control de giro). `FOCO` es esa caja.
 const GIRO = new THREE.Euler(0.62, -0.62, 0);
 const ESCALA_BASE = 0.68;
-const ESCALA_ZOOM = 1.3;
+const ESCALA_ZOOM = 1.0;
 const POSICION_BASE = new THREE.Vector3(0.25, -0.3, 0);
 const FOCO = new THREE.Vector3(X_ESCANER, ALTO_CINTA + TAM_CAJA / 2, Z_ESCANER);
 // Dónde queda el foco en pantalla cuando el zoom está al máximo.
-const FOCO_EN_PANTALLA = new THREE.Vector3(-0.05, -0.85, 0);
+const FOCO_EN_PANTALLA = new THREE.Vector3(0.1, -0.5, 0);
 const POSICION_ZOOM = FOCO_EN_PANTALLA.clone().sub(FOCO.clone().multiplyScalar(ESCALA_ZOOM).applyEuler(GIRO));
 
 // Convierte un desplazamiento en pantalla (con el zoom al máximo) a coordenadas de la escena.
 const GIRO_INVERSO = new THREE.Quaternion().setFromEuler(GIRO).invert();
 const enEscena = (x, y, z = 0) => new THREE.Vector3(x, y, z).applyQuaternion(GIRO_INVERSO).divideScalar(ESCALA_ZOOM).add(FOCO);
-const POS_ETIQUETA = enEscena(-1.0, 0.95);
-const POS_SAP = enEscena(1.2, 1.85);
-const POS_TABLERO = enEscena(1.05, 1.75);
+const POS_ETIQUETA = enEscena(-1.0, 0.8);
+const POS_SAP = enEscena(1.15, 1.7);
+const POS_TABLERO = enEscena(1.05, 1.62);
 const TAM_ETIQUETA = [1.7, 1.06];
-const TAM_SAP = [2.1, 1.31];
-const TAM_TABLERO = [2.5, 1.53];
+const TAM_SAP = [2.0, 1.25];
+const TAM_TABLERO = [2.4, 1.47];
 // Dónde está el QR dentro de la etiqueta (a la derecha, un poco arriba del centro).
-const POS_QR = enEscena(-1.0 + 0.36, 0.95 + 0.1);
+const POS_QR = enEscena(-1.0 + 0.36, 0.8 + 0.1);
 
 const SEGMENTOS = RUTA.slice(1).map(([x1, z1], i) => {
   const [x0, z0] = RUTA[i];

@@ -8,6 +8,7 @@ import useConsulta from '@/hooks/useConsulta.js';
 import useTema from '@/hooks/useTema.js';
 import { hayWebGL } from './soporteWebGL.js';
 import { idsConEscena } from './escenas/index.js';
+import AjusteGpuTemporal from './AjusteGpuTemporal.jsx';
 import styles from './Escena3D.module.css';
 
 // Todo `three` queda en este chunk, que sólo se pide cuando la sección se acerca
@@ -94,6 +95,8 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
       ) : (
         <EscenarioHito hito={hito} desarmado={desarmado} />
       )}
+      {/* TEMPORAL: barras para ubicar la gráfica de 2024 a mano. */}
+      {usar3D && hito.id === 3 && visible ? <AjusteGpuTemporal /> : null}
     </div>
   );
 }
