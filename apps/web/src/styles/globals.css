@@ -1,4 +1,17 @@
 @import '@portafolio/config/tokens/tokens.css';
+/* Tailwind sólo aporta tema y utilidades (para los componentes de src/components/ui).
+   Sin preflight: el sitio usa sus propios estilos y no debe perder márgenes ni el
+   display de canvas/svg. Las capas van antes que el CSS sin capa, que siempre gana. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@source '../';
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-fg);
+  --color-primary: var(--color-accent);
+}
 
 * {
   box-sizing: border-box;
