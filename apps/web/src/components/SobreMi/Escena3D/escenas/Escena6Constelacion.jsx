@@ -75,7 +75,9 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
       return l.textura;
     };
     const std = (opciones) => new THREE.MeshStandardMaterial(opciones);
-    const luz = claro ? '#2f6fe6' : '#6fa8ff';
+    // Azul eléctrico para todas las líneas de la animación (aros, cadena,
+    // hilos, onda y borde del núcleo). En claro se mantiene el azul medio.
+    const luz = claro ? '#2f6fe6' : '#0066ff';
     // La mezcla aditiva sobre un fondo claro se vería blanca: ahí se usa la normal.
     const mezcla = claro ? THREE.NormalBlending : THREE.AdditiveBlending;
     const etiqueta = (texto, nucleo) =>
@@ -100,13 +102,13 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
       cinta: std({ color: '#1d2a4a', roughness: 0.7 }),
       carton: std({ color: '#c79a62', roughness: 0.8 }),
       laser: new THREE.MeshBasicMaterial({ color: '#7fb4ff', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false }),
-      aro: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.7, toneMapped: false }),
-      nucleo: new THREE.MeshBasicMaterial({ color: '#4d8dff', transparent: true, opacity: 0.8, toneMapped: false }),
-      aroNucleo: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.6, toneMapped: false }),
+      aro: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.9, toneMapped: false }),
+      nucleo: new THREE.MeshBasicMaterial({ color: '#1f6bff', transparent: true, opacity: 0.8, toneMapped: false }),
+      aroNucleo: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.8, toneMapped: false }),
       onda: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0, depthWrite: false, blending: mezcla, toneMapped: false }),
-      cadena: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.85, depthWrite: false, blending: mezcla, toneMapped: false }),
-      hilo: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.22, depthWrite: false, blending: mezcla, toneMapped: false }),
-      pulso: new THREE.MeshBasicMaterial({ color: claro ? '#0b3d91' : '#c9e0ff', toneMapped: false }),
+      cadena: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 1, depthWrite: false, blending: mezcla, toneMapped: false }),
+      hilo: new THREE.MeshBasicMaterial({ color: luz, transparent: true, opacity: 0.5, depthWrite: false, blending: mezcla, toneMapped: false }),
+      pulso: new THREE.MeshBasicMaterial({ color: claro ? '#0b3d91' : '#ffffff', toneMapped: false }),
       bandera: new THREE.MeshBasicMaterial({ map: crear(512, 330, (ctx, w, h) => dibujarBandera(ctx, w, h)), side: THREE.DoubleSide, toneMapped: false }),
       pantallaMini: new THREE.MeshBasicMaterial({
         map: crear(512, 330, (ctx, w, h) => {
@@ -212,8 +214,8 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
           pulso.position.set(p[0] * (1 - recogida), p[1] * (1 - recogida), p[2] * (1 - recogida));
         }
       });
-      mats.cadena.opacity = 0.85 * (1 - recogida);
-      mats.hilo.opacity = 0.22 * (1 - recogida);
+      mats.cadena.opacity = 1.0 * (1 - recogida);
+      mats.hilo.opacity = 0.5 * (1 - recogida);
     }
 
     // Bandera: se ondula con una onda que viaja de la punta al asta.
@@ -234,7 +236,7 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
     nucleo.scale.setScalar(Math.max(escalaNucleo, 0.0001));
     nucleo.rotation.y = t * 0.6;
     nucleo.rotation.x = t * 0.35;
-    mats.nucleo.opacity = 0.6 + 0.25 * Math.sin(t * 2);
+    mats.nucleo.opacity = 0.8 + 0.2 * Math.sin(t * 2);
     refEtiquetaNucleo.current.scale.setScalar(Math.max(aparicionNucleo(t) * (1 - recogida), 0.0001));
 
     // Onda expansiva: un aro de luz que sale del núcleo cuando nace la red.

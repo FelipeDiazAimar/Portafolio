@@ -133,8 +133,9 @@ export default function Grafo({ tiempo, claro }) {
       etiquetas,
       ficha,
       colores,
-      // Esferas con luz propia: el sombreado les da volumen.
-      nodos: colores.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: claro ? 0.5 : 1.0, roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0 })),
+      // Esferas con luz propia: el sombreado les da volumen. Emisivo alto para
+      // que los colores de grupo se vean vívidos también de lejos.
+      nodos: colores.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: claro ? 0.7 : 1.6, roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0 })),
       materialFicha: new THREE.MeshBasicMaterial({ map: ficha.textura, transparent: true, opacity: 0, depthWrite: false, depthTest: false, toneMapped: false }),
       materialLineas: new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: mezcla, toneMapped: false }),
       geoNodo: new THREE.SphereGeometry(1, 28, 18),
@@ -153,7 +154,7 @@ export default function Grafo({ tiempo, claro }) {
   const arrastre = useRef(null);
   const vecinosActivos = useRef(new Set());
   const ultimoBloqueo = useRef(false);
-  const luz = useRef(NODOS_GRAFO.map(() => 0.85));
+  const luz = useRef(NODOS_GRAFO.map(() => 1));
   const actuales = useRef(inicial.map(() => new THREE.Vector3()));
   const apareceActual = useRef(NODOS_GRAFO.map(() => 0));
   const refRaiz = useRef(null);
@@ -609,10 +610,10 @@ export default function Grafo({ tiempo, claro }) {
       const resaltado = nodo.id === hover || nodo.id === seleccion.current;
       const importante = grado(nodo.id) >= 5 || nodo.id === 'yo';
 
-      // Profundidad: lo lejano se ve algo más tenue.
+      // Profundidad: lo lejano se ve algo más tenue (piso alto para no apagar colores).
       const distNodo = v3.copy(p).applyMatrix4(vista.matrixWorld).distanceTo(camera.position);
       const cercania = limitar(0.5 + (distCentro - distNodo) / (radioMundo * 2.4), 0, 1);
-      const profundidad = 0.78 + 0.22 * cercania;
+      const profundidad = 0.9 + 0.1 * cercania;
 
       const nodoMesh = refNodos.current[i];
       nodoMesh.position.copy(p);
@@ -639,7 +640,7 @@ export default function Grafo({ tiempo, claro }) {
       posLineas.setXYZ(k * 2, pa.x, pa.y, pa.z);
       posLineas.setXYZ(k * 2 + 1, pb.x, pb.y, pb.z);
       const toca = idFoco && (a === idFoco || b === idFoco);
-      const fuerza = (toca ? 1 : idFoco ? 0.05 : claro ? 0.55 : 0.5) * Math.min(1, e * 2);
+      const fuerza = (toca ? 1 : idFoco ? 0.05 : claro ? 0.8 : 0.75) * Math.min(1, e * 2);
       const ca = recursos.colores[ia];
       const cb = recursos.colores[ib];
       colLineas.setXYZW(k * 2, ca.r, ca.g, ca.b, fuerza);
