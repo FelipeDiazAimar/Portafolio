@@ -14,7 +14,7 @@ import styles from './Escena3D.module.css';
 // a la pantalla.
 const EscenaCanvas = dynamic(() => import('./EscenaCanvas.jsx'), { ssr: false, loading: () => null });
 
-export default function Escena3D({ hito, desarmado, onInteraccion }) {
+export default function Escena3D({ hito, desarmado, onInteraccion, onBloqueo }) {
   const refCaja = useRef(null);
   const [webgl, setWebgl] = useState(false);
   const [montado, setMontado] = useState(false);
@@ -22,6 +22,8 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
   const [fallo, setFallo] = useState(false);
   const refInteraccion = useRef(onInteraccion);
   refInteraccion.current = onInteraccion;
+  const refBloqueo = useRef(onBloqueo);
+  refBloqueo.current = onBloqueo;
   // En celular la descripción va DEBAJO del modelo, no encima: el modelo se queda
   // armado y visible. Sólo en escritorio se desarma para dejar lugar al texto.
   const esMovil = useConsulta('(max-width: 768px)');
@@ -40,8 +42,14 @@ export default function Escena3D({ hito, desarmado, onInteraccion }) {
     const caja = refCaja.current;
     if (!caja) return undefined;
     const alInteractuar = () => refInteraccion.current?.();
+    // 'bloqueo3d': el mouse está (o dejó de estar) sobre algo interactivo del modelo.
+    const alBloquear = (evento) => refBloqueo.current?.(Boolean(evento.detail));
     caja.addEventListener('interaccion3d', alInteractuar);
-    return () => caja.removeEventListener('interaccion3d', alInteractuar);
+    caja.addEventListener('bloqueo3d', alBloquear);
+    return () => {
+      caja.removeEventListener('interaccion3d', alInteractuar);
+      caja.removeEventListener('bloqueo3d', alBloquear);
+    };
   }, []);
 
   useEffect(() => {

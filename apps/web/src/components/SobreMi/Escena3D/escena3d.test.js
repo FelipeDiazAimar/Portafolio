@@ -12,27 +12,23 @@ import { fraccionExplosion, DURACION_CICLO } from './cicloPC.js';
 import { paletaEscena, valorMultimetro } from './paletas.js';
 import { CAJAS, CICLO, LARGO, PAUSA, RUTA, S_ESCANER, VELOCIDAD, distanciaCaja, estadoPlanta, progresoEscaneo, puntoEnRuta, tiempoCinta } from './cicloPlanta.js';
 import {
-  CAPAS,
   CENTRO,
   NODOS,
   RADIO,
   T_COLAPSO,
   T_RED,
-  activacion,
   aparicion,
   aparicionNucleo,
   colapso,
-  conexionesRed,
   enlaces,
   expansion,
-  expansionCapa,
   fasePulso,
-  nodosRed,
   posicionNodo,
   progresoEnlace,
   puntoDe,
   puntoEnTramo,
 } from './constelacion.js';
+import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, radioNodo, vecinos } from './grafo.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -753,48 +749,44 @@ test('guion de Hoy: los enlaces se dibujan al aparecer su nodo', () => {
   assert.ok(progresoEnlace(primero, 0.7 + 1.2) > 0, 'el primer enlace sale con el segundo nodo');
 });
 
-test('red neuronal: capas de tamaño fijo, ordenadas en x y con todos los nodos distintos', () => {
-  const nodos = nodosRed();
-  assert.equal(nodos.length, CAPAS.reduce((a, b) => a + b, 0));
-  for (let c = 0; c < CAPAS.length; c += 1) assert.equal(nodos.filter((n) => n.capa === c).length, CAPAS[c]);
-  for (const n of nodos) assert.ok(n.posicion.every(Number.isFinite));
-  const xs = CAPAS.map((_, c) => nodos.find((n) => n.capa === c).posicion[0]);
-  for (let c = 1; c < xs.length; c += 1) assert.ok(xs[c] > xs[c - 1]);
-  cerca(xs[0], -xs.at(-1));
-  for (let i = 0; i < nodos.length; i += 1) {
-    for (let j = i + 1; j < nodos.length; j += 1) {
-      const d = Math.hypot(...nodos[i].posicion.map((v, k) => v - nodos[j].posicion[k]));
-      assert.ok(d > 0.3, `nodos ${i} y ${j} casi superpuestos (${d})`);
-    }
+test('grafo: ids únicos, enlaces válidos y un solo bloque conectado', () => {
+  const ids = NODOS_GRAFO.map((n) => n.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const { a, b } of ENLACES_GRAFO) {
+    assert.ok(ids.includes(a) && ids.includes(b), `enlace roto ${a}-${b}`);
+    assert.notEqual(a, b);
+  }
+  const claves = ENLACES_GRAFO.map(({ a, b }) => [a, b].sort().join('|'));
+  assert.equal(new Set(claves).size, claves.length, 'enlaces repetidos');
+  // Desde "yo" se llega a todos.
+  const vistos = new Set(['yo']);
+  const pendientes = ['yo'];
+  while (pendientes.length) for (const v of vecinos(pendientes.pop())) if (!vistos.has(v)) { vistos.add(v); pendientes.push(v); }
+  assert.equal(vistos.size, ids.length);
+  for (const n of NODOS_GRAFO) {
+    assert.ok(GRUPOS[n.grupo], `grupo desconocido ${n.grupo}`);
+    assert.ok(n.etiqueta.length > 0 && n.detalle.length > 0);
   }
 });
 
-test('red neuronal: cada nodo se conecta con todos los de la capa siguiente', () => {
-  const nodos = nodosRed();
-  const conexiones = conexionesRed();
-  const esperadas = CAPAS.slice(0, -1).reduce((suma, n, c) => suma + n * CAPAS[c + 1], 0);
-  assert.equal(conexiones.length, esperadas);
-  for (const { capa, a, b } of conexiones) {
-    assert.equal(nodos[a].capa, capa);
-    assert.equal(nodos[b].capa, capa + 1);
+test('grafo: vecinos es simétrico y el grado define un radio acotado', () => {
+  for (const { a, b } of ENLACES_GRAFO) {
+    assert.ok(vecinos(a).includes(b) && vecinos(b).includes(a));
   }
+  assert.ok(radioNodo('yo') > radioNodo('python'));
+  for (const n of NODOS_GRAFO) assert.ok(radioNodo(n.id) >= 0.05 && radioNodo(n.id) < 0.17);
 });
 
-test('red neuronal: las capas se expanden en orden desde el medio y la activación es una onda', () => {
-  const t = (T_RED[0] + T_RED[1]) / 2;
-  const medio = (CAPAS.length - 1) / 2;
-  assert.ok(expansionCapa(medio, t) > expansionCapa(0, t), 'el medio sale primero');
-  for (let c = 0; c < CAPAS.length; c += 1) {
-    assert.equal(expansionCapa(c, T_RED[0] - 0.1), 0);
-    assert.equal(expansionCapa(c, T_RED[1] + 1), 1);
-  }
-  let maximo = 0;
-  for (let tt = 0; tt < 20; tt += 0.05) {
-    for (let c = 0; c < CAPAS.length; c += 1) {
-      const a = activacion(c, tt);
-      assert.ok(a >= 0 && a <= 1);
-      maximo = Math.max(maximo, a);
+test('grafo: la distribución es determinista, finita y los nodos no se pisan', () => {
+  const a = distribuir();
+  assert.deepEqual(a, distribuir());
+  assert.equal(a.length, NODOS_GRAFO.length);
+  for (const p of a) assert.ok(p.length === 3 && p.every(Number.isFinite));
+  assert.ok(Math.max(...a.map(([x, y]) => Math.hypot(x, y))) <= 2.6 + 1e-9);
+  for (let i = 0; i < a.length; i += 1) {
+    for (let j = i + 1; j < a.length; j += 1) {
+      const d = Math.hypot(a[i][0] - a[j][0], a[i][1] - a[j][1]);
+      assert.ok(d > 0.28, `${NODOS_GRAFO[i].id} y ${NODOS_GRAFO[j].id} muy cerca (${d.toFixed(3)})`);
     }
   }
-  assert.ok(maximo > 0.95, 'la onda llega a pleno');
 });

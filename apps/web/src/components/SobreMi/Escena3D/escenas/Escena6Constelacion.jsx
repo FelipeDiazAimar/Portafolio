@@ -25,7 +25,7 @@ import { dibujarTarjeta } from '../texturasMaterias.js';
 import { dibujarManzanaEn } from '../manzanaPath.js';
 import { dibujarLogoSap, dibujarLogoUtn } from '../dibujarLogos.js';
 import { MINIATURAS, Peana } from './hoy/Miniaturas.jsx';
-import RedNeuronal from './hoy/RedNeuronal.jsx';
+import Grafo from './hoy/Grafo.jsx';
 
 // Un nombre por hito del anillo (el último hito, "Hoy", es el núcleo).
 const NOMBRES = ['Origen', '2022', '2023', '2024', '2025', '2026'];
@@ -241,14 +241,12 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
     const onda = refOnda.current;
     onda.visible = red > 0 && red < 1;
     if (onda.visible) {
-      onda.scale.setScalar(0.3 + 5.5 * (1 - (1 - red) ** 2));
+      onda.scale.setScalar(0.3 + 3.4 * (1 - (1 - red) ** 2));
       mats.onda.opacity = 0.9 * (1 - red) ** 1.5;
     }
 
-    // La red neuronal gira muy despacio una vez que existe.
-    const grupoRed = refRed.current;
-    grupoRed.visible = red > 0;
-    if (grupoRed.visible) grupoRed.rotation.y = t * 0.1;
+    // El grafo aparece cuando empieza la expansión.
+    refRed.current.visible = red > 0;
   });
 
   return (
@@ -320,10 +318,10 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
         </mesh>
       </PiezaDesarmable>
 
-      {/* La red neuronal en que se expande el núcleo. */}
+      {/* El grafo de conocimiento (estilo Obsidian) en que se expande el núcleo; es plano, así que se contrarresta la inclinación de la escena. */}
       <PiezaDesarmable semilla={9}>
-        <group ref={refRed} visible={false} scale={0.78}>
-          <RedNeuronal tiempo={tiempo} claro={claro} luz={luz} />
+        <group ref={refRed} visible={false} rotation={[-0.5, 0, 0]} scale={1.3}>
+          <Grafo tiempo={tiempo} claro={claro} />
         </group>
       </PiezaDesarmable>
     </group>

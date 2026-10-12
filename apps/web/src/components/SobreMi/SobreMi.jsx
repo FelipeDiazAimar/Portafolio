@@ -28,7 +28,18 @@ function SobreMiContenido() {
   const refEspera = useRef(0);
   const refAbierto = useRef(false);
   refAbierto.current = detalleAbierto;
+  const refBloqueo = useRef(false);
+  // Si el mouse está sobre la columna (la espera de 0,9 s sólo corre en ese caso).
+  const refDentro = useRef(false);
   useEffect(() => () => clearTimeout(refEspera.current), []);
+  // Empieza la cuenta de 0,9 s con el mouse quieto; si algo del modelo lo está
+  // reteniendo (`refBloqueo`), no se abre el detalle.
+  const armarEspera = () => {
+    clearTimeout(refEspera.current);
+    refEspera.current = setTimeout(() => {
+      if (!refBloqueo.current) setDetalleAbierto(true);
+    }, ESPERA_HOVER_MODELO_MS);
+  };
 
   const { scrollYProgress } = useScroll({
     target: refContenedor,
@@ -73,19 +84,20 @@ function SobreMiContenido() {
           onPointerEnter={(evento) => {
             // `buttons !== 0`: si entra con un botón apretado es un arrastre
             // (girar el modelo) que salió de la columna y volvió.
-            if (evento.pointerType !== 'mouse' || evento.buttons !== 0) return;
-            clearTimeout(refEspera.current);
-            refEspera.current = setTimeout(() => setDetalleAbierto(true), ESPERA_HOVER_MODELO_MS);
+            if (evento.pointerType !== 'mouse') return;
+            refDentro.current = true;
+            if (evento.buttons !== 0) return;
+            armarEspera();
           }}
           onPointerMove={(evento) => {
             // Mover el mouse reinicia la espera (no se desarma mientras se juega
             // con el modelo). Con el detalle ya abierto no hace falta nada.
             if (evento.pointerType !== 'mouse' || evento.buttons !== 0 || refAbierto.current) return;
-            clearTimeout(refEspera.current);
-            refEspera.current = setTimeout(() => setDetalleAbierto(true), ESPERA_HOVER_MODELO_MS);
+            armarEspera();
           }}
           onPointerLeave={(evento) => {
             if (evento.pointerType !== 'mouse') return;
+            refDentro.current = false;
             clearTimeout(refEspera.current);
             setDetalleAbierto(false);
           }}
@@ -95,6 +107,13 @@ function SobreMiContenido() {
             <Escena3D
               hito={hito}
               desarmado={detalleAbierto}
+              onBloqueo={(bloqueado) => {
+                // El mouse está sobre algo interactivo del modelo (un nodo del grafo):
+                // no se desarma mientras tanto, y al salir se reinicia la espera.
+                refBloqueo.current = bloqueado;
+                if (bloqueado) clearTimeout(refEspera.current);
+                else if (refDentro.current && !refAbierto.current) armarEspera();
+              }}
               onInteraccion={() => {
                 clearTimeout(refEspera.current);
                 setDetalleAbierto(false);
