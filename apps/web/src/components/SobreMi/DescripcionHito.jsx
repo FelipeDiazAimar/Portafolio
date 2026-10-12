@@ -1,25 +1,15 @@
 import { dividirResaltado } from '@/lib/resaltado.js';
+import { useMemo } from 'react';
+import BioDibujada from './BioDibujada.jsx';
 import styles from './DescripcionHito.module.css';
 
-// El texto siempre está en el DOM (lo leen los lectores de pantalla); `visible`
-// sólo decide si se ve. Las palabras clave llevan `--n` para que se enciendan
-// escalonadas, una detrás de otra.
+// La biografía se escribe a trazo cuando el detalle se abre (ver BioDibujada). El
+// texto real está siempre en el DOM para los lectores de pantalla.
 export default function DescripcionHito({ hito, visible }) {
-  let claves = 0;
-  const partes = dividirResaltado(hito.descripcion).map((parte, i) => {
-    if (!parte.resaltado) return <span key={i}>{parte.texto}</span>;
-    const n = claves;
-    claves += 1;
-    return (
-      <strong key={i} className={styles.clave} style={{ '--n': n }}>
-        {parte.texto}
-      </strong>
-    );
-  });
-
+  const partes = useMemo(() => dividirResaltado(hito.descripcion), [hito.descripcion]);
   return (
     <div className={`${styles.descripcion} ${visible ? styles.visible : ''}`}>
-      <p className={styles.texto}>{partes}</p>
+      <BioDibujada key={hito.id} partes={partes} visible={visible} />
       {hito.credito ? (
         <p className={styles.credito}>
           <a href={hito.credito.url} target="_blank" rel="noopener noreferrer">

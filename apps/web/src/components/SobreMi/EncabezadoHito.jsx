@@ -1,5 +1,6 @@
 'use client';
 
+import TextoTipeado from './TextoTipeado.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import styles from './EncabezadoHito.module.css';
 
@@ -34,7 +35,9 @@ export default function EncabezadoHito({ hito }) {
           encryptedClassName={styles.encriptado}
         />
       </h3>
-      <p className={styles.resumen}>{hito.resumen}</p>
+      <p className={styles.resumen}>
+        <TextoTipeado key={`resumen-${hito.id}`} texto={hito.resumen} velocidad={26} retraso={700} />
+      </p>
     </header>
   );
 }

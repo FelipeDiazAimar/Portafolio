@@ -1,0 +1,30 @@
+.bio {
+  max-width: 34rem;
+  margin: 0;
+  font-size: clamp(0.98rem, 1.25vw, 1.12rem);
+  line-height: 1.7;
+  color: var(--color-fg);
+}
+
+.renglon {
+  display: block;
+  overflow: visible;
+}
+
+/* Hasta que se mide el ancho (o si falla) se ve el texto corrido normal. */
+.respaldo {
+  margin: 0;
+}
+
+/* Texto para lectores de pantalla: está en el DOM pero no se ve. */
+.soloLectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
