@@ -70,6 +70,15 @@ test('proyectos: cada portada existe en apps/web/public', () => {
   }
 });
 
+// (4b) Logo en /proyectos/<slug>/logo.webp y archivo real en public.
+test('proyectos: cada logo existe en apps/web/public', () => {
+  for (const proyecto of proyectos) {
+    assert.equal(proyecto.imagenes.logo, `/proyectos/${proyecto.slug}/logo.webp`);
+    const urlLogo = new URL(`../../public/proyectos/${proyecto.slug}/logo.webp`, import.meta.url);
+    assert.ok(fs.existsSync(urlLogo), `falta el archivo: ${urlLogo.pathname}`);
+  }
+});
+
 // (5) Si privado es true, todos los enlaces son null.
 test('proyectos: los privados no tienen enlaces', () => {
   for (const proyecto of proyectos.filter((p) => p.privado === true)) {
