@@ -43,6 +43,8 @@ export default function ControlGiro({ quieto = false, girable = true, limiteAzim
   // vaivén (no salta) para retomarlo con suavidad después de que se lo suelta.
   useFrame((_, delta) => {
     const controles = refControles.current;
+    // Una escena puede tomar el control del giro (el grafo de Hoy gira libre): no se interfiere.
+    if (controles?.giroLibre) return;
     if (!limitado || !girable || !girando || quieto || !controles) return;
     reloj.current += Math.min(delta, 0.05);
     const objetivo = Math.sin(reloj.current * 0.45) * limiteAzimut * 0.55;

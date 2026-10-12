@@ -6,17 +6,17 @@ import { Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { crearPantalla } from '../../pantallaCanvas.js';
 import { expansion } from '../../constelacion.js';
-import { encuadrar, ubicarFicha } from '../../fichaLayout.js';
-import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, grado, indiceDe, radioNodo, vecinos } from '../../grafo.js';
+import { ubicarFicha, zoomParaRadio } from '../../fichaLayout.js';
+import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, grado, indiceDe, pasoFuerzas, radioNodo, vecinos } from '../../grafo.js';
 
 const SANS = '-apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
 const ALTO_ETIQUETA = 0.15;
 const FICHA = { ancho: 2.7, alto: 0.974 };
-const ZOOM_MINIMO = 0.6;
-const ZOOM_MAXIMO = 3.2;
-// Sólo las zonas de contacto reciben el mouse: lo demás (etiquetas, ficha, halos, líneas)
-// no debe taparlas ni sacarles el foco.
-const SIN_MOUSE = () => null;
+const ZOOM_MINIMO = 0.5;
+const ZOOM_MAXIMO = 3;
+// Zoom máximo del encuadre inicial y de la selección (nodo + sus conexiones).
+const ZOOM_BASE_MAX = 1.9;
+const ZOOM_SELECCION_MAX = 2.8;
 const salida = (x) => 1 - (1 - x) ** 3;
 const limitar = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 
@@ -71,13 +71,16 @@ const v2 = new THREE.Vector3();
 const v3 = new THREE.Vector3();
 const m3 = new THREE.Matrix3();
 const m4 = new THREE.Matrix4();
+const rayo = new THREE.Raycaster();
+const plano = new THREE.Plane();
 
-// Grafo de conocimiento estilo Obsidian: puntos, líneas con degradé de color y
-// etiquetas. Al pasar el mouse por un nodo se resaltan él y sus vecinos, el resto
-// se apaga y aparece una ficha con texto, ubicada alrededor del nodo para que
-// siempre quede dentro de la pantalla. El grafo se encuadra solo en la ventana y se
-// puede acercar y mover con dos dedos (o Ctrl + rueda) sin hacer zoom en la página.
-// Los datos viven en `grafoDatos.js`.
+// Grafo de conocimiento 3D estilo Obsidian. Los nodos son esferas en un volumen y se
+// puede girar 360° (los nombres siempre miran a la cámara). Al pasar el mouse por un
+// nodo se resaltan él y sus vecinos y aparece una ficha ubicada alrededor del nodo
+// para que quede dentro de la pantalla. Se pueden arrastrar nodos (el resto se
+// reacomoda con la misma simulación de fuerzas) y al hacer click en uno la vista se
+// acerca a él y a sus conexiones. Dos dedos (o Ctrl + rueda) acercan el grafo sin
+// hacer zoom en la página. Los datos viven en `grafoDatos.js`.
 export default function Grafo({ tiempo, claro }) {
   const camera = useThree((estado) => estado.camera);
   const lienzoDom = useThree((estado) => estado.gl.domElement);
@@ -85,11 +88,16 @@ export default function Grafo({ tiempo, claro }) {
   const refControles = useRef(controles);
   refControles.current = controles;
 
-  const posiciones = useMemo(() => distribuir(), []);
+  const inicial = useMemo(() => distribuir(), []);
+  const pos = useRef(inicial.map((p) => [...p]));
+  const vel = useRef(inicial.map(() => [0, 0, 0]));
+  const fijos = useRef(inicial.map(() => false));
+  const alpha = useRef(0);
   const distancias = useMemo(() => {
-    const maximo = Math.max(...posiciones.map(([x, y]) => Math.hypot(x, y)));
-    return posiciones.map(([x, y]) => Math.hypot(x, y) / maximo);
-  }, [posiciones]);
+    const radios = inicial.map(([x, y, z]) => Math.hypot(x, y, z));
+    const maximo = Math.max(...radios);
+    return radios.map((r) => r / maximo);
+  }, [inicial]);
 
   const recursos = useMemo(() => {
     const texturas = [];
@@ -108,7 +116,8 @@ export default function Grafo({ tiempo, claro }) {
       texturas.push(lienzo.textura);
       return {
         proporcion: ancho / 54,
-        material: new THREE.MeshBasicMaterial({ map: lienzo.textura, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }),
+        // Sin prueba de profundidad: el nombre se lee desde cualquier ángulo.
+        material: new THREE.MeshBasicMaterial({ map: lienzo.textura, transparent: true, opacity: 0, depthWrite: false, depthTest: false, toneMapped: false }),
       };
     });
     const ficha = crearPantalla(720, 260);
@@ -124,11 +133,11 @@ export default function Grafo({ tiempo, claro }) {
       etiquetas,
       ficha,
       colores,
-      puntos: NODOS_GRAFO.map((_, i) => new THREE.MeshBasicMaterial({ color: colores[i], transparent: true, opacity: 0, depthWrite: false, toneMapped: false })),
-      halos: NODOS_GRAFO.map((_, i) => new THREE.MeshBasicMaterial({ color: colores[i], transparent: true, opacity: 0, depthWrite: false, blending: mezcla, toneMapped: false })),
+      // Esferas con luz propia: el sombreado les da volumen.
+      nodos: colores.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: claro ? 0.5 : 1.0, roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0 })),
       materialFicha: new THREE.MeshBasicMaterial({ map: ficha.textura, transparent: true, opacity: 0, depthWrite: false, depthTest: false, toneMapped: false }),
       materialLineas: new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: mezcla, toneMapped: false }),
-      geoPunto: new THREE.CircleGeometry(1, 32),
+      geoNodo: new THREE.SphereGeometry(1, 28, 18),
       geoLineas: (() => {
         const g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ENLACES_GRAFO.length * 6), 3));
@@ -138,34 +147,66 @@ export default function Grafo({ tiempo, claro }) {
     };
   }, [claro]);
 
+  // Estado de la interacción (todo en refs: se lee en cada cuadro y en los eventos).
   const foco = useRef(null);
-  const vecinosFoco = useRef(new Set());
-  const luz = useRef(NODOS_GRAFO.map(() => 0.75));
-  const actuales = useRef(posiciones.map(() => new THREE.Vector3()));
+  const seleccion = useRef(null);
+  const arrastre = useRef(null);
+  const vecinosActivos = useRef(new Set());
+  const ultimoBloqueo = useRef(false);
+  const luz = useRef(NODOS_GRAFO.map(() => 0.85));
+  const actuales = useRef(inicial.map(() => new THREE.Vector3()));
+  const apareceActual = useRef(NODOS_GRAFO.map(() => 0));
   const refRaiz = useRef(null);
   const refVista = useRef(null);
-  const refPuntos = useRef([]);
-  const refHalos = useRef([]);
+  const refNodos = useRef([]);
   const refEtiquetas = useRef([]);
   const refFicha = useRef(null);
   const ultimaFicha = useRef(null);
-  // Encuadre automático (zoom y desplazamiento que hacen entrar el grafo en pantalla)
-  // y ajuste del usuario (pellizco y arrastre con dos dedos) por encima de ése.
-  const encuadre = useRef({ zoom: 1, pos: new THREE.Vector3(), pendiente: 3 });
-  const usuario = useRef({ zoom: 1, pos: new THREE.Vector3() });
-  const vistaActual = useRef({ zoom: 1, pos: new THREE.Vector3() });
+  const encuadre = useRef({ zoom: 1, pxPorLocal: 100, area: null, pendiente: 3 });
+  const usuario = useRef({ zoom: 1 });
+  const vistaActual = useRef({ zoom: 1, centro: new THREE.Vector3() });
+  const guardado = useRef(null);
+  const ultimoUso = useRef(0);
 
   const cursor = (valor) => {
     document.body.style.cursor = valor;
   };
+  const listoAhora = () => expansion(tiempo.current) >= 0.95;
+  // Le avisa a la sección si el mouse está explorando el grafo (hover, arrastre o
+  // selección): mientras tanto no se desarma.
+  const actualizarBloqueo = () => {
+    const bloqueado = foco.current !== null || seleccion.current !== null || arrastre.current !== null;
+    if (bloqueado === ultimoBloqueo.current) return;
+    ultimoBloqueo.current = bloqueado;
+    lienzoDom.dispatchEvent(new CustomEvent('bloqueo3d', { bubbles: true, detail: bloqueado }));
+  };
+  const ponerFoco = (indice) => {
+    const id = indice >= 0 ? NODOS_GRAFO[indice].id : null;
+    if (id === foco.current) return;
+    foco.current = id;
+    if (!arrastre.current) cursor(id ? 'pointer' : '');
+    vecinosActivos.current = new Set(id ? [id, ...vecinos(id)] : seleccion.current ? [seleccion.current, ...vecinos(seleccion.current)] : []);
+    actualizarBloqueo();
+  };
+  const seleccionar = (indice) => {
+    seleccion.current = indice >= 0 ? NODOS_GRAFO[indice].id : null;
+    usuario.current.zoom = 1;
+    vecinosActivos.current = new Set(seleccion.current ? [seleccion.current, ...vecinos(seleccion.current)] : []);
+    actualizarBloqueo();
+  };
+  const reordenarTodo = () => {
+    pos.current = inicial.map((p) => [...p]);
+    vel.current = inicial.map(() => [0, 0, 0]);
+    fijos.current = inicial.map(() => false);
+    alpha.current = 0;
+  };
 
   // --- Medidas de pantalla -------------------------------------------------
-  // Píxeles de pantalla del punto del mundo `mundo` (se escribe en `salidaPx`).
-  const aPantalla = (mundo, rect, salidaPx) => {
+  const aPantalla = (mundo, rect, destino) => {
     v3.copy(mundo).project(camera);
-    salidaPx.x = rect.left + (v3.x * 0.5 + 0.5) * rect.width;
-    salidaPx.y = rect.top + (1 - (v3.y * 0.5 + 0.5)) * rect.height;
-    return salidaPx;
+    destino.x = rect.left + (v3.x * 0.5 + 0.5) * rect.width;
+    destino.y = rect.top + (1 - (v3.y * 0.5 + 0.5)) * rect.height;
+    return destino;
   };
   // Cuánto mide un píxel de pantalla en el mundo, a la profundidad de `mundo`.
   const mundoPorPixel = (mundo, rect) => {
@@ -190,110 +231,286 @@ export default function Grafo({ tiempo, claro }) {
     abajo: Math.min(window.innerHeight - 12, rect.bottom),
   });
 
-  // Mide el grafo con la cámara actual y calcula el zoom y el corrimiento que lo
-  // hacen entrar entero en el área visible.
-  const calcularEncuadre = () => {
+  // Tamaño del grafo en pantalla y zoom que lo hace entrar entero. Como gira, se
+  // ajusta a la esfera que lo contiene (no a la silueta de un ángulo).
+  const medirEncuadre = () => {
     const raiz = refRaiz.current;
     if (!raiz) return;
     raiz.updateWorldMatrix(true, false);
     camera.updateMatrixWorld();
     const rect = lienzoDom.getBoundingClientRect();
     if (rect.width < 10) return;
-    const punto = { x: 0, y: 0 };
-    const caja = { izq: Infinity, arriba: Infinity, der: -Infinity, abajo: -Infinity };
-    posiciones.forEach(([x, y, z]) => {
-      aPantalla(v2.set(x, y, z).applyMatrix4(raiz.matrixWorld), rect, punto);
-      // Margen para el punto y su etiqueta.
-      caja.izq = Math.min(caja.izq, punto.x - 70);
-      caja.der = Math.max(caja.der, punto.x + 70);
-      caja.arriba = Math.min(caja.arriba, punto.y - 24);
-      caja.abajo = Math.max(caja.abajo, punto.y + 36);
-    });
-    const origenMundo = v2.set(0, 0, 0).applyMatrix4(raiz.matrixWorld).clone();
-    const origen = aPantalla(origenMundo, rect, { x: 0, y: 0 });
+    const origen = new THREE.Vector3().setFromMatrixPosition(raiz.matrixWorld);
+    const escalaRaiz = v3.setFromMatrixScale(raiz.matrixWorld).x;
+    const pxPorLocal = escalaRaiz / mundoPorPixel(origen, rect);
+    const radioLocal = Math.max(...pos.current.map(([x, y, z]) => Math.hypot(x, y, z))) + 0.4;
     const area = areaVisible(rect, window.innerWidth > 768 ? 170 : 8);
-    const { zoom, dx, dy } = encuadrar({ caja, area, origen, margen: 10, maximo: 1.2 });
-    encuadre.current.zoom = zoom;
-    pixelesALocal(dx, dy, origenMundo, rect, encuadre.current.pos);
+    encuadre.current.pxPorLocal = pxPorLocal;
+    encuadre.current.area = area;
+    encuadre.current.zoom = zoomParaRadio({ radioPx: radioLocal * pxPorLocal, area, margen: 6, maximo: ZOOM_BASE_MAX });
   };
 
-  // --- Zoom y desplazamiento del usuario ----------------------------------
+  // Centro y zoom que encuadran un nodo junto con todas sus conexiones.
+  const encuadreSeleccion = (centroDestino) => {
+    const i = indiceDe(seleccion.current);
+    const conjunto = [i, ...vecinos(seleccion.current).map(indiceDe)];
+    const caja = new THREE.Box3();
+    conjunto.forEach((k) => caja.expandByPoint(v1.set(...pos.current[k])));
+    caja.getCenter(centroDestino);
+    let radio = 0;
+    conjunto.forEach((k) => {
+      radio = Math.max(radio, v1.set(...pos.current[k]).distanceTo(centroDestino));
+    });
+    const { pxPorLocal, area } = encuadre.current;
+    if (!area) return 1;
+    return zoomParaRadio({ radioPx: (radio + 0.55) * pxPorLocal, area, margen: 16, maximo: ZOOM_SELECCION_MAX });
+  };
+
+  // --- Cámara: giro libre mientras el grafo está listo ----------------------
+  const tomarControles = () => {
+    const c = refControles.current;
+    if (!c || guardado.current) return;
+    guardado.current = {
+      minA: c.minAzimuthAngle,
+      maxA: c.maxAzimuthAngle,
+      minP: c.minPolarAngle,
+      maxP: c.maxPolarAngle,
+      velocidad: c.autoRotateSpeed,
+    };
+    c.minAzimuthAngle = -Infinity;
+    c.maxAzimuthAngle = Infinity;
+    c.minPolarAngle = 0;
+    c.maxPolarAngle = Math.PI;
+    c.autoRotateSpeed = 0.6;
+    c.giroLibre = true;
+  };
+  const soltarControles = () => {
+    const c = refControles.current;
+    if (!c || !guardado.current) return;
+    const g = guardado.current;
+    c.minAzimuthAngle = g.minA;
+    c.maxAzimuthAngle = g.maxA;
+    c.minPolarAngle = g.minP;
+    c.maxPolarAngle = g.maxP;
+    c.autoRotateSpeed = g.velocidad;
+    c.autoRotate = false;
+    c.giroLibre = false;
+    guardado.current = null;
+  };
+
+  // Registra cuándo el usuario toca la cámara, para retomar el giro lento solo.
+  useEffect(() => {
+    if (!controles) return undefined;
+    const marcar = () => {
+      ultimoUso.current = performance.now();
+    };
+    controles.addEventListener('start', marcar);
+    controles.addEventListener('end', marcar);
+    return () => {
+      controles.removeEventListener('start', marcar);
+      controles.removeEventListener('end', marcar);
+    };
+  }, [controles]);
+
+  // --- Mouse, dedos y teclado ----------------------------------------------
   useEffect(() => {
     const punteros = new Map();
     let anterior = null;
-    const restaurar = () => {
-      lienzoDom.style.touchAction = 'pan-y';
-      if (refControles.current) refControles.current.enabled = true;
-      anterior = null;
-    };
-    const centro = () => {
-      const [a, b] = [...punteros.values()];
-      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
-    };
-    const alBajar = (evento) => {
-      if (evento.pointerType !== 'touch') return;
-      punteros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
-      if (punteros.size === 2) {
-        // Con dos dedos el gesto es del grafo: la página no hace zoom ni scroll y el
-        // modelo no gira.
-        lienzoDom.style.touchAction = 'none';
-        if (refControles.current) refControles.current.enabled = false;
-        anterior = centro();
-      }
-    };
-    const alMover = (evento) => {
-      if (!punteros.has(evento.pointerId)) return;
-      punteros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
-      if (punteros.size !== 2 || !anterior) return;
-      const ahora = centro();
-      const u = usuario.current;
-      u.zoom = limitar(u.zoom * (ahora.d / anterior.d), ZOOM_MINIMO, ZOOM_MAXIMO);
+    let toque = null;
+    let vacio = null;
+
+    const pickear = (clientX, clientY) => {
+      const raiz = refRaiz.current;
+      const vista = refVista.current;
+      if (!raiz || !vista || !listoAhora()) return -1;
+      vista.updateWorldMatrix(true, false);
+      camera.updateMatrixWorld();
       const rect = lienzoDom.getBoundingClientRect();
-      const origenMundo = new THREE.Vector3().applyMatrix4(refRaiz.current.matrixWorld);
-      u.pos.add(pixelesALocal(ahora.x - anterior.x, ahora.y - anterior.y, origenMundo, rect, new THREE.Vector3()));
-      anterior = ahora;
+      const escalaRaiz = v3.setFromMatrixScale(raiz.matrixWorld).x;
+      const punto = { x: 0, y: 0 };
+      let mejor = -1;
+      let menor = Infinity;
+      let profundidadMejor = Infinity;
+      NODOS_GRAFO.forEach((nodo, i) => {
+        if (apareceActual.current[i] < 0.9) return;
+        const mundo = v2.copy(actuales.current[i]).applyMatrix4(vista.matrixWorld).clone();
+        aPantalla(mundo, rect, punto);
+        const radioPx = (radioNodo(nodo.id) * 1.15 * vistaActual.current.zoom * escalaRaiz) / mundoPorPixel(mundo, rect);
+        const distancia = Math.hypot(clientX - punto.x, clientY - punto.y);
+        // Zona de contacto: el nodo más un margen de unos píxeles, siempre cómoda.
+        if (distancia > Math.max(radioPx * 1.3, 11) + 5) return;
+        const profundidad = -mundo.clone().applyMatrix4(camera.matrixWorldInverse).z;
+        const puntaje = distancia - radioPx;
+        if (puntaje < menor - 0.5 || (Math.abs(puntaje - menor) <= 0.5 && profundidad < profundidadMejor)) {
+          menor = puntaje;
+          mejor = i;
+          profundidadMejor = profundidad;
+        }
+      });
+      return mejor;
     };
+
+    const alBajar = (evento) => {
+      if (evento.target !== lienzoDom) return;
+      if (evento.pointerType === 'touch') {
+        punteros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
+        if (punteros.size === 2) {
+          // Con dos dedos el gesto es del grafo: la página no hace zoom ni scroll y
+          // la cámara no gira.
+          lienzoDom.style.touchAction = 'none';
+          if (refControles.current) refControles.current.enabled = false;
+          anterior = centroDedos();
+          toque = null;
+        } else if (punteros.size === 1) {
+          toque = { x: evento.clientX, y: evento.clientY, t: performance.now() };
+        }
+        return;
+      }
+      if (evento.button !== 0 || !listoAhora()) return;
+      const i = pickear(evento.clientX, evento.clientY);
+      if (i < 0) {
+        vacio = { x: evento.clientX, y: evento.clientY, t: performance.now() };
+        return;
+      }
+      // Agarrar un nodo: el evento no llega a la cámara, que no gira.
+      evento.stopPropagation();
+      evento.preventDefault();
+      const vista = refVista.current;
+      vista.updateWorldMatrix(true, false);
+      const mundo = v2.copy(actuales.current[i]).applyMatrix4(vista.matrixWorld).clone();
+      plano.setFromNormalAndCoplanarPoint(camera.getWorldDirection(v1).clone(), mundo);
+      arrastre.current = { i, x: evento.clientX, y: evento.clientY, movido: false };
+      fijos.current[i] = true;
+      cursor('grabbing');
+      actualizarBloqueo();
+    };
+
+    const alMover = (evento) => {
+      const a = arrastre.current;
+      if (a) {
+        if (!a.movido && Math.hypot(evento.clientX - a.x, evento.clientY - a.y) > 4) a.movido = true;
+        if (!a.movido) return;
+        const rect = lienzoDom.getBoundingClientRect();
+        rayo.setFromCamera({ x: ((evento.clientX - rect.left) / rect.width) * 2 - 1, y: -((evento.clientY - rect.top) / rect.height) * 2 + 1 }, camera);
+        if (rayo.ray.intersectPlane(plano, v3)) {
+          refVista.current.worldToLocal(v3);
+          pos.current[a.i] = [v3.x, v3.y, v3.z];
+          vel.current[a.i] = [0, 0, 0];
+          alpha.current = Math.max(alpha.current, 0.4);
+        }
+        lienzoDom.dispatchEvent(new CustomEvent('interaccion3d', { bubbles: true }));
+        return;
+      }
+      if (evento.pointerType === 'touch') {
+        if (punteros.has(evento.pointerId)) {
+          punteros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
+          if (punteros.size === 2 && anterior) {
+            const ahora = centroDedos();
+            usuario.current.zoom = limitar(usuario.current.zoom * (ahora.d / anterior.d), ZOOM_MINIMO, ZOOM_MAXIMO);
+            anterior = ahora;
+          }
+        }
+        return;
+      }
+      // Hover: sólo con el cursor libre sobre el canvas (no mientras gira la cámara).
+      if (evento.target !== lienzoDom || evento.buttons !== 0) {
+        if (evento.target !== lienzoDom) ponerFoco(-1);
+        return;
+      }
+      const i = pickear(evento.clientX, evento.clientY);
+      ponerFoco(i);
+      // Explorando un nodo no cuenta como "mouse quieto" para el desarme.
+      if (i >= 0) lienzoDom.dispatchEvent(new CustomEvent('interaccion3d', { bubbles: true }));
+    };
+
     const alSubir = (evento) => {
-      if (!punteros.delete(evento.pointerId)) return;
-      if (punteros.size < 2) restaurar();
+      const a = arrastre.current;
+      if (a) {
+        arrastre.current = null;
+        if (a.movido) alpha.current = Math.max(alpha.current, 0.5);
+        else {
+          // Un click sin arrastre: selecciona (y si ya estaba seleccionado y tiene
+          // enlace, lo abre).
+          const { url } = NODOS_GRAFO[a.i];
+          if (seleccion.current === NODOS_GRAFO[a.i].id && url) window.open(url, '_blank', 'noopener,noreferrer');
+          else seleccionar(a.i);
+          fijos.current[a.i] = false;
+        }
+        cursor(foco.current ? 'pointer' : '');
+        actualizarBloqueo();
+        return;
+      }
+      if (evento.pointerType === 'touch') {
+        const habia = punteros.delete(evento.pointerId);
+        if (habia && punteros.size < 2 && anterior) {
+          lienzoDom.style.touchAction = 'pan-y';
+          if (refControles.current) refControles.current.enabled = true;
+          anterior = null;
+        }
+        // Un toque corto sobre un nodo lo selecciona; sobre el vacío, deselecciona.
+        if (habia && toque && Math.hypot(evento.clientX - toque.x, evento.clientY - toque.y) < 8 && performance.now() - toque.t < 500) {
+          const i = pickear(evento.clientX, evento.clientY);
+          if (i >= 0) seleccionar(i);
+          else if (seleccion.current) seleccionar(-1);
+        }
+        toque = null;
+        return;
+      }
+      // Click sobre el vacío (sin haber girado la cámara): deselecciona.
+      if (vacio && evento.target === lienzoDom && Math.hypot(evento.clientX - vacio.x, evento.clientY - vacio.y) < 5 && performance.now() - vacio.t < 500) {
+        if (seleccion.current) seleccionar(-1);
+      }
+      vacio = null;
+    };
+
+    const centroDedos = () => {
+      const [a, b] = [...punteros.values()];
+      return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
     };
     // Pellizco en el trackpad (Ctrl + rueda): acerca el grafo y no la página.
     const alRodar = (evento) => {
       if (!evento.ctrlKey) return;
       evento.preventDefault();
-      const u = usuario.current;
-      u.zoom = limitar(u.zoom * Math.exp(-evento.deltaY * 0.01), ZOOM_MINIMO, ZOOM_MAXIMO);
+      usuario.current.zoom = limitar(usuario.current.zoom * Math.exp(-evento.deltaY * 0.01), ZOOM_MINIMO, ZOOM_MAXIMO);
     };
     // Safari (iOS y macOS) hace zoom de página con sus propios eventos de gesto.
     const sinGesto = (evento) => evento.preventDefault();
-    // Doble click: vuelve al encuadre inicial.
-    const alDobleClick = () => {
+    // Doble click en el vacío: vuelve a la vista inicial y reacomoda los nodos.
+    const alDobleClick = (evento) => {
+      if (pickear(evento.clientX, evento.clientY) >= 0) return;
+      seleccionar(-1);
       usuario.current.zoom = 1;
-      usuario.current.pos.set(0, 0, 0);
+      reordenarTodo();
+    };
+    const alTeclear = (evento) => {
+      if (evento.key === 'Escape' && seleccion.current) seleccionar(-1);
     };
     const alCambiarTamano = () => {
       encuadre.current.pendiente = 2;
     };
-    lienzoDom.addEventListener('pointerdown', alBajar);
-    lienzoDom.addEventListener('pointermove', alMover);
-    lienzoDom.addEventListener('pointerup', alSubir);
-    lienzoDom.addEventListener('pointercancel', alSubir);
+    window.addEventListener('pointerdown', alBajar, true);
+    window.addEventListener('pointermove', alMover);
+    window.addEventListener('pointerup', alSubir);
+    window.addEventListener('pointercancel', alSubir);
+    window.addEventListener('keydown', alTeclear);
+    window.addEventListener('resize', alCambiarTamano);
     lienzoDom.addEventListener('wheel', alRodar, { passive: false });
     lienzoDom.addEventListener('gesturestart', sinGesto);
     lienzoDom.addEventListener('gesturechange', sinGesto);
     lienzoDom.addEventListener('dblclick', alDobleClick);
-    window.addEventListener('resize', alCambiarTamano);
     return () => {
-      lienzoDom.removeEventListener('pointerdown', alBajar);
-      lienzoDom.removeEventListener('pointermove', alMover);
-      lienzoDom.removeEventListener('pointerup', alSubir);
-      lienzoDom.removeEventListener('pointercancel', alSubir);
+      window.removeEventListener('pointerdown', alBajar, true);
+      window.removeEventListener('pointermove', alMover);
+      window.removeEventListener('pointerup', alSubir);
+      window.removeEventListener('pointercancel', alSubir);
+      window.removeEventListener('keydown', alTeclear);
+      window.removeEventListener('resize', alCambiarTamano);
       lienzoDom.removeEventListener('wheel', alRodar);
       lienzoDom.removeEventListener('gesturestart', sinGesto);
       lienzoDom.removeEventListener('gesturechange', sinGesto);
       lienzoDom.removeEventListener('dblclick', alDobleClick);
-      window.removeEventListener('resize', alCambiarTamano);
-      restaurar();
+      lienzoDom.style.touchAction = 'pan-y';
+      if (refControles.current) refControles.current.enabled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lienzoDom]);
@@ -301,106 +518,104 @@ export default function Grafo({ tiempo, claro }) {
   useEffect(
     () => () => {
       cursor('');
+      soltarControles();
       lienzoDom.dispatchEvent(new CustomEvent('bloqueo3d', { bubbles: true, detail: false }));
       recursos.texturas.forEach((t) => t.dispose());
       recursos.etiquetas.forEach((e) => e.material.dispose());
-      recursos.puntos.forEach((m) => m.dispose());
-      recursos.halos.forEach((m) => m.dispose());
+      recursos.nodos.forEach((m) => m.dispose());
       recursos.materialFicha.dispose();
       recursos.materialLineas.dispose();
-      recursos.geoPunto.dispose();
+      recursos.geoNodo.dispose();
       recursos.geoLineas.dispose();
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [recursos, lienzoDom]
   );
-
-  // --- Hover ----------------------------------------------------------------
-  // Le avisa a la sección que el mouse está sobre un nodo (no se desarma mientras tanto).
-  const avisar = (bloqueado) => lienzoDom.dispatchEvent(new CustomEvent('bloqueo3d', { bubbles: true, detail: bloqueado }));
-  const entrar = (indice, evento) => {
-    // Hasta que la red termina de expandirse no responde al mouse.
-    if (expansion(tiempo.current) < 0.95) return;
-    evento.stopPropagation();
-    foco.current = NODOS_GRAFO[indice].id;
-    vecinosFoco.current = new Set(vecinos(foco.current));
-    cursor('pointer');
-    avisar(true);
-  };
-  const salir = (indice) => {
-    if (foco.current === NODOS_GRAFO[indice].id) {
-      foco.current = null;
-      vecinosFoco.current = new Set();
-      cursor('');
-      avisar(false);
-    }
-  };
-  // Con el cursor sobre un nodo se está explorando: que no cuente como "mouse quieto"
-  // para el desarme por hover (Escena3D escucha este evento).
-  const moviendo = (evento) => {
-    evento.stopPropagation();
-    lienzoDom.dispatchEvent(new CustomEvent('interaccion3d', { bubbles: true }));
-  };
-  const alClick = (indice, evento) => {
-    const { url } = NODOS_GRAFO[indice];
-    if (!url || expansion(tiempo.current) < 0.95) return;
-    evento.stopPropagation();
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
   useFrame(() => {
     const t = tiempo.current;
     const e = expansion(t);
     const listo = e >= 0.95;
-    const idFoco = listo ? foco.current : null;
+    const idFoco = listo ? foco.current ?? seleccion.current : null;
+    const hover = listo ? foco.current : null;
     const posLineas = recursos.geoLineas.attributes.position;
     const colLineas = recursos.geoLineas.attributes.color;
+    const c = refControles.current;
 
-    // Encuadre: se recalcula al empezar y cuando cambia el tamaño de la ventana.
+    // Giro libre sólo cuando el grafo ya está armado; la cámara gira sola, despacio,
+    // si nadie la toca (y se detiene al apuntar, arrastrar o seleccionar).
+    if (listo) tomarControles();
+    else soltarControles();
+    if (c && guardado.current) {
+      c.autoRotate = !arrastre.current && !foco.current && !seleccion.current && performance.now() - ultimoUso.current > 3500;
+    }
+
     if (encuadre.current.pendiente > 0) {
       encuadre.current.pendiente -= 1;
-      calcularEncuadre();
+      medirEncuadre();
     }
+
+    // Simulación de fuerzas: sólo mientras algo se está reacomodando.
+    if (listo && alpha.current > 0.004) {
+      pasoFuerzas(pos.current, vel.current, fijos.current, alpha.current);
+      alpha.current *= 0.986;
+    }
+
+    // Vista: zoom y centro. Con una selección el centro es el del nodo y sus
+    // conexiones; la cámara orbita siempre alrededor del centro de la vista.
     const actualV = vistaActual.current;
-    actualV.zoom += (encuadre.current.zoom * usuario.current.zoom - actualV.zoom) * 0.18;
-    actualV.pos.lerp(v1.copy(encuadre.current.pos).add(usuario.current.pos), 0.18);
+    const centroObjetivo = v1.set(0, 0, 0);
+    let zoomObjetivo = encuadre.current.zoom;
+    if (listo && seleccion.current) zoomObjetivo = encuadreSeleccion(centroObjetivo);
+    zoomObjetivo *= usuario.current.zoom;
+    actualV.zoom += (zoomObjetivo - actualV.zoom) * 0.12;
+    actualV.centro.lerp(centroObjetivo, 0.12);
     const vista = refVista.current;
     vista.scale.setScalar(actualV.zoom);
-    vista.position.copy(actualV.pos);
+    vista.position.copy(actualV.centro).multiplyScalar(-actualV.zoom);
     vista.updateWorldMatrix(true, false);
+    const origenMundo = v3.setFromMatrixPosition(refRaiz.current.matrixWorld).clone();
+    if (c && guardado.current) c.target.lerp(origenMundo, 0.2);
+
+    // Para atenuar lo que queda lejos de la cámara (da profundidad).
+    const distCentro = camera.position.distanceTo(origenMundo);
+    const radioMundo = Math.max(
+      1,
+      Math.max(...pos.current.map(([x, y, z]) => Math.hypot(x, y, z))) * actualV.zoom * v2.setFromMatrixScale(refRaiz.current.matrixWorld).x
+    );
 
     NODOS_GRAFO.forEach((nodo, i) => {
       const aparece = salida(limitar(e * 1.7 - distancias[i] * 0.7));
-      const [x, y, z] = posiciones[i];
-      const p = actuales.current[i].set(
-        x * aparece + Math.sin(t * 0.5 + i * 1.7) * 0.035,
-        y * aparece + Math.cos(t * 0.45 + i * 2.3) * 0.035,
-        z * aparece
-      );
+      apareceActual.current[i] = aparece;
+      const [x, y, z] = pos.current[i];
+      const p = actuales.current[i].set(x * aparece, y * aparece, z * aparece);
+
       // Luz objetivo: normal, resaltada (foco o vecino) o apagada (el resto).
-      let objetivo = 0.78;
-      if (idFoco) objetivo = nodo.id === idFoco ? 1 : vecinosFoco.current.has(nodo.id) ? 0.98 : 0.13;
+      let objetivo = 1;
+      if (idFoco) objetivo = vecinosActivos.current.has(nodo.id) ? 1 : 0.16;
       luz.current[i] += (objetivo - luz.current[i]) * 0.18;
       const l = luz.current[i];
-      const resaltado = nodo.id === idFoco;
+      const resaltado = nodo.id === hover || nodo.id === seleccion.current;
       const importante = grado(nodo.id) >= 5 || nodo.id === 'yo';
 
-      const punto = refPuntos.current[i];
-      punto.position.copy(p);
-      // Los puntos de los nodos importantes "laten" suavemente.
-      const latido = importante ? 1 + 0.07 * Math.sin(t * 2.2 + i) : 1;
-      const radio = radioNodo(nodo.id) * 1.25 * (resaltado ? 1.45 : 1) * latido * aparece;
-      punto.scale.setScalar(Math.max(radio, 0.0001));
-      recursos.puntos[i].opacity = l * aparece;
-      const halo = refHalos.current[i];
-      halo.position.copy(p);
-      halo.scale.setScalar(Math.max(radio * (resaltado ? 3.3 : importante ? 2.6 : 2.3), 0.0001));
-      recursos.halos[i].opacity = (resaltado ? 0.3 : importante ? 0.16 : 0.15) * (nodo.id === 'yo' ? 0.5 : 1) * l * aparece * (claro ? 0.7 : 1);
+      // Profundidad: lo lejano se ve algo más tenue.
+      const distNodo = v3.copy(p).applyMatrix4(vista.matrixWorld).distanceTo(camera.position);
+      const cercania = limitar(0.5 + (distCentro - distNodo) / (radioMundo * 2.4), 0, 1);
+      const profundidad = 0.78 + 0.22 * cercania;
+
+      const nodoMesh = refNodos.current[i];
+      nodoMesh.position.copy(p);
+      // Los nodos importantes "laten" suavemente; el apuntado crece un poco.
+      const latido = importante ? 1 + 0.06 * Math.sin(t * 2.2 + i) : 1;
+      const radio = radioNodo(nodo.id) * 1.15 * (resaltado ? 1.35 : 1) * latido * aparece;
+      nodoMesh.scale.setScalar(Math.max(radio, 0.0001));
+      recursos.nodos[i].opacity = l * aparece * profundidad;
 
       const etiqueta = refEtiquetas.current[i];
-      etiqueta.position.set(p.x, p.y - radioNodo(nodo.id) * 1.9 - 0.12, p.z);
-      const base = importante ? 1 : 0.62;
+      etiqueta.position.set(p.x, p.y - radioNodo(nodo.id) * 1.9 - 0.13, p.z);
+      const base = importante ? 1 : 0.8;
       const claridad = idFoco ? (l > 0.9 ? 1 : 0.1) : base;
-      recursos.etiquetas[i].material.opacity += (claridad * aparece - recursos.etiquetas[i].material.opacity) * 0.2;
+      recursos.etiquetas[i].material.opacity += (claridad * aparece * (0.55 + 0.45 * cercania) - recursos.etiquetas[i].material.opacity) * 0.2;
     });
 
     // Líneas: degradé entre los colores de sus dos nodos; siguen a los nodos y se
@@ -413,7 +628,7 @@ export default function Grafo({ tiempo, claro }) {
       posLineas.setXYZ(k * 2, pa.x, pa.y, pa.z);
       posLineas.setXYZ(k * 2 + 1, pb.x, pb.y, pb.z);
       const toca = idFoco && (a === idFoco || b === idFoco);
-      const fuerza = (toca ? 1 : idFoco ? 0.05 : claro ? 0.5 : 0.42) * Math.min(1, e * 2);
+      const fuerza = (toca ? 1 : idFoco ? 0.05 : claro ? 0.55 : 0.5) * Math.min(1, e * 2);
       const ca = recursos.colores[ia];
       const cb = recursos.colores[ib];
       colLineas.setXYZW(k * 2, ca.r, ca.g, ca.b, fuerza);
@@ -433,11 +648,10 @@ export default function Grafo({ tiempo, claro }) {
         recursos.ficha.textura.needsUpdate = true;
       }
     }
-    recursos.materialFicha.opacity += ((idFoco ? 1 : 0) - recursos.materialFicha.opacity) * 0.25;
+    recursos.materialFicha.opacity += ((idFoco && !arrastre.current?.movido ? 1 : 0) - recursos.materialFicha.opacity) * 0.25;
     ficha.visible = recursos.materialFicha.opacity > 0.02;
     if (idFoco) {
       const raiz = refRaiz.current;
-      raiz.updateWorldMatrix(true, false);
       const mundoNodo = v2.copy(actuales.current[indiceDe(idFoco)]).applyMatrix4(vista.matrixWorld).clone();
       const rect = lienzoDom.getBoundingClientRect();
       const nodoPx = aPantalla(mundoNodo, rect, { x: 0, y: 0 });
@@ -446,7 +660,7 @@ export default function Grafo({ tiempo, claro }) {
       const pxPorMundo = 1 / mundoPorPixel(mundoNodo, rect);
       const anchoPx = FICHA.ancho * escalaRaiz * pxPorMundo;
       const altoPx = FICHA.alto * escalaRaiz * pxPorMundo;
-      const centro = ubicarFicha({ nodo: nodoPx, ancho: anchoPx, alto: altoPx, area: areaVisible(rect, 8), separacion: 20 });
+      const centro = ubicarFicha({ nodo: nodoPx, ancho: anchoPx, alto: altoPx, area: areaVisible(rect, 8), separacion: 24 });
       const desplazamiento = pixelesALocal(centro.x - nodoPx.x, centro.y - nodoPx.y, mundoNodo, rect, new THREE.Vector3());
       const destino = raiz.worldToLocal(mundoNodo.clone()).add(desplazamiento);
       if (cambio && !ficha.userData.puesta) ficha.position.copy(destino);
@@ -460,32 +674,20 @@ export default function Grafo({ tiempo, claro }) {
   return (
     <group ref={refRaiz}>
       <group ref={refVista}>
-        <lineSegments geometry={recursos.geoLineas} material={recursos.materialLineas} frustumCulled={false} renderOrder={1} raycast={SIN_MOUSE} />
+        <lineSegments geometry={recursos.geoLineas} material={recursos.materialLineas} frustumCulled={false} renderOrder={1} />
         {NODOS_GRAFO.map((nodo, i) => (
           <group key={nodo.id}>
-            <mesh ref={(m) => { refHalos.current[i] = m; }} geometry={recursos.geoPunto} material={recursos.halos[i]} renderOrder={2} raycast={SIN_MOUSE} />
-            <mesh ref={(m) => { refPuntos.current[i] = m; }} geometry={recursos.geoPunto} material={recursos.puntos[i]} renderOrder={3} raycast={SIN_MOUSE} />
+            <mesh ref={(m) => { refNodos.current[i] = m; }} geometry={recursos.geoNodo} material={recursos.nodos[i]} renderOrder={3} />
             <Billboard ref={(m) => { refEtiquetas.current[i] = m; }}>
-              <mesh material={recursos.etiquetas[i].material} renderOrder={4} raycast={SIN_MOUSE}>
+              <mesh material={recursos.etiquetas[i].material} renderOrder={10}>
                 <planeGeometry args={[ALTO_ETIQUETA * recursos.etiquetas[i].proporcion, ALTO_ETIQUETA]} />
               </mesh>
             </Billboard>
-            {/* Zona de contacto más grande que el punto, para que sea fácil apuntarle. */}
-            <mesh
-              position={posiciones[i]}
-              onPointerOver={(evento) => entrar(i, evento)}
-              onPointerOut={() => salir(i)}
-              onPointerMove={moviendo}
-              onClick={(evento) => alClick(i, evento)}
-            >
-              <sphereGeometry args={[Math.max(radioNodo(nodo.id) * 3, 0.24), 10, 8]} />
-              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-            </mesh>
           </group>
         ))}
       </group>
       <Billboard ref={refFicha} visible={false}>
-        <mesh material={recursos.materialFicha} renderOrder={20} raycast={SIN_MOUSE}>
+        <mesh material={recursos.materialFicha} renderOrder={20}>
           <planeGeometry args={[FICHA.ancho, FICHA.alto]} />
         </mesh>
       </Billboard>

@@ -28,8 +28,8 @@ import {
   puntoDe,
   puntoEnTramo,
 } from './constelacion.js';
-import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, radioNodo, vecinos } from './grafo.js';
-import { encuadrar, ubicarFicha } from './fichaLayout.js';
+import { ENLACES_GRAFO, FUERZAS, GRUPOS, NODOS_GRAFO, distribuir, pasoFuerzas, radioNodo, vecinos } from './grafo.js';
+import { ubicarFicha, zoomParaRadio } from './fichaLayout.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -783,10 +783,13 @@ test('grafo: la distribución es determinista, finita y los nodos no se pisan', 
   assert.deepEqual(a, distribuir());
   assert.equal(a.length, NODOS_GRAFO.length);
   for (const p of a) assert.ok(p.length === 3 && p.every(Number.isFinite));
-  assert.ok(Math.max(...a.map(([x, y]) => Math.hypot(x, y))) <= 2.6 * Math.sqrt(NODOS_GRAFO.length / 24) + 1e-9);
+  assert.ok(Math.max(...a.map(([x, y, z]) => Math.hypot(x, y, z))) <= 2.6 * Math.sqrt(NODOS_GRAFO.length / 24) + 1e-9);
+  // Es un volumen de verdad: hay profundidad, no un plano.
+  const zs = a.map((p) => p[2]);
+  assert.ok(Math.max(...zs) - Math.min(...zs) > 1.5, `casi plano en z: ${Math.max(...zs) - Math.min(...zs)}`);
   for (let i = 0; i < a.length; i += 1) {
     for (let j = i + 1; j < a.length; j += 1) {
-      const d = Math.hypot(a[i][0] - a[j][0], a[i][1] - a[j][1]);
+      const d = Math.hypot(a[i][0] - a[j][0], a[i][1] - a[j][1], a[i][2] - a[j][2]);
       assert.ok(d > 0.28, `${NODOS_GRAFO[i].id} y ${NODOS_GRAFO[j].id} muy cerca (${d.toFixed(3)})`);
     }
   }
@@ -830,30 +833,39 @@ test('ubicarFicha: si la ficha es más grande que el área se alinea con el bord
   assert.equal(r.y, 200);
 });
 
-test('encuadrar: una caja que ya entra no se achica y se centra', () => {
-  const r = encuadrar({ caja: { izq: 100, arriba: 200, der: 500, abajo: 500 }, area: AREA, origen: { x: 300, y: 350 }, maximo: 1 });
-  cerca(r.zoom, 1);
-  cerca(r.dx, 200);
-  cerca(r.dy, 35);
+test('zoomParaRadio: una esfera chica se agranda hasta el máximo y una grande se achica hasta entrar', () => {
+  cerca(zoomParaRadio({ radioPx: 10, area: AREA, maximo: 1.25 }), 1.25);
+  const z = zoomParaRadio({ radioPx: 800, area: AREA, margen: 20 });
+  // El área mide 1000 × 630: entra una esfera de hasta (630 / 2 - 20) px de radio.
+  cerca(z * 800, 630 / 2 - 20, 1e-9);
+  assert.ok(z < 1);
 });
 
-test('encuadrar: una caja que se sale se achica hasta entrar y queda centrada en el área', () => {
-  const caja = { izq: -200, arriba: 20, der: 1200, abajo: 1000 };
-  const origen = { x: 500, y: 500 };
-  const r = encuadrar({ caja, area: AREA, origen, margen: 20 });
-  assert.ok(r.zoom < 1);
-  const escalar = (v, o, d) => o + (v - o) * r.zoom + d;
-  const izq = escalar(caja.izq, origen.x, r.dx);
-  const der = escalar(caja.der, origen.x, r.dx);
-  const arriba = escalar(caja.arriba, origen.y, r.dy);
-  const abajo = escalar(caja.abajo, origen.y, r.dy);
-  assert.ok(izq >= AREA.izq + 20 - 1e-6 && der <= AREA.der - 20 + 1e-6, `horizontal ${izq}..${der}`);
-  assert.ok(arriba >= AREA.arriba + 20 - 1e-6 && abajo <= AREA.abajo - 20 + 1e-6, `vertical ${arriba}..${abajo}`);
-  cerca((izq + der) / 2, (AREA.izq + AREA.der) / 2, 1e-6);
-  cerca((arriba + abajo) / 2, (AREA.arriba + AREA.abajo) / 2, 1e-6);
+test('zoomParaRadio: el zoom sube cuando baja el radio (acercarse a una selección)', () => {
+  assert.ok(zoomParaRadio({ radioPx: 150, area: AREA, maximo: 3 }) > zoomParaRadio({ radioPx: 400, area: AREA, maximo: 3 }));
 });
 
-test('encuadrar: no agranda más allá del máximo', () => {
-  const r = encuadrar({ caja: { izq: 400, arriba: 300, der: 420, abajo: 320 }, area: AREA, origen: { x: 410, y: 310 }, maximo: 1.15 });
-  cerca(r.zoom, 1.15);
+test('pasoFuerzas: el nodo fijo no se mueve y los demás siguen siendo números', () => {
+  const pos = distribuir();
+  const vel = pos.map(() => [0, 0, 0]);
+  const fijos = pos.map((_, i) => i === 3);
+  const antes = [...pos[3]];
+  pos[0] = [pos[0][0] + 2, pos[0][1], pos[0][2]];
+  for (let k = 0; k < 60; k += 1) pasoFuerzas(pos, vel, fijos, 0.3);
+  assert.deepEqual(pos[3], antes);
+  for (const p of pos) assert.ok(p.every(Number.isFinite));
+});
+
+test('pasoFuerzas: al arrastrar un nodo lejos, sus vecinos lo siguen', () => {
+  const pos = distribuir();
+  const vel = pos.map(() => [0, 0, 0]);
+  const centro = 0;
+  const vecinosDe = vecinos(NODOS_GRAFO[centro].id).map((id) => NODOS_GRAFO.findIndex((n) => n.id === id));
+  const distancia = () => vecinosDe.reduce((suma, v) => suma + Math.hypot(...pos[v].map((c, k) => c - pos[centro][k])), 0) / vecinosDe.length;
+  pos[centro] = [pos[centro][0] + 6, pos[centro][1], pos[centro][2]];
+  const fijos = pos.map((_, i) => i === centro);
+  const antes = distancia();
+  for (let k = 0; k < 250; k += 1) pasoFuerzas(pos, vel, fijos, 0.5);
+  assert.ok(distancia() < antes * 0.6, `los vecinos no se acercaron: ${antes.toFixed(2)} → ${distancia().toFixed(2)}`);
+  assert.ok(FUERZAS.ideal > 0);
 });

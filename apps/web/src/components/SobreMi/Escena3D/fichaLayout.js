@@ -44,18 +44,10 @@ export function ubicarFicha({ nodo, ancho, alto, area, separacion = 22 }) {
   return { x, y, lado: mejor.lado };
 }
 
-// Zoom y desplazamiento (en píxeles) que hacen entrar en `area` una caja que hoy
-// ocupa `caja` = { izq, arriba, der, abajo }; `origen` es el punto de pantalla
-// alrededor del cual escala el zoom. Nunca agranda por encima de `maximo`.
-export function encuadrar({ caja, area, origen, margen = 24, maximo = 1.15 }) {
-  const anchoCaja = Math.max(caja.der - caja.izq, 1);
-  const altoCaja = Math.max(caja.abajo - caja.arriba, 1);
-  const anchoArea = Math.max(area.der - area.izq - margen * 2, 1);
-  const altoArea = Math.max(area.abajo - area.arriba - margen * 2, 1);
-  const zoom = Math.min(maximo, anchoArea / anchoCaja, altoArea / altoCaja);
-  // Centro de la caja una vez escalada alrededor de `origen`.
-  const centro = { x: (caja.izq + caja.der) / 2, y: (caja.arriba + caja.abajo) / 2 };
-  const escalado = { x: origen.x + (centro.x - origen.x) * zoom, y: origen.y + (centro.y - origen.y) * zoom };
-  const meta = { x: (area.izq + area.der) / 2, y: (area.arriba + area.abajo) / 2 };
-  return { zoom, dx: meta.x - escalado.x, dy: meta.y - escalado.y };
+// Zoom que hace entrar en `area` una esfera de `radioPx` píxeles (su tamaño en
+// pantalla con zoom 1). Como el grafo gira, se ajusta a la esfera completa y no a
+// la silueta de un ángulo. Nunca agranda por encima de `maximo`.
+export function zoomParaRadio({ radioPx, area, margen = 12, maximo = 1.25 }) {
+  const disponible = Math.max(Math.min(area.der - area.izq, area.abajo - area.arriba) / 2 - margen, 1);
+  return Math.min(maximo, disponible / Math.max(radioPx, 1));
 }
