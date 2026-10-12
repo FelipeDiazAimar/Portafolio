@@ -59,6 +59,7 @@
     "titulo": "Lo que viene",
     "resumen": "Quiero seguir creciendo.",
     "descripcion": "Busco una **nueva oportunidad** para crecer y seguir adelante en mi vida profesional, desarrollándome en lo que tanto me apasiona.",
-    "imagen": "/hito7.jpeg"
+    "imagen": "/hito7.jpeg",
+    "textoFijo": true
   }
 ]

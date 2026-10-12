@@ -6,9 +6,9 @@ import { partirEnRenglones } from '@/lib/renglones.js';
 import styles from './BioDibujada.module.css';
 
 // Segundos entre una letra y la siguiente, y lo que tarda en dibujarse cada contorno.
-const ENTRE_LETRAS = 0.011;
-const DIBUJO = 0.55;
-const RELLENO_DESDE = 0.32;
+const ENTRE_LETRAS = 0.018;
+const DIBUJO = 1.3;
+const RELLENO_DESDE = 0.6;
 
 // Biografía escrita "a trazo", con la técnica de StrokeText de React Bits: cada
 // letra se dibuja primero como contorno (stroke-dashoffset) y después se llena. Como
@@ -78,11 +78,11 @@ export default function BioDibujada({ partes, visible, className = '' }) {
     if (!visible) return () => gsap.killTweensOf(todos);
 
     const letra = ENTRE_LETRAS;
-    const linea = gsap.timeline({ delay: 0.25 });
+    const linea = gsap.timeline({ delay: 0.4 });
     linea.to(trazos, { strokeDashoffset: 0, duration: DIBUJO, ease: 'power2.out', stagger: letra }, 0);
-    linea.to(rellenos, { opacity: 1, duration: 0.35, ease: 'power2.out', stagger: letra }, DIBUJO * RELLENO_DESDE);
+    linea.to(rellenos, { opacity: 1, duration: 0.6, ease: 'power2.out', stagger: letra }, DIBUJO * RELLENO_DESDE);
     // Una vez lleno, el contorno se desvanece: el texto queda como cualquier otro.
-    linea.to(trazos, { strokeOpacity: 0, duration: 0.5, ease: 'power1.out', stagger: letra }, DIBUJO + 0.35);
+    linea.to(trazos, { strokeOpacity: 0, duration: 0.9, ease: 'power1.out', stagger: letra }, DIBUJO + 0.5);
     return () => {
       linea.kill();
       gsap.killTweensOf(todos);

@@ -29,6 +29,8 @@ function SobreMiContenido() {
   const refAbierto = useRef(false);
   refAbierto.current = detalleAbierto;
   const refBloqueo = useRef(false);
+  const refActivo = useRef(0);
+  refActivo.current = activo;
   // Si el mouse está sobre la columna (la espera de 0,9 s sólo corre en ese caso).
   const refDentro = useRef(false);
   // Última posición del mouse. Al terminar un scroll el navegador dispara un
@@ -46,7 +48,8 @@ function SobreMiContenido() {
   const armarEspera = () => {
     clearTimeout(refEspera.current);
     refEspera.current = setTimeout(() => {
-      if (!refBloqueo.current) setDetalleAbierto(true);
+      // Un hito con grafo para explorar (textoFijo) no se desarma por hover.
+      if (!refBloqueo.current && !hitos[refActivo.current].textoFijo) setDetalleAbierto(true);
     }, ESPERA_HOVER_MODELO_MS);
   };
 
@@ -118,6 +121,8 @@ function SobreMiContenido() {
           }}
         >
           <EncabezadoHito hito={hito} />
+          {/* Un hito con grafo para explorar no se desarma por hover: su texto queda a la vista. */}
+          {hito.textoFijo ? <DescripcionHito key={hito.id} hito={hito} fijo /> : null}
           <div className={styles.zona}>
             <Escena3D
               hito={hito}
@@ -134,7 +139,7 @@ function SobreMiContenido() {
                 setDetalleAbierto(false);
               }}
             />
-            <DescripcionHito hito={hito} visible={detalleAbierto} />
+            {hito.textoFijo ? null : <DescripcionHito hito={hito} visible={detalleAbierto} />}
           </div>
         </div>
 
