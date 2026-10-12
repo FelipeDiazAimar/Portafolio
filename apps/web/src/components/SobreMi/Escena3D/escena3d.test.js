@@ -513,8 +513,9 @@ test('limiteDeGiro: las escenas planas (2023) y de objeto con frente (2024) no d
   }
 });
 
-test('limiteDeGiro: la notebook gira libre y las escenas fijas no tienen límite', () => {
-  assert.equal(limiteDeGiro(0), null);
+test('limiteDeGiro: Origen no da la vuelta entera y las escenas fijas no tienen límite', () => {
+  const limiteOrigen = limiteDeGiro(0);
+  assert.ok(limiteOrigen > 0.3 && limiteOrigen < Math.PI / 2, `límite de la escena 0: ${limiteOrigen}`);
   assert.equal(limiteDeGiro(1), null);
   assert.equal(limiteDeGiro(99), null);
 });

@@ -85,7 +85,8 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
     texturas.push(manzana.textura);
     const std = (opciones) => new THREE.MeshStandardMaterial(opciones);
     const mats = {
-      tapete: std({ map: tapeteTex, color: claro ? '#ffffff' : '#6f8f84', emissiveMap: tapeteTex, emissive: claro ? '#000000' : '#2fbf80', emissiveIntensity: claro ? 0 : 0.16, roughness: 0.85 }),
+      // Mantel más vívido: teal saturado del mismo tono, legible en claro/oscuro y acorde al azul del sitio.
+      tapete: std({ map: tapeteTex, color: claro ? '#c2ffe7' : '#46d8a0', emissiveMap: tapeteTex, emissive: claro ? '#0bb37e' : '#1fe08d', emissiveIntensity: claro ? 0.14 : 0.28, roughness: 0.85 }),
       pantallaMac: new THREE.MeshBasicMaterial({
         map: crear(1280, Math.round(1280 / RELACION_PANTALLA), (ctx, w, h) => dibujarDiagnostico(ctx, w, h, claro)).textura,
         toneMapped: false,

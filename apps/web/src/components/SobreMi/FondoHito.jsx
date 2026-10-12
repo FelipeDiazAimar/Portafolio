@@ -71,6 +71,7 @@ export default function FondoHito({ hitos, activo, presente = true }) {
               sizes="100vw"
               loading="eager"
               className={styles.imagen}
+              style={{ objectPosition: hito.foco ?? 'center' }}
               onError={() => setFallidas((previas) => ({ ...previas, [hito.id]: true }))}
             />
           </div>

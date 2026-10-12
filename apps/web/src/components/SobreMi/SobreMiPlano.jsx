@@ -14,7 +14,7 @@ export default function SobreMiPlano({ hitos }) {
           <li key={hito.id} className={styles.hito}>
             {hito.imagen ? (
               <div className={styles.foto}>
-                <Image src={hito.imagen} alt="" fill sizes="(max-width: 768px) 100vw, 40vw" className={styles.imagen} />
+                <Image src={hito.imagen} alt="" fill sizes="(max-width: 768px) 100vw, 40vw" className={styles.imagen} style={{ objectPosition: hito.foco ?? 'center' }} />
               </div>
             ) : null}
             <div className={styles.texto}>

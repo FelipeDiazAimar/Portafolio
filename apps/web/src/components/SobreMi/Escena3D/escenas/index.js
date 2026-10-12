@@ -22,9 +22,10 @@ export function esEscenaFija(id) {
 
 // Escenas que se pueden girar sólo dentro de un rango a cada lado del frente
 // (radianes): no tiene sentido verles la parte de atrás, sea una pared de
-// tarjetas o una placa. En vez de dar vueltas, se mecen suavemente. Sin entrada =
-// giro libre (la notebook).
-const LIMITES_GIRO = { 2: 0.7, 3: 0.7, 4: 0.7, 5: 0.7, 6: 0.9 };
+// tarjetas, una placa o la pantalla de la notebook (la línea de tiempo quedaría
+// por delante). En vez de dar vueltas, se mecen suavemente. Sin entrada = giro
+// libre.
+const LIMITES_GIRO = { 0: 0.7, 2: 0.7, 3: 0.7, 4: 0.7, 5: 0.7, 6: 0.9 };
 
 export function limiteDeGiro(id) {
   return LIMITES_GIRO[id] ?? null;

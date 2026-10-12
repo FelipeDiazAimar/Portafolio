@@ -13,7 +13,8 @@
     "titulo": "Abanderado e ingeniería",
     "resumen": "Del ISFA a la UTN.",
     "descripcion": "Me recibí de **abanderado** en el Instituto San Francisco de Asís (**ISFA**), en San Francisco, Córdoba. Ese mismo año empecé **Ingeniería en Sistemas de Información** en la **UTN San Francisco**.",
-    "imagen": "/hito2.jpeg"
+    "imagen": "/hito2.jpeg",
+    "foco": "75% 50%"
   },
   {
     "id": 2,
