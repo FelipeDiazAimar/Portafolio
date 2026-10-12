@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMotionValueEvent, useScroll } from 'framer-motion';
 import hitos from '@/data/hitos.json';
 import useConsulta from '@/hooks/useConsulta.js';
 import { indiceDeHito, progresoDeHito } from '@/lib/hitoActivo.js';
+import { tiempoModeloMs } from '@/lib/tiempoModelo.js';
 import FondoHito from './FondoHito.jsx';
 import LineaTiempo from './LineaTiempo.jsx';
 import EncabezadoHito from './EncabezadoHito.jsx';
@@ -19,6 +20,21 @@ function SobreMiContenido() {
   // foco; en celular, los toques sobre un punto, el hilo y la "×".
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const sinHover = !useConsulta('(hover: hover) and (pointer: fine)');
+
+  // Cada hito muestra primero su modelo haciendo todo lo suyo: la biografía no puede
+  // abrirse hasta que pasa su tiempo (`tiempoModeloMs`). Si en ese momento el usuario
+  // está apuntando la línea de tiempo (o tocó el hito, en celular), se abre sola.
+  const refQuiereTexto = useRef(false);
+  const refModeloMostrado = useRef(false);
+  useEffect(() => {
+    refModeloMostrado.current = false;
+    setDetalleAbierto(false);
+    const espera = setTimeout(() => {
+      refModeloMostrado.current = true;
+      if (refQuiereTexto.current) setDetalleAbierto(true);
+    }, tiempoModeloMs(hitos[activo].id));
+    return () => clearTimeout(espera);
+  }, [activo]);
 
   const { scrollYProgress } = useScroll({
     target: refContenedor,
@@ -41,13 +57,25 @@ function SobreMiContenido() {
 
   function alSeleccionar(indice) {
     irAlHito(indice);
-    if (sinHover) setDetalleAbierto(true);
+    if (!sinHover) return;
+    refQuiereTexto.current = true;
+    // Mismo hito y modelo ya mostrado: se abre ya; si no, cuando termine su tiempo.
+    setDetalleAbierto(indice === activo && refModeloMostrado.current);
+  }
+
+  function cerrarDetalle() {
+    refQuiereTexto.current = false;
+    setDetalleAbierto(false);
   }
 
   // En dispositivos táctiles el foco y el hover no deben abrir ni cerrar nada:
   // tocar la descripción desenfoca el botón y cerraría el detalle sin querer.
+  // Con el mouse, apuntar la línea de tiempo pide la biografía y salir la cierra (el
+  // modelo vuelve y se queda); el texto sólo se abre si el modelo ya cumplió su tiempo.
   function alApuntar(abierto) {
-    if (!sinHover) setDetalleAbierto(abierto);
+    if (sinHover) return;
+    refQuiereTexto.current = abierto;
+    setDetalleAbierto(abierto && refModeloMostrado.current);
   }
 
   const hito = hitos[activo];
@@ -81,7 +109,7 @@ function SobreMiContenido() {
           activo={activo}
           onSeleccionar={alSeleccionar}
           onApuntarActivo={alApuntar}
-          onToqueHilo={() => setDetalleAbierto(false)}
+          onToqueHilo={cerrarDetalle}
         />
 
         {/* Se decide por "sin hover" y no por ancho: una tablet o un celular en
@@ -92,7 +120,7 @@ function SobreMiContenido() {
             type="button"
             className={styles.cerrar}
             aria-label="Cerrar detalle"
-            onClick={() => setDetalleAbierto(false)}
+            onClick={cerrarDetalle}
           >
             ×
           </button>
