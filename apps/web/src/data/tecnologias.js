@@ -1,0 +1,46 @@
+// Catálogo único de tecnologías. `icono` es el nombre del componente de react-icons/si
+// (o null: se muestra `sigla`). Los proyectos referencian estas `id`.
+export const TECNOLOGIAS = [
+  { id: 'nextjs', nombre: 'Next.js', icono: 'SiNextdotjs', sigla: 'Nx', href: 'https://nextjs.org' },
+  { id: 'react', nombre: 'React', icono: 'SiReact', sigla: 'Re', href: 'https://react.dev' },
+  { id: 'vite', nombre: 'Vite', icono: 'SiVite', sigla: 'Vi', href: 'https://vite.dev' },
+  { id: 'typescript', nombre: 'TypeScript', icono: 'SiTypescript', sigla: 'TS', href: 'https://www.typescriptlang.org' },
+  { id: 'javascript', nombre: 'JavaScript', icono: 'SiJavascript', sigla: 'JS', href: 'https://developer.mozilla.org/docs/Web/JavaScript' },
+  { id: 'tailwind', nombre: 'Tailwind CSS', icono: 'SiTailwindcss', sigla: 'Tw', href: 'https://tailwindcss.com' },
+  { id: 'shadcn', nombre: 'shadcn/ui', icono: 'SiShadcnui', sigla: 'sh', href: 'https://ui.shadcn.com' },
+  { id: 'mui', nombre: 'Material UI', icono: 'SiMui', sigla: 'MU', href: 'https://mui.com' },
+  { id: 'framer', nombre: 'Framer Motion', icono: 'SiFramer', sigla: 'FM', href: 'https://motion.dev' },
+  { id: 'zustand', nombre: 'Zustand', icono: null, sigla: 'Zu', href: 'https://zustand.docs.pmnd.rs' },
+  { id: 'tanstack', nombre: 'TanStack Query', icono: 'SiReactquery', sigla: 'TQ', href: 'https://tanstack.com/query' },
+  { id: 'node', nombre: 'Node.js', icono: 'SiNodedotjs', sigla: 'No', href: 'https://nodejs.org' },
+  { id: 'express', nombre: 'Express', icono: 'SiExpress', sigla: 'Ex', href: 'https://expressjs.com' },
+  { id: 'socketio', nombre: 'Socket.IO', icono: 'SiSocketdotio', sigla: 'IO', href: 'https://socket.io' },
+  { id: 'go', nombre: 'Go', icono: 'SiGo', sigla: 'Go', href: 'https://go.dev' },
+  { id: 'python', nombre: 'Python', icono: 'SiPython', sigla: 'Py', href: 'https://www.python.org' },
+  { id: 'flask', nombre: 'Flask', icono: 'SiFlask', sigla: 'Fl', href: 'https://flask.palletsprojects.com' },
+  { id: 'php', nombre: 'PHP', icono: 'SiPhp', sigla: 'PHP', href: 'https://www.php.net' },
+  { id: 'supabase', nombre: 'Supabase', icono: 'SiSupabase', sigla: 'Sb', href: 'https://supabase.com' },
+  { id: 'postgresql', nombre: 'PostgreSQL', icono: 'SiPostgresql', sigla: 'PG', href: 'https://www.postgresql.org' },
+  { id: 'mysql', nombre: 'MySQL', icono: 'SiMysql', sigla: 'My', href: 'https://www.mysql.com' },
+  { id: 'sqlite', nombre: 'SQLite', icono: 'SiSqlite', sigla: 'SL', href: 'https://sqlite.org' },
+  // SiMicrosoftsqlserver no existe en react-icons/si (verificado): se usa la sigla.
+  { id: 'sqlserver', nombre: 'SQL Server', icono: null, sigla: 'MS', href: 'https://www.microsoft.com/sql-server' },
+  { id: 'sequelize', nombre: 'Sequelize', icono: 'SiSequelize', sigla: 'Sq', href: 'https://sequelize.org' },
+  { id: 'firebase', nombre: 'Firebase', icono: 'SiFirebase', sigla: 'Fb', href: 'https://firebase.google.com' },
+  { id: 'sap', nombre: 'SAP (OData / HANA)', icono: 'SiSap', sigla: 'SAP', href: 'https://www.sap.com' },
+  { id: 'gemini', nombre: 'Gemini', icono: 'SiGooglegemini', sigla: 'Ge', href: 'https://ai.google.dev' },
+  { id: 'openrouter', nombre: 'OpenRouter', icono: null, sigla: 'OR', href: 'https://openrouter.ai' },
+  { id: 'mercadopago', nombre: 'Mercado Pago', icono: 'SiMercadopago', sigla: 'MP', href: 'https://www.mercadopago.com.ar/developers' },
+  { id: 'cloudflare', nombre: 'Cloudflare R2', icono: 'SiCloudflare', sigla: 'R2', href: 'https://developers.cloudflare.com/r2' },
+  { id: 'whatsapp', nombre: 'WhatsApp', icono: 'SiWhatsapp', sigla: 'WA', href: 'https://www.whatsapp.com' },
+  { id: 'electron', nombre: 'Electron', icono: 'SiElectron', sigla: 'El', href: 'https://www.electronjs.org' },
+  { id: 'expo', nombre: 'Expo / React Native', icono: 'SiExpo', sigla: 'Xp', href: 'https://expo.dev' },
+  { id: 'docker', nombre: 'Docker', icono: 'SiDocker', sigla: 'Dk', href: 'https://docker.com' },
+  { id: 'kubernetes', nombre: 'Kubernetes', icono: 'SiKubernetes', sigla: 'K8s', href: 'https://kubernetes.io' },
+  { id: 'vercel', nombre: 'Vercel', icono: 'SiVercel', sigla: 'Vc', href: 'https://vercel.com' },
+  { id: 'render', nombre: 'Render', icono: 'SiRender', sigla: 'Rn', href: 'https://render.com' },
+  { id: 'activedirectory', nombre: 'Active Directory (LDAPS)', icono: null, sigla: 'AD', href: 'https://learn.microsoft.com/windows-server/identity/ad-ds' },
+];
+
+// Busca una tecnología por su `id`. Devuelve el objeto o null si no existe.
+export const tecnologiaPorId = (id) => TECNOLOGIAS.find((t) => t.id === id) ?? null;

@@ -1,0 +1,7 @@
+.sigla {
+  font-size: 0.62em;
+  font-weight: 800;
+  border: 1.5px solid currentColor;
+  border-radius: 6px;
+  padding: 0.1em 0.3em;
+}
