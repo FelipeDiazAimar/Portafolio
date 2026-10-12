@@ -6,7 +6,9 @@ import styles from './PresentadorProyectos.module.css';
 
 // Tarjeta de vidrio abajo a la derecha: etiqueta, problema tipeado,
 // chips de features, estado y enlaces. Hace crossfade al cambiar de proyecto.
-export default function Problematica({ proyecto }) {
+// idPanel/etiquetadoPor permiten reutilizarla fuera del presentador
+// (en la vista mixta el tab es nav-<slug>, no tab-<slug>).
+export default function Problematica({ proyecto, idPanel, etiquetadoPor }) {
   const enlaces = proyecto.enlaces ?? {};
   const features = (proyecto.features ?? []).slice(0, 3);
   const esProduccion = proyecto.estado === 'produccion';
@@ -17,9 +19,9 @@ export default function Problematica({ proyecto }) {
     <AnimatePresence mode="wait">
       <motion.article
         key={proyecto.slug}
-        id="panel-proyecto"
+        id={idPanel ?? 'panel-proyecto'}
         role="tabpanel"
-        aria-labelledby={`tab-${proyecto.slug}`}
+        aria-labelledby={etiquetadoPor ?? `tab-${proyecto.slug}`}
         className={styles.problematica}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

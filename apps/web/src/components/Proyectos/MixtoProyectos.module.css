@@ -1,0 +1,83 @@
+/* Mixto: capa absoluta que llena el .panel sticky del contenedor. */
+.mixto {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* La marquesina 3D ocupa todo el fondo. */
+.fondoMarquesina {
+  position: absolute;
+  inset: 0;
+}
+
+/* Columna de navegación izquierda, sobre la marquesina (ref: .lista de PresentadorProyectos). */
+.columnaNav {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: min(320px, 34%);
+  z-index: 3;
+}
+
+/* Hijo .nav (de NavegacionMixta): ocupa todo el alto/ancho de la columna. */
+.columnaNav > .nav,
+.nav {
+  width: 100%;
+  height: 100%;
+}
+
+/* Zona de tarjeta a la derecha: centrada, transparente a clics para ver la marquesina alrededor. */
+.zonaTarjeta {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: min(320px, 34%);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  pointer-events: none;
+}
+
+/* Hija .marcoTarjeta (de TarjetaExpandida): recupera la interacción. */
+.zonaTarjeta > .marcoTarjeta,
+.marcoTarjeta {
+  pointer-events: auto;
+}
+
+/* Móvil: nav como tira horizontal arriba, marquesina debajo, tarjeta centrada casi a pantalla completa. */
+@media (max-width: 768px) {
+  .columnaNav {
+    top: 0;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 132px;
+  }
+
+  .fondoMarquesina {
+    top: 132px;
+  }
+
+  .zonaTarjeta {
+    left: 0;
+    top: 132px;
+    padding: 1rem;
+    place-items: center;
+  }
+}
+
+/* Nada animado extra aquí: la marquesina ya congela su pista con reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  .mixto,
+  .fondoMarquesina,
+  .columnaNav,
+  .zonaTarjeta {
+    animation: none;
+    transition: none;
+  }
+}

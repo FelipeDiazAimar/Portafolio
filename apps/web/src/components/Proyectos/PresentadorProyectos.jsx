@@ -31,12 +31,15 @@ function lineaCabecera(proyecto) {
 // Presentador de proyectos estilo réplica de Hover Tabs: fondo con la imagen
 // del proyecto activo, lista de pestañas a la izquierda, cabecera centrada,
 // tarjeta de problemática abajo a la derecha y HUD de tecnologías.
-export default function PresentadorProyectos() {
+export default function PresentadorProyectos({ activo, alCambiar }) {
   const [proyectos] = useState(() => listarProyectos());
-  const [activo, setActivo] = useState(0);
+  const [interno, setInterno] = useState(0);
+  const esControlado = activo !== undefined;
+  const valor = esControlado ? activo : interno;
+  const fijar = esControlado ? (alCambiar ?? (() => {})) : setInterno;
   const marcoRef = useRef(null);
   const visibleRef = useRef(false);
-  const proyecto = proyectos[activo] ?? proyectos[0];
+  const proyecto = proyectos[valor] ?? proyectos[0];
 
   // Observa si el marco está al menos 50% visible para las flechas globales.
   useEffect(() => {
@@ -66,11 +69,11 @@ export default function PresentadorProyectos() {
       if (!foco) return;
       if (foco.tagName === 'INPUT' || foco.tagName === 'TEXTAREA' || foco.isContentEditable) return;
       e.preventDefault();
-      setActivo((previo) => indicePorTecla(e.key, previo, total) ?? previo);
+      fijar(indicePorTecla(e.key, valor, total) ?? valor);
     };
     window.addEventListener('keydown', alTeclarGlobal);
     return () => window.removeEventListener('keydown', alTeclarGlobal);
-  }, [proyectos.length]);
+  }, [proyectos.length, valor, fijar]);
 
   return (
     <div
@@ -82,10 +85,10 @@ export default function PresentadorProyectos() {
         {proyectos.map((item, i) => (
           <div
             key={item.slug}
-            className={i === activo ? `${styles.capa} ${styles.capaActiva}` : styles.capa}
+            className={i === valor ? `${styles.capa} ${styles.capaActiva}` : styles.capa}
           >
             <Image
-              src={item.imagenes?.portada ?? ''}
+              src={item.imagenes?.logo ?? item.imagenes?.portada ?? ''}
               alt=""
               fill
               sizes="(max-width: 768px) 100vw, 1240px"
@@ -112,7 +115,7 @@ export default function PresentadorProyectos() {
         </AnimatePresence>
       </header>
 
-      <ListaProyectos proyectos={proyectos} activo={activo} onCambiar={setActivo} />
+      <ListaProyectos proyectos={proyectos} activo={valor} onCambiar={fijar} />
       <Problematica proyecto={proyecto} />
       <HudTecnologias proyecto={proyecto} />
     </div>

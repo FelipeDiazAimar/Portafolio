@@ -1,11 +1,12 @@
 /* Contenedor full-bleed de Proyectos: sale del <main> de 960 px con la misma
-   técnica que SobreMi (100vw + margen compensado). El alto extra (260svh)
-   es el recorrido de scroll que alimenta el progreso de framer-motion. */
+   técnica que SobreMi (100vw + margen compensado). El alto extra (420svh)
+   es el recorrido de scroll que alimenta el progreso de framer-motion
+   (3 fases: muro -> presentador -> mixto). */
 .contenedor {
   position: relative;
   width: 100vw;
   margin-left: calc(50% - 50vw);
-  height: 260svh;
+  height: 420svh;
 }
 
 /* Panel fijo mientras se recorre el contenedor: centra las capas. */
@@ -19,7 +20,8 @@
   padding: 5.5rem clamp(1rem, 4vw, 3rem) 1.5rem;
 }
 
-/* Capas superpuestas dentro del panel: muro primero, presentador encima. */
+/* Capas superpuestas dentro del panel: muro primero, presentador encima,
+   mixto tercero (las tres absolute + inset 0, el orden lo da el DOM/z-index). */
 .capaMuro {
   position: absolute;
   inset: 0;
@@ -29,6 +31,13 @@
 }
 
 .capaPresentador {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.capaMixto {
   position: absolute;
   inset: 0;
   display: grid;
@@ -68,7 +77,10 @@
 }
 
 /* Variante estática para movimiento reducido (render condicional en JSX):
-   sin sticky, capas apiladas en flujo normal. */
+   sin sticky, capas apiladas en flujo normal. La rama estática muestra
+   3 bloques (muro, presentador y mixto); .capaEstatica vale para los tres
+   (position static + width 100%). El mixto interno ya es fluido, así que
+   no necesita altura extra aquí. */
 .contenedorEstatico {
   height: auto;
 }
@@ -83,7 +95,7 @@
 }
 
 .capaEstatica {
-  position: relative;
+  position: static;
   width: 100%;
 }
 
@@ -113,7 +125,8 @@
   }
 
   .capaMuro,
-  .capaPresentador {
+  .capaPresentador,
+  .capaMixto {
     position: relative;
     inset: auto;
     display: flex;

@@ -1,9 +1,10 @@
 'use client';
 
-// Contenedor con scroll cinematográfico de la sección Proyectos:
-// un muro que se disuelve y un presentador que entra, ambos guiados
-// por el progreso de scroll del contenedor (0 a 1).
-import { useRef } from 'react';
+// Contenedor con scroll cinematográfico de la sección Proyectos en 3 fases:
+// intro (muro que se disuelve + presentador que entra) y cierre (vista mixta),
+// todo guiado por el progreso de scroll del contenedor (0 a 1).
+// El alto del recorrido (~420svh) y el sticky los define el CSS.
+import { useRef, useState } from 'react';
 import {
   motion,
   useScroll,
@@ -12,17 +13,24 @@ import {
   useReducedMotion,
 } from 'framer-motion';
 import TextoDescifrado from '../TextoDescifrado/TextoDescifrado.jsx';
-import { resumenCifras } from '../../lib/proyectos.js';
+import { listarProyectos, resumenCifras } from '../../lib/proyectos.js';
 import MuroProyectos from './MuroProyectos.jsx';
 import PresentadorProyectos from './PresentadorProyectos.jsx';
+import MixtoProyectos from './MixtoProyectos.jsx';
 import styles from './Proyectos.module.css';
 
 export default function Proyectos() {
-  // Referencia al contenedor alto (260svh): el avance del scroll por ese
-  // alto es el progreso que anima muro y presentador.
+  // Referencia al contenedor alto: el avance del scroll por ese alto
+  // (definido en el CSS) es el progreso que anima las tres capas.
   const refContenedor = useRef(null);
   // Respeta el ajuste de movimiento reducido del sistema operativo.
   const movimientoReducido = useReducedMotion();
+
+  // Índice de la intro (fase muro + presentador), en modo controlado.
+  const [introActivo, setIntroActivo] = useState(0);
+
+  // Catálogo local para resolver el slug excluido del muro.
+  const proyectos = listarProyectos();
 
   // Cifras de cabecera desde el catálogo local ("13 proyectos · ...").
   const cifras = resumenCifras();
@@ -35,22 +43,34 @@ export default function Proyectos() {
   });
 
   // Muro: visible al inicio, se disuelve con zoom y desenfoque.
-  const opacidadMuro = useTransform(progreso, [0.3, 0.55], [1, 0]);
-  const escalaMuro = useTransform(progreso, [0.3, 0.55], [1, 1.12]);
-  const desenfoqueMuro = useTransform(progreso, [0.3, 0.55], [0, 8]);
+  const opacidadMuro = useTransform(progreso, [0.12, 0.28], [1, 0]);
+  const escalaMuro = useTransform(progreso, [0.12, 0.28], [1, 1.12]);
+  const desenfoqueMuro = useTransform(progreso, [0.12, 0.28], [0, 8]);
   const filtroMuro = useMotionTemplate`blur(${desenfoqueMuro}px)`;
 
-  // Presentador: entra desvanecido desde abajo con leve zoom.
-  const opacidadPresentador = useTransform(progreso, [0.38, 0.6], [0, 1]);
-  const escalaPresentador = useTransform(progreso, [0.38, 0.6], [0.94, 1]);
-  const desplazamientoPresentador = useTransform(progreso, [0.38, 0.6], [40, 0]);
+  // Presentador: entra desvanecido desde abajo con leve zoom y luego sale.
+  const opacidadPresentador = useTransform(
+    progreso,
+    [0.24, 0.38, 0.52, 0.64],
+    [0, 1, 1, 0],
+  );
+  const escalaPresentador = useTransform(progreso, [0.24, 0.38], [0.94, 1]);
+  const desplazamientoPresentador = useTransform(progreso, [0.24, 0.38], [40, 0]);
   // Sin clics fantasma: sin eventos de puntero hasta ser medio visible.
   const eventosPunteroPresentador = useTransform(opacidadPresentador, (valor) =>
     valor < 0.5 ? 'none' : 'auto',
   );
 
-  // Movimiento reducido: sin sticky ni transiciones, muro y presentador
-  // apilados como contenido estático.
+  // Mixto (cierre): entra desvanecido desde abajo con leve zoom.
+  const opacidadMixto = useTransform(progreso, [0.6, 0.76], [0, 1]);
+  const escalaMixto = useTransform(progreso, [0.6, 0.76], [0.94, 1]);
+  const desplazamientoMixto = useTransform(progreso, [0.6, 0.76], [40, 0]);
+  const eventosPunteroMixto = useTransform(opacidadMixto, (valor) =>
+    valor < 0.5 ? 'none' : 'auto',
+  );
+
+  // Movimiento reducido: sin sticky ni transiciones, muro + presentador
+  // + mixto apilados como contenido estático.
   if (movimientoReducido) {
     return (
       <section
@@ -71,10 +91,13 @@ export default function Proyectos() {
             <p className={styles.lineaCifras}>{textoCifras}</p>
           </div>
           <div className={styles.capaEstatica}>
-            <MuroProyectos />
+            <MuroProyectos excluirSlug={proyectos[introActivo]?.slug} />
           </div>
           <div className={styles.capaEstatica}>
-            <PresentadorProyectos />
+            <PresentadorProyectos activo={introActivo} alCambiar={setIntroActivo} />
+          </div>
+          <div className={styles.capaEstatica}>
+            <MixtoProyectos />
           </div>
         </div>
       </section>
@@ -98,7 +121,7 @@ export default function Proyectos() {
             filter: filtroMuro,
           }}
         >
-          <MuroProyectos />
+          <MuroProyectos excluirSlug={proyectos[introActivo]?.slug} />
           <div className={styles.cabecera}>
             <h2 id="titulo-proyectos" className={styles.titulo}>
               <TextoDescifrado
@@ -112,7 +135,8 @@ export default function Proyectos() {
           </div>
         </motion.div>
 
-        {/* Presentador: entra cuando el muro ya se está disolviendo. */}
+        {/* Presentador: entra cuando el muro ya se está disolviendo y sale
+            antes del cierre. */}
         <motion.div
           className={styles.capaPresentador}
           style={{
@@ -122,7 +146,20 @@ export default function Proyectos() {
             pointerEvents: eventosPunteroPresentador,
           }}
         >
-          <PresentadorProyectos />
+          <PresentadorProyectos activo={introActivo} alCambiar={setIntroActivo} />
+        </motion.div>
+
+        {/* Mixto (cierre): entra al final y queda como vista de cierre. */}
+        <motion.div
+          className={styles.capaMixto}
+          style={{
+            opacity: opacidadMixto,
+            scale: escalaMixto,
+            y: desplazamientoMixto,
+            pointerEvents: eventosPunteroMixto,
+          }}
+        >
+          <MixtoProyectos />
         </motion.div>
       </div>
     </section>
