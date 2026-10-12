@@ -1,0 +1,71 @@
+.plano {
+  padding: 5.5rem 0 4rem;
+}
+
+.etiqueta {
+  margin: 0 0 2.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.lista {
+  display: grid;
+  gap: 4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hito {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.foto {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+.imagen {
+  object-fit: cover;
+}
+
+.texto {
+  display: grid;
+  gap: 1rem;
+}
+
+.bio {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--color-fg);
+}
+
+.bio strong {
+  color: var(--color-accent);
+}
+
+.credito {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.credito a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .hito {
+    grid-template-columns: 1fr;
+  }
+}

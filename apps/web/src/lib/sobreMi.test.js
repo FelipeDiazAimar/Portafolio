@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dividirResaltado } from './resaltado.js';
-import { indiceDeHito, progresoDeHito } from './hitoActivo.js';
 import { mostrarVideo } from './fondoHito.js';
 import { partirEnRenglones } from './renglones.js';
 import { tiempoModeloMs } from './tiempoModelo.js';
@@ -38,26 +37,6 @@ test('dividirResaltado: una marca sin cerrar queda como texto literal', () => {
 test('dividirResaltado: vacío y marcas vacías no generan fragmentos', () => {
   assert.deepEqual(dividirResaltado(''), []);
   assert.deepEqual(dividirResaltado('****'), []);
-});
-
-test('indiceDeHito: reparte el progreso en tramos iguales', () => {
-  assert.equal(indiceDeHito(0, 7), 0);
-  assert.equal(indiceDeHito(0.5, 7), 3);
-  assert.equal(indiceDeHito(0.999, 7), 6);
-  assert.equal(indiceDeHito(1, 7), 6);
-});
-
-test('indiceDeHito: acota progreso fuera de rango, NaN y total inválido', () => {
-  assert.equal(indiceDeHito(-0.2, 7), 0);
-  assert.equal(indiceDeHito(1.4, 7), 6);
-  assert.equal(indiceDeHito(Number.NaN, 7), 0);
-  assert.equal(indiceDeHito(0.5, 0), 0);
-});
-
-test('progresoDeHito: cae dentro del tramo de su propio hito', () => {
-  for (let i = 0; i < 7; i += 1) {
-    assert.equal(indiceDeHito(progresoDeHito(i, 7), 7), i);
-  }
 });
 
 test('mostrarVideo: sin foto el video va directo; con foto espera; sin video nunca', () => {

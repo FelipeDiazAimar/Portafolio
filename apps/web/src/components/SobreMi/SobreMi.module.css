@@ -1,28 +1,75 @@
-/* Sale del ancho de <main> (960px) sin tocarlo, y es alto: el panel sticky
-   queda fijo mientras se recorre ese alto, y ese recorrido es el avance de
-   la línea de tiempo. */
+/* Sale del ancho de <main> (960px) sin tocarlo, y es alto: el panel sticky queda fijo
+   mientras se recorre ese alto, y ese recorrido es el viaje por la columna. */
 .contenedor {
   position: relative;
   width: 100vw;
   margin-left: calc(50% - 50vw);
-  height: calc(100svh + var(--hitos) * 70svh);
+  height: calc(100svh + var(--peso) * 55svh);
 }
 
 .panel {
+  --fondo-viaje: var(--color-bg);
   position: sticky;
   top: 0;
-  display: flex;
-  align-items: center;
   height: 100svh;
   overflow: hidden;
-  padding: 5.5rem clamp(1.25rem, 5vw, 4rem) 3rem;
+  background: var(--fondo-viaje);
+}
+
+:global([data-theme='light']) .panel {
+  --fondo-viaje: #e9edf5;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .panel {
+    --fondo-viaje: #e9edf5;
+  }
+}
+
+/* Foto/video del hito: sólo al llegar. Encima, un velo del color de fondo para que el
+   mundo 3D se lea. */
+.fondo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.fondo[data-presente='true'] {
+  opacity: 1;
+  transition-duration: 0.9s;
+}
+
+.fondo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--fondo-viaje) 55%, transparent) 0%,
+    var(--fondo-viaje) 85%
+  );
+}
+
+.mundo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transition: opacity 0.4s ease;
+}
+
+/* Movimiento reducido: en vez de viajar, el mundo se funde entre hitos. */
+.mundo[data-fundido='true'] {
+  opacity: 0;
 }
 
 .etiqueta {
   position: absolute;
   top: 5.5rem;
   left: clamp(1.25rem, 5vw, 4rem);
-  z-index: 2;
+  z-index: 3;
   margin: 0;
   font-size: 0.8rem;
   font-weight: 600;
@@ -31,88 +78,59 @@
   color: var(--color-muted);
 }
 
-.columna {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: min(54%, 46rem);
-  padding-top: 2.2rem;
-  /* Ocupa todo el alto del panel: el modelo se estira hasta abajo. */
-  align-self: stretch;
-}
-
-.zona {
-  position: relative;
-  flex: 1;
-  min-height: 18rem;
-}
-
-.cerrar {
+/* Textos del hito: en la mitad opuesta al modelo. */
+.textos {
   position: absolute;
-  top: 4.4rem;
-  right: 0.75rem;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: var(--color-chip-bg);
-  color: var(--color-fg);
-  font: inherit;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
+  top: 50%;
+  z-index: 3;
+  width: min(40%, 34rem);
+  max-height: calc(100svh - 10rem);
+  overflow-y: auto;
+  scrollbar-width: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.panel[data-lado='izquierda'] .textos {
+  right: clamp(3.5rem, 7vw, 6rem);
+  transform: translate(24px, -50%);
+}
+
+.panel[data-lado='derecha'] .textos {
+  left: clamp(1.25rem, 5vw, 4rem);
+  transform: translate(-24px, -50%);
+}
+
+.panel .textos[data-visible='true'] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, -50%);
 }
 
 @media (max-width: 768px) {
   .contenedor {
-    height: calc(100svh + var(--hitos) * 60svh);
-  }
-
-  .panel {
-    align-items: flex-start;
-    padding: 5rem 1rem 2rem;
+    height: calc(100svh + var(--peso) * 45svh);
   }
 
   .etiqueta {
-    left: 1rem;
     top: 5rem;
+    left: 1rem;
   }
 
-  /* Estado inicial: sólo se ven la imagen y la cinta centrada. */
-  .columna {
-    align-self: auto;
-    width: calc(100% - 7.5rem);
-    /* Aire para que el scroll interno no recorte el brillo del año. */
-    padding: 1rem 0.5rem 1rem 0;
-    margin-top: 2rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease 0.1s;
-  }
-
-  .panel[data-detalle='true'] .columna {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* El panel no scrollea (el scroll mueve la línea de tiempo) y en el detalle
-     se apilan encabezado, escenario y descripción: en pantallas bajas el final
-     del texto quedaba cortado. La columna scrollea por dentro. */
-  .columna {
-    max-height: calc(100svh - 7.5rem);
-    overflow-y: auto;
+  /* Modelo arriba, texto en una hoja abajo que scrollea por dentro. */
+  .panel[data-lado] .textos {
+    top: auto;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    width: auto;
+    max-height: 42svh;
     overscroll-behavior: contain;
-    scrollbar-width: none;
+    transform: translateY(24px);
   }
 
-  .zona {
-    flex: none;
-    min-height: 0;
+  .panel .textos[data-visible='true'] {
+    transform: translateY(0);
   }
-
 }
