@@ -135,14 +135,3 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-
-/* Texto que no se superpone al modelo: va en el flujo, debajo del subtítulo. */
-.fijo {
-  position: relative;
-  transform: none;
-  transition: none;
-  pointer-events: auto;
-  margin-top: 0.4rem;
-  /* Por encima del canvas 3D, que se extiende detrás del título y del texto. */
-  z-index: 2;
-}
