@@ -29,6 +29,7 @@ import {
   puntoEnTramo,
 } from './constelacion.js';
 import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, radioNodo, vecinos } from './grafo.js';
+import { encuadrar, ubicarFicha } from './fichaLayout.js';
 import { MATERIAS, T_FIN_TILDES, progresoTilde, progresoSello, escalaTilde, brilloTarjeta } from './cicloMaterias.js';
 import { velocidadInicial, avanzarCaida, volverAlOrigen, LIMITE_CAIDA } from './caida.js';
 import {
@@ -782,11 +783,77 @@ test('grafo: la distribución es determinista, finita y los nodos no se pisan', 
   assert.deepEqual(a, distribuir());
   assert.equal(a.length, NODOS_GRAFO.length);
   for (const p of a) assert.ok(p.length === 3 && p.every(Number.isFinite));
-  assert.ok(Math.max(...a.map(([x, y]) => Math.hypot(x, y))) <= 2.6 + 1e-9);
+  assert.ok(Math.max(...a.map(([x, y]) => Math.hypot(x, y))) <= 2.6 * Math.sqrt(NODOS_GRAFO.length / 24) + 1e-9);
   for (let i = 0; i < a.length; i += 1) {
     for (let j = i + 1; j < a.length; j += 1) {
       const d = Math.hypot(a[i][0] - a[j][0], a[i][1] - a[j][1]);
       assert.ok(d > 0.28, `${NODOS_GRAFO[i].id} y ${NODOS_GRAFO[j].id} muy cerca (${d.toFixed(3)})`);
     }
   }
+});
+
+const AREA = { izq: 0, arriba: 70, der: 1000, abajo: 700 };
+const dentro = (c, ancho, alto, area = AREA) =>
+  c.x - ancho / 2 >= area.izq - 1e-9 && c.x + ancho / 2 <= area.der + 1e-9 && c.y - alto / 2 >= area.arriba - 1e-9 && c.y + alto / 2 <= area.abajo + 1e-9;
+
+test('ubicarFicha: en el medio de la pantalla va a la derecha del nodo', () => {
+  const r = ubicarFicha({ nodo: { x: 300, y: 350 }, ancho: 280, alto: 100, area: AREA });
+  assert.equal(r.lado, 'derecha');
+  assert.ok(r.x > 300 + 140 && dentro(r, 280, 100));
+});
+
+test('ubicarFicha: cerca del borde derecho pasa a la izquierda', () => {
+  const r = ubicarFicha({ nodo: { x: 940, y: 350 }, ancho: 280, alto: 100, area: AREA });
+  assert.equal(r.lado, 'izquierda');
+  assert.ok(r.x < 940 && dentro(r, 280, 100));
+});
+
+test('ubicarFicha: siempre entra entera, en cualquier punto de la pantalla', () => {
+  for (let x = 0; x <= 1000; x += 50) {
+    for (let y = 70; y <= 700; y += 35) {
+      const r = ubicarFicha({ nodo: { x, y }, ancho: 280, alto: 100, area: AREA });
+      assert.ok(dentro(r, 280, 100), `se sale con el nodo en (${x}, ${y}): ${JSON.stringify(r)}`);
+    }
+  }
+});
+
+test('ubicarFicha: abajo de todo se acomoda arriba y no tapa el nodo cuando hay lugar', () => {
+  const r = ubicarFicha({ nodo: { x: 400, y: 690 }, ancho: 200, alto: 100, area: AREA });
+  assert.ok(dentro(r, 200, 100));
+  const tapa = Math.abs(r.x - 400) < 100 && Math.abs(r.y - 690) < 50;
+  assert.equal(tapa, false);
+});
+
+test('ubicarFicha: si la ficha es más grande que el área se alinea con el borde', () => {
+  const r = ubicarFicha({ nodo: { x: 100, y: 100 }, ancho: 500, alto: 400, area: { izq: 0, arriba: 0, der: 300, abajo: 300 } });
+  assert.equal(r.x, 250);
+  assert.equal(r.y, 200);
+});
+
+test('encuadrar: una caja que ya entra no se achica y se centra', () => {
+  const r = encuadrar({ caja: { izq: 100, arriba: 200, der: 500, abajo: 500 }, area: AREA, origen: { x: 300, y: 350 }, maximo: 1 });
+  cerca(r.zoom, 1);
+  cerca(r.dx, 200);
+  cerca(r.dy, 35);
+});
+
+test('encuadrar: una caja que se sale se achica hasta entrar y queda centrada en el área', () => {
+  const caja = { izq: -200, arriba: 20, der: 1200, abajo: 1000 };
+  const origen = { x: 500, y: 500 };
+  const r = encuadrar({ caja, area: AREA, origen, margen: 20 });
+  assert.ok(r.zoom < 1);
+  const escalar = (v, o, d) => o + (v - o) * r.zoom + d;
+  const izq = escalar(caja.izq, origen.x, r.dx);
+  const der = escalar(caja.der, origen.x, r.dx);
+  const arriba = escalar(caja.arriba, origen.y, r.dy);
+  const abajo = escalar(caja.abajo, origen.y, r.dy);
+  assert.ok(izq >= AREA.izq + 20 - 1e-6 && der <= AREA.der - 20 + 1e-6, `horizontal ${izq}..${der}`);
+  assert.ok(arriba >= AREA.arriba + 20 - 1e-6 && abajo <= AREA.abajo - 20 + 1e-6, `vertical ${arriba}..${abajo}`);
+  cerca((izq + der) / 2, (AREA.izq + AREA.der) / 2, 1e-6);
+  cerca((arriba + abajo) / 2, (AREA.arriba + AREA.abajo) / 2, 1e-6);
+});
+
+test('encuadrar: no agranda más allá del máximo', () => {
+  const r = encuadrar({ caja: { izq: 400, arriba: 300, der: 420, abajo: 320 }, area: AREA, origen: { x: 410, y: 310 }, maximo: 1.15 });
+  cerca(r.zoom, 1.15);
 });

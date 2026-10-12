@@ -320,7 +320,7 @@ export default function Escena6Constelacion({ activa, reducido, claro = false })
 
       {/* El grafo de conocimiento (estilo Obsidian) en que se expande el núcleo; es plano, así que se contrarresta la inclinación de la escena. */}
       <PiezaDesarmable semilla={9}>
-        <group ref={refRed} visible={false} rotation={[-0.5, 0, 0]} scale={1.3}>
+        <group ref={refRed} visible={false} rotation={[-0.5, 0, 0]}>
           <Grafo tiempo={tiempo} claro={claro} />
         </group>
       </PiezaDesarmable>

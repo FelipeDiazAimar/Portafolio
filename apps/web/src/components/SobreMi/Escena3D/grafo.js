@@ -3,84 +3,9 @@
 // sale de una simulación de fuerzas determinista, así es siempre la misma y se
 // puede probar sin gráficos.
 
-export const GRUPOS = {
-  yo: { nombre: 'Yo', color: '#ffffff' },
-  trayectoria: { nombre: 'Trayectoria', color: '#6fa8ff' },
-  proyectos: { nombre: 'Proyectos', color: '#3de0c0' },
-  tecnologias: { nombre: 'Tecnologías', color: '#ffc247' },
-};
+import { ENLACES_BASE, GRUPOS, NODOS_GRAFO } from './grafoDatos.js';
 
-// `detalle` es el texto que aparece al pasar el mouse por el nodo.
-export const NODOS_GRAFO = [
-  { id: 'yo', etiqueta: 'Felipe Diaz Aimar', grupo: 'yo', detalle: 'Busco una nueva oportunidad para seguir creciendo.' },
-
-  { id: 'trayectoria', etiqueta: 'Trayectoria', grupo: 'trayectoria', detalle: 'De armar y reparar equipos a sistemas industriales.' },
-  { id: 'origen', etiqueta: 'Origen', grupo: 'trayectoria', detalle: 'Siempre me fascinó todo lo que hacía beep.' },
-  { id: 'isfa', etiqueta: 'ISFA', grupo: 'trayectoria', detalle: 'Abanderado en 2022.' },
-  { id: 'utn', etiqueta: 'UTN', grupo: 'trayectoria', detalle: 'Ingeniería en Sistemas, cursando el 4.º año.' },
-  { id: 'cambridge', etiqueta: 'Cambridge First', grupo: 'trayectoria', detalle: 'Certificado de inglés en 2023.' },
-  { id: 'laboratorio', etiqueta: 'Lab. UTN', grupo: 'trayectoria', detalle: 'Ayudante de laboratorio: reparación, instalación y desarme de equipos.' },
-  { id: 'ingreso', etiqueta: 'Profesor de ingreso', grupo: 'trayectoria', detalle: 'Programación: Python, C y lógica de procesos. Más de 90 alumnos.' },
-  { id: 'tecnico', etiqueta: 'Técnico informático', grupo: 'trayectoria', detalle: 'Reparación de PCs, notebooks, impresoras y teléfonos.' },
-  { id: 'mbrf', etiqueta: 'MBRF', grupo: 'trayectoria', detalle: 'Desarrollador fullstack en trazabilidad industrial, planta San Jorge.' },
-
-  { id: 'proyectos', etiqueta: 'Proyectos', grupo: 'proyectos', detalle: 'Trabajo freelance y para clientes.' },
-  { id: 'justphones', etiqueta: 'JustPhones', grupo: 'proyectos', detalle: 'Proyecto freelance.' },
-  { id: 'calidad', etiqueta: 'Calidad Esencia', grupo: 'proyectos', detalle: 'Proyecto freelance.' },
-  { id: 'algobonito', etiqueta: 'AlgoBonitoSV', grupo: 'proyectos', detalle: 'Proyecto freelance.' },
-  { id: 'asistente', etiqueta: 'AsistenteInteligente', grupo: 'proyectos', detalle: 'Proyecto freelance.' },
-  { id: 'dario', etiqueta: 'Darío Martínez Computación', grupo: 'proyectos', detalle: 'Técnico y desarrollador de su sitio web.' },
-  { id: 'neifert', etiqueta: 'Neifert Automotores', grupo: 'proyectos', detalle: 'Cliente freelance.' },
-
-  { id: 'tecnologias', etiqueta: 'Tecnologías', grupo: 'tecnologias', detalle: 'Con lo que trabajo y lo que aprendí.' },
-  { id: 'python', etiqueta: 'Python', grupo: 'tecnologias', detalle: 'Lo enseño y lo uso.' },
-  { id: 'c', etiqueta: 'C', grupo: 'tecnologias', detalle: 'Lo enseño en el ingreso a la UTN.' },
-  { id: 'nextjs', etiqueta: 'Next.js', grupo: 'tecnologias', detalle: 'Este portfolio está hecho con Next.js y React.' },
-  { id: 'sap', etiqueta: 'SAP', grupo: 'tecnologias', detalle: 'Integración con los sistemas de trazabilidad de MBRF.' },
-  { id: 'kubernetes', etiqueta: 'Kubernetes', grupo: 'tecnologias', detalle: 'Lo aprendí trabajando en MBRF.' },
-  { id: 'hardware', etiqueta: 'Hardware', grupo: 'tecnologias', detalle: 'Diagnóstico y reparación de equipos.' },
-];
-
-const ENLACES_BASE = [
-  ['yo', 'trayectoria'],
-  ['yo', 'proyectos'],
-  ['yo', 'tecnologias'],
-  // Trayectoria, en orden cronológico.
-  ['trayectoria', 'origen'],
-  ['origen', 'isfa'],
-  ['isfa', 'utn'],
-  ['utn', 'cambridge'],
-  ['utn', 'laboratorio'],
-  ['laboratorio', 'ingreso'],
-  ['ingreso', 'tecnico'],
-  ['tecnico', 'mbrf'],
-  ['trayectoria', 'mbrf'],
-  // Proyectos.
-  ['proyectos', 'justphones'],
-  ['proyectos', 'calidad'],
-  ['proyectos', 'algobonito'],
-  ['proyectos', 'asistente'],
-  ['proyectos', 'dario'],
-  ['proyectos', 'neifert'],
-  ['tecnico', 'dario'],
-  ['mbrf', 'neifert'],
-  // Tecnologías.
-  ['tecnologias', 'python'],
-  ['tecnologias', 'c'],
-  ['tecnologias', 'nextjs'],
-  ['tecnologias', 'sap'],
-  ['tecnologias', 'kubernetes'],
-  ['tecnologias', 'hardware'],
-  ['ingreso', 'python'],
-  ['ingreso', 'c'],
-  ['mbrf', 'sap'],
-  ['mbrf', 'kubernetes'],
-  ['laboratorio', 'hardware'],
-  ['tecnico', 'hardware'],
-  ['algobonito', 'nextjs'],
-  ['asistente', 'python'],
-];
-
+export { GRUPOS, NODOS_GRAFO };
 export const ENLACES_GRAFO = ENLACES_BASE.map(([a, b]) => ({ a, b }));
 
 const INDICE = new Map(NODOS_GRAFO.map((n, i) => [n.id, i]));
@@ -105,6 +30,8 @@ export function grado(id) {
 // central es el más grande).
 export function radioNodo(id) {
   if (id === 'yo') return 0.16;
+  const propio = NODOS_GRAFO[INDICE.get(id)]?.tamano;
+  if (propio) return propio;
   return 0.05 + Math.min(grado(id), 9) * 0.011;
 }
 
@@ -112,7 +39,8 @@ export function radioNodo(id) {
 // leve atracción al centro). Parte de una disposición circular, así que no hay azar:
 // mismo resultado siempre. Devuelve [x, y, z] por nodo, con el nodo más lejano a
 // `radio` del centro.
-export function distribuir(radio = 2.6, iteraciones = 420) {
+// El radio por defecto crece con la cantidad de nodos, así al sumar más no se amontonan.
+export function distribuir(radio = 2.6 * Math.sqrt(NODOS_GRAFO.length / 24), iteraciones = 420) {
   const n = NODOS_GRAFO.length;
   const pos = NODOS_GRAFO.map((_, i) => {
     const angulo = (i / n) * Math.PI * 2;
@@ -120,7 +48,7 @@ export function distribuir(radio = 2.6, iteraciones = 420) {
     return [Math.cos(angulo) * vuelta, Math.sin(angulo) * vuelta];
   });
   const pares = ENLACES_GRAFO.map(({ a, b }) => [INDICE.get(a), INDICE.get(b)]);
-  const ideal = 0.85;
+  const ideal = 1.0;
   let paso = 0.14;
   for (let it = 0; it < iteraciones; it += 1) {
     const fuerza = pos.map(() => [0, 0]);
@@ -129,7 +57,7 @@ export function distribuir(radio = 2.6, iteraciones = 420) {
         const dx = pos[i][0] - pos[j][0];
         const dy = pos[i][1] - pos[j][1];
         const d2 = Math.max(dx * dx + dy * dy, 0.0004);
-        const f = 0.2 / d2;
+        const f = 0.34 / d2;
         const d = Math.sqrt(d2);
         fuerza[i][0] += (dx / d) * f;
         fuerza[i][1] += (dy / d) * f;
@@ -159,5 +87,5 @@ export function distribuir(radio = 2.6, iteraciones = 420) {
   const escala = radio / maximo;
   // Un poco de profundidad por grupo, para que al girar se vea que es un volumen.
   const profundidad = { yo: 0, trayectoria: 0.35, proyectos: -0.35, tecnologias: 0.0 };
-  return pos.map(([x, y], i) => [x * escala, y * escala, profundidad[NODOS_GRAFO[i].grupo] + ((i * 7) % 5 - 2) * 0.05]);
+  return pos.map(([x, y], i) => [x * escala, y * escala, (profundidad[NODOS_GRAFO[i].grupo] ?? 0) + ((i * 7) % 5 - 2) * 0.05]);
 }
