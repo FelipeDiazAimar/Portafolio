@@ -99,14 +99,14 @@ Se reemplazan / eliminan:
 - `SobreMi.jsx` se reescribe (Parte 4). `SobreMi.module.css` se reescribe.
 - `LineaTiempo.jsx` + `.module.css`: se eliminan (la columna y el minimapa los reemplazan).
 - `Escena3D/EscenaCanvas.jsx` y `Escena3D/Escena3D.jsx`: se eliminan; `MundoColumna` es
-  el único canvas. `EscalaResponsiva`, `DistanciaCamara`, `ControlGiro`, `LucesAzules`,
+  el único canvas. `EscalaResponsiva`, `ControlGiro`, `LucesAzules`,
   `useDesarme`, `PiezaDesarmable`, `LimiteErrores`, `soporteWebGL`, `vista.js` y todas las
   escenas se **conservan**.
 - `lib/hitoActivo.js`: se elimina; sus tests en `lib/sobreMi.test.js` se reemplazan por
   los de `recorrido.test.js`.
 
-Dependencia nueva: `@react-three/postprocessing@3.0.4` (+ su peer `postprocessing`),
-compatible con `@react-three/fiber@9`.
+Dependencias nuevas (versiones exactas): `@react-three/postprocessing@3.1.1` y su peer
+`postprocessing@6.39.4`, compatibles con `@react-three/fiber@9.8`.
 
 ## Parte 2 — Scroll, viaje y cámara
 
@@ -132,7 +132,8 @@ Funciones exportadas:
   `t` dentro del viaje entre `longitudHasta(i)` y `longitudHasta(i+1)`; en estancia
   `longitudHasta(i)`.
 - `progresoDeEstancia(i, N)` → `p` del centro de la estancia `i` (para saltar y para el imán).
-- `imanDe(p, N)` → `p` de la estancia más cercana (centro), para el frenado.
+- `imanDe(p, N)` → `null` en una estancia; en un viaje, el `p` del centro de la estancia a
+  la que hay que ir (umbral `t = 0.35`).
 - `poseCamara(tramo, d, opciones)` → `{ posicion:[x,y,z], mira:[x,y,z], fov, giroZ }`
   en **coordenadas de pantalla canónicas** (el mundo ya está transformado por `s`):
   - estancia: pose canónica (`fov = 38`, `giroZ = 0`).
@@ -154,7 +155,7 @@ Funciones exportadas:
 - El `scrollYProgress` de framer-motion pasa por un `useSpring` (`stiffness 120,
   damping 30, mass 0.6`) antes de `tramoDe`: la rueda del mouse a saltos no se nota.
 - **Imán**: 160 ms después del último evento de scroll (y sin dedo apoyado), si el progreso
-  no está en el centro de una estancia, `window.scrollTo({ top, behavior: 'smooth' })` al
+  quedó **dentro de un viaje** (las estancias son zonas de descanso y no se tocan), `window.scrollTo({ top, behavior: 'smooth' })` al
   `imanDe(p)`. Si el usuario estaba en un viaje con `t ≥ 0.35` avanza al siguiente hito; con
   `t < 0.35` vuelve al anterior (así un scroll corto "lanza" al siguiente). Con movimiento
   reducido el salto es instantáneo.
@@ -200,8 +201,10 @@ brillo, período 2.4 s).
 ### Estela (`Estela.jsx`)
 
 - Un punto de luz (esfera 0.09, blanca × 4) que sigue la cabeza del llenado sobre la curva.
-- `Trail` de drei sobre ese punto (`width 0.6, length 6, decay 1.2, attenuation t²`, color
-  acento): la estela que deja la cabeza al moverse.
+- Estela sobre la propia columna (en el shader): detrás de la cabeza, el tramo encendido
+  brilla de más y se apaga con la distancia (`exp(-(uLlenado - x)/0.012)`). Se descartó el
+  `Trail` de drei: dibuja en coordenadas del mundo y, como el mundo entero se mueve, la
+  estela no seguiría a la columna.
 - Chispas: `Points` con un pool de 240 partículas (aditivas, tamaño 0.05 atenuado) que
   nacen en la cabeza con velocidad radial aleatoria (0.2–0.6) y viven 1.2 s. Sólo se emiten
   mientras la cabeza se mueve (velocidad > umbral).
@@ -242,9 +245,12 @@ distancia al activo `a = activoDe(tramo)`:
   su propio `ProveedorDesarme` y `EscalaResponsiva`. Prop `activa = (i === a && tramo.tipo
   === 'estancia')`: los vecinos se ven pero quietos (las escenas ya respetan `activa`).
 - `|i - a| > 1` → `Silueta`: un icosaedro alámbrico (radio 0.9) con el color acento, alfa
-  0.35, que gira despacio, y el año como `Text` de drei debajo. Se ve de lejos al viajar.
-- Al entrar en un viaje se precarga la escena del hito de destino y del siguiente
-  (`cargadorEscena(id)()` y `useGLTF.preload` de sus modelos) para que al llegar ya esté.
+  0.35, que gira despacio, y el año debajo, dibujado en una textura de canvas sobre un `Billboard` (el `Text` de drei
+  pide una fuente por red). Se ve de lejos al viajar.
+- Precarga: el destino de un viaje siempre es vecino del hito de origen, así que ya está
+  montado (y su chunk y GLB cargados) durante toda la estancia anterior. Al empezar un
+  viaje el destino se **remonta** (`key` = contador de visitas) para que su animación
+  arranque de cero al llegar.
 - `EscalaResponsiva`: en escritorio el modelo ocupa su mitad de pantalla, por eso recibe
   `ancho = 4.2` medido contra `viewport.width / 2`; en celular contra `viewport.width`.
   (Se agrega la prop `fraccion` = 0.5 | 1 a `EscalaResponsiva`.)
@@ -345,7 +351,6 @@ los `useFrame`, sin renders de React por frame).
   2) chispas 240 → 60 y polvo 1 200 → 400; 3) `dpr` 1. Nunca vuelve a subir en la sesión.
 - Sólo 3 escenas reales montadas a la vez (activo ± 1); los vecinos con `activa = false`.
 - El video de fondo se pausa durante el viaje.
-- `useGLTF.preload` de destino y siguiente al empezar cada viaje.
 
 ### Pruebas
 
