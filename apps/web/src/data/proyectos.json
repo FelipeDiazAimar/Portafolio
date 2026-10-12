@@ -1,14 +1,536 @@
 [
   {
-    "slug": "portfolio-monorepo",
-    "titulo": "Portfolio Fullstack (este proyecto)",
-    "resumen": "Monorepo con Next.js, Vite y Express desplegado como un único proyecto en Vercel.",
-    "stack": ["Next.js", "React", "Vite", "Express", "Supabase"]
+    "slug": "mbrf-captura",
+    "orden": 1,
+    "titulo": "Trazabilidad en planta · Data collector",
+    "cliente": "MBRF (Marfrig) · Planta San Jorge",
+    "tipo": "laboral",
+    "periodo": "2026",
+    "estado": "produccion",
+    "destacado": true,
+    "privado": true,
+    "color": "#2fd3a3",
+    "problema": "En planta, el dato de cada media, caja y pallet se cargaba en terminales legacy de los 90 o a mano: sin peso automático, sin etiqueta confiable y con SAP desfasado.",
+    "resumen": "Captura en estación para faena y elaborados: balanzas, escaneo, etiquetas y unidades de manipulación (HU) que llegan a SAP en tiempo real, conviviendo con el sistema legacy en producción.",
+    "contexto": "Traza SF reemplaza a BeefTraz (Informix 4GL / Ideafix) y absorbió los servicios beeft_*, el gestor de balanzas y el panel N-Natura.",
+    "features": [
+      "Peso automático desde balanzas industriales por TCP y WebSocket",
+      "Etiquetas con QR y Code128 de la HU y plantillas DPL para impresoras Datamax",
+      "Alta de mercadería con HU en SAP vía OData",
+      "Cuarteo con cola FIFO por estación y hojas de códigos en PDF",
+      "Terminales táctiles para cámaras, pesaje de oreo, encajado, charqueo y menudencias"
+    ],
+    "metricas": [
+      "539 medias pesadas en un día",
+      "Reglas de 3.900+ líneas de C/4GL reescritas en JavaScript"
+    ],
+    "stack": ["react", "vite", "node", "express", "postgresql", "socketio", "sap", "mui", "tailwind", "docker"],
+    "enlaces": {
+      "sitio": null,
+      "repo": null,
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/mbrf-captura/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
   },
   {
-    "slug": "proyecto-demo",
-    "titulo": "Proyecto de ejemplo",
-    "resumen": "Reemplazá esta entrada con uno de tus proyectos reales.",
-    "stack": ["React"]
+    "slug": "mbrf-control",
+    "orden": 2,
+    "titulo": "Control y planeamiento de producción",
+    "cliente": "MBRF (Marfrig) · 4 plantas",
+    "tipo": "laboral",
+    "periodo": "2026",
+    "estado": "produccion",
+    "destacado": true,
+    "privado": true,
+    "color": "#5b8cff",
+    "problema": "Planificar la producción y controlar stock, calidad y envíos a SAP dependía de planillas y de un datalake que había dejado de actualizarse.",
+    "resumen": "Tableros de planeamiento, calidad y stock multiplanta, sincronizados contra SAP HANA, con un monitor de la flota de servidores de cada planta.",
+    "contexto": null,
+    "features": [
+      "Planeamiento automático que aprende de las decisiones de los planificadores",
+      "Monitores de almacén, traslados y diferencias de órdenes de compra contra SAP HANA",
+      "Calidad: MicroAQL, analizador de grasa FOSS y control de grasa",
+      "Sincronizaciones programadas con SAP y monitor de servidores por planta",
+      "Análisis de puntos de falla del sistema legacy"
+    ],
+    "metricas": [
+      "4 plantas SAP",
+      "288 envíos a SAP por día",
+      "178.406 materiales SAP sincronizados"
+    ],
+    "stack": ["react", "vite", "node", "express", "postgresql", "sqlserver", "sap", "tailwind", "shadcn", "docker"],
+    "enlaces": {
+      "sitio": null,
+      "repo": null,
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/mbrf-control/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "neifert",
+    "orden": 3,
+    "titulo": "Neifert Automotores",
+    "cliente": "Neifert Automotores · San Francisco, Córdoba",
+    "tipo": "cliente",
+    "periodo": null,
+    "estado": "produccion",
+    "destacado": true,
+    "privado": false,
+    "color": "#e5484d",
+    "problema": "Una concesionaria premium vendía por WhatsApp e Instagram sin catálogo propio ni registro de interesados: los leads se perdían entre chats.",
+    "resumen": "Web de catálogo y marca con un CRM interno de leads, una bandeja de WhatsApp compartida y estadísticas comerciales.",
+    "contexto": null,
+    "features": [
+      "Catálogo de vehículos con filtros y ficha por unidad",
+      "CRM de leads en tiempo real",
+      "Bandeja de WhatsApp compartida y autoalojada",
+      "Sincronización de la galería de Instagram",
+      "Estadísticas comerciales"
+    ],
+    "metricas": [],
+    "stack": ["react", "vite", "tailwind", "shadcn", "framer", "zustand", "tanstack", "supabase", "cloudflare", "whatsapp", "electron", "vercel"],
+    "enlaces": {
+      "sitio": "https://neifertautomotores.com",
+      "repo": "https://github.com/FelipeDiazAimar/NeifertAutomotores",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/neifert/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "dario-martinez",
+    "orden": 4,
+    "titulo": "Darío Martínez Computación",
+    "cliente": "Darío Martínez Computación",
+    "tipo": "cliente",
+    "periodo": null,
+    "estado": "produccion",
+    "destacado": true,
+    "privado": false,
+    "color": "#f59e0b",
+    "problema": "Un negocio de puntos de venta y controladores fiscales no tenía presencia web ni control de stock: precios, ventas y existencias vivían en papel y planillas.",
+    "resumen": "Sitio comercial con productos y servicios, más un panel privado para gestionar artículos, precios, ventas y stock en tiempo real.",
+    "contexto": null,
+    "features": [
+      "Sitio con productos, servicios, Posberry y controladores fiscales",
+      "Panel de artículos, precios, ventas y kardex de stock",
+      "Editor de todas las páginas públicas desde el panel",
+      "Estadísticas de ventas",
+      "Formulario de contacto que llega al panel"
+    ],
+    "metricas": [],
+    "stack": ["nextjs", "react", "tailwind", "shadcn", "supabase", "postgresql", "firebase", "vercel"],
+    "enlaces": {
+      "sitio": "https://dariomartinezcomputacion.com",
+      "repo": "https://github.com/FelipeDiazAimar/DarioMartinez",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/dario-martinez/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "justphones",
+    "orden": 5,
+    "titulo": "JustPhones",
+    "cliente": "JustPhones · fundas y accesorios",
+    "tipo": "cliente",
+    "periodo": null,
+    "estado": "demo",
+    "destacado": true,
+    "privado": false,
+    "color": "#a78bfa",
+    "problema": "Un vendedor de fundas para iPhone tomaba pedidos por mensaje, sin catálogo por modelo, sin códigos de descuento y sin saber cuánto ganaba.",
+    "resumen": "Tienda online con catálogo por modelo, carrito que cierra el pedido por WhatsApp y un panel con finanzas y cierres de período.",
+    "contexto": null,
+    "features": [
+      "Catálogo por modelo de iPhone y categoría",
+      "Carrito que cierra el pedido por WhatsApp",
+      "Códigos de descuento validados al escribir",
+      "Finanzas: rentabilidad, cierres de período e historial de stock",
+      "Panel de productos, pedidos, modelos y carrusel"
+    ],
+    "metricas": [],
+    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "framer", "supabase", "cloudflare", "vercel"],
+    "enlaces": {
+      "sitio": "https://justphones-fv.vercel.app",
+      "repo": "https://github.com/FelipeDiazAimar/justphones",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/justphones/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "algobonito",
+    "orden": 6,
+    "titulo": "Algo Bonito SV",
+    "cliente": "Algo Bonito SV · joyería artesanal",
+    "tipo": "cliente",
+    "periodo": null,
+    "estado": "produccion",
+    "destacado": false,
+    "privado": false,
+    "color": "#d4a373",
+    "problema": "Una marca de joyería artesanal vendía solo por redes, sin tienda propia ni cobro online, y llevaba stock y pedidos a mano.",
+    "resumen": "E-commerce con catálogo, pago con Mercado Pago y un panel para productos, pedidos, finanzas y contenido del sitio.",
+    "contexto": null,
+    "features": [
+      "Catálogo por categoría con búsqueda",
+      "Checkout con Mercado Pago y confirmación por webhook",
+      "Panel de productos, pedidos, finanzas y materiales",
+      "Imágenes en Cloudflare R2",
+      "Contenido editable: carrusel, anuncios, testimonios y preguntas frecuentes"
+    ],
+    "metricas": [],
+    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "supabase", "mercadopago", "cloudflare", "firebase"],
+    "enlaces": {
+      "sitio": "https://algobonito-sv.vercel.app",
+      "repo": "https://github.com/FelipeDiazAimar/AlgoBonitoSV",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/algobonito/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "calida-escencia",
+    "orden": 7,
+    "titulo": "Calida Escencia",
+    "cliente": "Calida Escencia · aromas y deco",
+    "tipo": "cliente",
+    "periodo": null,
+    "estado": "produccion",
+    "destacado": false,
+    "privado": false,
+    "color": "#c084fc",
+    "problema": "Una tienda de sahumerios, velas y deco necesitaba vender online sin perder a los clientes que preferían cerrar la compra por WhatsApp.",
+    "resumen": "Tienda online con dos caminos de pago, Mercado Pago o pedido por WhatsApp, y panel de productos, atributos y pedidos.",
+    "contexto": "Comparte la base de código de Algo Bonito SV, adaptada a otra marca.",
+    "features": [
+      "Catálogo, carrito y búsqueda",
+      "Pago con Mercado Pago o pedido por WhatsApp",
+      "Modo demo completo con datos simulados",
+      "Panel de productos, atributos, pedidos y finanzas"
+    ],
+    "metricas": [],
+    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "supabase", "mercadopago", "cloudflare"],
+    "enlaces": {
+      "sitio": "https://calida-escencia.vercel.app",
+      "repo": "https://github.com/FelipeDiazAimar/CalidaEscencia",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/calida-escencia/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "asistente",
+    "orden": 8,
+    "titulo": "Asistente Inteligente · Atención Primaria",
+    "cliente": "Proyecto propio",
+    "tipo": "personal",
+    "periodo": null,
+    "estado": "demo",
+    "destacado": false,
+    "privado": false,
+    "color": "#22d3ee",
+    "problema": "Estudiantes y agentes de atención primaria de la salud no tenían un lugar único para consultar dudas y estudiar con material confiable.",
+    "resumen": "Asistente con IA que responde usando el apunte como contexto, más biblioteca de recursos, autoevaluaciones y panel de administración.",
+    "contexto": null,
+    "features": [
+      "Chat con IA que usa el apunte en PDF como contexto",
+      "Biblioteca de PDFs, videos, imágenes y artículos",
+      "Autoevaluaciones",
+      "Panel de administración con login JWT"
+    ],
+    "metricas": [],
+    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "gemini", "openrouter", "postgresql", "supabase", "vercel"],
+    "enlaces": {
+      "sitio": "https://asistente-inteligente.vercel.app",
+      "repo": "https://github.com/FelipeDiazAimar/AsistenteInteligente",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/asistente/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "control-salidas-rrhh",
+    "orden": 9,
+    "titulo": "Control de salidas de personal",
+    "cliente": "MBRF (Marfrig) · Recursos Humanos",
+    "tipo": "laboral",
+    "periodo": "2024–2026",
+    "estado": "produccion",
+    "destacado": false,
+    "privado": true,
+    "color": "#34d399",
+    "problema": "Las salidas de empleados durante el turno se autorizaban en papel: RRHH, enfermería y vigilancia no sabían en el momento quién estaba fuera de la planta.",
+    "resumen": "Pedido y autorización de salidas en tiempo real, con paneles por rol, ausentismo y suspensiones.",
+    "contexto": "Repositorio compartido: aporté el login contra Active Directory, ausentismo y suspensiones, la dockerización y el ranking.",
+    "features": [
+      "Pedido y autorización de salidas en tiempo real",
+      "Paneles para supervisión, vigilancia y enfermería",
+      "Ausentismo y suspensiones",
+      "Login con Active Directory (LDAPS)",
+      "Ranking y estadísticas"
+    ],
+    "metricas": [],
+    "stack": ["react", "vite", "mui", "express", "socketio", "postgresql", "sqlserver", "activedirectory", "docker"],
+    "enlaces": {
+      "sitio": null,
+      "repo": null,
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/control-salidas-rrhh/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "gestor-proyectos-sap",
+    "orden": 10,
+    "titulo": "Gestor de proyectos del equipo SAP",
+    "cliente": "MBRF (Marfrig) · equipo SAP",
+    "tipo": "laboral",
+    "periodo": "2026",
+    "estado": "produccion",
+    "destacado": false,
+    "privado": true,
+    "color": "#60a5fa",
+    "problema": "El equipo SAP seguía proyectos e incidencias en planillas sueltas: no había una vista única del avance ni del estado de cada ticket.",
+    "resumen": "Panel interno de proyectos, hitos y tareas con avance automático, semáforos por fecha y tickets de incidencias SAP.",
+    "contexto": null,
+    "features": [
+      "Proyectos con hitos y tareas cuyo avance se calcula solo",
+      "Semáforos por fecha de vencimiento",
+      "Tickets de incidencias SAP con bitácora",
+      "Login con Active Directory y 4 roles"
+    ],
+    "metricas": [],
+    "stack": ["python", "flask", "sqlite", "activedirectory", "docker"],
+    "enlaces": {
+      "sitio": null,
+      "repo": null,
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/gestor-proyectos-sap/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "bibliotech",
+    "orden": 11,
+    "titulo": "BiblioTech · Biblioteca inteligente",
+    "cliente": "Trabajo académico · con Jeremías Micheloud",
+    "tipo": "academico",
+    "periodo": null,
+    "estado": "demo",
+    "destacado": false,
+    "privado": false,
+    "color": "#f472b6",
+    "problema": "Una biblioteca institucional necesitaba que los estudiantes encuentren libros y reserven salas de estudio sin depender del mostrador.",
+    "resumen": "Catálogo con buscador, turnos de sala con invitaciones y un asistente con IA que conoce el catálogo y responde por voz.",
+    "contexto": null,
+    "features": [
+      "Catálogo con buscador y portadas",
+      "Asistente con IA que conoce el catálogo y responde por voz",
+      "Turnos de sala con invitaciones a grupos",
+      "API documentada con Swagger y panel de administración"
+    ],
+    "metricas": [],
+    "stack": ["react", "vite", "mui", "express", "sequelize", "postgresql", "openrouter", "render", "vercel"],
+    "enlaces": {
+      "sitio": "https://repositoriofrontendbibliotech.vercel.app",
+      "repo": "https://github.com/FelipeDiazAimar/BibliotecaInteligente",
+      "repoFrontend": "https://github.com/JereMicheloud/Repositorio-Frontend-BibliotecaInteligente",
+      "repoBackend": "https://github.com/FelipeDiazAimar/Repositorio-Backend-BibliotecaInteligente"
+    },
+    "imagenes": {
+      "portada": "/proyectos/bibliotech/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "movii",
+    "orden": 12,
+    "titulo": "Movii · Última milla",
+    "cliente": "Trabajo académico · Scrum",
+    "tipo": "academico",
+    "periodo": null,
+    "estado": "demo",
+    "destacado": false,
+    "privado": false,
+    "color": "#fb923c",
+    "problema": "Un operador logístico necesitaba planificar rutas diarias, asignar repartidores y que el cliente siga su envío sin tener que llamar.",
+    "resumen": "API en Go, panel web para envíos y rutas, app móvil para el repartidor y seguimiento público por código.",
+    "contexto": null,
+    "features": [
+      "API REST en Go con pruebas por tabla",
+      "Panel web para registrar envíos y armar rutas",
+      "App móvil del repartidor: entregado, no entregado o reprogramado",
+      "Seguimiento público por código de guía"
+    ],
+    "metricas": [],
+    "stack": ["go", "react", "typescript", "vite", "tailwind", "tanstack", "expo", "postgresql", "docker"],
+    "enlaces": {
+      "sitio": null,
+      "repo": "https://github.com/FelipeDiazAimar/Movii",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/movii/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "crm-inmobiliaria",
+    "orden": 13,
+    "titulo": "CRM Inmobiliaria",
+    "cliente": "Proyecto propio",
+    "tipo": "personal",
+    "periodo": null,
+    "estado": "demo",
+    "destacado": false,
+    "privado": false,
+    "color": "#94a3b8",
+    "problema": "Una inmobiliaria llevaba clientes, agentes, propiedades y visitas en registros separados, sin una vista común de cada operación.",
+    "resumen": "CRM de propiedades, clientes, agentes e interacciones con modo demo sin base de datos.",
+    "contexto": null,
+    "features": [
+      "Propiedades con precio, superficie, ambientes y estado",
+      "Clientes, agentes e interacciones",
+      "Turnos y operaciones",
+      "Modo demo sin base de datos"
+    ],
+    "metricas": [],
+    "stack": ["php", "mysql", "docker", "render"],
+    "enlaces": {
+      "sitio": "https://crm-inmobiliaria.onrender.com",
+      "repo": "https://github.com/FelipeDiazAimar/CRM-Inmobiliaria",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/crm-inmobiliaria/portada.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
   }
 ]
