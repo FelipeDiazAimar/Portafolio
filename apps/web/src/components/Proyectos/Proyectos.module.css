@@ -1,0 +1,127 @@
+/* Contenedor full-bleed de Proyectos: sale del <main> de 960 px con la misma
+   técnica que SobreMi (100vw + margen compensado). El alto extra (260svh)
+   es el recorrido de scroll que alimenta el progreso de framer-motion. */
+.contenedor {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  height: 260svh;
+}
+
+/* Panel fijo mientras se recorre el contenedor: centra las capas. */
+.panel {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 5.5rem clamp(1rem, 4vw, 3rem) 1.5rem;
+}
+
+/* Capas superpuestas dentro del panel: muro primero, presentador encima. */
+.capaMuro {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.capaPresentador {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Cabecera centrada encima del muro (z-index 2). Sin puntero para no
+   bloquear el muro que hay debajo. */
+.cabecera {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  text-align: center;
+  pointer-events: none;
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(3rem, 10vw, 8rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--color-fg);
+}
+
+.lineaCifras {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-muted);
+}
+
+/* Variante estática para movimiento reducido (render condicional en JSX):
+   sin sticky, capas apiladas en flujo normal. */
+.contenedorEstatico {
+  height: auto;
+}
+
+.panelEstatico {
+  position: relative;
+  height: auto;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.capaEstatica {
+  position: relative;
+  width: 100%;
+}
+
+.cabeceraEstatica {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+/* Red de seguridad CSS por si el ajuste del sistema llega antes que el JS. */
+@media (prefers-reduced-motion: reduce) {
+  .contenedor {
+    height: auto;
+  }
+
+  .panel {
+    position: relative;
+    height: auto;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+
+  .capaMuro,
+  .capaPresentador {
+    position: relative;
+    inset: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cabecera {
+    position: relative;
+    inset: auto;
+  }
+}

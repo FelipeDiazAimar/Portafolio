@@ -1,0 +1,305 @@
+/* Contenedor del presentador: marco relativo con acento y alto de HUD por variable. */
+.marco {
+  position: relative;
+  width: min(1240px, 100%);
+  height: min(80svh, 780px);
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: #05070c;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.45);
+}
+
+/* Fondo: una capa por proyecto con crossfade y zoom lento en la activa. */
+.fondo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.capa {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+.capaActiva {
+  opacity: 1;
+}
+
+.capa img {
+  transform: scale(1);
+  transition: transform 8s linear;
+}
+
+.capaActiva img {
+  transform: scale(1.06);
+}
+
+/* Velo con doble degradado sobre las imágenes. */
+.velo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(0deg, rgba(5, 7, 12, 0.95) 0%, transparent 32%),
+    linear-gradient(
+      90deg,
+      rgba(5, 7, 12, 0.92) 0%,
+      rgba(5, 7, 12, 0.55) 34%,
+      rgba(5, 7, 12, 0.25) 60%,
+      rgba(5, 7, 12, 0.7) 100%
+    );
+}
+
+/* Cabecera centrada sobre la imagen, a la derecha de la lista. */
+.cabecera {
+  position: absolute;
+  top: 2.25rem;
+  left: min(320px, 34%);
+  right: 0;
+  z-index: 3;
+  text-align: center;
+  color: #fff;
+  padding: 0 2rem;
+  pointer-events: none;
+}
+
+.linea {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  opacity: 0.85;
+  margin: 0 0 0.5rem;
+}
+
+.tituloCabecera {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 4.4vw, 3.6rem);
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+  margin: 0;
+}
+
+/* Lista de pestañas: columna izquierda sobre el HUD. */
+.lista {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: var(--alto-hud);
+  width: min(320px, 34%);
+  z-index: 2;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.lista::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 112px;
+  padding: 1.25rem 1.4rem;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+  background: #fff;
+  color: #0b0d12;
+  transition: background-color 0.35s, color 0.35s;
+}
+
+.item:hover {
+  background: #f1f3f7;
+}
+
+.itemActivo {
+  background: transparent;
+  color: #fff;
+}
+
+.itemActivo:hover {
+  background: transparent;
+}
+
+.numero {
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.tituloFila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tituloItem {
+  font-family: var(--font-serif, Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  line-height: 1.1;
+}
+
+.flecha {
+  flex: none;
+  animation: entradaFlecha 0.35s ease;
+}
+
+@keyframes entradaFlecha {
+  from {
+    transform: translateX(-6px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Tarjeta de vidrio con la problemática, abajo a la derecha sobre el HUD. */
+.problematica {
+  position: absolute;
+  right: 1.5rem;
+  bottom: calc(var(--alto-hud) + 1.25rem);
+  width: min(520px, 46%);
+  z-index: 4;
+  padding: 1.25rem 1.4rem;
+  border-radius: 18px;
+  background: rgba(8, 12, 24, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.etiqueta {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 0 0 0.6rem;
+}
+
+.texto {
+  font-size: clamp(1rem, 1.35vw, 1.2rem);
+  line-height: 1.5;
+  margin: 0 0 0.9rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.9rem;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.filaFinal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chipEstado {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chipPrivado {
+  font-size: 12px;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+}
+
+.boton {
+  font-size: 13px;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  color: #fff;
+  text-decoration: none;
+  transition: background-color 0.25s, color 0.25s;
+}
+
+.boton:hover {
+  background: #fff;
+  color: #0b0d12;
+}
+
+/* Celular: imagen arriba, cabecera y tira horizontal, tarjeta en flujo. */
+@media (max-width: 768px) {
+  .marco {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .fondo {
+    position: relative;
+    inset: auto;
+    aspect-ratio: 16 / 10;
+    order: 0;
+  }
+
+  .cabecera {
+    position: static;
+    order: 1;
+    padding: 1.5rem 1.25rem 1rem;
+    text-align: center;
+  }
+
+  .lista {
+    position: static;
+    order: 2;
+    width: auto;
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+  }
+
+  .item {
+    min-width: 72%;
+    min-height: auto;
+    scroll-snap-align: start;
+  }
+
+  .problematica {
+    position: static;
+    order: 3;
+    width: auto;
+    margin: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capa,
+  .capa img,
+  .item,
+  .boton {
+    transition: none;
+  }
+
+  .flecha {
+    animation: none;
+  }
+}
