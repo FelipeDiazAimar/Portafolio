@@ -11,11 +11,16 @@ import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, grado, indiceDe, pasoFu
 
 const SANS = '-apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
 const ALTO_ETIQUETA = 0.15;
-const FICHA = { ancho: 2.7, alto: 0.974 };
+// Ficha a mitad del tamaño original (misma proporción 720×260): con 2,7 de ancho
+// tapaba medio grafo al seleccionar un nodo; con 1,35 sigue legible y no tapa el modelo.
+const FICHA = { ancho: 1.35, alto: 0.487 };
 const ZOOM_MINIMO = 0.5;
 const ZOOM_MAXIMO = 3;
 // Zoom máximo del encuadre inicial y de la selección (nodo + sus conexiones).
-const ZOOM_BASE_MAX = 1.9;
+// La base sube a 2.6 para acompañar la ESCALA_ULTIMA 1.9 de la estación: el neto del
+// grafo crece ~35% frente al tope 1.9 anterior y en escritorio sigue entrando entero
+// (el autoencuadre lo ajusta a la esfera que lo contiene, sin recortar).
+const ZOOM_BASE_MAX = 2.6;
 const ZOOM_SELECCION_MAX = 2.8;
 const salida = (x) => 1 - (1 - x) ** 3;
 const limitar = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
