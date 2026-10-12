@@ -119,8 +119,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/neifert/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/neifert/movil.webp",
+      "completa": "/proyectos/neifert/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -160,8 +160,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/dario-martinez/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/dario-martinez/movil.webp",
+      "completa": "/proyectos/dario-martinez/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -201,8 +201,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/justphones/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/justphones/movil.webp",
+      "completa": "/proyectos/justphones/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -242,8 +242,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/algobonito/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/algobonito/movil.webp",
+      "completa": "/proyectos/algobonito/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -282,8 +282,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/calida-escencia/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/calida-escencia/movil.webp",
+      "completa": "/proyectos/calida-escencia/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -322,8 +322,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/asistente/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/asistente/movil.webp",
+      "completa": "/proyectos/asistente/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -443,8 +443,8 @@
     },
     "imagenes": {
       "portada": "/proyectos/bibliotech/portada.webp",
-      "movil": null,
-      "completa": null
+      "movil": "/proyectos/bibliotech/movil.webp",
+      "completa": "/proyectos/bibliotech/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -516,7 +516,7 @@
     "metricas": [],
     "stack": ["php", "mysql", "docker", "render"],
     "enlaces": {
-      "sitio": "https://crm-inmobiliaria.onrender.com",
+      "sitio": null,
       "repo": "https://github.com/FelipeDiazAimar/CRM-Inmobiliaria",
       "repoFrontend": null,
       "repoBackend": null
