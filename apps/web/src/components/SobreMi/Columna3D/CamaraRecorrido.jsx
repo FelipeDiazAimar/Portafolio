@@ -31,7 +31,9 @@ export default function CamaraRecorrido({ n, refTramo, lado, opciones, reducido 
     const { distancia } = vistaParaAltura(size.height);
 
     const objetivo = DESPLAZAMIENTO[lado] ?? DESPLAZAMIENTO.izquierda;
-    const k = reducido ? 1 : 1 - Math.exp(-4 * dt);
+    // Corrimiento cinematográfico: factor 2.5 (antes 4) para que el encuadre
+    // acompañe el vuelo sin adelantarse al modelo.
+    const k = reducido ? 1 : 1 - Math.exp(-2.5 * dt);
     corrimiento.current.x += (objetivo.x - corrimiento.current.x) * k;
     corrimiento.current.y += (objetivo.y - corrimiento.current.y) * k;
     camera.setViewOffset(
@@ -59,7 +61,12 @@ export default function CamaraRecorrido({ n, refTramo, lado, opciones, reducido 
     anclada.current = false;
     if (controls) controls.enabled = false;
     const pose = poseCamara(tramo, distancia, n, opciones);
-    const f = reducido ? 1 : 1 - Math.exp(-6 * dt);
+    // Seguimiento cinematográfico: factor 3 (antes 6) para un vuelo más lento
+    // y apreciable. Se mantiene el fast-path con reducido (f = 1).
+    // La ventana de primera persona (llegada en t = 0.8) no se toca aquí: vive
+    // en recorrido.js (B03) y moverla comprimiría la mezcla hacia la pose
+    // canónica rompiendo la continuidad del anclaje.
+    const f = reducido ? 1 : 1 - Math.exp(-3 * dt);
     const destino = auxiliar.current.set(...pose.posicion);
     camera.position.lerp(destino, f);
     mira.current.lerp(destino.set(...pose.mira), f);

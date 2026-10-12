@@ -23,7 +23,7 @@ const MundoColumna = dynamic(() => import('./Columna3D/MundoColumna.jsx'), { ssr
 
 const N = hitos.length;
 const ESPERA_LLEGADA_MS = 400;
-const ESPERA_IMAN_MS = 160;
+const ESPERA_IMAN_MS = 260;
 
 function SobreMiRecorrido({ onFallo }) {
   const refContenedor = useRef(null);
@@ -35,7 +35,7 @@ function SobreMiRecorrido({ onFallo }) {
   const { scrollYProgress } = useScroll({ target: refContenedor, offset: ['start start', 'end end'] });
   // La rueda del mouse avanza a saltos: el resorte los suaviza. Con movimiento reducido
   // se usa el progreso crudo (no hay viaje que suavizar).
-  const suave = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.6 });
+  const suave = useSpring(scrollYProgress, { stiffness: 120, damping: 38, mass: 0.6 });
   const progreso = reducido ? scrollYProgress : suave;
 
   // El tramo viaja por ref a los useFrame (sin renders por frame); React sólo se entera
@@ -105,12 +105,16 @@ function SobreMiRecorrido({ onFallo }) {
     };
   }, [vista.tipo, vista.indice, enPantalla, reducido]);
 
+  // Destino de un salto programático (minimapa o imán): mientras el scroll suave
+  // viaja hacia él, el imán no interviene para no desviarlo a un hito intermedio.
+  const refDestino = useRef(null);
   const scrollAProgreso = useCallback(
     (p) => {
       const contenedor = refContenedor.current;
       if (!contenedor) return;
       const recorrido = contenedor.offsetHeight - window.innerHeight;
       const arriba = contenedor.getBoundingClientRect().top + window.scrollY;
+      refDestino.current = { p, expira: Date.now() + 8000 };
       window.scrollTo({ top: arriba + p * recorrido, behavior: reducido ? 'auto' : 'smooth' });
     },
     [reducido]
@@ -124,6 +128,13 @@ function SobreMiRecorrido({ onFallo }) {
     const intentar = () => {
       const contenedor = refContenedor.current;
       if (dedos > 0 || !contenedor || document.documentElement.dataset.sinIman) return;
+      // Salto programático en vuelo: se espera a llegar (o al tiempo límite).
+      const destino = refDestino.current;
+      if (destino) {
+        const llego = Math.abs(scrollYProgress.get() - destino.p) < 0.002;
+        if (!llego && Date.now() <= destino.expira) return;
+        refDestino.current = null;
+      }
       const caja = contenedor.getBoundingClientRect();
       // Sólo con el panel fijo en pantalla (no al entrar o salir de la sección).
       if (caja.top > 1 || caja.bottom < window.innerHeight - 1) return;

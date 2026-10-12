@@ -27,7 +27,9 @@ const W = pesoTotal(N);
 const pViaje = (i, t) => (i * (PESO_ESTANCIA + PESO_VIAJE) + PESO_ESTANCIA + t * PESO_VIAJE) / W;
 
 test('pesoTotal: 7 estancias y 6 viajes', () => {
-  assert.ok(Math.abs(W - (7 + 6 * 1.4)) < 1e-9);
+  assert.equal(PESO_ESTANCIA, 1);
+  assert.equal(PESO_VIAJE, 3.4);
+  assert.ok(Math.abs(W - (7 * PESO_ESTANCIA + 6 * PESO_VIAJE)) < 1e-9);
 });
 
 test('tramoDe: extremos, rango y valores inválidos', () => {
