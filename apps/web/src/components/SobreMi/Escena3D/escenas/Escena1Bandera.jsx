@@ -156,6 +156,9 @@ export default function Escena1Bandera({ activa, reducido }) {
   const get = useThree((estado) => estado.get);
   const gl = useThree((estado) => estado.gl);
   const camera = useThree((estado) => estado.camera);
+  // Puede estar montada como vecina del hito activo: entonces no responde al puntero.
+  const refActiva = useRef(activa);
+  refActiva.current = activa;
 
   // Interacción con el puntero. Se escucha el DOM directamente (y no los eventos
   // de R3F) porque el arrastre sobre la tela tiene que ganarle al giro del
@@ -204,6 +207,7 @@ export default function Escena1Bandera({ activa, reducido }) {
     const aLocal = (puntoMundo) => malla.worldToLocal(local.copy(puntoMundo));
 
     const alMover = (evento) => {
+      if (!refActiva.current) return;
       if (refAgarre.current) return;
       apuntar(evento);
       const impacto = golpe();
@@ -277,6 +281,7 @@ export default function Escena1Bandera({ activa, reducido }) {
     }
 
     const alApretar = (evento) => {
+      if (!refActiva.current) return;
       if (evento.button !== 0) return;
       apuntar(evento);
       const impacto = golpe();

@@ -32,7 +32,8 @@ export default function ControlGiro({ quieto = false, girable = true, limiteAzim
   useEffect(() => {
     if (girable && !limitado) return;
     const controles = refControles.current;
-    if (!controles) return;
+    // Apagado = la cámara la maneja el recorrido de la columna: no se la toca.
+    if (!controles || !controles.enabled) return;
     const distancia = camera.position.length();
     camera.position.set(0, distancia * 0.116, distancia * 0.993);
     camera.lookAt(0, 0, 0);
@@ -45,6 +46,8 @@ export default function ControlGiro({ quieto = false, girable = true, limiteAzim
     const controles = refControles.current;
     // Una escena puede tomar el control del giro (el grafo de Hoy gira libre): no se interfiere.
     if (controles?.giroLibre) return;
+    // `setAzimuthalAngle` mueve la cámara: no mientras viaja por la columna.
+    if (controles && !controles.enabled) return;
     if (!limitado || !girable || !girando || quieto || !controles) return;
     reloj.current += Math.min(delta, 0.05);
     const objetivo = Math.sin(reloj.current * 0.45) * limiteAzimut * 0.55;

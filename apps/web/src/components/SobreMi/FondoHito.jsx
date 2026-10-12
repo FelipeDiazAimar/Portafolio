@@ -13,7 +13,7 @@ const ESPERA_VIDEO_S = 1.5;
 // hito es un crossfade y no una carga. Una foto que no existe se omite en vez de
 // dejar el ícono de imagen rota. El video, en cambio, sólo se monta para el hito
 // activo (pesan megas) y se pide recién cuando se llega a él.
-export default function FondoHito({ hitos, activo }) {
+export default function FondoHito({ hitos, activo, presente = true }) {
   const [fallidas, setFallidas] = useState({});
   const [videoFallido, setVideoFallido] = useState({});
   const [verVideo, setVerVideo] = useState(false);
@@ -26,7 +26,7 @@ export default function FondoHito({ hitos, activo }) {
   // corresponde, video después.
   useEffect(() => {
     setVideoListo(false);
-    if (reducido || !hitoActivo.video) {
+    if (!presente || reducido || !hitoActivo.video) {
       setVerVideo(false);
       return undefined;
     }
@@ -37,7 +37,7 @@ export default function FondoHito({ hitos, activo }) {
     setVerVideo(false);
     const espera = setTimeout(() => setVerVideo(true), ESPERA_VIDEO_S * 1000);
     return () => clearTimeout(espera);
-  }, [activo, hitoActivo, reducido]);
+  }, [activo, hitoActivo, reducido, presente]);
 
   // El video arranca (desde el principio) cuando toca verlo.
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function FondoHito({ hitos, activo }) {
               src={hito.imagen}
               alt=""
               fill
-              sizes="(max-width: 768px) 100vw, 62vw"
+              sizes="100vw"
               loading="eager"
               className={styles.imagen}
               onError={() => setFallidas((previas) => ({ ...previas, [hito.id]: true }))}

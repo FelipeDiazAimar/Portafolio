@@ -81,12 +81,15 @@ const plano = new THREE.Plane();
 // reacomoda con la misma simulación de fuerzas) y al hacer click en uno la vista se
 // acerca a él y a sus conexiones. Dos dedos (o Ctrl + rueda) acercan el grafo sin
 // hacer zoom en la página. Los datos viven en `grafoDatos.js`.
-export default function Grafo({ tiempo, claro }) {
+export default function Grafo({ tiempo, claro, activa = true }) {
   const camera = useThree((estado) => estado.camera);
   const lienzoDom = useThree((estado) => estado.gl.domElement);
   const controles = useThree((estado) => estado.controls);
   const refControles = useRef(controles);
   refControles.current = controles;
+  // Montado como vecino (o durante un viaje) el grafo no toma la cámara ni escucha al usuario.
+  const refActiva = useRef(activa);
+  refActiva.current = activa;
 
   const inicial = useMemo(() => distribuir(), []);
   const pos = useRef(inicial.map((p) => [...p]));
@@ -359,6 +362,7 @@ export default function Grafo({ tiempo, claro }) {
     };
 
     const alBajar = (evento) => {
+      if (!refActiva.current) return;
       if (evento.target !== lienzoDom) return;
       if (evento.pointerType === 'touch') {
         punteros.set(evento.pointerId, { x: evento.clientX, y: evento.clientY });
@@ -394,6 +398,7 @@ export default function Grafo({ tiempo, claro }) {
     };
 
     const alMover = (evento) => {
+      if (!refActiva.current) return;
       const a = arrastre.current;
       if (a) {
         if (!a.movido && Math.hypot(evento.clientX - a.x, evento.clientY - a.y) > 4) a.movido = true;
@@ -480,20 +485,25 @@ export default function Grafo({ tiempo, claro }) {
     // otro elemento, igual no debe hacer zoom en la página.
     const seccion = lienzoDom.closest('section') ?? lienzoDom;
     const alRodar = (evento) => {
+      if (!refActiva.current) return;
       if (!evento.ctrlKey || !seccion.contains(evento.target)) return;
       evento.preventDefault();
       usuario.current.zoom = limitar(usuario.current.zoom * Math.exp(-evento.deltaY * 0.01), ZOOM_MINIMO, ZOOM_MAXIMO);
     };
     // Safari (iOS y macOS) hace zoom de página con sus propios eventos de gesto.
-    const sinGesto = (evento) => evento.preventDefault();
+    const sinGesto = (evento) => {
+      if (refActiva.current) evento.preventDefault();
+    };
     // Doble click en el vacío: vuelve a la vista inicial y reacomoda los nodos.
     const alDobleClick = (evento) => {
+      if (!refActiva.current) return;
       if (pickear(evento.clientX, evento.clientY) >= 0) return;
       seleccionar(-1);
       usuario.current.zoom = 1;
       reordenarTodo();
     };
     const alTeclear = (evento) => {
+      if (!refActiva.current) return;
       if (evento.key === 'Escape' && seleccion.current) seleccionar(-1);
     };
     const alCambiarTamano = () => {
@@ -555,6 +565,11 @@ export default function Grafo({ tiempo, claro }) {
 
     // Giro libre sólo cuando el grafo ya está armado; la cámara gira sola, despacio,
     // si nadie la toca (y se detiene al apuntar, arrastrar o seleccionar).
+    if (!refActiva.current) {
+      // Al empezar un viaje: devuelve límites, punto de giro y cámara de frente.
+      soltarControles();
+      return;
+    }
     if (listo) tomarControles();
     else soltarControles();
     if (c && guardado.current) {

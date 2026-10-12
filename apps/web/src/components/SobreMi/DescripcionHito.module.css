@@ -1,9 +1,7 @@
-/* En escritorio se superpone al escenario (que se desarma debajo). */
+/* Debajo del encabezado, en la columna de textos del lado opuesto al modelo. */
 .descripcion {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  margin-top: 1.5rem;
   opacity: 0;
   transform: translateY(14px);
   pointer-events: none;
@@ -78,10 +76,6 @@
    visibilidad la maneja la columna entera, así que acá siempre se ve. */
 @media (max-width: 768px) {
   .descripcion {
-    position: static;
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
     margin-top: 1rem;
   }
 
