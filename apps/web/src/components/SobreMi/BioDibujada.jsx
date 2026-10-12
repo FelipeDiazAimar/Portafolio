@@ -5,16 +5,15 @@ import { gsap } from 'gsap';
 import { partirEnRenglones } from '@/lib/renglones.js';
 import styles from './BioDibujada.module.css';
 
-// Segundos entre una letra y la siguiente, y lo que tarda en dibujarse cada contorno.
+// Segundos entre una letra y la siguiente, y lo que tarda en aparecer cada una.
 const ENTRE_LETRAS = 0.018;
-const DIBUJO = 1.3;
-const RELLENO_DESDE = 0.6;
+const APARICION = 0.45;
 
-// Biografía escrita "a trazo", con la técnica de StrokeText de React Bits: cada
-// letra se dibuja primero como contorno (stroke-dashoffset) y después se llena. Como
-// el original es de una sola línea, el texto se reparte acá en renglones del ancho
-// disponible (midiendo con la fuente real) y cada renglón es un SVG. Las palabras
-// resaltadas van en azul y negrita. El texto real queda para lectores de pantalla.
+// Biografía con aparición escalonada: cada letra sube unos píxeles mientras
+// se difumina hacia su opacidad final. Como el original es de una sola
+// línea, el texto se reparte acá en renglones del ancho disponible (midiendo
+// con la fuente real) y cada renglón es un SVG. Las palabras resaltadas van
+// en azul y negrita. El texto real queda para lectores de pantalla.
 // `visible` dispara la escritura; al ocultarse vuelve a empezar.
 export default function BioDibujada({ partes, visible, className = '' }) {
   const refRaiz = useRef(null);
@@ -54,40 +53,32 @@ export default function BioDibujada({ partes, visible, className = '' }) {
     return partirEnRenglones(partes, medidas.ancho - 4, medir);
   }, [partes, medidas]);
 
-  // La escritura: arranca al hacerse visible y se reinicia al ocultarse.
+  // La aparición: arranca al hacerse visible y se reinicia al ocultarse.
   useEffect(() => {
     const raiz = refRaiz.current;
     if (!raiz || !renglones.length) return undefined;
-    const trazos = gsap.utils.toArray(raiz.querySelectorAll('[data-trazo]'));
-    const rellenos = gsap.utils.toArray(raiz.querySelectorAll('[data-relleno]'));
-    if (!trazos.length) return undefined;
-    const largo = Math.max((medidas?.tamano ?? 16) * 7, 200);
+    const letras = gsap.utils.toArray(raiz.querySelectorAll('[data-letra]'));
+    if (!letras.length) return undefined;
     const reducido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const todos = [...trazos, ...rellenos];
 
     const ocultar = () => {
-      gsap.set(trazos, { strokeDasharray: largo, strokeDashoffset: largo, strokeOpacity: 1 });
-      gsap.set(rellenos, { opacity: 0 });
+      gsap.set(letras, { opacity: 0, y: 10 });
     };
     if (reducido) {
-      gsap.set(trazos, { strokeOpacity: 0 });
-      gsap.set(rellenos, { opacity: visible ? 1 : 0 });
+      gsap.set(letras, { opacity: 1, y: 0 });
       return undefined;
     }
     ocultar();
-    if (!visible) return () => gsap.killTweensOf(todos);
+    if (!visible) return () => gsap.killTweensOf(letras);
 
     const letra = ENTRE_LETRAS;
     const linea = gsap.timeline({ delay: 0.4 });
-    linea.to(trazos, { strokeDashoffset: 0, duration: DIBUJO, ease: 'power2.out', stagger: letra }, 0);
-    linea.to(rellenos, { opacity: 1, duration: 0.6, ease: 'power2.out', stagger: letra }, DIBUJO * RELLENO_DESDE);
-    // Una vez lleno, el contorno se desvanece: el texto queda como cualquier otro.
-    linea.to(trazos, { strokeOpacity: 0, duration: 0.9, ease: 'power1.out', stagger: letra }, DIBUJO + 0.5);
+    linea.to(letras, { opacity: 1, y: 0, duration: APARICION, ease: 'power2.out', stagger: letra }, 0);
     return () => {
       linea.kill();
-      gsap.killTweensOf(todos);
+      gsap.killTweensOf(letras);
     };
-  }, [renglones, visible, medidas?.tamano]);
+  }, [renglones, visible]);
 
   return (
     <div ref={refRaiz} className={`${styles.bio} ${className}`.trim()}>
@@ -104,26 +95,12 @@ export default function BioDibujada({ partes, visible, className = '' }) {
             viewBox={`0 0 ${medidas.ancho} ${medidas.interlineado}`}
             style={{ fontFamily: medidas.familia, fontSize: `${medidas.tamano}px` }}
           >
-            <text x="0" y={medidas.interlineado * 0.68} fill="none" strokeWidth="0.9" strokeLinejoin="round" strokeLinecap="round">
+            <text x="0" y={medidas.interlineado * 0.68}>
               {renglon.flatMap((fragmento, j) =>
                 Array.from(fragmento.texto).map((c, k) => (
                   <tspan
                     key={`${j}-${k}`}
-                    data-trazo
-                    stroke="var(--color-accent)"
-                    fontWeight={fragmento.resaltado ? 700 : 400}
-                  >
-                    {c}
-                  </tspan>
-                ))
-              )}
-            </text>
-            <text x="0" y={medidas.interlineado * 0.68} stroke="none">
-              {renglon.flatMap((fragmento, j) =>
-                Array.from(fragmento.texto).map((c, k) => (
-                  <tspan
-                    key={`${j}-${k}`}
-                    data-relleno
+                    data-letra
                     fill={fragmento.resaltado ? 'var(--color-accent)' : 'var(--color-fg)'}
                     fontWeight={fragmento.resaltado ? 700 : 400}
                   >
