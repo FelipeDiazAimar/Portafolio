@@ -7,7 +7,7 @@ import { mostrarVideo } from '@/lib/fondoHito.js';
 import styles from './FondoHito.module.css';
 
 // Segundos que se ve la foto antes de pasar al video (si el hito tiene los dos).
-const ESPERA_VIDEO_S = 3;
+const ESPERA_VIDEO_S = 1.5;
 
 // Todas las fotos quedan montadas y sólo cambia la opacidad: así el cambio de
 // hito es un crossfade y no una carga. Una foto que no existe se omite en vez de

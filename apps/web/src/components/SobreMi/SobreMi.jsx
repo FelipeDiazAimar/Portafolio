@@ -31,6 +31,15 @@ function SobreMiContenido() {
   const refBloqueo = useRef(false);
   // Si el mouse está sobre la columna (la espera de 0,9 s sólo corre en ese caso).
   const refDentro = useRef(false);
+  // Última posición del mouse. Al terminar un scroll el navegador dispara un
+  // movimiento "falso" en el mismo lugar: sólo cuenta un desplazamiento real, si no
+  // un mouse que descansa sobre la columna abría el detalle y desarmaba el modelo.
+  const refUltimaPosicion = useRef(null);
+  const hayMovimientoReal = (evento) => {
+    const anterior = refUltimaPosicion.current;
+    refUltimaPosicion.current = { x: evento.clientX, y: evento.clientY };
+    return anterior !== null && Math.hypot(evento.clientX - anterior.x, evento.clientY - anterior.y) >= 2;
+  };
   useEffect(() => () => clearTimeout(refEspera.current), []);
   // Empieza la cuenta de 0,9 s con el mouse quieto; si algo del modelo lo está
   // reteniendo (`refBloqueo`), no se abre el detalle.
@@ -45,6 +54,13 @@ function SobreMiContenido() {
     target: refContenedor,
     offset: ['start start', 'end end'],
   });
+  // Al cambiar de hito (o llegar a la sección) se descarta la posición del mouse y la
+  // espera pendiente: lo que siga a un scroll no es el usuario explorando.
+  useEffect(() => {
+    refUltimaPosicion.current = null;
+    clearTimeout(refEspera.current);
+  }, [activo]);
+
   useMotionValueEvent(scrollYProgress, 'change', (progreso) => {
     setActivo(indiceDeHito(progreso, hitos.length));
   });
@@ -86,14 +102,13 @@ function SobreMiContenido() {
             // (girar el modelo) que salió de la columna y volvió.
             if (evento.pointerType !== 'mouse') return;
             refDentro.current = true;
-            if (evento.buttons !== 0) return;
-            armarEspera();
+            refUltimaPosicion.current = { x: evento.clientX, y: evento.clientY };
           }}
           onPointerMove={(evento) => {
             // Mover el mouse reinicia la espera (no se desarma mientras se juega
             // con el modelo). Con el detalle ya abierto no hace falta nada.
             if (evento.pointerType !== 'mouse' || evento.buttons !== 0 || refAbierto.current) return;
-            armarEspera();
+            if (hayMovimientoReal(evento)) armarEspera();
           }}
           onPointerLeave={(evento) => {
             if (evento.pointerType !== 'mouse') return;
