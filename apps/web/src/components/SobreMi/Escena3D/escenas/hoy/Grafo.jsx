@@ -276,6 +276,7 @@ export default function Grafo({ tiempo, claro }) {
       minP: c.minPolarAngle,
       maxP: c.maxPolarAngle,
       velocidad: c.autoRotateSpeed,
+      target: c.target.clone(),
     };
     c.minAzimuthAngle = -Infinity;
     c.maxAzimuthAngle = Infinity;
@@ -295,6 +296,13 @@ export default function Grafo({ tiempo, claro }) {
     c.autoRotateSpeed = g.velocidad;
     c.autoRotate = false;
     c.giroLibre = false;
+    // La cámara vuelve al frente y al punto de giro de origen: la escena siguiente
+    // (con su propio encuadre) no hereda el giro ni el desplazamiento del grafo.
+    c.target.copy(g.target);
+    const distancia = camera.position.distanceTo(g.target);
+    camera.position.set(g.target.x, g.target.y + distancia * 0.116, g.target.z + distancia * 0.993);
+    camera.lookAt(g.target);
+    c.update();
     guardado.current = null;
   };
 
@@ -467,9 +475,12 @@ export default function Grafo({ tiempo, claro }) {
       const [a, b] = [...punteros.values()];
       return { d: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
     };
-    // Pellizco en el trackpad (Ctrl + rueda): acerca el grafo y no la página.
+    // Pellizco en el trackpad (Ctrl + rueda): acerca el grafo y no la página. Se
+    // atiende en toda la sección (no sólo sobre el canvas): si el cursor está sobre
+    // otro elemento, igual no debe hacer zoom en la página.
+    const seccion = lienzoDom.closest('section') ?? lienzoDom;
     const alRodar = (evento) => {
-      if (!evento.ctrlKey) return;
+      if (!evento.ctrlKey || !seccion.contains(evento.target)) return;
       evento.preventDefault();
       usuario.current.zoom = limitar(usuario.current.zoom * Math.exp(-evento.deltaY * 0.01), ZOOM_MINIMO, ZOOM_MAXIMO);
     };
@@ -494,9 +505,9 @@ export default function Grafo({ tiempo, claro }) {
     window.addEventListener('pointercancel', alSubir);
     window.addEventListener('keydown', alTeclear);
     window.addEventListener('resize', alCambiarTamano);
-    lienzoDom.addEventListener('wheel', alRodar, { passive: false });
-    lienzoDom.addEventListener('gesturestart', sinGesto);
-    lienzoDom.addEventListener('gesturechange', sinGesto);
+    window.addEventListener('wheel', alRodar, { passive: false, capture: true });
+    seccion.addEventListener('gesturestart', sinGesto);
+    seccion.addEventListener('gesturechange', sinGesto);
     lienzoDom.addEventListener('dblclick', alDobleClick);
     return () => {
       window.removeEventListener('pointerdown', alBajar, true);
@@ -505,9 +516,9 @@ export default function Grafo({ tiempo, claro }) {
       window.removeEventListener('pointercancel', alSubir);
       window.removeEventListener('keydown', alTeclear);
       window.removeEventListener('resize', alCambiarTamano);
-      lienzoDom.removeEventListener('wheel', alRodar);
-      lienzoDom.removeEventListener('gesturestart', sinGesto);
-      lienzoDom.removeEventListener('gesturechange', sinGesto);
+      window.removeEventListener('wheel', alRodar, { capture: true });
+      seccion.removeEventListener('gesturestart', sinGesto);
+      seccion.removeEventListener('gesturechange', sinGesto);
       lienzoDom.removeEventListener('dblclick', alDobleClick);
       lienzoDom.style.touchAction = 'pan-y';
       if (refControles.current) refControles.current.enabled = true;

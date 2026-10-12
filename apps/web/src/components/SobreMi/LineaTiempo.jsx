@@ -7,7 +7,17 @@ import styles from './LineaTiempo.module.css';
 // signo, al activo). Los vecinos se atenúan y los lejanos desaparecen.
 export default function LineaTiempo({ hitos, activo, onSeleccionar, onApuntarActivo, onToqueHilo }) {
   return (
-    <nav className={styles.linea} aria-label="Línea de tiempo">
+    <nav
+      className={styles.linea}
+      aria-label="Línea de tiempo"
+      // Toda la cinta (no sólo el nombre del hito) abre el detalle al apuntarla con el mouse.
+      onPointerEnter={(evento) => {
+        if (evento.pointerType === 'mouse') onApuntarActivo(true);
+      }}
+      onPointerLeave={(evento) => {
+        if (evento.pointerType === 'mouse') onApuntarActivo(false);
+      }}
+    >
       <span className={styles.hiloPasado} aria-hidden="true" onClick={onToqueHilo} />
       <span className={styles.hiloFuturo} aria-hidden="true" onClick={onToqueHilo} />
       <ul className={styles.lista}>
@@ -29,12 +39,6 @@ export default function LineaTiempo({ hitos, activo, onSeleccionar, onApuntarAct
                 onClick={(evento) => {
                   evento.stopPropagation();
                   onSeleccionar(i);
-                }}
-                onPointerEnter={(evento) => {
-                  if (esActivo && evento.pointerType === 'mouse') onApuntarActivo(true);
-                }}
-                onPointerLeave={(evento) => {
-                  if (evento.pointerType === 'mouse') onApuntarActivo(false);
                 }}
                 onFocus={() => {
                   if (esActivo) onApuntarActivo(true);
