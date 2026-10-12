@@ -24,9 +24,20 @@
   opacity: 1;
 }
 
-/* Las letras que todavía no se escribieron reservan su lugar. */
+/* Las letras que todavía no se escribieron reservan su lugar y se ven
+   fantasma en 200 ExtraLight: engrosan al escribirse. */
 .pendiente {
-  visibility: hidden;
+  visibility: visible;
+  font-weight: 200;
+  color: var(--color-muted);
+  opacity: 0.55;
+}
+
+/* Los segmentos **negrita** pendientes van en 350 para no pegar el salto
+   a 650 de golpe cuando se completan. */
+.pendiente .negrita,
+.pendiente strong {
+  font-weight: 350;
 }
 
 /* Cursor fino que acompaña la escritura. No ocupa ancho, así no empuja el
