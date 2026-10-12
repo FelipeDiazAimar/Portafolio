@@ -60,7 +60,10 @@ export default function Polvo({ n, color, cantidad = 1200, reducido }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
-  useEffect(() => material.uniforms.uColor.value.set(color), [material, color]);
+  useEffect(() => {
+    // `Color.set` devuelve el color (no una limpieza): con llaves no se retorna nada.
+    material.uniforms.uColor.value.set(color);
+  }, [material, color]);
   useEffect(
     () => () => {
       geometria.dispose();

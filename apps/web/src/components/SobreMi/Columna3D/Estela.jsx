@@ -66,7 +66,10 @@ export default function Estela({ n, refTramo, color, cantidad = 240 }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
-  useEffect(() => material.uniforms.uColor.value.set(color), [material, color]);
+  useEffect(() => {
+    // `Color.set` devuelve el color (no una limpieza): con llaves no se retorna nada.
+    material.uniforms.uColor.value.set(color);
+  }, [material, color]);
   useEffect(
     () => () => {
       geometria.dispose();
