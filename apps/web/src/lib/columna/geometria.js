@@ -26,7 +26,7 @@ export function ejeEn(y, n) {
 }
 
 export function vertebra(i, n) {
-  return { centro: ejeEn(i * SEPARACION, n), angulo: i * PASO_ANGULO };
+  return { centro: ejeEn(-i * SEPARACION, n), angulo: i * PASO_ANGULO };
 }
 
 // Dónde va el modelo del hito `i`: a RADIO_ANCLA del eje, en su ángulo. El modelo se
@@ -39,10 +39,10 @@ export function ancla(i, n) {
   };
 }
 
-// Puntos para construir la curva (de la cola a la punta).
+// Puntos para construir la curva (de la cola —arriba— a la punta —abajo—).
 export function puntosColumna(n, cantidad = 64) {
-  const desde = -EXTRA;
-  const hasta = altoTotal(n) + EXTRA;
+  const desde = EXTRA;
+  const hasta = -(altoTotal(n) + EXTRA);
   return Array.from({ length: cantidad }, (_, k) => ejeEn(desde + ((hasta - desde) * k) / (cantidad - 1), n));
 }
 
@@ -52,8 +52,8 @@ const MUESTRAS = 2048;
 const tablas = new Map();
 function tabla(n) {
   if (tablas.has(n)) return tablas.get(n);
-  const desde = -EXTRA;
-  const hasta = altoTotal(n) + EXTRA;
+  const desde = EXTRA;
+  const hasta = -(altoTotal(n) + EXTRA);
   const ys = [];
   const acumulado = [0];
   let previo = ejeEn(desde, n);
@@ -81,7 +81,7 @@ export function fraccionEnAltura(y, n) {
 
 // Fracción del largo a la altura de la vértebra `i`.
 export function longitudHasta(i, n) {
-  return fraccionEnAltura(i * SEPARACION, n);
+  return fraccionEnAltura(-i * SEPARACION, n);
 }
 
 // Punto del eje en la fracción `f` del largo (inversa de fraccionEnAltura).
@@ -104,7 +104,7 @@ export function puntoEnFraccion(f, n) {
 // estado `s` (índice de hito fraccionario): el ancla del hito `s` queda en el origen
 // mirando a +z. Mundo = T(0,0,-R) · Ry(-θ) · T(-c).
 export function aPantalla(punto, s, n) {
-  const c = ejeEn(s * SEPARACION, n);
+  const c = ejeEn(-s * SEPARACION, n);
   const theta = s * PASO_ANGULO;
   const x = punto.x - c.x;
   const y = punto.y - c.y;
@@ -116,23 +116,24 @@ export function aPantalla(punto, s, n) {
 
 // Lo que necesitan los grupos del mundo 3D para el estado `s`.
 export function transformacionMundo(s, n) {
-  const c = ejeEn(s * SEPARACION, n);
+  const c = ejeEn(-s * SEPARACION, n);
   return { pivote: [0, 0, -RADIO_ANCLA], rotacionY: -s * PASO_ANGULO, contenido: [-c.x, -c.y, -c.z] };
 }
 
-// Minimapa: la S proyectada en 2D (x lateral, y hacia arriba = hitos más nuevos).
-// Devuelve el camino de la columna y la posición de cada hito en píxeles. El camino tiene
-// PUNTOS_POR_TRAMO puntos entre dos hitos: el hito i es exactamente camino[i * PUNTOS_POR_TRAMO].
+// Minimapa: la S proyectada en 2D (x lateral, el MÁXIMO arriba: hito 0 arriba del
+// todo, hitos más nuevos hacia abajo). Devuelve el camino de la columna y la posición
+// de cada hito en píxeles. El camino tiene PUNTOS_POR_TRAMO puntos entre dos hitos:
+// el hito i es exactamente camino[i * PUNTOS_POR_TRAMO].
 export const PUNTOS_POR_TRAMO = 8;
 export function puntosMinimapa(n, { ancho, alto, margen = 10 }) {
-  const desde = 0;
-  const hasta = altoTotal(n);
+  const minimo = -altoTotal(n);
+  const maximo = 0;
   const aPx = (p) => ({
     x: ancho / 2 + (p.x / AMPLITUD_S) * (ancho / 2 - margen / 2),
-    y: alto - margen - ((p.y - desde) / (hasta - desde)) * (alto - 2 * margen),
+    y: alto - margen - ((p.y - minimo) / (maximo - minimo)) * (alto - 2 * margen),
   });
   const cantidad = Math.max(n - 1, 1) * PUNTOS_POR_TRAMO + 1;
-  const camino = Array.from({ length: cantidad }, (_, k) => aPx(ejeEn(desde + ((hasta - desde) * k) / (cantidad - 1), n)));
+  const camino = Array.from({ length: cantidad }, (_, k) => aPx(ejeEn(maximo + ((minimo - maximo) * k) / (cantidad - 1), n)));
   const hitos = Array.from({ length: n }, (_, i) => aPx(vertebra(i, n).centro));
   return { camino, hitos };
 }

@@ -28,11 +28,35 @@
 .recorrido {
   stroke: var(--color-accent);
   filter: drop-shadow(0 0 4px var(--color-accent));
+  animation: minimapa-brillo 2.4s ease-in-out infinite;
+}
+
+@keyframes minimapa-brillo {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px var(--color-accent));
+  }
+  50% {
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 80%, transparent));
+  }
 }
 
 .marcador {
   fill: #fff;
   filter: drop-shadow(0 0 6px var(--color-accent));
+  opacity: 0.95;
+  transition: opacity 0.3s ease;
+  animation: minimapa-halo 2.4s ease-in-out infinite;
+}
+
+@keyframes minimapa-halo {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .boton {
@@ -54,13 +78,27 @@
   border: 1.5px solid var(--color-muted);
   border-radius: 50%;
   background: var(--color-bg);
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .boton[aria-current='step'] .punto {
   border-color: var(--color-accent);
   background: var(--color-accent);
   transform: scale(1.3);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
+  animation: minimapa-pulso 2s ease-in-out infinite;
+}
+
+@keyframes minimapa-pulso {
+  0%,
+  100% {
+    transform: scale(1.3);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+  50% {
+    transform: scale(1.45);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 0%, transparent);
+  }
 }
 
 .boton:hover .punto,
@@ -88,13 +126,27 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%);
-  transition: opacity 0.15s ease;
+  transform: translateY(-50%) translateX(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .boton:hover .tooltip,
 .boton:focus-visible .tooltip {
   opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recorrido,
+  .marcador,
+  .boton[aria-current='step'] .punto {
+    animation: none;
+  }
+  .punto,
+  .tooltip,
+  .marcador {
+    transition: none;
+  }
 }
 
 @media (max-width: 768px) {
