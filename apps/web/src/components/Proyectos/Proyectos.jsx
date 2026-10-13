@@ -1,179 +1,187 @@
 'use client';
 
-// Contenedor con scroll cinematográfico de la sección Proyectos en 3 fases:
-// intro (muro que se disuelve + presentador que entra) y cierre (vista mixta),
-// todo guiado por el progreso de scroll del contenedor (0 a 1).
-// El alto del recorrido (~420svh) y el sticky los define el CSS.
-import { useRef, useState } from 'react';
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useMotionTemplate,
-  useReducedMotion,
-} from 'framer-motion';
+// Sección Proyectos: una sola vista. La marquesina 3D con la tarjeta de cada proyecto
+// ocupa todo el fondo y la lista va a la izquierda (hover tabs). Al apuntar un proyecto
+// —en la lista o en la marquesina— su tarjeta viaja desde la marquesina al primer plano
+// y se abre a pantalla completa; al elegir otro, la anterior vuelve a su lugar mientras
+// la nueva sale de la suya. Sin nada elegido, se ve la marquesina con la lista.
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, useReducedMotion } from 'framer-motion';
+import { ThreeDMarquee } from '@/components/ui/3d-marquee.jsx';
 import TextoDescifrado from '../TextoDescifrado/TextoDescifrado.jsx';
-import useConsulta from '@/hooks/useConsulta.js';
-import { listarProyectos, resumenCifras } from '../../lib/proyectos.js';
-import MuroProyectos from './MuroProyectos.jsx';
-import PresentadorProyectos from './PresentadorProyectos.jsx';
-import MixtoProyectos from './MixtoProyectos.jsx';
+import { listarProyectos, resumenCifras } from '@/lib/proyectos.js';
+import { indicePorTecla } from '@/lib/navegacionProyectos.js';
+import NavegacionMixta from './NavegacionMixta.jsx';
+import TarjetaMarca from './TarjetaMarca.jsx';
+import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
 
+// Intención de hover sobre la marquesina: cruzarla con el mouse no abre nada.
+const DEMORA_MARQUESINA_MS = 160;
+// Con 13 tarjetas la grilla del marquee quedaba arriba a la izquierda, fuera de la
+// vista: se la corre (en píxeles de su caja, que escala sola) hacia el centro del espacio
+// que deja la lista.
+const POSICION_GRILLA = { top: '971px', right: '-108px' };
+
 export default function Proyectos() {
-  // Referencia al contenedor alto: el avance del scroll por ese alto
-  // (definido en el CSS) es el progreso que anima las tres capas.
-  const refContenedor = useRef(null);
-  // Respeta el ajuste de movimiento reducido del sistema operativo.
-  const movimientoReducido = useReducedMotion();
-  // En celular el presentador es más alto que la pantalla: el panel fijo lo
-  // recortaba. Ahí se usa la versión apilada, igual que con movimiento reducido.
-  const esCelular = useConsulta('(max-width: 768px)');
-
-  // Índice de la intro (fase muro + presentador), en modo controlado.
-  const [introActivo, setIntroActivo] = useState(0);
-
-  // Catálogo local para resolver el slug excluido del muro.
-  const proyectos = listarProyectos();
-
-  // Cifras de cabecera desde el catálogo local ("13 proyectos · ...").
+  const proyectos = useMemo(() => listarProyectos(), []);
+  const reducido = Boolean(useReducedMotion());
   const cifras = resumenCifras();
   const textoCifras = `${cifras.total} proyectos · ${cifras.clientes} clientes · ${cifras.laborales} sistemas en planta`;
 
-  // Progreso de 0 a 1 mientras el contenedor cruza la ventana.
-  const { scrollYProgress } = useScroll({
-    target: refContenedor,
-    offset: ['start start', 'end end'],
-  });
-  // framer-motion acelera con la ScrollTimeline del navegador las transformaciones
-  // por rangos de un scrollYProgress, y con este panel sticky calcula mal los rangos:
-  // el muro volvía a aparecer y el cierre nunca llegaba a opacidad 1. Pasarlo por una
-  // función corta esa aceleración y los valores se calculan en JS.
-  const progreso = useTransform(scrollYProgress, (valor) => valor);
+  const refPanel = useRef(null);
+  const [tamano, setTamano] = useState({ ancho: 0, alto: 0 });
+  useLayoutEffect(() => {
+    const panel = refPanel.current;
+    if (!panel) return undefined;
+    const medirPanel = () => setTamano({ ancho: panel.clientWidth, alto: panel.clientHeight });
+    medirPanel();
+    const observador = new ResizeObserver(medirPanel);
+    observador.observe(panel);
+    return () => observador.disconnect();
+  }, []);
 
-  // Muro: visible al inicio, se disuelve con zoom y desenfoque.
-  const opacidadMuro = useTransform(progreso, [0.12, 0.28], [1, 0]);
-  const escalaMuro = useTransform(progreso, [0.12, 0.28], [1, 1.12]);
-  const desenfoqueMuro = useTransform(progreso, [0.12, 0.28], [0, 8]);
-  const filtroMuro = useMotionTemplate`blur(${desenfoqueMuro}px)`;
+  // Activo = el que está en primer plano; saliendo = los que vuelven a la marquesina.
+  // Mientras tanto, sus tarjetas se ocultan: en su lugar viaja la copia.
+  const [activo, setActivo] = useState(null);
+  const [saliendo, setSaliendo] = useState([]);
+  const refActivo = useRef(null);
+  const elegir = useCallback((slug) => {
+    if (slug === refActivo.current) return;
+    const anterior = refActivo.current;
+    if (anterior) setSaliendo((lista) => (lista.includes(anterior) ? lista : [...lista, anterior]));
+    setSaliendo((lista) => lista.filter((s) => s !== slug));
+    refActivo.current = slug;
+    setActivo(slug);
+  }, []);
+  const cerrar = useCallback(() => elegir(null), [elegir]);
 
-  // Presentador: entra desvanecido desde abajo con leve zoom y luego sale.
-  const opacidadPresentador = useTransform(
-    progreso,
-    [0.24, 0.38, 0.52, 0.64],
-    [0, 1, 1, 0],
+  // Hover sobre una tarjeta de la marquesina, con intención.
+  const refDemora = useRef(0);
+  const apuntarMarquesina = useCallback(
+    (slug) => {
+      clearTimeout(refDemora.current);
+      refDemora.current = setTimeout(() => elegir(slug), DEMORA_MARQUESINA_MS);
+    },
+    [elegir]
   );
-  const escalaPresentador = useTransform(progreso, [0.24, 0.38], [0.94, 1]);
-  const desplazamientoPresentador = useTransform(progreso, [0.24, 0.38], [40, 0]);
-  // Sin clics fantasma: sin eventos de puntero hasta ser medio visible.
-  const eventosPunteroPresentador = useTransform(opacidadPresentador, (valor) =>
-    valor < 0.5 ? 'none' : 'auto',
-  );
+  const salirMarquesina = useCallback(() => clearTimeout(refDemora.current), []);
+  useEffect(() => () => clearTimeout(refDemora.current), []);
 
-  // Mixto (cierre): entra desvanecido desde abajo con leve zoom.
-  const opacidadMixto = useTransform(progreso, [0.6, 0.76], [0, 1]);
-  const escalaMixto = useTransform(progreso, [0.6, 0.76], [0.94, 1]);
-  const desplazamientoMixto = useTransform(progreso, [0.6, 0.76], [40, 0]);
-  const eventosPunteroMixto = useTransform(opacidadMixto, (valor) =>
-    valor < 0.5 ? 'none' : 'auto',
-  );
+  // Caja de la tarjeta de un proyecto en la marquesina, en coordenadas del panel: el
+  // centro sale de su caja en pantalla y el tamaño, de su tamaño sin transformar por la
+  // escala de la marquesina (la inclinación la pone la vista).
+  const medir = useCallback((slug) => {
+    const panel = refPanel.current;
+    const tarjeta = panel?.querySelector(`[data-clave="${slug}"]`);
+    if (!panel || !tarjeta) return null;
+    const contenedor = tarjeta.closest('[data-escala-marquee]');
+    const escala = contenedor ? contenedor.getBoundingClientRect().width / contenedor.offsetWidth : 1;
+    const caja = tarjeta.getBoundingClientRect();
+    const base = panel.getBoundingClientRect();
+    const ancho = tarjeta.offsetWidth * escala;
+    const alto = tarjeta.offsetHeight * escala;
+    return {
+      x: caja.left + caja.width / 2 - base.left - ancho / 2,
+      y: caja.top + caja.height / 2 - base.top - alto / 2,
+      ancho,
+      alto,
+    };
+  }, []);
 
-  // Movimiento reducido: sin sticky ni transiciones, muro + presentador
-  // + mixto apilados como contenido estático.
-  if (movimientoReducido || esCelular) {
-    return (
-      <section
-        id="proyectos"
-        className={`${styles.contenedor} ${styles.contenedorEstatico}`}
-        aria-labelledby="titulo-proyectos"
-      >
-        <div className={`${styles.panel} ${styles.panelEstatico}`}>
-          <div className={styles.cabeceraEstatica}>
-            <h2 id="titulo-proyectos" className={styles.titulo}>
-              <TextoDescifrado
-                texto="Proyectos"
-                activarCon="view"
-                secuencial
-                velocidad={40}
-              />
-            </h2>
-            <p className={styles.lineaCifras}>{textoCifras}</p>
-          </div>
-          <div className={`${styles.capaEstatica} ${styles.muroEstatico}`}>
-            <MuroProyectos excluirSlug={proyectos[introActivo]?.slug} />
-          </div>
-          <div className={styles.capaEstatica}>
-            <PresentadorProyectos activo={introActivo} alCambiar={setIntroActivo} />
-          </div>
-          {/* En celular el presentador ya lista todos los proyectos con su tarjeta: el
-              cierre repetiría lo mismo en una tira. */}
-          {esCelular ? null : (
-            <div className={`${styles.capaEstatica} ${styles.mixtoEstatico}`}>
-              <MixtoProyectos />
-            </div>
-          )}
-        </div>
-      </section>
-    );
-  }
+  // Al salir de la sección se vuelve a la marquesina.
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const panel = refPanel.current;
+    if (!panel) return undefined;
+    const observador = new IntersectionObserver(([entrada]) => {
+      setVisible(entrada.isIntersecting);
+      if (!entrada.isIntersecting) elegir(null);
+    }, { threshold: 0.35 });
+    observador.observe(panel);
+    return () => observador.disconnect();
+  }, [elegir]);
+
+  // Teclado con la sección a la vista: flechas recorren, Escape vuelve a la marquesina.
+  useEffect(() => {
+    if (!visible) return undefined;
+    const alTecla = (e) => {
+      const objetivo = e.target;
+      if (objetivo && (objetivo.tagName === 'INPUT' || objetivo.tagName === 'TEXTAREA' || objetivo.isContentEditable)) return;
+      if (e.key === 'Escape') {
+        if (refActivo.current) document.getElementById(`nav-${refActivo.current}`)?.focus();
+        cerrar();
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp'].includes(e.key) || !refActivo.current) return;
+      const actual = proyectos.findIndex((p) => p.slug === refActivo.current);
+      const siguiente = indicePorTecla(e.key, actual, proyectos.length);
+      if (siguiente === null || !proyectos[siguiente]) return;
+      e.preventDefault();
+      elegir(proyectos[siguiente].slug);
+      document.getElementById(`nav-${proyectos[siguiente].slug}`)?.scrollIntoView({ block: 'nearest' });
+    };
+    window.addEventListener('keydown', alTecla);
+    return () => window.removeEventListener('keydown', alTecla);
+  }, [visible, proyectos, elegir, cerrar]);
+
+  // La lista (en celular, una tira horizontal) muestra siempre el proyecto abierto.
+  useEffect(() => {
+    if (activo) document.getElementById(`nav-${activo}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activo]);
+
+  const tarjetas = useMemo(
+    () =>
+      proyectos.map((p) => ({
+        clave: p.slug,
+        titulo: p.titulo,
+        contenido: <TarjetaMarca proyecto={p} />,
+      })),
+    [proyectos]
+  );
+  const proyecto = proyectos.find((p) => p.slug === activo) ?? null;
+  const ocultas = useMemo(() => [activo, ...saliendo].filter(Boolean), [activo, saliendo]);
 
   return (
-    <section
-      id="proyectos"
-      ref={refContenedor}
-      className={styles.contenedor}
-      aria-labelledby="titulo-proyectos"
-    >
-      <div className={styles.panel}>
-        {/* Muro + título: comparten opacidad para desaparecer juntos. */}
-        <motion.div
-          className={styles.capaMuro}
-          style={{
-            opacity: opacidadMuro,
-            scale: escalaMuro,
-            filter: filtroMuro,
-          }}
-        >
-          <MuroProyectos excluirSlug={proyectos[introActivo]?.slug} />
-          <div className={styles.cabecera}>
-            <h2 id="titulo-proyectos" className={styles.titulo}>
-              <TextoDescifrado
-                texto="Proyectos"
-                activarCon="view"
-                secuencial
-                velocidad={40}
+    <section id="proyectos" className={styles.contenedor} aria-labelledby="titulo-proyectos">
+      <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'}>
+        <div className={styles.fondo}>
+          <ThreeDMarquee
+            images={tarjetas}
+            className={styles.marquesina}
+            alApuntar={apuntarMarquesina}
+            alSalir={salirMarquesina}
+            claveActiva={ocultas}
+            posicionGrilla={POSICION_GRILLA}
+          />
+          <div className={styles.velo} aria-hidden="true" />
+        </div>
+
+        <div className={styles.cabecera}>
+          <h2 id="titulo-proyectos" className={styles.titulo}>
+            <TextoDescifrado texto="Proyectos" activarCon="view" secuencial velocidad={40} />
+          </h2>
+          <p className={styles.cifras}>{textoCifras}</p>
+        </div>
+
+        {tamano.ancho > 0 ? (
+          <AnimatePresence onExitComplete={() => setSaliendo([])}>
+            {proyecto ? (
+              <VistaProyecto
+                key={proyecto.slug}
+                proyecto={proyecto}
+                medir={medir}
+                tamano={tamano}
+                reducido={reducido}
+                alCerrar={cerrar}
               />
-            </h2>
-            <p className={styles.lineaCifras}>{textoCifras}</p>
-          </div>
-        </motion.div>
+            ) : null}
+          </AnimatePresence>
+        ) : null}
 
-        {/* Presentador: entra cuando el muro ya se está disolviendo y sale
-            antes del cierre. */}
-        <motion.div
-          className={styles.capaPresentador}
-          style={{
-            opacity: opacidadPresentador,
-            scale: escalaPresentador,
-            y: desplazamientoPresentador,
-            pointerEvents: eventosPunteroPresentador,
-          }}
-        >
-          <PresentadorProyectos activo={introActivo} alCambiar={setIntroActivo} />
-        </motion.div>
-
-        {/* Mixto (cierre): entra al final y queda como vista de cierre. */}
-        <motion.div
-          className={styles.capaMixto}
-          style={{
-            opacity: opacidadMixto,
-            scale: escalaMixto,
-            y: desplazamientoMixto,
-            pointerEvents: eventosPunteroMixto,
-          }}
-        >
-          <MixtoProyectos />
-        </motion.div>
+        <div className={styles.columnaNav}>
+          <NavegacionMixta proyectos={proyectos} activoSlug={activo} alElegir={elegir} alSalir={() => {}} />
+        </div>
       </div>
     </section>
   );
