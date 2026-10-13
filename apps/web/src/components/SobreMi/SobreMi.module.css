@@ -84,9 +84,8 @@
   top: 50%;
   z-index: 3;
   width: min(40%, 34rem);
-  max-height: calc(100svh - 10rem);
-  overflow-y: auto;
-  scrollbar-width: none;
+  /* Sin overflow: un contenedor con scroll recortaba en recto el halo del año (se veía
+     un rectángulo) y mostraba un mini scroll. */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -126,6 +125,10 @@
     left: 1rem;
     width: auto;
     max-height: 42svh;
+    /* En celular la hoja sí scrollea; el aire deja entrar el halo del año. */
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding: 1rem 0.75rem 0;
     overscroll-behavior: contain;
     transform: translateY(24px);
   }

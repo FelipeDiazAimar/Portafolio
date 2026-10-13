@@ -382,7 +382,7 @@ export default function Escena1Bandera({ activa, reducido }) {
               map={lienzo.textura}
               emissiveMap={lienzo.textura}
               emissive="#ffffff"
-              emissiveIntensity={0.35}
+              emissiveIntensity={0.12}
               roughness={0.85}
               side={THREE.DoubleSide}
             />

@@ -4,8 +4,8 @@
 import { RADIO_ANCLA, aPantalla, longitudHasta, puntoEnFraccion } from './geometria.js';
 
 export const PESO_ESTANCIA = 1;
-// Los viajes pesan más para darles ~16.8x más scroll que a las estancias.
-export const PESO_VIAJE = 16.8;
+// Los viajes pesan mucho más que las estancias: son el recorrido cinematográfico.
+export const PESO_VIAJE = 28;
 // Desde qué avance de un viaje el imán lleva al hito siguiente (antes, al anterior).
 export const UMBRAL_IMAN = 0.35;
 
@@ -68,9 +68,13 @@ export function progresoDeEstancia(i, n) {
 
 // Adónde llevar el scroll cuando el usuario lo suelta: sólo actúa en un viaje (las
 // estancias son zonas de descanso). Devuelve null si no hay que mover nada.
-export function imanDe(p, n) {
+// `direccion` (+1 bajando, -1 subiendo) termina el viaje hacia el hito al que se iba;
+// sin dirección decide por el umbral.
+export function imanDe(p, n, direccion = 0) {
   const tramo = tramoDe(p, n);
   if (tramo.tipo === 'estancia') return null;
+  if (direccion > 0) return progresoDeEstancia(tramo.indice + 1, n);
+  if (direccion < 0) return progresoDeEstancia(tramo.indice, n);
   return progresoDeEstancia(tramo.t >= UMBRAL_IMAN ? tramo.indice + 1 : tramo.indice, n);
 }
 

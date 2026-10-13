@@ -28,7 +28,7 @@ const pViaje = (i, t) => (i * (PESO_ESTANCIA + PESO_VIAJE) + PESO_ESTANCIA + t *
 
 test('pesoTotal: 7 estancias y 6 viajes', () => {
   assert.equal(PESO_ESTANCIA, 1);
-  assert.equal(PESO_VIAJE, 16.8);
+  assert.equal(PESO_VIAJE, 28);
   assert.ok(Math.abs(W - (7 * PESO_ESTANCIA + 6 * PESO_VIAJE)) < 1e-9);
 });
 
@@ -89,6 +89,17 @@ test('llenadoDe: monótono y exacto en cada estancia', () => {
     assert.ok(f >= previo - 1e-12);
     previo = f;
   }
+});
+
+test('imanDe: con dirección, termina el viaje hacia donde se iba', () => {
+  // Bajando (hacia el hito siguiente), aunque recién haya empezado el viaje.
+  assert.equal(imanDe(pViaje(2, 0.05), N, 1), progresoDeEstancia(3, N));
+  assert.equal(imanDe(pViaje(2, 0.9), N, 1), progresoDeEstancia(3, N));
+  // Subiendo (de vuelta al anterior), aunque esté casi en el siguiente.
+  assert.equal(imanDe(pViaje(2, 0.95), N, -1), progresoDeEstancia(2, N));
+  assert.equal(imanDe(pViaje(2, 0.1), N, -1), progresoDeEstancia(2, N));
+  // En una estancia no hace nada.
+  assert.equal(imanDe(progresoDeEstancia(3, N), N, 1), null);
 });
 
 test('imanDe: nada en estancias; en viajes decide por el umbral', () => {

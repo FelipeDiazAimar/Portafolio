@@ -32,8 +32,8 @@ const EXTRA_BIO_MS = 3000;
 // Los saltos programáticos (imán, autoplay, minimapa) recorren un viaje completo en
 // este tiempo: con el scroll suave nativo, 9 pantallas pasaban en menos de un segundo
 // y la primera persona no se llegaba a ver.
-const MS_POR_VIAJE = 5000;
-const MS_MAXIMO_SALTO = 14000;
+const MS_POR_VIAJE = 12000;
+const MS_MAXIMO_SALTO = 25000;
 
 // Arranca y frena despacio.
 function suaveEntradaSalida(t) {
@@ -133,12 +133,17 @@ function SobreMiRecorrido({ onFallo }) {
       refAnimacion.current = 0;
     };
     window.addEventListener('pointerdown', marcar, { passive: true });
-    window.addEventListener('wheel', marcar, { passive: true });
+    // La inercia del touchpad sigue mandando eventos de rueda chiquitos después de
+    // un click en el minimapa: no deben cortar el salto. Sólo cuenta un giro real.
+    const marcarRueda = (evento) => {
+      if (Math.abs(evento.deltaY) > 6) marcar();
+    };
+    window.addEventListener('wheel', marcarRueda, { passive: true });
     window.addEventListener('touchstart', marcar, { passive: true });
     window.addEventListener('keydown', marcar);
     return () => {
       window.removeEventListener('pointerdown', marcar);
-      window.removeEventListener('wheel', marcar);
+      window.removeEventListener('wheel', marcarRueda);
       window.removeEventListener('touchstart', marcar);
       window.removeEventListener('keydown', marcar);
     };
@@ -191,6 +196,9 @@ function SobreMiRecorrido({ onFallo }) {
   useEffect(() => {
     let espera = 0;
     let dedos = 0;
+    // Hacia dónde se venía scrolleando: el imán termina el viaje en ese sentido.
+    let ultimaY = window.scrollY;
+    let direccion = 0;
     const intentar = () => {
       const contenedor = refContenedor.current;
       if (dedos > 0 || !contenedor || document.documentElement.dataset.sinIman) return;
@@ -204,10 +212,13 @@ function SobreMiRecorrido({ onFallo }) {
       const caja = contenedor.getBoundingClientRect();
       // Sólo con el panel fijo en pantalla (no al entrar o salir de la sección).
       if (caja.top > 1 || caja.bottom < window.innerHeight - 1) return;
-      const objetivo = imanDe(scrollYProgress.get(), N);
+      const objetivo = imanDe(scrollYProgress.get(), N, direccion);
       if (objetivo != null) scrollAProgreso(objetivo);
     };
     const alScroll = () => {
+      const y = window.scrollY;
+      if (y !== ultimaY) direccion = Math.sign(y - ultimaY);
+      ultimaY = y;
       clearTimeout(espera);
       espera = setTimeout(intentar, ESPERA_IMAN_MS);
     };
