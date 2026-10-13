@@ -25,6 +25,18 @@ const THEME_INIT_SCRIPT = `(function() {
   } catch (e) {}
 })();`;
 
+// En una recarga el navegador debe restaurar el scroll solo (la sección Sobre
+// mí retoma su hito). Corre antes de hidratar: el valor 'manual' de la visita
+// anterior persiste y hay que devolverlo a 'auto' a tiempo.
+const SCROLL_INIT_SCRIPT = `(function() {
+  try {
+    var nav = performance.getEntriesByType('navigation')[0];
+    if (nav && nav.type === 'reload' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'auto';
+    }
+  } catch (e) {}
+})();`;
+
 function resolveLocale(acceptLanguageHeader) {
   const firstTag = acceptLanguageHeader?.split(',')[0]?.trim().toLowerCase();
   return firstTag?.startsWith('en') ? 'en' : 'es';
@@ -38,6 +50,7 @@ export default async function RootLayout({ children }) {
     <html lang={locale} suppressHydrationWarning className={inter.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SCROLL_INIT_SCRIPT }} />
       </head>
       <body>
         <ProveedorPortfolio>

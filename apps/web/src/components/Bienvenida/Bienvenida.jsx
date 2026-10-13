@@ -61,6 +61,11 @@ export default function Bienvenida({ locale = 'es' }) {
     // centrado (si quedara scroll anterior, el inicio aparecería corrido).
     const recarga = performance.getEntriesByType('navigation')[0]?.type === 'reload';
     if (recarga) {
+      // El valor 'manual' de la visita anterior persiste en la entrada del
+      // historial: hay que devolverlo a 'auto' para que el navegador restaure.
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'auto';
+      }
       setVisible(false);
       return undefined;
     }

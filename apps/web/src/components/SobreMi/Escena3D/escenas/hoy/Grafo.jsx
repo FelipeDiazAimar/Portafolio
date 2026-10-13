@@ -255,7 +255,10 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     const area = areaVisible(rect, window.innerWidth > 768 ? 170 : 8);
     encuadre.current.pxPorLocal = pxPorLocal;
     encuadre.current.area = area;
-    encuadre.current.zoom = zoomParaRadio({ radioPx: radioLocal * pxPorLocal, area, margen: 6, maximo: ZOOM_BASE_MAX });
+    // El grafo entrando entero se veía chiquito: se usa un 30% más de pantalla
+    // (leve sangrado de bordes; el foco y sus conexiones quedan visibles).
+    const base = zoomParaRadio({ radioPx: radioLocal * pxPorLocal, area, margen: 6, maximo: ZOOM_BASE_MAX });
+    encuadre.current.zoom = Math.min(ZOOM_BASE_MAX, base * 1.3);
   };
 
   // Centro y zoom que encuadran un nodo junto con todas sus conexiones.

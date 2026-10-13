@@ -12,12 +12,10 @@ import Silueta from './Silueta.jsx';
 // un viaje se dispersa mientras la cámara despega.
 // La última estación ("Hoy": constelación de radio 2.2 + grafo de radio 2.6, con
 // escala base 0.57) se veía lejos/pequeña frente a las vecinas (hasta 0.8): se amplía
-// sólo ella con factor 1.9 (0.57*1.9≈1.08 base, ~0.94 con la responsiva de escritorio).
-// El neto crece ~35% frente al 1.4 anterior (1.9/1.4≈1.36). La constelación cabe en
-// escritorio (radio efectivo ~2.07 frente a mitad alto ~2.07 y semiancho ~1.83: sólo
-// roza los bordes laterales al girar, sin recorte feo) y el grafo se autoencuadra solo
-// con tope 2.6, así acompaña el agrande sin recortarse.
-const ESCALA_ULTIMA = 1.9;
+// sólo ella con factor 1.55 (0.57*1.55≈0.88 base, ~0.77 con la responsiva). Con 1.9 la
+// cámara quedaba dentro de los anillos; con 1.55 la constelación respira y el grafo
+// crece por su sobreencuadre propio (ver medirEncuadre).
+const ESCALA_ULTIMA = 1.55;
 function Estacion({ hito, indice, n, cercana, activa, dispersa, visita, reducido, claro, fraccion, color }) {
   const { posicion, angulo } = useMemo(() => ancla(indice, n), [indice, n]);
   const cargar = cargadorEscena(hito.id);
