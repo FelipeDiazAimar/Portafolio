@@ -13,6 +13,7 @@ import {
   useReducedMotion,
 } from 'framer-motion';
 import TextoDescifrado from '../TextoDescifrado/TextoDescifrado.jsx';
+import useConsulta from '@/hooks/useConsulta.js';
 import { listarProyectos, resumenCifras } from '../../lib/proyectos.js';
 import MuroProyectos from './MuroProyectos.jsx';
 import PresentadorProyectos from './PresentadorProyectos.jsx';
@@ -25,6 +26,9 @@ export default function Proyectos() {
   const refContenedor = useRef(null);
   // Respeta el ajuste de movimiento reducido del sistema operativo.
   const movimientoReducido = useReducedMotion();
+  // En celular el presentador es más alto que la pantalla: el panel fijo lo
+  // recortaba. Ahí se usa la versión apilada, igual que con movimiento reducido.
+  const esCelular = useConsulta('(max-width: 768px)');
 
   // Índice de la intro (fase muro + presentador), en modo controlado.
   const [introActivo, setIntroActivo] = useState(0);
@@ -76,7 +80,7 @@ export default function Proyectos() {
 
   // Movimiento reducido: sin sticky ni transiciones, muro + presentador
   // + mixto apilados como contenido estático.
-  if (movimientoReducido) {
+  if (movimientoReducido || esCelular) {
     return (
       <section
         id="proyectos"
@@ -95,15 +99,19 @@ export default function Proyectos() {
             </h2>
             <p className={styles.lineaCifras}>{textoCifras}</p>
           </div>
-          <div className={styles.capaEstatica}>
+          <div className={`${styles.capaEstatica} ${styles.muroEstatico}`}>
             <MuroProyectos excluirSlug={proyectos[introActivo]?.slug} />
           </div>
           <div className={styles.capaEstatica}>
             <PresentadorProyectos activo={introActivo} alCambiar={setIntroActivo} />
           </div>
-          <div className={styles.capaEstatica}>
-            <MixtoProyectos />
-          </div>
+          {/* En celular el presentador ya lista todos los proyectos con su tarjeta: el
+              cierre repetiría lo mismo en una tira. */}
+          {esCelular ? null : (
+            <div className={`${styles.capaEstatica} ${styles.mixtoEstatico}`}>
+              <MixtoProyectos />
+            </div>
+          )}
         </div>
       </section>
     );

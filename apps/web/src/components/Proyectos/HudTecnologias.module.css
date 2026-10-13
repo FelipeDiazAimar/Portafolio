@@ -153,6 +153,19 @@
   .chips {
     display: none;
   }
+
+  /* El presentador apilado (flex en columna) deja el HUD al final, en el flujo: absoluto
+     se montaba sobre la tarjeta de la problemática. */
+  .hud {
+    position: relative;
+    order: 4;
+    flex: none;
+  }
+
+  /* Angosto, los logos del carrusel le pasan por encima. */
+  .rotulo {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
