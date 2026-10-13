@@ -19,7 +19,7 @@ const MOVIL = Boolean(process.env.MOVIL);
 // Mismos pesos que lib/columna/recorrido.js (7 hitos).
 const N = 7;
 const PE = 1;
-const PV = 9.9;
+const PV = 16.8;
 const W = N * PE + (N - 1) * PV;
 const estancia = (i) => (i * (PE + PV) + PE / 2) / W;
 const viaje = (i, t) => (i * (PE + PV) + PE + t * PV) / W;

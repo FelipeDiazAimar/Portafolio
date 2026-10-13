@@ -4,8 +4,8 @@
 import { RADIO_ANCLA, aPantalla, longitudHasta, puntoEnFraccion } from './geometria.js';
 
 export const PESO_ESTANCIA = 1;
-// Los viajes pesan más para darles ~9.9x más scroll que a las estancias.
-export const PESO_VIAJE = 9.9;
+// Los viajes pesan más para darles ~16.8x más scroll que a las estancias.
+export const PESO_VIAJE = 16.8;
 // Desde qué avance de un viaje el imán lleva al hito siguiente (antes, al anterior).
 export const UMBRAL_IMAN = 0.35;
 

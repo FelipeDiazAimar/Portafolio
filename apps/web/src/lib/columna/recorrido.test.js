@@ -28,7 +28,7 @@ const pViaje = (i, t) => (i * (PESO_ESTANCIA + PESO_VIAJE) + PESO_ESTANCIA + t *
 
 test('pesoTotal: 7 estancias y 6 viajes', () => {
   assert.equal(PESO_ESTANCIA, 1);
-  assert.equal(PESO_VIAJE, 9.9);
+  assert.equal(PESO_VIAJE, 16.8);
   assert.ok(Math.abs(W - (7 * PESO_ESTANCIA + 6 * PESO_VIAJE)) < 1e-9);
 });
 
