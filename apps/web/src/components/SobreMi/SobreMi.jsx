@@ -6,7 +6,7 @@ import { useMotionValueEvent, useReducedMotion, useScroll, useSpring } from 'fra
 import hitos from '@/data/hitos.json';
 import useConsulta from '@/hooks/useConsulta.js';
 import useTema from '@/hooks/useTema.js';
-import { activoDe, imanDe, pesoTotal, progresoDeEstancia, tramoDe } from '@/lib/columna/recorrido.js';
+import { PESO_VIAJE, activoDe, imanDe, pesoTotal, progresoDeEstancia, tramoDe } from '@/lib/columna/recorrido.js';
 import { tiempoModeloMs } from '@/lib/tiempoModelo.js';
 import { hayWebGL } from './Escena3D/soporteWebGL.js';
 import LimiteErrores from './Escena3D/LimiteErrores.jsx';
@@ -29,6 +29,16 @@ const INICIO_AUTO_MS = 10000;
 const PAUSA_AUTO_MS = 120000;
 // Extra sobre el modelo para que cada escena+bio se vea antes de avanzar.
 const EXTRA_BIO_MS = 3000;
+// Los saltos programáticos (imán, autoplay, minimapa) recorren un viaje completo en
+// este tiempo: con el scroll suave nativo, 9 pantallas pasaban en menos de un segundo
+// y la primera persona no se llegaba a ver.
+const MS_POR_VIAJE = 5000;
+const MS_MAXIMO_SALTO = 14000;
+
+// Arranca y frena despacio.
+function suaveEntradaSalida(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+}
 
 function SobreMiRecorrido({ onFallo }) {
   const refContenedor = useRef(null);
@@ -114,9 +124,13 @@ function SobreMiRecorrido({ onFallo }) {
   // interacción en ventana. El scrollAProgreso programático del autoplay NO pasa
   // por estos listeners, así que no cuenta como gesto.
   const refUltimoGesto = useRef(null);
+  // Animación de scroll en curso (ver scrollAProgreso): un gesto real la corta.
+  const refAnimacion = useRef(0);
   useEffect(() => {
     const marcar = () => {
       refUltimoGesto.current = Date.now();
+      cancelAnimationFrame(refAnimacion.current);
+      refAnimacion.current = 0;
     };
     window.addEventListener('pointerdown', marcar, { passive: true });
     window.addEventListener('wheel', marcar, { passive: true });
@@ -139,11 +153,31 @@ function SobreMiRecorrido({ onFallo }) {
       if (!contenedor) return;
       const recorrido = contenedor.offsetHeight - window.innerHeight;
       const arriba = contenedor.getBoundingClientRect().top + window.scrollY;
-      refDestino.current = { p, expira: Date.now() + 8000 };
-      window.scrollTo({ top: arriba + p * recorrido, behavior: reducido ? 'auto' : 'smooth' });
+      const desde = window.scrollY;
+      const hasta = arriba + p * recorrido;
+      cancelAnimationFrame(refAnimacion.current);
+      refAnimacion.current = 0;
+      if (reducido) {
+        refDestino.current = null;
+        window.scrollTo({ top: hasta, behavior: 'instant' });
+        return;
+      }
+      // Duración según cuántos viajes hay que recorrer (un salto largo del minimapa
+      // tiene tope). 'instant' en cada paso: el CSS del sitio puede pedir scroll suave.
+      const largoViaje = (recorrido * PESO_VIAJE) / pesoTotal(N);
+      const duracion = Math.min(MS_MAXIMO_SALTO, Math.max(600, (Math.abs(hasta - desde) / largoViaje) * MS_POR_VIAJE));
+      refDestino.current = { p, expira: Date.now() + duracion + 1000 };
+      const inicio = performance.now();
+      const paso = (ahora) => {
+        const t = Math.min(1, (ahora - inicio) / duracion);
+        window.scrollTo({ top: desde + (hasta - desde) * suaveEntradaSalida(t), behavior: 'instant' });
+        refAnimacion.current = t < 1 ? requestAnimationFrame(paso) : 0;
+      };
+      refAnimacion.current = requestAnimationFrame(paso);
     },
     [reducido]
   );
+  useEffect(() => () => cancelAnimationFrame(refAnimacion.current), []);
   const irAlHito = useCallback(
     (i) => {
       // Click en el minimapa: el usuario tomó control, cuenta como gesto.
