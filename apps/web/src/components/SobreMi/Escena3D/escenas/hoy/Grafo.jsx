@@ -78,6 +78,11 @@ const m3 = new THREE.Matrix3();
 const m4 = new THREE.Matrix4();
 const rayo = new THREE.Raycaster();
 const plano = new THREE.Plane();
+// El nodo central ('yo') va clavado en el origen local (0,0,0): ahí llega la
+// costilla de la última estación. Excluido de fuerzas/integración (fijos) y del
+// arrastre (no se mueve ni deriva). En el origen no rompe medirEncuadre: el radio
+// se mide con el nodo más lejano.
+const IDX_YO = indiceDe('yo');
 
 // Grafo de conocimiento 3D estilo Obsidian. Los nodos son esferas en un volumen y se
 // puede girar 360° (los nombres siempre miran a la cámara). Al pasar el mouse por un
@@ -96,10 +101,14 @@ export default function Grafo({ tiempo, claro, activa = true }) {
   const refActiva = useRef(activa);
   refActiva.current = activa;
 
-  const inicial = useMemo(() => distribuir(), []);
+  const inicial = useMemo(() => {
+    const d = distribuir();
+    d[IDX_YO] = [0, 0, 0];
+    return d;
+  }, []);
   const pos = useRef(inicial.map((p) => [...p]));
   const vel = useRef(inicial.map(() => [0, 0, 0]));
-  const fijos = useRef(inicial.map(() => false));
+  const fijos = useRef(inicial.map((_, i) => i === IDX_YO));
   const alpha = useRef(0);
   const distancias = useMemo(() => {
     const radios = inicial.map(([x, y, z]) => Math.hypot(x, y, z));
@@ -205,7 +214,7 @@ export default function Grafo({ tiempo, claro, activa = true }) {
   const reordenarTodo = () => {
     pos.current = inicial.map((p) => [...p]);
     vel.current = inicial.map(() => [0, 0, 0]);
-    fijos.current = inicial.map(() => false);
+    fijos.current = inicial.map((_, i) => i === IDX_YO);
     alpha.current = 0;
   };
 
@@ -409,6 +418,8 @@ export default function Grafo({ tiempo, claro, activa = true }) {
       if (!refActiva.current) return;
       const a = arrastre.current;
       if (a) {
+        // El 'yo' está clavado en el origen: no se arrastra (el click sí selecciona).
+        if (a.i === IDX_YO) return;
         if (!a.movido && Math.hypot(evento.clientX - a.x, evento.clientY - a.y) > 4) a.movido = true;
         if (!a.movido) return;
         const rect = lienzoDom.getBoundingClientRect();
@@ -455,7 +466,8 @@ export default function Grafo({ tiempo, claro, activa = true }) {
           const { url } = NODOS_GRAFO[a.i];
           if (seleccion.current === NODOS_GRAFO[a.i].id && url) window.open(url, '_blank', 'noopener,noreferrer');
           else seleccionar(a.i);
-          fijos.current[a.i] = false;
+          // El 'yo' queda fijo aunque se le haga click.
+          if (a.i !== IDX_YO) fijos.current[a.i] = false;
         }
         cursor(foco.current ? 'pointer' : '');
         actualizarBloqueo();

@@ -24,6 +24,11 @@ const MundoColumna = dynamic(() => import('./Columna3D/MundoColumna.jsx'), { ssr
 const N = hitos.length;
 const ESPERA_LLEGADA_MS = 400;
 const ESPERA_IMAN_MS = 260;
+// Autoplay: arranque en el primer hito sin tocar nada, y retoma tras 2 min pausado.
+const INICIO_AUTO_MS = 10000;
+const PAUSA_AUTO_MS = 120000;
+// Extra sobre el modelo para que cada escena+bio se vea antes de avanzar.
+const EXTRA_BIO_MS = 3000;
 
 function SobreMiRecorrido({ onFallo }) {
   const refContenedor = useRef(null);
@@ -105,6 +110,26 @@ function SobreMiRecorrido({ onFallo }) {
     };
   }, [vista.tipo, vista.indice, enPantalla, reducido]);
 
+  // Último gesto real del usuario (ref, sin renders extra): se actualiza con
+  // interacción en ventana. El scrollAProgreso programático del autoplay NO pasa
+  // por estos listeners, así que no cuenta como gesto.
+  const refUltimoGesto = useRef(null);
+  useEffect(() => {
+    const marcar = () => {
+      refUltimoGesto.current = Date.now();
+    };
+    window.addEventListener('pointerdown', marcar, { passive: true });
+    window.addEventListener('wheel', marcar, { passive: true });
+    window.addEventListener('touchstart', marcar, { passive: true });
+    window.addEventListener('keydown', marcar);
+    return () => {
+      window.removeEventListener('pointerdown', marcar);
+      window.removeEventListener('wheel', marcar);
+      window.removeEventListener('touchstart', marcar);
+      window.removeEventListener('keydown', marcar);
+    };
+  }, []);
+
   // Destino de un salto programático (minimapa o imán): mientras el scroll suave
   // viaja hacia él, el imán no interviene para no desviarlo a un hito intermedio.
   const refDestino = useRef(null);
@@ -119,7 +144,14 @@ function SobreMiRecorrido({ onFallo }) {
     },
     [reducido]
   );
-  const irAlHito = useCallback((i) => scrollAProgreso(progresoDeEstancia(i, N)), [scrollAProgreso]);
+  const irAlHito = useCallback(
+    (i) => {
+      // Click en el minimapa: el usuario tomó control, cuenta como gesto.
+      refUltimoGesto.current = Date.now();
+      scrollAProgreso(progresoDeEstancia(i, N));
+    },
+    [scrollAProgreso]
+  );
 
   // Imán: si el usuario suelta el scroll a mitad de un viaje, lo termina (o lo deshace).
   useEffect(() => {
@@ -161,6 +193,58 @@ function SobreMiRecorrido({ onFallo }) {
       window.removeEventListener('touchcancel', alTocar);
     };
   }, [scrollYProgress, scrollAProgreso]);
+
+  // Autoplay: si no se toca nada en el primer hito, la línea de tiempo se
+  // reproduce sola entera; si el usuario la deja pausada más de 2 min, retoma.
+  // Al llegar a cada estancia este efecto reprograma el siguiente avance, así
+  // la cadena recorre todos los hitos sin más intervención.
+  useEffect(() => {
+    // Movimiento reducido: sin autoplay, por accesibilidad.
+    if (reducido) return undefined;
+    // Capturas: mismo interruptor que el imán (sólo para verificación).
+    if (document.documentElement.dataset.sinIman) return undefined;
+    // Sólo desde una estancia con siguiente; en el último hito no hace nada.
+    if (vista.tipo !== 'estancia' || vista.indice >= N - 1) return undefined;
+    // Fuera de pantalla no se programa nada (al volver, enPantalla re-ejecuta).
+    if (!enPantalla) return undefined;
+    const i = vista.indice;
+    // Cada escena+bio se deja ver (tiempo del modelo + 3 s) antes de avanzar.
+    const dwell = tiempoModeloMs(hitos[i].id) + EXTRA_BIO_MS;
+    // Arranque: en la estancia 0 sin gestos previos se espera el inicio; si el
+    // usuario ya tomó control, se respeta la pausa de 2 min desde su gesto.
+    const tomado = refUltimoGesto.current != null;
+    const haceCuanto = tomado ? Date.now() - refUltimoGesto.current : 0;
+    const base = !tomado && i === 0 ? INICIO_AUTO_MS : dwell;
+    const espera = tomado && haceCuanto < PAUSA_AUTO_MS ? PAUSA_AUTO_MS - haceCuanto : base;
+    const programadoEn = Date.now();
+    let id = 0;
+    function reprogramar(ms) {
+      clearTimeout(id);
+      id = setTimeout(tick, ms);
+    }
+    function tick() {
+      // Gesto durante la espera: el usuario tomó control, no se pelea; se
+      // reprograma la pausa completa desde ese gesto.
+      const ultimo = refUltimoGesto.current;
+      if (ultimo != null && ultimo > programadoEn) {
+        reprogramar(Math.max(0, PAUSA_AUTO_MS - (Date.now() - ultimo)));
+        return;
+      }
+      // Pestaña oculta: no se avanza (al volver, la llegada reprograma).
+      if (document.hidden) return;
+      // Capturas: el interruptor puede aparecer después de programar.
+      if (document.documentElement.dataset.sinIman) return;
+      const contenedor = refContenedor.current;
+      if (!contenedor) return;
+      // Misma guarda que el imán: sólo con el panel fijo en pantalla.
+      const caja = contenedor.getBoundingClientRect();
+      if (caja.top > 1 || caja.bottom < window.innerHeight - 1) return;
+      // scrollAProgreso setea refDestino (sólo lectura aquí): el imán no pelea.
+      scrollAProgreso(progresoDeEstancia(i + 1, N));
+    }
+    id = setTimeout(tick, espera);
+    return () => clearTimeout(id);
+  }, [vista.tipo, vista.indice, enPantalla, reducido, scrollAProgreso]);
 
   const hito = hitos[vista.activo];
   const lado = esMovil ? 'arriba' : vista.activo % 2 === 0 ? 'izquierda' : 'derecha';

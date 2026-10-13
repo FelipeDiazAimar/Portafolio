@@ -29,8 +29,10 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
         const tangente = curva.getTangentAt(fraccion);
         const centro3 = new THREE.Vector3(centro.x, centro.y, centro.z);
         const hacia = new THREE.Vector3(posicion.x, posicion.y, posicion.z).sub(centro3);
-        // La costilla llega hasta un poco más de la mitad: no atraviesa el modelo.
-        const fin = centro3.clone().addScaledVector(hacia, 0.55);
+        // La costilla llega hasta un poco más de la mitad (no atraviesa el modelo),
+        // salvo la última: llega al centro (1.0) para tocar el nodo 'yo' clavado
+        // en el origen de la estación final.
+        const fin = centro3.clone().addScaledVector(hacia, i === n - 1 ? 1.0 : 0.55);
         return {
           centro: centro3,
           giro: new THREE.Quaternion().setFromUnitVectors(Z, tangente),
