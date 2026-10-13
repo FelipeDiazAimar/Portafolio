@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { crearPantalla } from '../../pantallaCanvas.js';
 import { expansion } from '../../constelacion.js';
 import { ubicarFicha, zoomParaRadio } from '../../fichaLayout.js';
+import { puntaYo } from '../../../Columna3D/puntaYo.js';
 import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, grado, indiceDe, pasoFuerzas, radioNodo, vecinos } from '../../grafo.js';
 
 const SANS = '-apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
@@ -17,11 +18,11 @@ const FICHA = { ancho: 1.35, alto: 0.487 };
 const ZOOM_MINIMO = 0.5;
 const ZOOM_MAXIMO = 3;
 // Zoom máximo del encuadre inicial y de la selección (nodo + sus conexiones).
-// La base sube a 2.6 para acompañar la ESCALA_ULTIMA 1.9 de la estación: el neto del
-// grafo crece ~35% frente al tope 1.9 anterior y en escritorio sigue entrando entero
-// (el autoencuadre lo ajusta a la esfera que lo contiene, sin recortar).
-const ZOOM_BASE_MAX = 2.6;
-const ZOOM_SELECCION_MAX = 2.8;
+// La estación de Hoy está a escala normal (agrandarla entera agrandaba también la
+// constelación del comienzo): el grafo crece con su propio encuadre, que lo ajusta a la
+// esfera que lo contiene sin recortar.
+const ZOOM_BASE_MAX = 4;
+const ZOOM_SELECCION_MAX = 4.3;
 const salida = (x) => 1 - (1 - x) ** 3;
 const limitar = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 
@@ -560,6 +561,7 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     () => () => {
       cursor('');
       soltarControles();
+      puntaYo.visible = false;
       lienzoDom.dispatchEvent(new CustomEvent('bloqueo3d', { bubbles: true, detail: false }));
       recursos.texturas.forEach((t) => t.dispose());
       recursos.etiquetas.forEach((e) => e.material.dispose());
@@ -588,6 +590,7 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     if (!refActiva.current) {
       // Al empezar un viaje: devuelve límites, punto de giro y cámara de frente.
       soltarControles();
+      puntaYo.visible = false;
       return;
     }
     if (listo) tomarControles();
@@ -614,12 +617,20 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     let zoomObjetivo = encuadre.current.zoom;
     if (listo && seleccion.current) zoomObjetivo = encuadreSeleccion(centroObjetivo);
     zoomObjetivo *= usuario.current.zoom;
+    if (e < 0.02) {
+      // Antes de que aparezca, el grafo ya está en su encuadre: no se "acerca" desde lejos.
+      actualV.zoom = zoomObjetivo;
+      actualV.centro.copy(centroObjetivo);
+    }
     actualV.zoom += (zoomObjetivo - actualV.zoom) * 0.12;
     actualV.centro.lerp(centroObjetivo, 0.12);
     const vista = refVista.current;
     vista.scale.setScalar(actualV.zoom);
     vista.position.copy(actualV.centro).multiplyScalar(-actualV.zoom);
     vista.updateWorldMatrix(true, false);
+    // "yo" está en el origen de la vista: la última costilla de la columna termina ahí.
+    puntaYo.mundo.setFromMatrixPosition(vista.matrixWorld);
+    puntaYo.visible = e > 0.05;
     const origenMundo = v3.setFromMatrixPosition(refRaiz.current.matrixWorld).clone();
     if (c && guardado.current) c.target.lerp(origenMundo, 0.2);
 
