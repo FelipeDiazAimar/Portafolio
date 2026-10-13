@@ -34,6 +34,9 @@ const EXTRA_BIO_MS = 3000;
 // y la primera persona no se llegaba a ver.
 const MS_POR_VIAJE = 12000;
 const MS_MAXIMO_SALTO = 25000;
+// El minimapa es navegación: el salto es rápido (con el ritmo de cine, ir de Origen a
+// Hoy tardaba 25 s y cualquier giro de la rueda lo cortaba a mitad de camino).
+const RITMO_MINIMAPA = { msPorViaje: 900, maximo: 4000 };
 
 // Arranca y frena despacio.
 function suaveEntradaSalida(t) {
@@ -153,7 +156,7 @@ function SobreMiRecorrido({ onFallo }) {
   // viaja hacia él, el imán no interviene para no desviarlo a un hito intermedio.
   const refDestino = useRef(null);
   const scrollAProgreso = useCallback(
-    (p) => {
+    (p, { msPorViaje = MS_POR_VIAJE, maximo = MS_MAXIMO_SALTO } = {}) => {
       const contenedor = refContenedor.current;
       if (!contenedor) return;
       const recorrido = contenedor.offsetHeight - window.innerHeight;
@@ -170,7 +173,7 @@ function SobreMiRecorrido({ onFallo }) {
       // Duración según cuántos viajes hay que recorrer (un salto largo del minimapa
       // tiene tope). 'instant' en cada paso: el CSS del sitio puede pedir scroll suave.
       const largoViaje = (recorrido * PESO_VIAJE) / pesoTotal(N);
-      const duracion = Math.min(MS_MAXIMO_SALTO, Math.max(600, (Math.abs(hasta - desde) / largoViaje) * MS_POR_VIAJE));
+      const duracion = Math.min(maximo, Math.max(600, (Math.abs(hasta - desde) / largoViaje) * msPorViaje));
       refDestino.current = { p, expira: Date.now() + duracion + 1000 };
       const inicio = performance.now();
       const paso = (ahora) => {
@@ -187,7 +190,7 @@ function SobreMiRecorrido({ onFallo }) {
     (i) => {
       // Click en el minimapa: el usuario tomó control, cuenta como gesto.
       refUltimoGesto.current = Date.now();
-      scrollAProgreso(progresoDeEstancia(i, N));
+      scrollAProgreso(progresoDeEstancia(i, N), RITMO_MINIMAPA);
     },
     [scrollAProgreso]
   );

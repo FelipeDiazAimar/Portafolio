@@ -6,6 +6,7 @@ import { useFrame } from '@react-three/fiber';
 import { ancla, longitudHasta, vertebra } from '@/lib/columna/geometria.js';
 import { activoDe, llenadoDe } from '@/lib/columna/recorrido.js';
 import { curvaColumna } from './curva.js';
+import { puntaYo } from './puntaYo.js';
 
 const Z = new THREE.Vector3(0, 0, 1);
 // Costilla curva: comba leve hacia arriba, tubo fino y halo aditivo chicos
@@ -14,6 +15,18 @@ const COMBA_ARRIBA = 0.35;
 const SEGMENTOS_COSTILLA = 20;
 const RADIO_COSTILLA = 0.02;
 const RADIO_HALO_COSTILLA = 0.06;
+
+// Curva y tubos de una costilla, del anillo a `fin` con una comba hacia arriba.
+function armarCostilla(inicio, fin) {
+  const medio = inicio.clone().lerp(fin, 0.5);
+  medio.y += COMBA_ARRIBA;
+  const curva = new THREE.QuadraticBezierCurve3(inicio.clone(), medio, fin.clone());
+  return {
+    curva,
+    geoNucleo: new THREE.TubeGeometry(curva, SEGMENTOS_COSTILLA, RADIO_COSTILLA, 6, false),
+    geoHalo: new THREE.TubeGeometry(curva, SEGMENTOS_COSTILLA, RADIO_HALO_COSTILLA, 6, false),
+  };
+}
 
 // Un anillo por hito, perpendicular a la columna, y una "costilla" curva que lo
 // une con su modelo. Apagado → encendido (con un destello) cuando la luz lo
@@ -45,19 +58,7 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
   );
   // Una cuadrática por costilla: del anillo al modelo con leve comba hacia
   // arriba. Tubo fino (núcleo) + tubo grueso aditivo (halo).
-  const costillas = useMemo(
-    () =>
-      datos.map((dato) => {
-        const medio = dato.inicio.clone().lerp(dato.fin, 0.5);
-        medio.y += COMBA_ARRIBA;
-        const curvaCostilla = new THREE.QuadraticBezierCurve3(dato.inicio.clone(), medio, dato.fin.clone());
-        return {
-          curva: curvaCostilla,
-          geoNucleo: new THREE.TubeGeometry(curvaCostilla, SEGMENTOS_COSTILLA, RADIO_COSTILLA, 6, false),
-          geoHalo: new THREE.TubeGeometry(curvaCostilla, SEGMENTOS_COSTILLA, RADIO_HALO_COSTILLA, 6, false),
-        };
-      }),
-    [datos]
+  const costillas = useMemo(() => datos.map((dato) => armarCostilla(dato.inicio, dato.fin)), [datos]
   );
   const geoAnillo = useMemo(() => new THREE.TorusGeometry(0.42, 0.035, 12, 64), []);
   const materiales = useMemo(
@@ -80,6 +81,10 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
   const geoPulso = useMemo(() => new THREE.SphereGeometry(0.07, 8, 8), []);
   const refAnillos = useRef([]);
   const refPulsos = useRef([]);
+  // La última costilla termina en el nodo "yo" del grafo (ver puntaYo): se rearma
+  // cuando ese punto se mueve.
+  const refUltima = useRef({ grupo: null, nucleo: null, halo: null, fin: null });
+  const auxiliar = useMemo(() => new THREE.Vector3(), []);
   const encendidaDesde = useRef(datos.map(() => -1));
   const base = useMemo(() => new THREE.Color(colores.acento), [colores.acento]);
   const apagado = useMemo(() => new THREE.Color(colores.apagado), [colores.apagado]);
@@ -107,6 +112,20 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
   );
 
   useFrame(({ clock }) => {
+    const ultima = refUltima.current;
+    if (ultima.grupo && ultima.nucleo && ultima.halo) {
+      const destino = puntaYo.visible ? ultima.grupo.worldToLocal(auxiliar.copy(puntaYo.mundo)) : datos[n - 1].fin;
+      if (!ultima.fin || ultima.fin.distanceTo(destino) > 0.005) {
+        ultima.fin = destino.clone();
+        const vieja = costillas[n - 1];
+        const nueva = armarCostilla(datos[n - 1].inicio, ultima.fin);
+        vieja.geoNucleo.dispose();
+        vieja.geoHalo.dispose();
+        Object.assign(vieja, nueva);
+        ultima.nucleo.geometry = nueva.geoNucleo;
+        ultima.halo.geometry = nueva.geoHalo;
+      }
+    }
     const tramo = refTramo.current;
     const llenado = llenadoDe(tramo, n);
     const activo = activoDe(tramo);
@@ -137,7 +156,12 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
   });
 
   return datos.map((dato, i) => (
-    <group key={i}>
+    <group
+      key={i}
+      ref={(grupo) => {
+        if (i === n - 1) refUltima.current.grupo = grupo;
+      }}
+    >
       <mesh
         ref={(malla) => {
           refAnillos.current[i] = malla;
@@ -147,8 +171,20 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
         geometry={geoAnillo}
         material={materiales[i]}
       />
-      <mesh geometry={costillas[i].geoNucleo} material={matCostilla} />
-      <mesh geometry={costillas[i].geoHalo} material={matHaloCostilla} />
+      <mesh
+        ref={(malla) => {
+          if (i === n - 1) refUltima.current.nucleo = malla;
+        }}
+        geometry={costillas[i].geoNucleo}
+        material={matCostilla}
+      />
+      <mesh
+        ref={(malla) => {
+          if (i === n - 1) refUltima.current.halo = malla;
+        }}
+        geometry={costillas[i].geoHalo}
+        material={matHaloCostilla}
+      />
       {reducido ? null : (
         <mesh
           ref={(malla) => {
