@@ -55,6 +55,15 @@ export default function Bienvenida({ locale = 'es' }) {
   const t = COPY[locale] ?? COPY.es;
 
   useEffect(() => {
+    // En una recarga no hay splash: se deja que el navegador restaure solo el
+    // scroll (la sección Sobre mí retoma su hito con el progreso guardado). En
+    // primera visita sí se fuerza el inicio arriba para que el splash arranque
+    // centrado (si quedara scroll anterior, el inicio aparecería corrido).
+    const recarga = performance.getEntriesByType('navigation')[0]?.type === 'reload';
+    if (recarga) {
+      setVisible(false);
+      return undefined;
+    }
     // El navegador restaura solo la posición de scroll que tenía la página
     // en un F5 (no es un bug nuestro, es scrollRestoration = 'auto' por
     // defecto): si quedó algo de scroll de una visita anterior, la sección
