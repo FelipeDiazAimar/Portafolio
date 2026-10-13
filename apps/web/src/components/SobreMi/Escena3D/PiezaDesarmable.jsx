@@ -58,6 +58,9 @@ export default function PiezaDesarmable({ posicion = [0, 0, 0], centro, semilla 
 
     if (!escribir) return;
     const { p, r } = estado.current;
+    // Terminó de caer: desaparece. En el mundo de la columna seguiría a la vista desde
+    // los otros hitos.
+    grupo.current.visible = !(fase.current === 'cayendo' && estado.current.quieto);
     grupo.current.position.set(posicion[0] + p[0], posicion[1] + p[1], posicion[2] + p[2]);
     grupo.current.rotation.set(r[0], r[1], r[2]);
   });

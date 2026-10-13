@@ -63,9 +63,10 @@
   position: absolute;
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
-  margin: -9px 0 0 -9px;
+  /* Área de click generosa: el punto es chico. */
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
   padding: 0;
   border: 0;
   background: transparent;

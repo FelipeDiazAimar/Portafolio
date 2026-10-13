@@ -7,7 +7,7 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing';
 export default function Efectos({ claro }) {
   return (
     <EffectComposer multisampling={4}>
-      <Bloom mipmapBlur luminanceThreshold={0.9} luminanceSmoothing={0.2} intensity={claro ? 0.45 : 1.1} radius={0.7} />
+      <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.2} intensity={claro ? 0.45 : 1.1} radius={0.7} />
     </EffectComposer>
   );
 }
