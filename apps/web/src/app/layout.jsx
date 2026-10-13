@@ -1,4 +1,4 @@
-import { Inter } from 'next/font/google';
+import { Inter, Source_Serif_4 } from 'next/font/google';
 import { headers } from 'next/headers';
 import Bienvenida from '@/components/Bienvenida/Bienvenida.jsx';
 import Header from '@/components/Header/Header.jsx';
@@ -10,6 +10,7 @@ import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import '../styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const serif = Source_Serif_4({ subsets: ['latin'], variable: '--font-serif', display: 'swap' });
 
 export const metadata = {
   title: 'Felipe Diaz Aimar — Portfolio',
@@ -47,7 +48,7 @@ export default async function RootLayout({ children }) {
   const locale = resolveLocale(headerList.get('accept-language'));
 
   return (
-    <html lang={locale} suppressHydrationWarning className={inter.variable}>
+    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${serif.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SCROLL_INIT_SCRIPT }} />

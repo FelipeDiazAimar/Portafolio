@@ -1,0 +1,83 @@
+/* Cierre de Proyectos: ocupa todo el panel sticky de la sección. */
+.mixto {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* La marquesina 3D de logos llena el fondo (la misma del muro de entrada). */
+.fondoMarquesina {
+  position: absolute;
+  inset: 0;
+}
+
+.marquesina {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Funde la marquesina con el fondo por los bordes; con un proyecto en primer plano
+   la oscurece para que la tarjeta se lea. */
+.velo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 60% 50%, transparent 0%, var(--color-bg) 82%);
+  transition: background-color 0.35s ease;
+}
+
+.mixto[data-activo='true'] .velo {
+  background-color: color-mix(in srgb, var(--color-bg) 55%, transparent);
+}
+
+/* Lista a la izquierda, debajo del header fijo del sitio. */
+.columnaNav {
+  position: absolute;
+  top: 5.5rem;
+  bottom: 1.5rem;
+  left: clamp(1rem, 4vw, 3rem);
+  z-index: 3;
+  width: min(340px, 30%);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+}
+
+/* La tarjeta se centra en el espacio que deja la lista. Sólo la tarjeta recibe el
+   puntero: alrededor se sigue pudiendo apuntar la marquesina. */
+.zonaTarjeta {
+  position: absolute;
+  top: 5.5rem;
+  bottom: 1.5rem;
+  right: clamp(1rem, 4vw, 3rem);
+  left: calc(clamp(1rem, 4vw, 3rem) + min(340px, 30%) + 1.5rem);
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.zonaTarjeta > * {
+  pointer-events: auto;
+}
+
+/* Celular: la lista es una tira horizontal arriba y la tarjeta ocupa el resto. */
+@media (max-width: 768px) {
+  .columnaNav {
+    top: 5rem;
+    right: 1rem;
+    bottom: auto;
+    left: 1rem;
+    width: auto;
+    height: 112px;
+  }
+
+  .zonaTarjeta {
+    top: calc(5rem + 112px + 1rem);
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+  }
+}

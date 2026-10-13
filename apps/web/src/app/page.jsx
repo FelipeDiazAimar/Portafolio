@@ -1,4 +1,5 @@
 import SobreMi from '@/components/SobreMi/SobreMi.jsx';
+import Proyectos from '@/components/Proyectos/Proyectos.jsx';
 import styles from './page.module.css';
 
 const SECCIONES = [
@@ -16,6 +17,8 @@ export default function HomePage() {
       {SECCIONES.map((seccion) =>
         seccion.id === 'sobre-mi' ? (
           <SobreMi key={seccion.id} />
+        ) : seccion.id === 'proyectos' ? (
+          <Proyectos key={seccion.id} />
         ) : (
           <section key={seccion.id} id={seccion.id} className={styles.seccion}>
             <h2>{seccion.titulo}</h2>

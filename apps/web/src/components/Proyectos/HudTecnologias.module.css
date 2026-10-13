@@ -1,0 +1,181 @@
+/* Franja inferior del .marco del presentador (el .marco lo crea otro paso). */
+.hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--alto-hud);
+  display: flex;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 7, 12, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+/* Rótulo fijo a la izquierda. */
+.rotulo {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  opacity: 0.6;
+  padding-inline: 1.25rem;
+  color: #fff;
+}
+
+/* Zona del carrusel: ocupa el resto del ancho. */
+.carrusel {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Ítem del carrusel. */
+.logo {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.38);
+  filter: grayscale(1);
+  transition:
+    color 0.4s ease,
+    filter 0.4s ease,
+    transform 0.4s ease;
+}
+
+.logo[data-activa='true'] {
+  color: #fff;
+  filter: none;
+  transform: scale(1.15);
+}
+
+/* Nombre bajo el ícono activo. */
+.nombre {
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+/* Corchetes de mira: solo visibles en el stack activo. */
+.logo::before,
+.logo::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--acento);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.logo::before {
+  top: -8px;
+  left: -8px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.logo::after {
+  bottom: -8px;
+  right: -8px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.logo[data-activa='true']::before,
+.logo[data-activa='true']::after {
+  opacity: 1;
+}
+
+/* Fila "stack de este proyecto": arriba a la derecha del .marco. */
+/* Abajo a la izquierda del área de contenido, entre la lista y la tarjeta de la
+   problemática: arriba pisaba el título del proyecto. */
+.chips {
+  position: absolute;
+  left: var(--inicio-chips, calc(min(320px, 34%) + 1.5rem));
+  right: calc(min(520px, 46%) + 3rem);
+  bottom: calc(var(--alto-hud) + 1.25rem);
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  justify-content: flex-start;
+  z-index: 1;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.7rem;
+  background: rgba(5, 7, 12, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  opacity: 0;
+  transform: translateY(6px);
+  animation: hud-chip-in 0.45s ease forwards;
+}
+
+.chipIcono {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #fff;
+}
+
+.chipNombre {
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+}
+
+@keyframes hud-chip-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* En celular se oculta: el HUD ya resalta el stack. */
+@media (max-width: 768px) {
+  .chips {
+    display: none;
+  }
+
+  /* El presentador apilado (flex en columna) deja el HUD al final, en el flujo: absoluto
+     se montaba sobre la tarjeta de la problemática. */
+  .hud {
+    position: relative;
+    order: 4;
+    flex: none;
+  }
+
+  /* Angosto, los logos del carrusel le pasan por encima. */
+  .rotulo {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .logo {
+    transition: none;
+  }
+}

@@ -33,6 +33,7 @@
     },
     "imagenes": {
       "portada": "/proyectos/mbrf-captura/portada.webp",
+      "logo": "/proyectos/mbrf-captura/logo.webp",
       "movil": null,
       "completa": null
     },
@@ -78,6 +79,7 @@
     },
     "imagenes": {
       "portada": "/proyectos/mbrf-control/portada.webp",
+      "logo": "/proyectos/mbrf-control/logo.webp",
       "movil": null,
       "completa": null
     },
@@ -119,8 +121,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/neifert/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/neifert/logo.webp",
+      "movil": "/proyectos/neifert/movil.webp",
+      "completa": "/proyectos/neifert/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -160,8 +163,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/dario-martinez/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/dario-martinez/logo.webp",
+      "movil": "/proyectos/dario-martinez/movil.webp",
+      "completa": "/proyectos/dario-martinez/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -201,8 +205,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/justphones/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/justphones/logo.webp",
+      "movil": "/proyectos/justphones/movil.webp",
+      "completa": "/proyectos/justphones/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -242,8 +247,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/algobonito/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/algobonito/logo.webp",
+      "movil": "/proyectos/algobonito/movil.webp",
+      "completa": "/proyectos/algobonito/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -282,8 +288,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/calida-escencia/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/calida-escencia/logo.webp",
+      "movil": "/proyectos/calida-escencia/movil.webp",
+      "completa": "/proyectos/calida-escencia/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -322,8 +329,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/asistente/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/asistente/logo.webp",
+      "movil": "/proyectos/asistente/movil.webp",
+      "completa": "/proyectos/asistente/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -363,6 +371,7 @@
     },
     "imagenes": {
       "portada": "/proyectos/control-salidas-rrhh/portada.webp",
+      "logo": "/proyectos/control-salidas-rrhh/logo.webp",
       "movil": null,
       "completa": null
     },
@@ -403,6 +412,7 @@
     },
     "imagenes": {
       "portada": "/proyectos/gestor-proyectos-sap/portada.webp",
+      "logo": "/proyectos/gestor-proyectos-sap/logo.webp",
       "movil": null,
       "completa": null
     },
@@ -443,8 +453,9 @@
     },
     "imagenes": {
       "portada": "/proyectos/bibliotech/portada.webp",
-      "movil": null,
-      "completa": null
+      "logo": "/proyectos/bibliotech/logo.webp",
+      "movil": "/proyectos/bibliotech/movil.webp",
+      "completa": "/proyectos/bibliotech/completa.webp"
     },
     "caso": {
       "problema": "",
@@ -483,6 +494,7 @@
     },
     "imagenes": {
       "portada": "/proyectos/movii/portada.webp",
+      "logo": "/proyectos/movii/logo.webp",
       "movil": null,
       "completa": null
     },
@@ -516,13 +528,14 @@
     "metricas": [],
     "stack": ["php", "mysql", "docker", "render"],
     "enlaces": {
-      "sitio": "https://crm-inmobiliaria.onrender.com",
+      "sitio": null,
       "repo": "https://github.com/FelipeDiazAimar/CRM-Inmobiliaria",
       "repoFrontend": null,
       "repoBackend": null
     },
     "imagenes": {
       "portada": "/proyectos/crm-inmobiliaria/portada.webp",
+      "logo": "/proyectos/crm-inmobiliaria/logo.webp",
       "movil": null,
       "completa": null
     },

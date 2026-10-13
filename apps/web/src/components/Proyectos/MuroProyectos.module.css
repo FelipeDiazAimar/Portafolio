@@ -1,0 +1,23 @@
+/* Contenedor del muro: ocupa todo el .panel del contenedor. */
+.muro {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Marquesina 3D a pantalla completa dentro del muro. */
+.marquesina {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Capa de oscurecido encima del muro para fundirlo con el fondo. */
+.oscurecido {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 0%, var(--color-bg) 78%);
+}
