@@ -2,23 +2,25 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-// Adaptado: cada imagen puede ser un string o { src, clave, titulo }. Con
+// Adaptado: cada imagen puede ser un string, { src, clave, titulo } o { contenido,
+// clave, titulo } (una tarjeta HTML en vez de imagen). Con
 // `alApuntar` las imágenes se vuelven interactivas (hover con mouse, foco o click
-// eligen su clave) y `claveActiva` apaga la que ya está en primer plano.
+// eligen su clave) y `claveActiva` (una clave o una lista) oculta las que están en
+// primer plano: en su lugar viaja una copia, así que desaparecen sin transición.
 export const ThreeDMarquee = ({
   images,
   className,
   alApuntar,
   alSalir,
   claveActiva = null,
+  // Posición de la grilla dentro de su caja (top/right): la original está pensada para
+  // ~30 imágenes; con menos hay que correrla para que caigan en la zona visible.
+  posicionGrilla = null,
 }) => {
   const interactiva = typeof alApuntar === "function";
-  // Split the images array into 4 equal parts
-  const chunkSize = Math.ceil(images.length / 4);
-  const chunks = Array.from({ length: 4 }, (_, colIndex) => {
-    const start = colIndex * chunkSize;
-    return images.slice(start, start + chunkSize);
-  });
+  // Reparto alternado en 4 columnas: con pocas imágenes quedan parejas (13 → 4, 3, 3, 3)
+  // en vez de dejar una columna casi vacía.
+  const chunks = Array.from({ length: 4 }, (_, colIndex) => images.filter((_, i) => i % 4 === colIndex));
   return (
     <div
       className={cn(
@@ -27,10 +29,12 @@ export const ThreeDMarquee = ({
       )}
     >
       <div className="flex size-full items-center justify-center">
-        <div className="size-[1720px] shrink-0 scale-50 sm:scale-75 lg:scale-100">
+        {/* data-escala-marquee: para medir la escala real de las tarjetas (ver Proyectos). */}
+        <div data-escala-marquee className="size-[1720px] shrink-0 scale-50 sm:scale-75 lg:scale-100">
           <div
             style={{
               transform: "rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
+              ...posicionGrilla,
             }}
             className="relative top-96 right-[50%] grid size-full origin-top-left grid-cols-4 gap-8 transform-3d"
           >
@@ -47,13 +51,15 @@ export const ThreeDMarquee = ({
               >
                 <GridLineVertical className="-left-4" offset="80px" />
                 {subarray.map((item, imageIndex) => {
-                  const image = typeof item === "string" ? item : item.src;
+                  const image = typeof item === "string" ? item : item.src ?? item.clave;
                   const clave = typeof item === "string" ? item : item.clave ?? item.src;
                   const titulo = typeof item === "string" ? `Image ${imageIndex + 1}` : item.titulo ?? "";
-                  const activa = claveActiva !== null && clave === claveActiva;
+                  const activa = Array.isArray(claveActiva)
+                    ? claveActiva.includes(clave)
+                    : claveActiva !== null && clave === claveActiva;
                   return (
                     <div
-                      className="relative"
+                      className="relative w-full"
                       key={imageIndex + image}
                       data-clave={interactiva ? clave : undefined}
                       data-zona-mixto={interactiva ? "marquesina" : undefined}
@@ -62,7 +68,7 @@ export const ThreeDMarquee = ({
                       aria-label={interactiva ? titulo : undefined}
                       style={
                         interactiva
-                          ? { cursor: "pointer", opacity: activa ? 0.12 : 1, transition: "opacity 0.35s ease" }
+                          ? { cursor: "pointer", opacity: activa ? 0 : 1 }
                           : undefined
                       }
                       onPointerEnter={
@@ -77,21 +83,33 @@ export const ThreeDMarquee = ({
                       onClick={interactiva ? () => alApuntar(clave) : undefined}
                     >
                       <GridLineHorizontal className="-top-4" offset="20px" />
-                      <motion.img
-                        whileHover={{
-                          y: -10,
-                        }}
-                        transition={{
-                          duration: 0.3,
-                          ease: "easeInOut",
-                        }}
-                        key={imageIndex + image}
-                        src={image}
-                        alt={titulo}
-                        className="aspect-[970/700] rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
-                        width={970}
-                        height={700}
-                      />
+                      {item && typeof item === "object" && item.contenido ? (
+                        <motion.div
+                          whileHover={{ y: -10 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className="aspect-[970/700] w-full overflow-hidden rounded-lg ring ring-gray-950/5 hover:shadow-2xl"
+                        >
+                          {item.contenido}
+                        </motion.div>
+                      ) : (
+                        // w-full: el original se apoya en el reset de Tailwind (img con
+                        // max-width 100%); sin él la imagen salía a 970 px de ancho.
+                        <motion.img
+                          whileHover={{
+                            y: -10,
+                          }}
+                          transition={{
+                            duration: 0.3,
+                            ease: "easeInOut",
+                          }}
+                          key={imageIndex + image}
+                          src={image}
+                          alt={titulo}
+                          className="aspect-[970/700] w-full h-auto rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
+                          width={970}
+                          height={700}
+                        />
+                      )}
                     </div>
                   );
                 })}

@@ -1,151 +1,107 @@
-/* Contenedor full-bleed de Proyectos: sale del <main> de 960 px con la misma
-   técnica que SobreMi (100vw + margen compensado). El alto extra (420svh)
-   es el recorrido de scroll que alimenta el progreso de framer-motion
-   (3 fases: muro -> presentador -> mixto). */
+/* Sección Proyectos: una pantalla a todo el ancho (sale del <main> de 960 px). */
 .contenedor {
   position: relative;
   width: 100vw;
   margin-left: calc(50% - 50vw);
-  height: 420svh;
 }
 
-/* Panel fijo mientras se recorre el contenedor: centra las capas. */
 .panel {
-  position: sticky;
-  top: 0;
+  position: relative;
   height: 100svh;
+  min-height: 600px;
   overflow: hidden;
-  display: grid;
-  place-items: center;
-  padding: 5.5rem clamp(1rem, 4vw, 3rem) 1.5rem;
+  background: var(--color-bg);
 }
 
-/* Capas superpuestas dentro del panel: muro primero, presentador encima,
-   mixto tercero (las tres absolute + inset 0, el orden lo da el DOM/z-index). */
-.capaMuro {
+/* La marquesina 3D ocupa todo el fondo. */
+.fondo {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
 }
 
-.capaPresentador {
+.marquesina {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* Funde la marquesina con el fondo por los bordes y deja leer la lista. */
+.velo {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--color-bg) 0%, transparent 28%),
+    radial-gradient(ellipse at 62% 50%, transparent 30%, var(--color-bg) 92%);
 }
 
-.capaMixto {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-}
-
-/* Cabecera centrada encima del muro (z-index 2). Sin puntero para no
-   bloquear el muro que hay debajo. */
+/* Título sobre la marquesina, en el espacio que deja la lista. Se va al abrir un proyecto. */
 .cabecera {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: calc(clamp(1rem, 4vw, 3rem) + min(340px, 30%));
+  right: 0;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0 clamp(1rem, 4vw, 3rem);
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
   text-align: center;
   pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.35s ease;
+}
+
+.panel[data-activo='true'] .cabecera {
+  opacity: 0;
 }
 
 .titulo {
   margin: 0;
-  font-family: var(--font-sans);
   font-weight: 800;
-  font-size: clamp(3rem, 10vw, 8rem);
+  font-size: clamp(3rem, 8vw, 7rem);
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--color-fg);
+  text-shadow: 0 4px 40px var(--color-bg);
 }
 
-.lineaCifras {
+.cifras {
   margin: 0;
   font-size: 1rem;
   color: var(--color-muted);
 }
 
-/* Variante estática para movimiento reducido (render condicional en JSX):
-   sin sticky, capas apiladas en flujo normal. La rama estática muestra
-   3 bloques (muro, presentador y mixto); .capaEstatica vale para los tres
-   (position static + width 100%). El mixto interno ya es fluido, así que
-   no necesita altura extra aquí. */
-.contenedorEstatico {
-  height: auto;
-}
-
-.panelEstatico {
-  position: relative;
-  height: auto;
-  overflow: visible;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-}
-
-.capaEstatica {
-  position: relative;
-  width: 100%;
-}
-
-/* El muro y el cierre son capas absolutas: apilados necesitan un alto propio. */
-.muroEstatico {
-  height: 55svh;
+/* Lista de proyectos a la izquierda, siempre por encima de la vista abierta. */
+.columnaNav {
+  position: absolute;
+  top: 5.5rem;
+  bottom: 1.5rem;
+  left: clamp(1rem, 4vw, 3rem);
+  z-index: 6;
+  width: min(340px, 30%);
+  border-radius: 22px;
   overflow: hidden;
-  border-radius: 24px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
 }
 
-.mixtoEstatico {
-  height: min(100svh, 900px);
-}
-
-.cabeceraEstatica {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
-}
-
-/* Red de seguridad CSS por si el ajuste del sistema llega antes que el JS. */
-@media (prefers-reduced-motion: reduce) {
-  .contenedor {
-    height: auto;
-  }
-
-  .panel {
-    position: relative;
-    height: auto;
-    overflow: visible;
-    display: flex;
-    flex-direction: column;
-    gap: 2.5rem;
-  }
-
-  .capaMuro,
-  .capaPresentador,
-  .capaMixto {
-    position: relative;
-    inset: auto;
-    display: flex;
-    flex-direction: column;
+@media (max-width: 768px) {
+  .columnaNav {
+    top: 5rem;
+    right: 1rem;
+    bottom: auto;
+    left: 1rem;
+    width: auto;
+    height: 112px;
   }
 
   .cabecera {
-    position: relative;
-    inset: auto;
+    top: calc(5rem + 112px + 2rem);
+    left: 0;
+    transform: none;
+  }
+
+  .velo {
+    background: radial-gradient(ellipse at 50% 60%, transparent 30%, var(--color-bg) 92%);
   }
 }

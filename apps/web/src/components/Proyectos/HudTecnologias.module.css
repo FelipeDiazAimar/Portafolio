@@ -1,7 +1,7 @@
 /* Franja inferior del .marco del presentador (el .marco lo crea otro paso). */
 .hud {
   position: absolute;
-  left: 0;
+  left: var(--inicio-hud, 0);
   right: 0;
   bottom: 0;
   height: var(--alto-hud);
@@ -99,14 +99,15 @@
    problemática: arriba pisaba el título del proyecto. */
 .chips {
   position: absolute;
+  top: var(--chips-arriba, auto);
   left: var(--inicio-chips, calc(min(320px, 34%) + 1.5rem));
-  right: calc(min(520px, 46%) + 3rem);
-  bottom: calc(var(--alto-hud) + 1.25rem);
+  right: var(--chips-derecha, calc(min(520px, 46%) + 3rem));
+  bottom: var(--chips-abajo, calc(var(--alto-hud) + 1.25rem));
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
   align-content: flex-end;
-  justify-content: flex-start;
+  justify-content: var(--chips-justificar, flex-start);
   z-index: 1;
 }
 
