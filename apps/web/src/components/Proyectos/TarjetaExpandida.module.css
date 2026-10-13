@@ -15,8 +15,9 @@
 
 /* El JSX pone className={styles.fondo} en el next/image: por eso solo object-fit/position. */
 .fondo {
-  object-fit: cover;
-  object-position: top center;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 /* Mismo doble degradado del presentador. */

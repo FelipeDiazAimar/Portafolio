@@ -95,15 +95,18 @@
 }
 
 /* Fila "stack de este proyecto": arriba a la derecha del .marco. */
+/* Abajo a la izquierda del área de contenido, entre la lista y la tarjeta de la
+   problemática: arriba pisaba el título del proyecto. */
 .chips {
   position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
+  left: var(--inicio-chips, calc(min(320px, 34%) + 1.5rem));
+  right: calc(min(520px, 46%) + 3rem);
+  bottom: calc(var(--alto-hud) + 1.25rem);
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  max-width: 60%;
+  align-content: flex-end;
+  justify-content: flex-start;
   z-index: 1;
 }
 

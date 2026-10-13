@@ -2,10 +2,17 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+// Adaptado: cada imagen puede ser un string o { src, clave, titulo }. Con
+// `alApuntar` las imágenes se vuelven interactivas (hover con mouse, foco o click
+// eligen su clave) y `claveActiva` apaga la que ya está en primer plano.
 export const ThreeDMarquee = ({
   images,
-  className
+  className,
+  alApuntar,
+  alSalir,
+  claveActiva = null,
 }) => {
+  const interactiva = typeof alApuntar === "function";
   // Split the images array into 4 equal parts
   const chunkSize = Math.ceil(images.length / 4);
   const chunks = Array.from({ length: 4 }, (_, colIndex) => {
@@ -39,26 +46,55 @@ export const ThreeDMarquee = ({
                 className="flex flex-col items-start gap-8"
               >
                 <GridLineVertical className="-left-4" offset="80px" />
-                {subarray.map((image, imageIndex) => (
-                  <div className="relative" key={imageIndex + image}>
-                    <GridLineHorizontal className="-top-4" offset="20px" />
-                    <motion.img
-                      whileHover={{
-                        y: -10,
-                      }}
-                      transition={{
-                        duration: 0.3,
-                        ease: "easeInOut",
-                      }}
+                {subarray.map((item, imageIndex) => {
+                  const image = typeof item === "string" ? item : item.src;
+                  const clave = typeof item === "string" ? item : item.clave ?? item.src;
+                  const titulo = typeof item === "string" ? `Image ${imageIndex + 1}` : item.titulo ?? "";
+                  const activa = claveActiva !== null && clave === claveActiva;
+                  return (
+                    <div
+                      className="relative"
                       key={imageIndex + image}
-                      src={image}
-                      alt={`Image ${imageIndex + 1}`}
-                      className="aspect-[970/700] rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
-                      width={970}
-                      height={700}
-                    />
-                  </div>
-                ))}
+                      data-clave={interactiva ? clave : undefined}
+                      data-zona-mixto={interactiva ? "marquesina" : undefined}
+                      role={interactiva ? "button" : undefined}
+                      tabIndex={interactiva ? 0 : undefined}
+                      aria-label={interactiva ? titulo : undefined}
+                      style={
+                        interactiva
+                          ? { cursor: "pointer", opacity: activa ? 0.12 : 1, transition: "opacity 0.35s ease" }
+                          : undefined
+                      }
+                      onPointerEnter={
+                        interactiva
+                          ? (e) => {
+                              if (e.pointerType === "mouse") alApuntar(clave);
+                            }
+                          : undefined
+                      }
+                      onPointerLeave={interactiva ? (e) => alSalir?.(e) : undefined}
+                      onFocus={interactiva ? () => alApuntar(clave) : undefined}
+                      onClick={interactiva ? () => alApuntar(clave) : undefined}
+                    >
+                      <GridLineHorizontal className="-top-4" offset="20px" />
+                      <motion.img
+                        whileHover={{
+                          y: -10,
+                        }}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeInOut",
+                        }}
+                        key={imageIndex + image}
+                        src={image}
+                        alt={titulo}
+                        className="aspect-[970/700] rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
+                        width={970}
+                        height={700}
+                      />
+                    </div>
+                  );
+                })}
               </motion.div>
             ))}
           </div>

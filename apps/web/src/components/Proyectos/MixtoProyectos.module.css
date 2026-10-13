@@ -1,83 +1,83 @@
-/* Mixto: capa absoluta que llena el .panel sticky del contenedor. */
+/* Cierre de Proyectos: ocupa todo el panel sticky de la sección. */
 .mixto {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
 
-/* La marquesina 3D ocupa todo el fondo. */
+/* La marquesina 3D de logos llena el fondo (la misma del muro de entrada). */
 .fondoMarquesina {
   position: absolute;
   inset: 0;
 }
 
-/* Columna de navegación izquierda, sobre la marquesina (ref: .lista de PresentadorProyectos). */
-.columnaNav {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: min(320px, 34%);
-  z-index: 3;
-}
-
-/* Hijo .nav (de NavegacionMixta): ocupa todo el alto/ancho de la columna. */
-.columnaNav > .nav,
-.nav {
+.marquesina {
+  display: block;
   width: 100%;
   height: 100%;
+  border-radius: 0;
 }
 
-/* Zona de tarjeta a la derecha: centrada, transparente a clics para ver la marquesina alrededor. */
+/* Funde la marquesina con el fondo por los bordes; con un proyecto en primer plano
+   la oscurece para que la tarjeta se lea. */
+.velo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 60% 50%, transparent 0%, var(--color-bg) 82%);
+  transition: background-color 0.35s ease;
+}
+
+.mixto[data-activo='true'] .velo {
+  background-color: color-mix(in srgb, var(--color-bg) 55%, transparent);
+}
+
+/* Lista a la izquierda, debajo del header fijo del sitio. */
+.columnaNav {
+  position: absolute;
+  top: 5.5rem;
+  bottom: 1.5rem;
+  left: clamp(1rem, 4vw, 3rem);
+  z-index: 3;
+  width: min(340px, 30%);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+}
+
+/* La tarjeta se centra en el espacio que deja la lista. Sólo la tarjeta recibe el
+   puntero: alrededor se sigue pudiendo apuntar la marquesina. */
 .zonaTarjeta {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  left: min(320px, 34%);
+  top: 5.5rem;
+  bottom: 1.5rem;
+  right: clamp(1rem, 4vw, 3rem);
+  left: calc(clamp(1rem, 4vw, 3rem) + min(340px, 30%) + 1.5rem);
   z-index: 4;
   display: grid;
   place-items: center;
-  padding: 2rem;
   pointer-events: none;
 }
 
-/* Hija .marcoTarjeta (de TarjetaExpandida): recupera la interacción. */
-.zonaTarjeta > .marcoTarjeta,
-.marcoTarjeta {
+.zonaTarjeta > * {
   pointer-events: auto;
 }
 
-/* Móvil: nav como tira horizontal arriba, marquesina debajo, tarjeta centrada casi a pantalla completa. */
+/* Celular: la lista es una tira horizontal arriba y la tarjeta ocupa el resto. */
 @media (max-width: 768px) {
   .columnaNav {
-    top: 0;
+    top: 5rem;
+    right: 1rem;
     bottom: auto;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: 132px;
-  }
-
-  .fondoMarquesina {
-    top: 132px;
+    left: 1rem;
+    width: auto;
+    height: 112px;
   }
 
   .zonaTarjeta {
-    left: 0;
-    top: 132px;
-    padding: 1rem;
-    place-items: center;
-  }
-}
-
-/* Nada animado extra aquí: la marquesina ya congela su pista con reduced-motion. */
-@media (prefers-reduced-motion: reduce) {
-  .mixto,
-  .fondoMarquesina,
-  .columnaNav,
-  .zonaTarjeta {
-    animation: none;
-    transition: none;
+    top: calc(5rem + 112px + 1rem);
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
   }
 }

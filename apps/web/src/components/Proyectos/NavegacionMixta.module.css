@@ -2,6 +2,7 @@
 .nav {
   width: 100%;
   height: 100%;
+  background: #fff;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -14,6 +15,8 @@
 }
 
 .item {
+  /* Sin achicarse: con muchos proyectos la lista scrollea en vez de recortar títulos. */
+  flex: none;
   display: grid;
   gap: 0.35rem;
   width: 100%;
@@ -36,13 +39,16 @@
   outline-offset: -2px;
 }
 
+/* El activo se "apaga" como en el presentador, pero acá la tarjeta no queda detrás
+   de la lista: se pinta oscuro, con una barra del color del sitio. */
 .activo {
-  background: transparent;
+  background: #05070c;
   color: #fff;
+  box-shadow: inset 4px 0 0 var(--color-accent);
 }
 
 .activo:hover {
-  background: transparent;
+  background: #05070c;
 }
 
 .numero {

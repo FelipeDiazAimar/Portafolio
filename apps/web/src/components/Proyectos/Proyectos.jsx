@@ -37,10 +37,15 @@ export default function Proyectos() {
   const textoCifras = `${cifras.total} proyectos · ${cifras.clientes} clientes · ${cifras.laborales} sistemas en planta`;
 
   // Progreso de 0 a 1 mientras el contenedor cruza la ventana.
-  const { scrollYProgress: progreso } = useScroll({
+  const { scrollYProgress } = useScroll({
     target: refContenedor,
     offset: ['start start', 'end end'],
   });
+  // framer-motion acelera con la ScrollTimeline del navegador las transformaciones
+  // por rangos de un scrollYProgress, y con este panel sticky calcula mal los rangos:
+  // el muro volvía a aparecer y el cierre nunca llegaba a opacidad 1. Pasarlo por una
+  // función corta esa aceleración y los valores se calculan en JS.
+  const progreso = useTransform(scrollYProgress, (valor) => valor);
 
   // Muro: visible al inicio, se disuelve con zoom y desenfoque.
   const opacidadMuro = useTransform(progreso, [0.12, 0.28], [1, 0]);

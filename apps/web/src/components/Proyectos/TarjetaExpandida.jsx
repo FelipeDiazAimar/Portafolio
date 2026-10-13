@@ -37,7 +37,7 @@ export default function TarjetaExpandida({ proyecto, alCerrar }) {
   return (
     <motion.article
       className={styles.marcoTarjeta}
-      style={{ '--acento': proyecto.color, '--alto-hud': '76px' }}
+      style={{ '--acento': proyecto.color, '--alto-hud': '76px', '--inicio-chips': '1.5rem' }}
       data-zona-mixto="tarjeta"
       onPointerLeave={alCerrar}
       initial={movimientoReducido ? false : { opacity: 0, scale: 0.94, y: 24 }}
@@ -51,7 +51,7 @@ export default function TarjetaExpandida({ proyecto, alCerrar }) {
           alt={proyecto.titulo}
           fill
           sizes="(max-width: 768px) 100vw, 900px"
-          style={{ objectFit: 'cover' }}
+          style={{ objectFit: 'cover', objectPosition: 'top center' }}
         />
         <div className={styles.velo} />
       </div>
