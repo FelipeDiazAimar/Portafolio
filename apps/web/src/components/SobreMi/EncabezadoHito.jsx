@@ -2,6 +2,7 @@
 
 import TextoTipeado from './TextoTipeado.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
+import TextoTrazo from '@/components/TextoTrazo/TextoTrazo.jsx';
 import styles from './EncabezadoHito.module.css';
 
 const CARACTERES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=<>/\\|';
@@ -12,16 +13,8 @@ export default function EncabezadoHito({ hito }) {
   return (
     <header className={styles.encabezado}>
       <p className={styles.anio}>
-        <TextoDescifrado
-          key={`anio-${hito.id}`}
-          texto={hito.anio}
-          activarCon="view"
-          secuencial
-          velocidad={45}
-          caracteres={CARACTERES}
-          className={styles.revelado}
-          encryptedClassName={styles.encriptado}
-        />
+        {/* El año se traza y se rellena (StrokeFill); `key` por hito lo repite en cada uno. */}
+        <TextoTrazo key={`anio-${hito.id}`} texto={hito.anio} claseTexto={styles.anioTrazo} duracion={2} grosor={2} />
       </p>
       <h3 className={styles.titulo}>
         <TextoDescifrado

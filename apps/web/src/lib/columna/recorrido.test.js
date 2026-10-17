@@ -5,10 +5,14 @@ import {
   OPCIONES_ESCRITORIO,
   OPCIONES_MOVIL,
   PESO_ESTANCIA,
+  PESO_ULTIMA,
+  ZONA_EMBUDO,
+  RADIO_IMAN_ESTANCIA,
   PESO_VIAJE,
   UMBRAL_IMAN,
   activoDe,
   anioEnViaje,
+  avanceDe,
   estadoDe,
   imanDe,
   llenadoDe,
@@ -26,10 +30,11 @@ const W = pesoTotal(N);
 // p del avance `t` dentro del viaje `i`
 const pViaje = (i, t) => (i * (PESO_ESTANCIA + PESO_VIAJE) + PESO_ESTANCIA + t * PESO_VIAJE) / W;
 
-test('pesoTotal: 7 estancias y 6 viajes', () => {
-  assert.equal(PESO_ESTANCIA, 1);
+test('pesoTotal: 7 estancias (la última más larga) y 6 viajes', () => {
+  assert.equal(PESO_ESTANCIA, 4);
   assert.equal(PESO_VIAJE, 28);
-  assert.ok(Math.abs(W - (7 * PESO_ESTANCIA + 6 * PESO_VIAJE)) < 1e-9);
+  assert.ok(PESO_ULTIMA > PESO_ESTANCIA);
+  assert.ok(Math.abs(W - (6 * PESO_ESTANCIA + PESO_ULTIMA + 6 * PESO_VIAJE)) < 1e-9);
 });
 
 test('tramoDe: extremos, rango y valores inválidos', () => {
@@ -92,17 +97,17 @@ test('llenadoDe: monótono y exacto en cada estancia', () => {
 });
 
 test('imanDe: con dirección, termina el viaje hacia donde se iba', () => {
-  // Bajando (hacia el hito siguiente), aunque recién haya empezado el viaje.
-  assert.equal(imanDe(pViaje(2, 0.05), N, 1), progresoDeEstancia(3, N));
-  assert.equal(imanDe(pViaje(2, 0.9), N, 1), progresoDeEstancia(3, N));
-  // Subiendo (de vuelta al anterior), aunque esté casi en el siguiente.
-  assert.equal(imanDe(pViaje(2, 0.95), N, -1), progresoDeEstancia(2, N));
-  assert.equal(imanDe(pViaje(2, 0.1), N, -1), progresoDeEstancia(2, N));
-  // En una estancia no hace nada.
+  // En el medio del viaje manda la dirección.
+  assert.equal(imanDe(pViaje(2, 0.3), N, 1), progresoDeEstancia(3, N));
+  assert.equal(imanDe(pViaje(2, 0.7), N, -1), progresoDeEstancia(2, N));
+  // Cerca de un hito manda la cercanía: pasarse de largo apenas no salta al siguiente.
+  assert.equal(imanDe(pViaje(2, 0.05), N, 1), progresoDeEstancia(2, N));
+  assert.equal(imanDe(pViaje(2, 0.95), N, -1), progresoDeEstancia(3, N));
+  // Quieto en el centro de una estancia no hace nada.
   assert.equal(imanDe(progresoDeEstancia(3, N), N, 1), null);
 });
 
-test('imanDe: nada en estancias; en viajes decide por el umbral', () => {
+test('imanDe: en estancias centra el hito cercano; en viajes decide por el umbral', () => {
   assert.equal(imanDe(progresoDeEstancia(3, N), N), null);
   assert.equal(imanDe(pViaje(2, UMBRAL_IMAN + 0.01), N), progresoDeEstancia(3, N));
   assert.equal(imanDe(pViaje(2, UMBRAL_IMAN - 0.01), N), progresoDeEstancia(2, N));
@@ -146,4 +151,65 @@ test('opacidadAnio: invisible en los extremos, plena en el medio', () => {
   assert.equal(opacidadAnio(0), 0);
   assert.equal(opacidadAnio(0.5), 1);
   assert.equal(opacidadAnio(1), 0);
+});
+
+test('imanDe: cerca de un hito lo centra, y se puede salir de la sección por los extremos', () => {
+  const desvio = (i, pesos) => progresoDeEstancia(i, N) + pesos / W;
+  // Estancia del medio: centrada desde cualquier punto de su zona.
+  assert.equal(imanDe(desvio(3, 1.2), N), progresoDeEstancia(3, N));
+  assert.equal(imanDe(desvio(3, -1.7), N), progresoDeEstancia(3, N));
+  assert.equal(imanDe(desvio(3, 0.02), N), null);
+  // Primer hito: hacia arriba (salir de la sección) no tira para atrás; hacia abajo sí.
+  assert.equal(imanDe(desvio(0, -1), N), null);
+  assert.equal(imanDe(desvio(0, 1), N), progresoDeEstancia(0, N));
+  // Último hito: frena cerca, y pasado el radio ya se sale.
+  assert.equal(imanDe(desvio(N - 1, 2), N), progresoDeEstancia(N - 1, N));
+  assert.equal(imanDe(desvio(N - 1, RADIO_IMAN_ESTANCIA + 0.5), N), null);
+  assert.equal(imanDe(desvio(N - 1, -2), N), progresoDeEstancia(N - 1, N));
+});
+
+// --- Sentido del viaje: al subir la cámara mira hacia arriba (espejo de bajar). ---
+
+const viaje = (indice, t, sentido) => ({ tipo: 'viaje', indice, t, sentido });
+
+test('sentido: bajar es el comportamiento de siempre (sin `sentido` = +1)', () => {
+  for (const t of [0, 0.1, 0.4, 0.8, 1]) {
+    assert.deepEqual(estadoDe({ tipo: 'viaje', indice: 2, t }), estadoDe(viaje(2, t, 1)));
+    assert.deepEqual(poseCamara({ tipo: 'viaje', indice: 2, t }, D, N), poseCamara(viaje(2, t, 1), D, N));
+  }
+  assert.equal(avanceDe(viaje(2, 0.3, 1)), 0.3);
+  assert.equal(avanceDe(viaje(2, 0.3, -1)), 0.7);
+});
+
+test('sentido: subir espeja el estado del mundo (1 - giro) y no toca las estancias', () => {
+  // Subiendo, el viaje arranca en el hito de abajo (t = 1) y termina en el de arriba (t = 0).
+  assert.equal(estadoDe(viaje(2, 1, -1)), 3);
+  assert.equal(estadoDe(viaje(2, 0, -1)), 2);
+  for (const t of [0.2, 0.5, 0.9]) {
+    assert.ok(Math.abs(estadoDe(viaje(2, t, -1)) - (3 - (estadoDe(viaje(2, 1 - t, 1)) - 2))) < 1e-12);
+  }
+  const estancia = { tipo: 'estancia', indice: 3, t: 0.5 };
+  assert.deepEqual(poseCamara({ ...estancia, sentido: -1 }, D, N), poseCamara(estancia, D, N));
+});
+
+test('sentido: subiendo la primera persona mira hacia arriba y bajando, hacia abajo', () => {
+  // A mitad de viaje (primera persona plena) la mira queda por encima o por debajo de la
+  // posición según el sentido; la columna baja con el índice, así que arriba = y mayor.
+  const bajando = poseCamara(viaje(2, 0.5, 1), D, N);
+  const subiendo = poseCamara(viaje(2, 0.5, -1), D, N);
+  assert.ok(bajando.mira[1] < bajando.posicion[1], 'bajando debería mirar hacia abajo');
+  assert.ok(subiendo.mira[1] > subiendo.posicion[1], 'subiendo debería mirar hacia arriba');
+});
+
+test('sentido: poseCamara subiendo es continua en todo el viaje y sale/llega a la pose canónica', () => {
+  let previa = poseCamara(viaje(2, 1, -1), D, N);
+  assert.ok(Math.hypot(...previa.posicion.map((v, j) => v - poseCanonica(D).posicion[j])) < 1e-9);
+  for (let k = 1; k <= 2000; k += 1) {
+    const pose = poseCamara(viaje(2, 1 - k / 2000, -1), D, N);
+    const salto = Math.hypot(...pose.posicion.map((v, j) => v - previa.posicion[j]));
+    assert.ok(salto < 0.6, 'la posición salta ' + salto + ' en k=' + k);
+    assert.ok(Math.abs(pose.fov - previa.fov) < 1.5, 'el fov salta en k=' + k);
+    previa = pose;
+  }
+  assert.ok(Math.hypot(...previa.posicion.map((v, j) => v - poseCanonica(D).posicion[j])) < 1e-9);
 });

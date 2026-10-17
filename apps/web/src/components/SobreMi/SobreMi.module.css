@@ -78,6 +78,14 @@
   color: var(--color-muted);
 }
 
+/* La tipografía del rótulo va en el <text> del SVG que lo dibuja. */
+.etiquetaTrazo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
 /* Textos del hito: en la mitad opuesta al modelo. */
 .textos {
   position: absolute;

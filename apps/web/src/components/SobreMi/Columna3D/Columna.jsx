@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { RADIO_HALO, RADIO_TUBO } from '@/lib/columna/geometria.js';
 import { llenadoDe } from '@/lib/columna/recorrido.js';
+import { longitudHasta } from '@/lib/columna/geometria.js';
 import { curvaColumna } from './curva.js';
 import { crearMaterialColumna } from './shaderColumna.js';
 
@@ -21,8 +22,11 @@ export default function Columna({ n, refTramo, colores, reducido }) {
     [nucleo, halo].forEach((material) => {
       material.uniforms.uColor.value.set(colores.acento);
       material.uniforms.uApagado.value.set(colores.apagado);
+      // La cola llega a su plenitud en el primer hito y se disuelve hacia arriba.
+      const hasta = longitudHasta(0, n);
+      material.uniforms.uCola.value.set(hasta * 0.4, hasta * 0.9);
     });
-  }, [nucleo, halo, colores]);
+  }, [nucleo, halo, colores, n]);
 
   useEffect(
     () => () => {

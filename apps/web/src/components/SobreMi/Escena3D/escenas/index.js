@@ -36,3 +36,12 @@ export const idsConEscena = new Set(Object.keys(ESCENAS).map(Number));
 export function cargadorEscena(id) {
   return ESCENAS[id];
 }
+
+// Baja (sin montar nada) los chunks de todas las escenas, para que `lazy` resuelva al
+// instante cuando una estación las pida.
+let precargadas = false;
+export function precargarEscenas() {
+  if (precargadas) return;
+  precargadas = true;
+  Object.values(ESCENAS).forEach((cargar) => cargar().catch(() => {}));
+}

@@ -2,8 +2,9 @@
 
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Environment, Lightformer, useGLTF } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
+import ZoomEscena from '../ZoomEscena.jsx';
 import { fraccionExplosion } from '../cicloPC.js';
 import { colocarPieza, construirRam, separarPiezas } from './modelos.js';
 
@@ -96,15 +97,9 @@ export default function Escena3PC({ activa, reducido }) {
 
   const { escala, centro, piezas } = modelo;
   return (
+    <ZoomEscena activa={activa}>
     <group position={[0.1, 0.05, 0]} rotation={[0.42, -0.45, 0]}>
       {/* Iluminación de estudio: paneles de luz que se reflejan en los metales. */}
-      <Environment resolution={512} frames={1} environmentIntensity={0.75}>
-        <color attach="background" args={['#8190a6']} />
-        <Lightformer form="rect" intensity={9} color="#ffffff" position={[0, 6, 5]} rotation-x={Math.PI / 2.2} scale={[14, 6, 1]} />
-        <Lightformer form="rect" intensity={6} color="#f4f7ff" position={[0, 1, 9]} scale={[16, 9, 1]} />
-        <Lightformer form="rect" intensity={4} color="#7fe6ff" position={[-7, 1, 1]} rotation-y={Math.PI / 2} scale={[9, 5, 1]} />
-        <Lightformer form="rect" intensity={4} color="#b9ccff" position={[7, 1, 2]} rotation-y={-Math.PI / 2} scale={[9, 5, 1]} />
-      </Environment>
       <directionalLight position={[3, 6, 7]} intensity={0.9} color="#ffffff" />
       <directionalLight position={[-5, 2, 4]} intensity={0.35} color="#dfe8ff" />
 
@@ -118,5 +113,6 @@ export default function Escena3PC({ activa, reducido }) {
         </Flotante>
       ))}
     </group>
+    </ZoomEscena>
   );
 }

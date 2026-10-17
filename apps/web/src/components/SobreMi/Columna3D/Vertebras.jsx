@@ -31,7 +31,7 @@ function armarCostilla(inicio, fin) {
 // Un anillo por hito, perpendicular a la columna, y una "costilla" curva que lo
 // une con su modelo. Apagado → encendido (con un destello) cuando la luz lo
 // pasa; el del hito actual late despacio.
-export default function Vertebras({ n, refTramo, colores, reducido }) {
+export default function Vertebras({ n, refTramo, colores, reducido, ocultarCostillas = false }) {
   const curva = curvaColumna(n);
   const datos = useMemo(
     () =>
@@ -177,6 +177,7 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
         }}
         geometry={costillas[i].geoNucleo}
         material={matCostilla}
+        visible={!ocultarCostillas}
       />
       <mesh
         ref={(malla) => {
@@ -184,6 +185,7 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
         }}
         geometry={costillas[i].geoHalo}
         material={matHaloCostilla}
+        visible={!ocultarCostillas}
       />
       {reducido ? null : (
         <mesh
@@ -192,6 +194,7 @@ export default function Vertebras({ n, refTramo, colores, reducido }) {
           }}
           geometry={geoPulso}
           material={matPulso}
+          visible={!ocultarCostillas}
         />
       )}
     </group>

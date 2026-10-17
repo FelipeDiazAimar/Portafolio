@@ -1,4 +1,6 @@
 .minimapa {
+  /* Azul eléctrico (el del "Hoy"), plano: sin resplandores. */
+  --azul: #2f6bff;
   position: absolute;
   z-index: 3;
   right: clamp(1rem, 2.5vw, 2rem);
@@ -26,37 +28,13 @@
 }
 
 .recorrido {
-  stroke: var(--color-accent);
-  filter: drop-shadow(0 0 4px var(--color-accent));
-  animation: minimapa-brillo 2.4s ease-in-out infinite;
-}
-
-@keyframes minimapa-brillo {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 3px var(--color-accent));
-  }
-  50% {
-    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-accent) 80%, transparent));
-  }
+  stroke: var(--azul);
 }
 
 .marcador {
   fill: #fff;
-  filter: drop-shadow(0 0 6px var(--color-accent));
-  opacity: 0.95;
-  transition: opacity 0.3s ease;
-  animation: minimapa-halo 2.4s ease-in-out infinite;
-}
-
-@keyframes minimapa-halo {
-  0%,
-  100% {
-    opacity: 0.85;
-  }
-  50% {
-    opacity: 1;
-  }
+  stroke: var(--azul);
+  stroke-width: 1.5;
 }
 
 .boton {
@@ -64,9 +42,9 @@
   display: grid;
   place-items: center;
   /* Área de click generosa: el punto es chico. */
-  width: 28px;
-  height: 28px;
-  margin: -14px 0 0 -14px;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -79,37 +57,28 @@
   border: 1.5px solid var(--color-muted);
   border-radius: 50%;
   background: var(--color-bg);
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease, background 0.2s ease, box-shadow 0.25s ease;
 }
 
 .boton[aria-current='step'] .punto {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--azul);
+  background: var(--azul);
   transform: scale(1.3);
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
-  animation: minimapa-pulso 2s ease-in-out infinite;
-}
-
-@keyframes minimapa-pulso {
-  0%,
-  100% {
-    transform: scale(1.3);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
-  }
-  50% {
-    transform: scale(1.45);
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 0%, transparent);
-  }
 }
 
 .boton:hover .punto,
 .boton:focus-visible .punto {
-  border-color: var(--color-accent);
-  transform: scale(1.3);
+  border-color: var(--azul);
+  background: var(--azul);
+  transform: scale(1.8);
+}
+
+.boton:active .punto {
+  transform: scale(1.5);
 }
 
 .boton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--azul);
   outline-offset: 2px;
   border-radius: 50%;
 }
@@ -138,14 +107,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .recorrido,
-  .marcador,
-  .boton[aria-current='step'] .punto {
-    animation: none;
-  }
   .punto,
-  .tooltip,
-  .marcador {
+  .tooltip {
     transition: none;
   }
 }

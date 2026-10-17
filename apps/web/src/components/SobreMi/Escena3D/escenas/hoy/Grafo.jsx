@@ -10,7 +10,16 @@ import { ubicarFicha, zoomParaRadio } from '../../fichaLayout.js';
 import { puntaYo } from '../../../Columna3D/puntaYo.js';
 import { ENLACES_GRAFO, GRUPOS, NODOS_GRAFO, distribuir, grado, indiceDe, pasoFuerzas, radioNodo, vecinos } from '../../grafo.js';
 
-const SANS = '-apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif';
+// SF Pro donde esté instalada (macOS, iOS); en el resto, la tipografía del sitio. Se lee
+// del documento (y no se nombra) porque next/font le pone un nombre propio a Inter.
+const SF_PRO = '"SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont';
+function familiaSans() {
+  const sitio = typeof document === 'undefined' ? '' : getComputedStyle(document.body).fontFamily;
+  return `${SF_PRO}, ${sitio ? `${sitio}, ` : ''}"Segoe UI", system-ui, sans-serif`;
+}
+// Los nombres se dibujan a 3× y se achican en pantalla: con el grafo ampliado el texto
+// a tamaño 1× se veía pixelado y con letras comidas por el mipmap.
+const RESOLUCION_ETIQUETA = 3;
 const ALTO_ETIQUETA = 0.15;
 // Ficha a mitad del tamaño original (misma proporción 720×260): con 2,7 de ancho
 // tapaba medio grafo al seleccionar un nodo; con 1,35 sigue legible y no tapa el modelo.
@@ -21,8 +30,10 @@ const ZOOM_MAXIMO = 3;
 // La estación de Hoy está a escala normal (agrandarla entera agrandaba también la
 // constelación del comienzo): el grafo crece con su propio encuadre, que lo ajusta a la
 // esfera que lo contiene sin recortar.
-const ZOOM_BASE_MAX = 4;
-const ZOOM_SELECCION_MAX = 4.3;
+const ZOOM_BASE_MAX = 12;
+const ZOOM_SELECCION_MAX = 12;
+// El grafo arranca más lejos y se acerca a su encuadre mientras se expande.
+const ZOOM_ENTRADA = 0.5;
 const salida = (x) => 1 - (1 - x) ** 3;
 const limitar = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 
@@ -42,7 +53,7 @@ function renglones(ctx, texto, ancho) {
 }
 
 // Ficha que aparece al pasar el mouse por un nodo: grupo, nombre y descripción.
-function dibujarFicha(ctx, w, h, nodo, claro) {
+function dibujarFicha(ctx, w, h, nodo, claro, SANS) {
   ctx.clearRect(0, 0, w, h);
   if (!nodo) return;
   const color = GRUPOS[nodo.grupo].color;
@@ -119,12 +130,15 @@ export default function Grafo({ tiempo, claro, activa = true }) {
 
   const recursos = useMemo(() => {
     const texturas = [];
+    const SANS = familiaSans();
+    const R = RESOLUCION_ETIQUETA;
     const medida = document.createElement('canvas').getContext('2d');
     medida.font = `700 34px ${SANS}`;
     const colorEtiqueta = claro ? '#10204d' : '#f1f5ff';
     const etiquetas = NODOS_GRAFO.map((nodo) => {
       const ancho = Math.ceil(medida.measureText(nodo.etiqueta).width) + 24;
-      const lienzo = crearPantalla(ancho, 54);
+      const lienzo = crearPantalla(ancho * R, 54 * R);
+      lienzo.ctx.scale(R, R);
       lienzo.ctx.font = `700 34px ${SANS}`;
       lienzo.ctx.textAlign = 'center';
       lienzo.ctx.textBaseline = 'middle';
@@ -142,17 +156,20 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     texturas.push(ficha.textura);
     const colores = NODOS_GRAFO.map((nodo) => {
       const c = new THREE.Color(GRUPOS[nodo.grupo].color);
-      if (claro) c.offsetHSL(0, 0.1, -0.2);
+      // Mismos colores vívidos en tema claro y oscuro; sólo el blanco del 'yo' se oscurece
+      // en el claro (si no, desaparece contra el fondo).
+      if (claro && nodo.id === 'yo') c.offsetHSL(0, 0, -0.35);
       return c;
     });
     const mezcla = claro ? THREE.NormalBlending : THREE.AdditiveBlending;
     return {
+      sans: SANS,
       texturas,
       etiquetas,
       ficha,
       colores,
       // Esferas con luz propia: el sombreado les da volumen.
-      nodos: colores.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: claro ? 0.5 : 1.0, roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0 })),
+      nodos: colores.map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.0, roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0 })),
       materialFicha: new THREE.MeshBasicMaterial({ map: ficha.textura, transparent: true, opacity: 0, depthWrite: false, depthTest: false, toneMapped: false }),
       materialLineas: new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: mezcla, toneMapped: false }),
       geoNodo: new THREE.SphereGeometry(1, 28, 18),
@@ -265,10 +282,9 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     const area = areaVisible(rect, window.innerWidth > 768 ? 170 : 8);
     encuadre.current.pxPorLocal = pxPorLocal;
     encuadre.current.area = area;
-    // El grafo entrando entero se veía chiquito: se usa un 30% más de pantalla
-    // (leve sangrado de bordes; el foco y sus conexiones quedan visibles).
-    const base = zoomParaRadio({ radioPx: radioLocal * pxPorLocal, area, margen: 6, maximo: ZOOM_BASE_MAX });
-    encuadre.current.zoom = Math.min(ZOOM_BASE_MAX, base * 1.3);
+    // Entra entero y lo más grande posible (el tope de zoom era 4 y lo dejaba chiquito).
+    // (un poco por encima del ajuste exacto: la esfera de ajuste sobra respecto de lo que se ve).
+    encuadre.current.zoom = Math.min(ZOOM_BASE_MAX, zoomParaRadio({ radioPx: radioLocal * pxPorLocal, area, margen: 6, maximo: ZOOM_BASE_MAX }) * 1.12);
   };
 
   // Centro y zoom que encuadran un nodo junto con todas sus conexiones.
@@ -617,6 +633,8 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     let zoomObjetivo = encuadre.current.zoom;
     if (listo && seleccion.current) zoomObjetivo = encuadreSeleccion(centroObjetivo);
     zoomObjetivo *= usuario.current.zoom;
+    // Entrada: el grafo se acerca a su encuadre a medida que se expande.
+    zoomObjetivo *= ZOOM_ENTRADA + (1 - ZOOM_ENTRADA) * salida(limitar(e / 0.9));
     if (e < 0.02) {
       // Antes de que aparezca, el grafo ya está en su encuadre: no se "acerca" desde lejos.
       actualV.zoom = zoomObjetivo;
@@ -701,7 +719,7 @@ export default function Grafo({ tiempo, claro, activa = true }) {
     if (cambio) {
       ultimaFicha.current = idFoco;
       if (idFoco) {
-        dibujarFicha(recursos.ficha.ctx, recursos.ficha.ancho, recursos.ficha.alto, NODOS_GRAFO[indiceDe(idFoco)], claro);
+        dibujarFicha(recursos.ficha.ctx, recursos.ficha.ancho, recursos.ficha.alto, NODOS_GRAFO[indiceDe(idFoco)], claro, recursos.sans);
         recursos.ficha.textura.needsUpdate = true;
       }
     }
@@ -715,8 +733,14 @@ export default function Grafo({ tiempo, claro, activa = true }) {
       // Tamaño de la ficha en pantalla, con la escala real del grupo en que está.
       const escalaRaiz = v3.setFromMatrixScale(raiz.matrixWorld).x;
       const pxPorMundo = 1 / mundoPorPixel(mundoNodo, rect);
-      const anchoPx = FICHA.ancho * escalaRaiz * pxPorMundo;
-      const altoPx = FICHA.alto * escalaRaiz * pxPorMundo;
+      // La ficha no está dentro de la vista con zoom (que agranda el grafo), así que quedaba
+      // chica al lado de nodos enormes: se la escala para que ocupe un ancho de pantalla
+      // cómodo (entre 300 y 520 px) sea cual sea el zoom.
+      const anchoBasePx = FICHA.ancho * escalaRaiz * pxPorMundo;
+      const escalaFicha = limitar((limitar(rect.width * 0.22, 300, 520)) / Math.max(anchoBasePx, 1), 1, 8);
+      ficha.scale.setScalar(escalaFicha);
+      const anchoPx = anchoBasePx * escalaFicha;
+      const altoPx = FICHA.alto * escalaRaiz * pxPorMundo * escalaFicha;
       const centro = ubicarFicha({ nodo: nodoPx, ancho: anchoPx, alto: altoPx, area: areaVisible(rect, 8), separacion: 24 });
       const desplazamiento = pixelesALocal(centro.x - nodoPx.x, centro.y - nodoPx.y, mundoNodo, rect, new THREE.Vector3());
       const destino = raiz.worldToLocal(mundoNodo.clone()).add(desplazamiento);

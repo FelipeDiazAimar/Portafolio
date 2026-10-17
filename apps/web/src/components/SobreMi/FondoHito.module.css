@@ -1,14 +1,24 @@
-/* Ocupa todo el panel, detrás del mundo 3D, y se funde con el fondo por los bordes
-   con una máscara radial (no pinta color: sirve en tema claro y oscuro). Se ve sólo
-   al llegar a un hito (la opacidad la maneja la sección). */
+/* Ocupa todo el panel, detrás del mundo 3D, y se funde con el fondo por los bordes.
+   Se ve sólo al llegar a un hito (la opacidad la maneja la sección).
+   El fundido y el oscurecido son una capa encima (.velo) y no una máscara ni un filter
+   sobre las fotos y el video: con eso el navegador rehacía la máscara y el filtro en cada
+   cuadro del video y del zoom, y al llegar o irse de un hito se trababa. */
 .fondo {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 80% 75% at 50% 50%, #000 40%, transparent 100%);
-  mask-image: radial-gradient(ellipse 80% 75% at 50% 50%, #000 40%, transparent 100%);
   transition: opacity 0.5s ease;
+}
+
+.velo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Equivale a brightness(0.72) y al fundido radial hacia el color de fondo del panel. */
+  background:
+    radial-gradient(ellipse 80% 75% at 50% 50%, transparent 40%, var(--fondo-viaje, var(--color-bg)) 100%),
+    rgba(0, 0, 0, 0.28);
 }
 
 .capa {
@@ -25,7 +35,6 @@
 .imagen,
 .video {
   object-fit: cover;
-  filter: brightness(0.72) saturate(1.1);
   transform: scale(1);
   transition: transform 8s linear;
 }
@@ -33,6 +42,7 @@
 /* Zoom lento mientras el hito está activo (la foto; el video ya se mueve solo). */
 .activa .imagen {
   transform: scale(1.06);
+  will-change: transform;
 }
 
 .video {

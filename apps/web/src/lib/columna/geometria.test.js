@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AMPLITUD_S,
+  DESVIO_COLA,
   EXTRA,
   PASO_ANGULO,
   PUNTOS_POR_TRAMO,
@@ -40,14 +41,17 @@ test('ancla: a RADIO_ANCLA del eje, en el plano horizontal de su vértebra', () 
   }
 });
 
-test('ejeEn: la S nunca se aleja más que AMPLITUD_S y es continua', () => {
+test('ejeEn: la S nunca se aleja más que AMPLITUD_S y es continua; la cola se va hacia un costado', () => {
   let previo = ejeEn(-SEPARACION * N, N);
   for (let y = -SEPARACION * N; y <= SEPARACION; y += 0.05) {
     const p = ejeEn(y, N);
-    assert.ok(Math.abs(p.x) <= AMPLITUD_S + 1e-9);
-    assert.ok(Math.hypot(p.x - previo.x, p.z - previo.z) < 0.05);
+    // Del primer hito en adelante es la S; antes de él (la cola) se desprende a la izquierda.
+    if (y <= 1e-9) assert.ok(Math.abs(p.x) <= AMPLITUD_S + 1e-9);
+    else assert.ok(p.x <= AMPLITUD_S + 1e-9 && p.x >= -(AMPLITUD_S + DESVIO_COLA) - 1e-9);
+    assert.ok(Math.hypot(p.x - previo.x, p.z - previo.z) < (y > 0 ? 0.35 : 0.05));
     previo = p;
   }
+  assert.ok(ejeEn(SEPARACION, N).x < -DESVIO_COLA + AMPLITUD_S + 1e-9);
 });
 
 test('longitudHasta: crece con el índice y deja cola y punta', () => {

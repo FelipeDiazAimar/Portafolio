@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { poseCamara } from '@/lib/columna/recorrido.js';
+import { poseAlejada, poseCamara } from '@/lib/columna/recorrido.js';
 import { vistaParaAltura } from '../Escena3D/vista.js';
 
 // Desplazamiento del encuadre (fracción del ancho/alto) según dónde va el modelo.
@@ -17,7 +17,9 @@ const DESPLAZAMIENTO = {
 // "anclada" en un hito, la suelta: ahí manda el OrbitControls de siempre (ControlGiro).
 // También corre el encuadre hacia el lado del modelo con `setViewOffset` (es un
 // desplazamiento de proyección: el picking de las escenas sigue siendo correcto).
-export default function CamaraRecorrido({ n, refTramo, lado, opciones, reducido }) {
+// `salto`: salto largo del minimapa. La primera persona, a esa velocidad, es un borrón: la
+// cámara se queda alejada, mirando cómo pasa la columna.
+export default function CamaraRecorrido({ n, refTramo, lado, opciones, reducido, salto = false }) {
   const anclada = useRef(false);
   const mira = useRef(new THREE.Vector3());
   const giro = useRef(0);
@@ -60,7 +62,7 @@ export default function CamaraRecorrido({ n, refTramo, lado, opciones, reducido 
 
     anclada.current = false;
     if (controls) controls.enabled = false;
-    const pose = poseCamara(tramo, distancia, n, opciones);
+    const pose = salto && tramo.tipo === 'viaje' ? poseAlejada(distancia) : poseCamara(tramo, distancia, n, opciones);
     // Seguimiento cinematográfico: factor 3 (antes 6) para un vuelo más lento
     // y apreciable. Se mantiene el fast-path con reducido (f = 1).
     // La ventana de primera persona (llegada en t = 0.8) no se toca aquí: vive

@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Environment, Lightformer, RoundedBox, useGLTF } from '@react-three/drei';
+import { RoundedBox, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import PiezaDesarmable from '../PiezaDesarmable.jsx';
+import ZoomEscena from '../ZoomEscena.jsx';
 import { crearPantalla } from '../pantallaCanvas.js';
 import { valorMultimetro } from '../paletas.js';
 import { dibujarDiagnostico, dibujarLcd, dibujarPantallaTelefono, dibujarTapete } from '../texturasBanco.js';
@@ -177,14 +178,8 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
 
   return (
     // `key` por variante: al cambiar de tema se recrean los materiales y las texturas.
+    <ZoomEscena activa={activa}>
     <group key={claro ? 'claro' : 'oscuro'} position={[0.05, -0.25, 0]} rotation={[0.62, -0.28, 0]} scale={0.63}>
-      <Environment resolution={512} frames={1} environmentIntensity={0.75}>
-        <color attach="background" args={['#8190a6']} />
-        <Lightformer form="rect" intensity={9} color="#ffffff" position={[0, 6, 5]} rotation-x={Math.PI / 2.2} scale={[14, 6, 1]} />
-        <Lightformer form="rect" intensity={6} color="#f4f7ff" position={[0, 1, 9]} scale={[16, 9, 1]} />
-        <Lightformer form="rect" intensity={4} color="#7fe6ff" position={[-7, 1, 1]} rotation-y={Math.PI / 2} scale={[9, 5, 1]} />
-        <Lightformer form="rect" intensity={4} color="#b9ccff" position={[7, 1, 2]} rotation-y={-Math.PI / 2} scale={[9, 5, 1]} />
-      </Environment>
       {/* La luz azul del sitio tiñe los blancos: luz neutra para que se vean los colores. */}
       <directionalLight position={[3, 6, 5]} intensity={claro ? 2.0 : 1.1} color="#ffffff" />
 
@@ -262,5 +257,6 @@ export default function Escena4Banco({ activa, reducido, claro = false }) {
         </group>
       </PiezaDesarmable>
     </group>
+    </ZoomEscena>
   );
 }

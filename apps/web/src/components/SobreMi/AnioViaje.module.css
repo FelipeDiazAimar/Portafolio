@@ -6,10 +6,13 @@
   place-items: center;
   margin: 0;
   pointer-events: none;
+  color: var(--color-accent);
+}
+
+/* La tipografía va en el <text> del SVG que dibuja el año. */
+.anioTrazo {
   font-size: clamp(4rem, 14vw, 11rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  color: color-mix(in srgb, var(--color-accent) 8%, transparent);
-  -webkit-text-stroke: 1.5px var(--color-accent);
 }

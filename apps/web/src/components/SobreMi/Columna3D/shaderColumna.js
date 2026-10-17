@@ -24,6 +24,7 @@ const fragmentShader = /* glsl */ `
   uniform float uAlfaApagado;
   uniform vec3 uColor;
   uniform vec3 uApagado;
+  uniform vec2 uCola;
   varying vec2 vUv;
   varying float vProfundidad;
   void main() {
@@ -36,7 +37,9 @@ const fragmentShader = /* glsl */ `
     color += vec3(1.0) * cabeza * 4.0;
     float alfa = mix(uAlfaApagado, 1.0, max(encendido, cabeza));
     float niebla = exp(-pow(vProfundidad * 0.03, 2.0));
-    gl_FragColor = vec4(color * uIntensidad, alfa * niebla);
+    // La cola se disuelve antes de llegar al borde de la pantalla: sin corte seco.
+    float cola = uCola.y > 0.0 ? smoothstep(uCola.x, uCola.y, x) : 1.0;
+    gl_FragColor = vec4(color * uIntensidad, alfa * niebla * cola);
   }
 `;
 
@@ -55,6 +58,8 @@ export function crearMaterialColumna({ intensidad = 1, aditivo = false } = {}) {
       uAlfaApagado: { value: aditivo ? 0.08 : 0.18 },
       uColor: { value: new THREE.Color('#5b8cff') },
       uApagado: { value: new THREE.Color('#2a3350') },
+      // Tramo (en uv.x) donde la cola pasa de invisible a plena; (0,0) = sin desvanecer.
+      uCola: { value: new THREE.Vector2(0, 0) },
     },
   });
 }

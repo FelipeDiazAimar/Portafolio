@@ -11,7 +11,8 @@
 //
 export const GRUPOS = {
   yo: { nombre: 'Yo', color: '#ffffff' },
-  trayectoria: { nombre: 'Trayectoria', color: '#4d9bff' },
+  // Azul eléctrico (era un celeste): el mismo en tema claro y oscuro.
+  trayectoria: { nombre: 'Trayectoria', color: '#1f6bff' },
   proyectos: { nombre: 'Proyectos', color: '#00f5c4' },
   tecnologias: { nombre: 'Tecnologías', color: '#ffb21a' },
 };

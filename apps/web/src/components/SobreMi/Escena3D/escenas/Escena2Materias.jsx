@@ -103,12 +103,14 @@ export default function Escena2Materias({ activa, reducido, claro = false }) {
     const barraTex = crear(512, 48, dibujarBarraLlena);
     const haloTex = crear(512, Math.round((512 * ALTO_T) / ANCHO_T), dibujarHaloTarjeta);
 
-    const cuerpo = new THREE.MeshStandardMaterial({ color: claro ? '#dfe5f3' : '#0a1020', metalness: claro ? 0.2 : 0.55, roughness: 0.38 });
+    const cuerpo = new THREE.MeshStandardMaterial({ color: '#0a1020', metalness: 0.55, roughness: 0.38 });
     const relleno = new THREE.MeshBasicMaterial({ map: rellenoTex, transparent: true, depthWrite: false, toneMapped: false });
 
     const tarjetas = MATERIAS.map((nombre, i) => {
       const frente = new THREE.MeshStandardMaterial({
-        map: crear(ancho, alto, (ctx, w, h) => dibujarTarjeta(ctx, w, h, nombre, i, claro)),
+        // Las tarjetas son siempre de vidrio oscuro: en tema claro las blancas se perdían contra
+        // el fondo claro, con su texto.
+        map: crear(ancho, alto, (ctx, w, h) => dibujarTarjeta(ctx, w, h, nombre, i, false)),
         transparent: true,
         roughness: 0.42,
         metalness: 0.15,
@@ -318,8 +320,10 @@ export default function Escena2Materias({ activa, reducido, claro = false }) {
           <mesh position={[0, 0, 0.044]} material={recursos.materialEscudo}>
             <planeGeometry args={[ALTO_ESCUDO * PROPORCION_ESCUDO, ALTO_ESCUDO]} />
           </mesh>
-          <pointLight ref={refLuz} position={[0, 0, 1.2]} color="#ffcf80" intensity={0} distance={7} />
         </group>
+        {/* Fuera del sello (que se oculta): una luz oculta cambiaría la cuenta de luces del
+            mundo y obligaría a recompilar todos los shaders. */}
+        <pointLight ref={refLuz} position={[0, 0, 1.2]} color="#ffcf80" intensity={0} distance={7} />
       </PiezaDesarmable>
     </group>
   );

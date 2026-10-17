@@ -93,6 +93,7 @@ export default function FondoHito({ hitos, activo, presente = true }) {
           />
         </div>
       ) : null}
+      <div className={styles.velo} />
     </div>
   );
 }

@@ -4,8 +4,10 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { LIMITE_CAIDA, avanzarCaida, velocidadInicial, volverAlOrigen } from './caida.js';
 import { useDesarme } from './useDesarme.jsx';
+import { fijarOculto } from './ocultarRenderizables.js';
 
 const LAMBDA_REGRESO = 6;
+
 const REPOSO = () => ({ p: [0, 0, 0], v: [0, 0, 0], r: [0, 0, 0], w: [0, 0, 0], quieto: false });
 
 // Envuelve una pieza. Armada, está en `posicion`. Al desarmarse sale disparada,
@@ -22,6 +24,7 @@ export default function PiezaDesarmable({ posicion = [0, 0, 0], centro, semilla 
   // fase: 'armada' (en su lugar) | 'cayendo' | 'volviendo'
   const fase = useRef('armada');
   const estado = useRef(REPOSO());
+  const oculta = useRef(false);
 
   useFrame((_, delta) => {
     const { desarmado, reducido } = control.current;
@@ -60,7 +63,11 @@ export default function PiezaDesarmable({ posicion = [0, 0, 0], centro, semilla 
     const { p, r } = estado.current;
     // Terminó de caer: desaparece. En el mundo de la columna seguiría a la vista desde
     // los otros hitos.
-    grupo.current.visible = !(fase.current === 'cayendo' && estado.current.quieto);
+    const ocultar = fase.current === 'cayendo' && estado.current.quieto;
+    if (ocultar !== oculta.current) {
+      oculta.current = ocultar;
+      fijarOculto(grupo.current, ocultar, 'ocultoPorCaida');
+    }
     grupo.current.position.set(posicion[0] + p[0], posicion[1] + p[1], posicion[2] + p[2]);
     grupo.current.rotation.set(r[0], r[1], r[2]);
   });

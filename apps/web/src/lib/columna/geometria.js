@@ -15,11 +15,22 @@ export function altoTotal(n) {
   return SEPARACION * Math.max(n - 1, 1);
 }
 
+// La cola (el tramo antes del primer hito) no sube derecha hasta cortarse contra el borde de
+// arriba de la pantalla: se inclina con suavidad hacia la izquierda, como un haz que se
+// desprende de un costado (y además se desvanece: ver `uCola` en shaderColumna.js). Es nula
+// en el primer hito y crece con derivada 0 al empezar.
+export const DESVIO_COLA = 6;
+function desvioCola(y) {
+  if (y <= 0) return 0;
+  const t = Math.min(1, y / EXTRA);
+  return -DESVIO_COLA * t * t * (3 - 2 * t);
+}
+
 // Punto del eje de la columna a la altura `y`: una S suave en el espacio (no plana).
 export function ejeEn(y, n) {
   const alto = altoTotal(n);
   return {
-    x: AMPLITUD_S * Math.sin((2 * Math.PI * y) / alto),
+    x: AMPLITUD_S * Math.sin((2 * Math.PI * y) / alto) + desvioCola(y),
     y,
     z: AMPLITUD_S * 0.5 * Math.sin((Math.PI * y) / alto),
   };
