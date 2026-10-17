@@ -21,13 +21,14 @@ import {
 } from 'three';
 import { acercarValores, amortiguar, avanzarFase, elegirResaltada, limitarZoom, resalteContinuo } from '@/lib/xilofono.js';
 import { CELDAS, CELDAS_NOMBRES } from './atlas.js';
-import { CAPA_FONDO, CAPA_VIDRIO, ESCARCHA, FLUIDO, PALETAS, XILOFONO, calidad } from './config.js';
+import { AURORA, CAPA_FONDO, CAPA_VIDRIO, ESCARCHA, FLUIDO, FONDO, PALETAS, XILOFONO, calidad } from './config.js';
+import { coloresAurora } from './aurora.js';
 import { AyudaFBO } from './fbo.js';
 import { Fluido } from './fluido.js';
 import { armarGeometria, crearBarra, escribirHelice } from './helice.js';
 import { PasadaEscarcha } from './pasadas.js';
 import { barraBajoRayo, centroDeBarra, crearEspacio, frenteDeBarra } from './picking.js';
-import { barraFrag, barraVert, fondoFrag, fondoVert } from './shaders.js';
+import { barraFrag, barraVert, fondoAuroraFrag, fondoFrag, fondoVert } from './shaders.js';
 
 // Motor del xilófono de vidrio (de main.ts + Xylophone.ts del original, MIT), dentro de un
 // canvas de la sección en vez de a pantalla completa. Diferencias: sin audio, la cinta avanza con
@@ -194,9 +195,33 @@ export class Xilofono {
       u_time: this.uniforms.u_time,
       u_aspecto: { value: 1 },
     };
+    const conAurora = FONDO === 'aurora';
+    if (conAurora) {
+      Object.assign(this.uniformsFondo, {
+        // la aurora va a su propio ritmo (más lento que el reloj de la escena)
+        u_time: { value: 0 },
+        u_stops: { value: Array.from({ length: 5 }, () => new Vector3()) },
+        u_cantidad: { value: 2 },
+        u_amplitud: { value: AURORA.amplitud },
+        u_suavidad: { value: AURORA.suavidad },
+        u_alto: { value: AURORA.alto },
+        u_escala: { value: AURORA.escala },
+        u_resplandor: { value: AURORA.resplandor },
+        u_brillo: { value: AURORA.brillo },
+        u_capas: { value: AURORA.capas },
+        u_invertir: { value: AURORA.desdeAbajo ? 1 : 0 },
+        u_claro: { value: 0 },
+      });
+    }
     const malla = new Mesh(
       new PlaneGeometry(2, 2),
-      new ShaderMaterial({ vertexShader: fondoVert, fragmentShader: fondoFrag, uniforms: this.uniformsFondo, depthTest: false, depthWrite: false })
+      new ShaderMaterial({
+        vertexShader: fondoVert,
+        fragmentShader: conAurora ? fondoAuroraFrag : fondoFrag,
+        uniforms: this.uniformsFondo,
+        depthTest: false,
+        depthWrite: false,
+      })
     );
     malla.renderOrder = -1;
     malla.frustumCulled = false;
@@ -244,6 +269,13 @@ export class Xilofono {
     this.uniformsFondo.u_colorA.value.set(p.fondoA);
     this.uniformsFondo.u_colorB.value.set(p.fondoB);
     this.uniformsFondo.u_colorC.value.set(p.manchas);
+    if (this.uniformsFondo.u_stops) {
+      const { colores, cantidad } = coloresAurora(p.aurora);
+      colores.forEach((c, i) => this.uniformsFondo.u_stops.value[i].set(c[0], c[1], c[2]));
+      this.uniformsFondo.u_cantidad.value = cantidad;
+      this.uniformsFondo.u_claro.value = tema === 'light' ? 1 : 0;
+      this.uniformsFondo.u_brillo.value = AURORA.brillo * p.brilloAurora;
+    }
     this.uniforms.u_especular.value = p.especular;
     this.uniforms.u_colorLogo.value.set(p.logo);
     this.uniforms.u_colorResalte.value.set(p.resalte);
@@ -432,6 +464,7 @@ export class Xilofono {
     this.ultimo = ahora;
     this.tiempo += dt;
     this.uniforms.u_time.value = this.tiempo;
+    if (this.uniformsFondo.u_stops) this.uniformsFondo.u_time.value += dt * AURORA.velocidad * (this.reducido ? 0 : 1);
 
     this.fluido.resolver(this.puntero, this.tiempo, dt, this.tamano.ancho / this.tamano.alto);
     this.actualizarVista(dt);

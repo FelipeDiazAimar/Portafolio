@@ -16,6 +16,7 @@ import { escribirHelice } from '../components/Habilidades/xilofono/helice.js';
 import { XILOFONO } from '../components/Habilidades/xilofono/config.js';
 import { TECNOLOGIAS } from '../data/tecnologias.js';
 import { CATEGORIAS } from '../data/categoriasTecnologias.js';
+import { aOklch, coloresAurora, hexARgb } from '../components/Habilidades/xilofono/aurora.js';
 
 test('xilófono: una barra por habilidad, sin repetir', () => {
   assert.equal(TECNOLOGIAS.length, XILOFONO.cantidad);
@@ -135,4 +136,15 @@ test('limitarZoom: acota en los dos sentidos', () => {
   assert.equal(limitarZoom(0.01), 0.4);
   assert.equal(limitarZoom(99), 12);
   assert.equal(limitarZoom(3), 3);
+});
+
+test('aurora: colores a OKLCH, siempre 5 lugares y al menos 2 colores', () => {
+  assert.deepEqual(hexARgb('#ffffff'), [1, 1, 1]);
+  const [l, c] = aOklch([1, 1, 1]);
+  assert.ok(Math.abs(l - 1) < 1e-3 && c < 1e-3);
+  const azul = coloresAurora(['#0038ff', '#00a6ff', '#5b8cff']);
+  assert.equal(azul.colores.length, 5);
+  assert.equal(azul.cantidad, 3);
+  assert.deepEqual(azul.colores[4], azul.colores[2]);
+  assert.equal(coloresAurora(['#0057ff']).cantidad, 2);
 });

@@ -305,6 +305,147 @@ void main() {
 }
 `;
 
+// Fondo "aurora": cortinas de luz que ondulan, adaptado de <Aurora /> de React Bits
+// (reactbits.dev). Va sobre el degradé del tema; en tema claro, como luz pastel.
+export const fondoAuroraFrag = /* glsl */ `
+uniform vec3 u_colorA;
+uniform vec3 u_colorB;
+uniform float u_time;
+uniform float u_aspecto;
+uniform vec3 u_stops[5];
+uniform int u_cantidad;
+uniform float u_amplitud;
+uniform float u_suavidad;
+uniform float u_alto;
+uniform float u_escala;
+uniform float u_resplandor;
+uniform float u_brillo;
+uniform int u_capas;
+uniform float u_invertir;
+uniform float u_claro;
+varying vec2 v_uv;
+
+vec3 permute(vec3 x) {
+  return mod(((x * 34.0) + 1.0) * x, 289.0);
+}
+
+float snoise(vec2 v) {
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = mod(i, 289.0);
+  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+  m = m * m;
+  m = m * m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+  vec3 g;
+  g.x = a0.x * x0.x + h.x * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+float suavizar(float e0, float e1, float x) {
+  float t = clamp((x - e0) / (e1 - e0), 0.0, 1.0);
+  return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+vec3 oklabALineal(vec3 c) {
+  float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+  float m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+  float s = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+  l = l * l * l;
+  m = m * m * m;
+  s = s * s * s;
+  return vec3(
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
+  );
+}
+
+vec3 aSrgb(vec3 c) {
+  c = clamp(c, 0.0, 1.0);
+  return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+}
+
+vec3 rampa(float t) {
+  float x = clamp(t, 0.0, 1.0) * float(u_cantidad - 1);
+  int i = int(min(floor(x), float(u_cantidad - 2)));
+  float f = x - float(i);
+  f = f * f * (3.0 - 2.0 * f);
+  vec3 lch = mix(u_stops[i], u_stops[i + 1], f);
+  lch.x = mix(lch.x, min(lch.x, 0.7), u_claro);
+  return aSrgb(oklabALineal(vec3(lch.x, lch.y * cos(lch.z), lch.y * sin(lch.z))));
+}
+
+float ruido(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+void main() {
+  float y = 1.0 - v_uv.y;
+  y = mix(y, 1.0 - y, u_invertir);
+  float u = v_uv.x;
+  float X = (v_uv.x - 0.5) * u_aspecto;
+  float t = u_time;
+
+  vec3 brillo = vec3(0.0);
+  float cubre = 0.0;
+  for (int k = 0; k < 3; k++) {
+    if (k >= u_capas) break;
+    float capa = float(k);
+    float semilla = capa * 13.7;
+    float paso = t * (1.0 - capa * 0.18);
+    float tuerce = snoise(vec2(X * 0.45 * u_escala + paso * 0.02 + semilla, paso * 0.05 + semilla));
+    float onda = snoise(vec2(X * 0.75 * u_escala + tuerce * 0.35 - paso * 0.03 + semilla, paso * 0.07 - semilla)) * 0.72
+      + snoise(vec2(X * 1.6 * u_escala + tuerce * 0.5 + paso * 0.04 - semilla, paso * 0.1 + semilla * 0.5)) * 0.28;
+    float borde = u_alto + capa * 0.07 + onda * 0.15 * u_amplitud;
+
+    float suave = (0.04 + u_suavidad * 0.16) * (1.0 + capa * 0.9);
+    float sube = borde - y;
+    float bajo = -suave - u_resplandor * 0.14;
+    float alto = 0.26 + suave * 0.6;
+    float cuerpo = pow(suavizar(bajo, alto, sube), 1.5 + u_resplandor * 0.6);
+    float lobulos = 0.86 + 0.14 * snoise(vec2(X * 0.9 * u_escala - paso * 0.025 + semilla, y * 0.3 + paso * 0.04));
+    float alfa = clamp(cuerpo * lobulos * (capa < 0.5 ? 1.0 : 0.32 / capa), 0.0, 1.0);
+
+    vec3 tinte = rampa(u + 0.05 * sin(paso * 0.08 + capa * 2.3) + capa * 0.1 + max(sube, 0.0) * 0.05);
+    brillo = 1.0 - (1.0 - brillo) * (1.0 - tinte * alfa);
+    cubre = 1.0 - (1.0 - cubre) * (1.0 - alfa);
+  }
+
+  float fuerza = clamp(u_brillo, 0.0, 2.0);
+  brillo *= min(fuerza, 1.0);
+  cubre *= min(fuerza, 1.0);
+  brillo = 1.0 - pow(1.0 - brillo, vec3(max(fuerza, 1.0)));
+  float tramado = (ruido(gl_FragCoord.xy) - 0.5) / 255.0;
+
+  float d = smoothstep(0.0, 1.0, v_uv.y * 0.5 + (1.0 - v_uv.x) * 0.5);
+  vec3 base = mix(u_colorA, u_colorB, d);
+  vec3 color;
+  if (u_claro > 0.5) {
+    // tema claro: luz pastel sobre el fondo claro
+    vec3 tinte = cubre > 0.0001 ? brillo / cubre : vec3(0.0);
+    float alfa = cubre * suavizar(0.0, 0.25, cubre) * 0.7;
+    color = mix(base, tinte, alfa);
+  } else {
+    // tema oscuro: la luz se suma sobre el fondo (el brillo ya viene premultiplicado)
+    color = base * (1.0 - cubre) + brillo;
+  }
+  gl_FragColor = vec4(color + tramado, 1.0);
+}
+`;
+
 /* ------------------------------------------------------------------------ */
 /*                                  fluido                                  */
 /* ------------------------------------------------------------------------ */

@@ -35,6 +35,22 @@ export const XILOFONO = {
   avanceSolo: 0.32,
 };
 
+// Fondo de la escena: 'aurora' (cortinas de luz, adaptado de <Aurora /> de React Bits) o
+// 'manchas' (el anterior: degradé con manchas de luz). Para volver, cambiar sólo esta línea.
+export const FONDO = 'aurora';
+
+export const AURORA = {
+  amplitud: 1, // alto de las ondas del borde
+  suavidad: 0.5, // qué tan difuso es el borde (0..1)
+  alto: 0.5, // cuánto baja la aurora en la sección (0..1)
+  escala: 1, // tamaño de las ondas (menos = más anchas y calmas)
+  resplandor: 0.7, // cuánto se derrama la luz pasando el borde
+  brillo: 1,
+  capas: 2, // cortinas (1..3); las de atrás, más tenues
+  velocidad: 0.6,
+  desdeAbajo: false, // false: cuelga desde arriba
+};
+
 export const FLUIDO = {
   resolucion: 128,
   rotor: 0.2,
@@ -68,6 +84,8 @@ export const PALETAS = {
     opacidad: 0.62, // alfa base del vidrio (el borde y el logo suben a opaco)
     especular: 0.6,
     bordeLuz: 0.8,
+    aurora: ['#0a2cff', '#0057ff', '#2f7bff', '#0038ff'],
+    brilloAurora: 0.62, // en oscuro, más tenue: el texto blanco y gris tiene que leerse encima
   },
   claro: {
     fondoA: '#f4f7ff',
@@ -83,5 +101,7 @@ export const PALETAS = {
     opacidad: 0.62,
     especular: 0.5,
     bordeLuz: 0.6,
+    aurora: ['#3d7bff', '#7fd4ff', '#8fb2ff', '#0a5cff'],
+    brilloAurora: 1,
   },
 };
