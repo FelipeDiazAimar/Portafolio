@@ -1,0 +1,87 @@
+/* Fila de enlaces centrada bajo el título de la vista del proyecto. */
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.4rem;
+}
+
+.enlace {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 1.1rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 12, 24, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+
+/* Brillo que cruza la píldora al apuntarla. */
+.enlace::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.enlace:hover,
+.enlace:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--acento, #fff);
+  box-shadow: 0 10px 30px -10px var(--acento, #fff);
+}
+
+.enlace:hover::after,
+.enlace:focus-visible::after {
+  transform: translateX(120%);
+  transition: transform 0.7s ease;
+}
+
+.enlace:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.principal {
+  border-color: transparent;
+  background: var(--acento, #fff);
+  color: #05070c;
+}
+
+.principal:hover,
+.principal:focus-visible {
+  border-color: #fff;
+}
+
+/* La flecha sale en diagonal al apuntar. */
+.flecha {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.enlace:hover .flecha,
+.enlace:focus-visible .flecha {
+  transform: translate(3px, -3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enlace,
+  .flecha,
+  .enlace::after {
+    transition: none;
+  }
+}

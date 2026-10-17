@@ -55,28 +55,15 @@ export default function Bienvenida({ locale = 'es' }) {
   const t = COPY[locale] ?? COPY.es;
 
   useEffect(() => {
-    // En una recarga no hay splash: se deja que el navegador restaure solo el
-    // scroll (la sección Sobre mí retoma su hito con el progreso guardado). En
-    // primera visita sí se fuerza el inicio arriba para que el splash arranque
-    // centrado (si quedara scroll anterior, el inicio aparecería corrido).
+    // El splash es una capa fija a pantalla completa: se muestra también en una recarga, sin
+    // tocar el scroll (el navegador lo restaura y la sección Sobre mí retoma su hito con el
+    // progreso guardado, todo por detrás del splash). Sólo en la primera visita se fuerza el
+    // inicio arriba, para que el splash arranque centrado en la página.
     const recarga = performance.getEntriesByType('navigation')[0]?.type === 'reload';
-    if (recarga) {
-      // El valor 'manual' de la visita anterior persiste en la entrada del
-      // historial: hay que devolverlo a 'auto' para que el navegador restaure.
-      if ('scrollRestoration' in window.history) {
-        window.history.scrollRestoration = 'auto';
-      }
-      setVisible(false);
-      return undefined;
-    }
-    // El navegador restaura solo la posición de scroll que tenía la página
-    // en un F5 (no es un bug nuestro, es scrollRestoration = 'auto' por
-    // defecto): si quedó algo de scroll de una visita anterior, la sección
-    // de inicio aparece corrida en vez de arrancar centrada.
     if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
+      window.history.scrollRestoration = recarga ? 'auto' : 'manual';
     }
-    window.scrollTo(0, 0);
+    if (!recarga) window.scrollTo(0, 0);
 
     const exitTimer = setTimeout(() => setExiting(true), EXIT_DELAY_MS);
     const unmountTimer = setTimeout(() => setVisible(false), UNMOUNT_DELAY_MS);

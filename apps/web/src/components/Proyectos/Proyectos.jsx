@@ -1,14 +1,15 @@
 'use client';
 
 // Sección Proyectos: una sola vista. La marquesina 3D con la tarjeta de cada proyecto
-// ocupa todo el fondo y la lista va a la izquierda (hover tabs). Al apuntar un proyecto
-// —en la lista o en la marquesina— su tarjeta viaja desde la marquesina al primer plano
-// y se abre a pantalla completa; al elegir otro, la anterior vuelve a su lugar mientras
-// la nueva sale de la suya. Sin nada elegido, se ve la marquesina con la lista.
+// ocupa todo el ancho. Al hacer click en una tarjeta su proyecto viaja desde la marquesina
+// al primer plano y se abre a pantalla completa; recién entonces aparece la lista a la
+// izquierda (hover tabs), con la que se cambia de proyecto: la anterior vuelve a su lugar
+// mientras la nueva sale de la suya. Sin nada elegido, se ve solo la marquesina.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ThreeDMarquee } from '@/components/ui/3d-marquee.jsx';
 import TextoDescifrado from '../TextoDescifrado/TextoDescifrado.jsx';
+import TextoTrazo from '../TextoTrazo/TextoTrazo.jsx';
 import { listarProyectos, resumenCifras } from '@/lib/proyectos.js';
 import { indicePorTecla } from '@/lib/navegacionProyectos.js';
 import NavegacionMixta from './NavegacionMixta.jsx';
@@ -16,12 +17,47 @@ import TarjetaMarca from './TarjetaMarca.jsx';
 import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
 
-// Intención de hover sobre la marquesina: cruzarla con el mouse no abre nada.
-const DEMORA_MARQUESINA_MS = 160;
-// Con 13 tarjetas la grilla del marquee quedaba arriba a la izquierda, fuera de la
-// vista: se la corre (en píxeles de su caja, que escala sola) hacia el centro del espacio
-// que deja la lista.
-const POSICION_GRILLA = { top: '971px', right: '-108px' };
+// Marquesina: la grilla inclinada deja huecos en las esquinas si sólo están los 13 proyectos,
+// así que se repiten los necesarios (más cuanto más grande la pantalla) hasta cubrirla, sin
+// agrandar las tarjetas. Medidas de la grilla original (en px de su caja, que escala sola):
+// 4 columnas en 1720 px con 32 de separación → tarjeta de 406 × 293.
+const ANCHO_TARJETA = 406;
+const ALTO_TARJETA = 293;
+const SEPARACION_TARJETAS = 32;
+const limitar = (x, min, max) => Math.min(max, Math.max(min, x));
+
+// Cuántas columnas y copias hacen falta para el tamaño del panel, y dónde poner la grilla
+// para que el centro de lo que ocupa caiga en el centro de la sección. Un vector (u, v) de
+// la grilla se ve en pantalla como (0,707·(u+v), 0,406·(v−u)) por la inclinación.
+export function configurarMarquesina(ancho, alto, total) {
+  const escala = ancho >= 1024 ? 1 : ancho >= 640 ? 0.75 : 0.5;
+  const k = Math.max(ancho / 1917, alto / 910) / escala;
+  const chico = ancho < 768;
+  // Hasta 13 columnas: más que proyectos obligaría a repetir uno en la misma fila.
+  const columnas = chico ? 6 : limitar(Math.ceil(8 * k), 6, 13);
+  const lado = chico ? 3 : limitar(Math.ceil(5 * k), 4, 9);
+  const filas = Math.ceil(total / columnas) + 2 * lado;
+  const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;
+  const altoFilas = filas * (ALTO_TARJETA + SEPARACION_TARJETAS);
+  return {
+    columnas,
+    anchoCaja,
+    filas,
+    posicion: {
+      right: `${Math.round(-anchoCaja / 2 + (0.707 * (anchoCaja + altoFilas)) / 2)}px`,
+      top: `${Math.round(860 - (0.406 * (altoFilas - anchoCaja)) / 2)}px`,
+    },
+  };
+}
+// Cuánto se ve el título antes de irse y dejar solo la marquesina.
+const TITULO_VISIBLE_MS = 4000;
+const ESCALA_TITULO = 0.2;
+const MARGEN_TITULO = 32;
+const ALTO_HEADER = 72;
+// Embudo de scroll: dentro de esta fracción del alto de pantalla, la sección se centra sola
+// tras quedar quieta ese tiempo.
+const EMBUDO_FRACCION = 0.45;
+const EMBUDO_ESPERA_MS = 220;
 
 export default function Proyectos() {
   const proyectos = useMemo(() => listarProyectos(), []);
@@ -46,27 +82,19 @@ export default function Proyectos() {
   const [activo, setActivo] = useState(null);
   const [saliendo, setSaliendo] = useState([]);
   const refActivo = useRef(null);
+  // Pasar de un proyecto a otro desde la lista no viaja ni anima el fondo: uno desaparece y
+  // aparece el otro. La animación de viaje queda para abrir desde la marquesina y para cerrar.
+  const [instantaneo, setInstantaneo] = useState(false);
   const elegir = useCallback((slug) => {
     if (slug === refActivo.current) return;
     const anterior = refActivo.current;
+    setInstantaneo(Boolean(anterior && slug));
     if (anterior) setSaliendo((lista) => (lista.includes(anterior) ? lista : [...lista, anterior]));
     setSaliendo((lista) => lista.filter((s) => s !== slug));
     refActivo.current = slug;
     setActivo(slug);
   }, []);
   const cerrar = useCallback(() => elegir(null), [elegir]);
-
-  // Hover sobre una tarjeta de la marquesina, con intención.
-  const refDemora = useRef(0);
-  const apuntarMarquesina = useCallback(
-    (slug) => {
-      clearTimeout(refDemora.current);
-      refDemora.current = setTimeout(() => elegir(slug), DEMORA_MARQUESINA_MS);
-    },
-    [elegir]
-  );
-  const salirMarquesina = useCallback(() => clearTimeout(refDemora.current), []);
-  useEffect(() => () => clearTimeout(refDemora.current), []);
 
   // Caja de la tarjeta de un proyecto en la marquesina, en coordenadas del panel: el
   // centro sale de su caja en pantalla y el tamaño, de su tamaño sin transformar por la
@@ -91,6 +119,33 @@ export default function Proyectos() {
 
   // Al salir de la sección se vuelve a la marquesina.
   const [visible, setVisible] = useState(false);
+  const [tituloVisto, setTituloVisto] = useState(false);
+  // El título terminó de viajar al header y ahí queda como texto con hover.
+  const [enHeader, setEnHeader] = useState(false);
+  // La franja de arriba de la lista es blanca lisa; sólo con la lista scrolleada se le suma el blur.
+  const [listaScrolleada, setListaScrolleada] = useState(false);
+  // Adónde viaja el título: la esquina de arriba a la derecha, centrado en la fila del header.
+  const refTitulo = useRef(null);
+  const [destinoTitulo, setDestinoTitulo] = useState({ x: 0, y: 0 });
+  useLayoutEffect(() => {
+    if (!tituloVisto || !refTitulo.current || !tamano.ancho) return;
+    const titulo = refTitulo.current.querySelector('h2');
+    const ancho = (titulo?.offsetWidth ?? refTitulo.current.offsetWidth) * ESCALA_TITULO;
+    setDestinoTitulo({
+      x: tamano.ancho / 2 - MARGEN_TITULO - ancho / 2,
+      // Centro de la fila del header (72 px de alto) respecto del centro del panel.
+      y: ALTO_HEADER / 2 - tamano.alto / 2,
+    });
+  }, [tituloVisto, tamano.ancho, tamano.alto]);
+  useEffect(() => {
+    if (!visible) {
+      setTituloVisto(false);
+      setEnHeader(false);
+      return undefined;
+    }
+    const id = setTimeout(() => setTituloVisto(true), TITULO_VISIBLE_MS);
+    return () => clearTimeout(id);
+  }, [visible]);
   useEffect(() => {
     const panel = refPanel.current;
     if (!panel) return undefined;
@@ -101,6 +156,39 @@ export default function Proyectos() {
     observador.observe(panel);
     return () => observador.disconnect();
   }, [elegir]);
+
+  // Embudo: al pasar por la sección, si el scroll se detiene cerca, la centra sola en pantalla.
+  useEffect(() => {
+    const panel = refPanel.current;
+    if (!panel) return undefined;
+    let espera = 0;
+    let dedos = 0;
+    const intentar = () => {
+      if (dedos > 0 || document.documentElement.dataset.sinIman) return;
+      const distancia = panel.getBoundingClientRect().top;
+      if (Math.abs(distancia) < 2 || Math.abs(distancia) > window.innerHeight * EMBUDO_FRACCION) return;
+      window.scrollTo({ top: window.scrollY + distancia, behavior: 'smooth' });
+    };
+    const alScroll = () => {
+      clearTimeout(espera);
+      espera = setTimeout(intentar, EMBUDO_ESPERA_MS);
+    };
+    const alTocar = (evento) => {
+      dedos = evento.touches.length;
+      if (!dedos) alScroll();
+    };
+    window.addEventListener('scroll', alScroll, { passive: true });
+    window.addEventListener('touchstart', alTocar, { passive: true });
+    window.addEventListener('touchend', alTocar, { passive: true });
+    window.addEventListener('touchcancel', alTocar, { passive: true });
+    return () => {
+      clearTimeout(espera);
+      window.removeEventListener('scroll', alScroll);
+      window.removeEventListener('touchstart', alTocar);
+      window.removeEventListener('touchend', alTocar);
+      window.removeEventListener('touchcancel', alTocar);
+    };
+  }, []);
 
   // Teclado con la sección a la vista: flechas recorren, Escape vuelve a la marquesina.
   useEffect(() => {
@@ -140,32 +228,77 @@ export default function Proyectos() {
     [proyectos]
   );
   const proyecto = proyectos.find((p) => p.slug === activo) ?? null;
+  const marquesina = useMemo(
+    () => configurarMarquesina(tamano.ancho || 1917, tamano.alto || 910, proyectos.length),
+    [tamano.ancho, tamano.alto, proyectos.length]
+  );
+
+  // El header se acomoda a la vista de un proyecto (navegación a la derecha, junto a la cruz).
+  useEffect(() => {
+    if (!proyecto) {
+      setListaScrolleada(false);
+      return undefined;
+    }
+    document.documentElement.dataset.proyectoAbierto = 'true';
+    return () => {
+      delete document.documentElement.dataset.proyectoAbierto;
+    };
+  }, [proyecto]);
   const ocultas = useMemo(() => [activo, ...saliendo].filter(Boolean), [activo, saliendo]);
 
   return (
     <section id="proyectos" className={styles.contenedor} aria-labelledby="titulo-proyectos">
-      <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'}>
+      <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'}>
         <div className={styles.fondo}>
           <ThreeDMarquee
             images={tarjetas}
             className={styles.marquesina}
-            alApuntar={apuntarMarquesina}
-            alSalir={salirMarquesina}
+            alApuntar={elegir}
             claveActiva={ocultas}
-            posicionGrilla={POSICION_GRILLA}
+            posicionGrilla={marquesina.posicion}
+            filas={marquesina.filas}
+            columnas={marquesina.columnas}
+            anchoCaja={marquesina.anchoCaja}
           />
           <div className={styles.velo} aria-hidden="true" />
         </div>
 
         <div className={styles.cabecera}>
-          <h2 id="titulo-proyectos" className={styles.titulo}>
-            <TextoDescifrado texto="Proyectos" activarCon="view" secuencial velocidad={40} />
-          </h2>
-          <p className={styles.cifras}>{textoCifras}</p>
+          {/* Tras unos segundos el título viaja, achicándose, a la esquina de arriba a la derecha
+              (a la altura del header) y las cifras se van. */}
+          <motion.div
+            ref={refTitulo}
+            className={styles.tituloBloque}
+            animate={tituloVisto && !reducido ? { x: destinoTitulo.x, y: destinoTitulo.y, scale: ESCALA_TITULO } : { x: 0, y: 0, scale: 1 }}
+            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            onAnimationComplete={() => {
+              if (tituloVisto && !reducido) setEnHeader(true);
+            }}
+            style={{ visibility: enHeader ? 'hidden' : 'visible' }}
+          >
+            <h2 id="titulo-proyectos" className={styles.titulo}>
+              <TextoTrazo texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer />
+            </h2>
+            <p className={styles.cifras}>{textoCifras}</p>
+          </motion.div>
+        </div>
+
+        {/* Ya en el header: el mismo texto, con el efecto de hover descifrado que tiene el nombre. */}
+        <div className={styles.tituloHeader} data-visible={enHeader && !proyecto ? 'true' : 'false'}>
+          <TextoDescifrado
+            texto="Proyectos"
+            activarCon="hover"
+            secuencial
+            direccionRevelado="start"
+            caracteres="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=<>/\\|"
+            velocidad={35}
+            className={styles.tituloHeaderRevelado}
+            encryptedClassName={styles.tituloHeaderEncriptado}
+          />
         </div>
 
         {tamano.ancho > 0 ? (
-          <AnimatePresence onExitComplete={() => setSaliendo([])}>
+          <AnimatePresence custom={instantaneo} onExitComplete={() => setSaliendo([])}>
             {proyecto ? (
               <VistaProyecto
                 key={proyecto.slug}
@@ -173,15 +306,27 @@ export default function Proyectos() {
                 medir={medir}
                 tamano={tamano}
                 reducido={reducido}
+                instantaneo={instantaneo}
                 alCerrar={cerrar}
               />
             ) : null}
           </AnimatePresence>
         ) : null}
 
-        <div className={styles.columnaNav}>
-          <NavegacionMixta proyectos={proyectos} activoSlug={activo} alElegir={elegir} alSalir={() => {}} />
-        </div>
+        <AnimatePresence>
+          {proyecto ? (
+            <motion.div
+              key="nav"
+              className={styles.columnaNav}
+              data-scrolleada={listaScrolleada ? 'true' : 'false'}
+              initial={reducido ? { opacity: 0 } : { opacity: 0, x: -48 }}
+              animate={{ opacity: 1, x: 0, transition: { delay: reducido ? 0 : 0.3, duration: 0.45, ease: [0.22, 1, 0.36, 1] } }}
+              exit={{ opacity: 0, x: reducido ? 0 : -48, transition: { duration: 0.2 } }}
+            >
+              <NavegacionMixta proyectos={proyectos} activoSlug={activo} alElegir={elegir} alSalir={() => {}} alScrollear={setListaScrolleada} />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </section>
   );

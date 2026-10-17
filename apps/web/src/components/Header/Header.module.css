@@ -7,6 +7,13 @@
   align-items: center;
   width: 100%;
   padding: 1rem 2rem;
+  /* El header ocupa todo el ancho pero sólo sus piezas reciben el mouse: lo que hay debajo
+     (por ejemplo la cruz de Proyectos) tiene que poder tocarse. */
+  pointer-events: none;
+}
+
+.header > * {
+  pointer-events: auto;
 }
 
 .logo {
@@ -136,6 +143,31 @@
 .miniWrapper:hover,
 .miniWrapper:focus-within {
   max-width: 220px;
+}
+
+/* Con un proyecto abierto (Proyectos pone data-proyecto-abierto en <html>): la navegación
+   va a la derecha, pegada a la cruz (40 px) que queda a su derecha. Anclada a la derecha,
+   al abrirse el rótulo de un ícono crece hacia la izquierda y no pisa nada. En las demás
+   secciones sigue centrada. */
+@media (min-width: 769px) {
+  :global(html[data-proyecto-abierto='true']) .header {
+    grid-template-columns: 1fr auto;
+  }
+
+  :global(html[data-proyecto-abierto='true']) .pildoraGrandeWrapper,
+  :global(html[data-proyecto-abierto='true']) .navMini {
+    grid-column: 2;
+    justify-self: end;
+    margin-right: calc(40px + 0.75rem);
+  }
+
+  /* La lista de proyectos es blanca hasta arriba y el nombre queda sobre ella. */
+  :global(html[data-proyecto-abierto='true']) .logo,
+  :global(html[data-proyecto-abierto='true']) .logoRevelado,
+  :global(html[data-proyecto-abierto='true']) .logoEncriptado {
+    color: #0b0d12;
+    text-shadow: none;
+  }
 }
 
 @media (max-width: 768px) {

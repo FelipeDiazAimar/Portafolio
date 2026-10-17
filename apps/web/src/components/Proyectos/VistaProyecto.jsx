@@ -2,7 +2,9 @@
 
 import { motion } from 'framer-motion';
 import TarjetaMarca from './TarjetaMarca.jsx';
+import TextoTrazoVarios from '../TextoTrazo/TextoTrazoVarios.jsx';
 import Problematica from './Problematica.jsx';
+import EnlacesProyecto from './EnlacesProyecto.jsx';
 import { HudTecnologias } from './HudTecnologias.jsx';
 import styles from './VistaProyecto.module.css';
 
@@ -25,8 +27,11 @@ const INCLINACION = { rotateX: 55, rotateZ: -45 };
 // su tarjeta en la marquesina —mismo lugar, tamaño e inclinación— y viaja hasta ocupar
 // el panel; al cerrarse vuelve a donde esté su tarjeta en ese momento.
 // `medir(slug)` da la caja de la tarjeta en coordenadas del panel; `tamano` = panel.
-export default function VistaProyecto({ proyecto, medir, tamano, reducido, alCerrar }) {
-  const enMarquesina = () => {
+export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, alCerrar }) {
+  const enMarquesina = (cambioDirecto = false) => {
+    // Cambio de un proyecto a otro: desaparece de golpe (apenas pasa el cuadro en que el
+    // nuevo ya está pintado encima), sin viajar de vuelta a su lugar.
+    if (cambioDirecto) return { opacity: 0, transition: { duration: 0, delay: 0.15 } };
     const caja = medir(proyecto.slug);
     if (!caja) return { opacity: 0, transition: { duration: 0.25 } };
     return {
@@ -65,7 +70,8 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, alCer
       className={styles.vista}
       style={{ '--acento': proyecto.color }}
       variants={variantes}
-      initial="marquesina"
+      custom={instantaneo}
+      initial={instantaneo ? 'pantalla' : 'marquesina'}
       animate="pantalla"
       exit="marquesina"
       aria-labelledby={`titulo-${proyecto.slug}`}
@@ -73,21 +79,29 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, alCer
       <TarjetaMarca proyecto={proyecto} grande className={styles.fondo} />
       <motion.div
         className={styles.contenido}
-        initial={{ opacity: 0 }}
+        // En un cambio directo el velo y los textos ya están desde el primer cuadro: si
+        // aparecían de a poco, se veía la tarjeta clara sin oscurecer (un "pantallazo").
+        initial={{ opacity: instantaneo ? 1 : 0 }}
         animate={{ opacity: 1, transition: { delay: reducido ? 0 : 0.45, duration: 0.35 } }}
         exit={{ opacity: 0, transition: { duration: 0.12 } }}
       >
         <div className={styles.velo} aria-hidden="true" />
         <header className={styles.cabecera}>
-          <p className={styles.linea}>{lineaCabecera(proyecto)}</p>
+          {/* La línea y el título se trazan y se rellenan (StrokeFill) cada vez que aparecen. */}
+          <p className={styles.linea}>
+            <TextoTrazoVarios key={`linea-${proyecto.slug}`} texto={lineaCabecera(proyecto)} claseTexto={styles.lineaTrazo} duracion={1.6} grosor={0.5} interlineado={1.3} />
+          </p>
           <h3 id={`titulo-${proyecto.slug}`} className={styles.titulo}>
-            {proyecto.titulo}
+            <TextoTrazoVarios key={`titulo-${proyecto.slug}`} texto={proyecto.titulo} claseTexto={styles.tituloTrazo} duracion={2.2} retraso={0.15} grosor={1.1} interlineado={1.05} />
           </h3>
+          <EnlacesProyecto proyecto={proyecto} reducido={reducido} />
         </header>
-        <Problematica proyecto={proyecto} idPanel={`panel-${proyecto.slug}`} etiquetadoPor={`nav-${proyecto.slug}`} />
+        <Problematica proyecto={proyecto} idPanel={`panel-${proyecto.slug}`} etiquetadoPor={`nav-${proyecto.slug}`} sinFundido={instantaneo} />
         <HudTecnologias proyecto={proyecto} />
         <button type="button" className={styles.cerrar} aria-label="Volver a todos los proyectos" onClick={alCerrar}>
-          ✕
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M5 5l14 14M19 5L5 19" />
+          </svg>
         </button>
       </motion.div>
     </motion.article>

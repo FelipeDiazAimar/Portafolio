@@ -6,7 +6,7 @@ import styles from './NavegacionMixta.module.css';
 // Navegación mixta: número + título serif + flecha → en el activo.
 // El hover con mouse activa con 120 ms de intención, el click y el foco
 // activan al instante. El padre (Mixto) posiciona este nav.
-export default function NavegacionMixta({ proyectos = [], activoSlug, alElegir, alSalir, navRef }) {
+export default function NavegacionMixta({ proyectos = [], activoSlug, alElegir, alSalir, navRef, alScrollear }) {
   const demoraRef = useRef(null);
 
   // Limpia el timeout de intención al desmontar.
@@ -26,6 +26,7 @@ export default function NavegacionMixta({ proyectos = [], activoSlug, alElegir, 
       data-zona-mixto="nav"
       ref={navRef}
       onPointerLeave={alSalir}
+      onScroll={alScrollear ? (e) => alScrollear(e.currentTarget.scrollTop > 2) : undefined}
     >
       {proyectos.map((proyecto, i) => {
         const esActivo = proyecto.slug === activoSlug;
@@ -47,9 +48,12 @@ export default function NavegacionMixta({ proyectos = [], activoSlug, alElegir, 
             <span className={styles.numero}>{String(i + 1).padStart(2, '0')}</span>
             <span className={styles.tituloFila}>
               <span className={styles.titulo}>{proyecto.titulo}</span>
-              {esActivo && (
+              {/* La flecha siempre ocupa su lugar (invisible si no es el activo): así el nombre no
+                  cambia de ancho ni de renglones al apuntarlo. */}
+              {(
                 <svg
                   className={styles.flecha}
+                  style={{ visibility: esActivo ? 'visible' : 'hidden' }}
                   width="22"
                   height="22"
                   viewBox="0 0 24 24"

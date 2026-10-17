@@ -1,15 +1,15 @@
 /* Proyecto en primer plano: ocupa todo el panel (left/top/width/height los anima JS). */
 .vista {
   /* Dónde empieza el contenido: a la derecha de la lista de proyectos. */
-  --inicio: calc(clamp(1rem, 4vw, 3rem) + min(340px, 30%) + 1.5rem);
-  --alto-hud: 76px;
-  --inicio-chips: var(--inicio);
+  --inicio: calc(min(340px, 30%) + 1.5rem);
+  /* Alto de la franja de tecnologías: entra el ítem señalado (más grande, con nombre debajo)
+     y la lupa al apuntarlo, sin recortarse. */
+  --alto-hud: 108px;
+  /* La franja de tecnologías ocupa todo el ancho (pasa por debajo de la lista): sólo su
+     contenido arranca a la derecha de ella. */
   --inicio-hud: var(--inicio);
-  /* El stack en una fila bajo el título (abajo pisaba el logo). */
-  --chips-arriba: 13rem;
-  --chips-abajo: auto;
-  --chips-derecha: 5rem;
-  --chips-justificar: center;
+  /* Ancho de la lista de proyectos (donde empieza la franja de tecnologías). */
+  --lista: min(340px, 30%);
   position: absolute;
   z-index: 4;
   overflow: hidden;
@@ -54,6 +54,17 @@
   opacity: 0.85;
 }
 
+.lineaTrazo {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tituloTrazo {
+  font-size: clamp(2rem, 4.4vw, 3.8rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
 .titulo {
   margin: 0;
   font-weight: 800;
@@ -65,20 +76,26 @@
 
 .cerrar {
   position: absolute;
-  top: 6rem;
-  right: clamp(1rem, 3vw, 2.5rem);
+  /* Misma fila y mismo tamaño que los botones de la navegación del header (40 px, a 16 px
+     del borde de arriba), pegada a su derecha. */
+  top: 16px;
+  right: 2rem;
   z-index: 5;
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   background: rgba(5, 7, 12, 0.5);
   color: #fff;
-  font: inherit;
   cursor: pointer;
   backdrop-filter: blur(8px);
+}
+
+.cerrar svg {
+  display: block;
 }
 
 .cerrar:hover,
@@ -91,15 +108,15 @@
 @media (max-width: 768px) {
   .vista {
     --inicio: 1rem;
-    --inicio-chips: 1rem;
     --inicio-hud: 0;
+    --lista: 0px;
   }
 
   .contenido {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    padding-top: calc(5rem + 112px + 1rem);
+    padding-top: calc(var(--alto-cabecera, 4.5rem) + 112px + 1rem);
   }
 
   .cabecera {
@@ -111,6 +128,7 @@
   }
 
   .cerrar {
-    top: calc(5rem + 112px + 0.5rem);
+    top: calc(var(--alto-cabecera, 4.5rem) + 112px + 0.5rem);
+    right: 1rem;
   }
 }

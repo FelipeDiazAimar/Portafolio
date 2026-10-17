@@ -2,21 +2,20 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import TextoTipeado from '../SobreMi/TextoTipeado.jsx';
+import { FRASES_CLAVE, rangosClave } from '@/lib/resaltadoProblema.js';
 import styles from './PresentadorProyectos.module.css';
 
 // Tarjeta de vidrio abajo a la derecha: etiqueta, problema tipeado,
-// chips de features, estado y enlaces. Hace crossfade al cambiar de proyecto.
+// chips de features y estado (los enlaces van aparte, en EnlacesProyecto). Hace crossfade al cambiar de proyecto.
 // idPanel/etiquetadoPor permiten reutilizarla fuera del presentador
 // (en la vista mixta el tab es nav-<slug>, no tab-<slug>).
-export default function Problematica({ proyecto, idPanel, etiquetadoPor }) {
-  const enlaces = proyecto.enlaces ?? {};
+export default function Problematica({ proyecto, idPanel, etiquetadoPor, sinFundido = false }) {
   const features = (proyecto.features ?? []).slice(0, 3);
-  const esProduccion = proyecto.estado === 'produccion';
-  const esDemo = proyecto.estado === 'demo';
   const texto = proyecto.problema || proyecto.resumen || '';
+  const rangos = rangosClave(texto, FRASES_CLAVE[proyecto.slug]);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={!sinFundido}>
       <motion.article
         key={proyecto.slug}
         id={idPanel ?? 'panel-proyecto'}
@@ -37,6 +36,8 @@ export default function Problematica({ proyecto, idPanel, etiquetadoPor }) {
             texto={texto}
             velocidad={18}
             retraso={250}
+            rangos={rangos}
+            claseClave={styles.clave}
           />
         </p>
         {features.length > 0 && (
@@ -48,59 +49,6 @@ export default function Problematica({ proyecto, idPanel, etiquetadoPor }) {
             ))}
           </div>
         )}
-        <div className={styles.filaFinal}>
-          {esProduccion && (
-            <span className={styles.chipEstado} style={{ color: '#34d399' }}>
-              ● En producción
-            </span>
-          )}
-          {esDemo && (
-            <span className={styles.chipEstado} style={{ color: '#fbbf24' }}>
-              ● Demo
-            </span>
-          )}
-          {proyecto.privado && <span className={styles.chipPrivado}>Sistema interno</span>}
-          {enlaces.sitio && (
-            <a
-              className={styles.boton}
-              href={enlaces.sitio}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Ver sitio ↗
-            </a>
-          )}
-          {enlaces.repoFrontend && (
-            <a
-              className={styles.boton}
-              href={enlaces.repoFrontend}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Frontend ↗
-            </a>
-          )}
-          {enlaces.repoBackend && (
-            <a
-              className={styles.boton}
-              href={enlaces.repoBackend}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Backend ↗
-            </a>
-          )}
-          {!enlaces.repoFrontend && !enlaces.repoBackend && enlaces.repo && (
-            <a
-              className={styles.boton}
-              href={enlaces.repo}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Código ↗
-            </a>
-          )}
-        </div>
       </motion.article>
     </AnimatePresence>
   );
