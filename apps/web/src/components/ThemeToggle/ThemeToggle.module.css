@@ -9,7 +9,8 @@
   transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.wrapper[data-visible='false'] {
+/* Siempre a la vista, salvo con un proyecto abierto: ese lugar lo ocupa la cruz de cerrar. */
+:global(html[data-proyecto-abierto='true']) .wrapper {
   opacity: 0;
   transform: translateY(-12px);
   pointer-events: none;

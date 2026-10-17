@@ -27,11 +27,10 @@
 
 
 /* El blanco llega hasta abajo aunque los botones no alcancen. */
+/* Relleno blanco sólo si los botones no llegan a cubrir la columna (no agrega scroll). */
 .nav::after {
   content: '';
-  flex: 1 0 auto;
-  /* Deja espacio para que el último botón también pueda quedar arriba. */
-  min-height: calc(100% - var(--alto-cabecera, 4.5rem) - 132px);
+  flex: 1 0 0;
   background: #fff;
 }
 

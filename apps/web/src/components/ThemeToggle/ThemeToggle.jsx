@@ -2,7 +2,6 @@
 
 import { useRef } from 'react';
 import { GlassSurface } from '@portafolio/ui';
-import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
 import useTema from '@/hooks/useTema.js';
 import styles from './ThemeToggle.module.css';
 
@@ -25,8 +24,6 @@ function IconSun() {
 
 export default function ThemeToggle() {
   const { tema: theme, alternar: handleToggle } = useTema();
-  const pasado = useScrollPasadoViewport();
-  const visible = !pasado;
   const refToggle = useRef(null);
 
   function manejarMovimientoRaton(evento) {
@@ -41,7 +38,6 @@ export default function ThemeToggle() {
     <div
       ref={refToggle}
       className={styles.wrapper}
-      data-visible={visible}
       onMouseMove={manejarMovimientoRaton}
     >
       <GlassSurface

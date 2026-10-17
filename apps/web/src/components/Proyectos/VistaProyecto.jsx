@@ -89,7 +89,7 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
         <header className={styles.cabecera}>
           {/* La línea y el título se trazan y se rellenan (StrokeFill) cada vez que aparecen. */}
           <p className={styles.linea}>
-            <TextoTrazoVarios key={`linea-${proyecto.slug}`} texto={lineaCabecera(proyecto)} claseTexto={styles.lineaTrazo} duracion={1.6} grosor={0.5} interlineado={1.3} />
+            {lineaCabecera(proyecto)}
           </p>
           <h3 id={`titulo-${proyecto.slug}`} className={styles.titulo}>
             <TextoTrazoVarios key={`titulo-${proyecto.slug}`} texto={proyecto.titulo} claseTexto={styles.tituloTrazo} duracion={2.2} retraso={0.15} grosor={1.1} interlineado={1.05} />
