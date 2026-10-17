@@ -6,10 +6,15 @@
   border-radius: 100px;
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  /* `right`: con el fondo de rayos X activo se corre a la izquierda para dejar lugar a la cruz */
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Siempre a la vista, salvo con un proyecto abierto: ese lugar lo ocupa la cruz de cerrar. */
+:global(html[data-rayosx]) .wrapper {
+  right: calc(2rem + 48px);
+}
+
 :global(html[data-proyecto-abierto='true']) .wrapper {
   opacity: 0;
   transform: translateY(-12px);

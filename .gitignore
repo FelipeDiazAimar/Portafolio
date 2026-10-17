@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Next.js (apps/web)
-apps/web/.next/
+# Next.js (apps/web) — y cualquier .next que quede de un build corrido desde otra carpeta
+.next/
 apps/web/out/
 
 

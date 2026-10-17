@@ -1,0 +1,161 @@
+// Shaders del efecto de rayos X (portados a GLSL desde el TSL del original, MIT).
+
+/* --------------------------- material de rayos X --------------------------- */
+export const rayosVert = /* glsl */ `
+varying vec3 vNormal;
+varying vec3 vVista;
+varying float vAltura;
+varying float vProfundidad;
+void main() {
+  vec4 p = vec4(position, 1.0);
+  vec3 n = normal;
+  #ifdef USE_INSTANCING
+    p = instanceMatrix * p;
+    n = mat3(instanceMatrix) * n;
+  #endif
+  vec4 mv = modelViewMatrix * p;
+  vNormal = normalize(normalMatrix * n);
+  vVista = normalize(-mv.xyz);
+  vAltura = position.y;
+  vProfundidad = -mv.z;
+  gl_Position = projectionMatrix * mv;
+}
+`;
+
+// Fresnel: oscuro de frente y brillante en la silueta (de ahí el aspecto de radiografía); se apaga
+// hacia abajo y con la distancia (la niebla del original).
+export const rayosFrag = /* glsl */ `
+uniform vec3 u_nucleo;
+uniform vec3 u_borde;
+uniform float u_emisivo;
+uniform float u_alturaBase;
+uniform float u_alturaMax;
+uniform vec2 u_niebla;
+varying vec3 vNormal;
+varying vec3 vVista;
+varying float vAltura;
+varying float vProfundidad;
+void main() {
+  vec3 N = normalize(vNormal);
+  if (!gl_FrontFacing) N = -N;
+  float fresnel = clamp(1.0 - dot(N, normalize(vVista)), 0.0, 1.0);
+  vec3 color = mix(u_nucleo, u_borde, fresnel);
+  color *= smoothstep(u_alturaBase, u_alturaMax, vAltura);
+  color *= 1.0 + u_emisivo;
+  color *= 1.0 - smoothstep(u_niebla.x, u_niebla.y, vProfundidad);
+  gl_FragColor = vec4(color, 1.0);
+}
+`;
+
+/* ------------------------------- pantalla ------------------------------- */
+export const cuadroVert = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}
+`;
+
+const ruido = /* glsl */ `
+float azar(vec2 n) {
+  return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+}
+float ruidoValor(vec2 p) {
+  vec2 ip = floor(p);
+  vec2 u = fract(p);
+  u = u * u * (3.0 - 2.0 * u);
+  float r = mix(mix(azar(ip), azar(ip + vec2(1.0, 0.0)), u.x), mix(azar(ip + vec2(0.0, 1.0)), azar(ip + vec2(1.0, 1.0)), u.x), u.y);
+  return r * r;
+}
+float fbm(vec2 x) {
+  float v = 0.0;
+  float a = 0.5;
+  mat2 giro = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
+  for (int i = 0; i < 4; i++) {
+    v += a * ruidoValor(x);
+    x = giro * x * 2.0 + vec2(100.0);
+    a *= 0.5;
+  }
+  return v;
+}
+`;
+
+// Máscara fluida: blanco = sin revelar, negro = revelado. Cada cuadro toma el valor más oscuro de
+// los vecinos corridos por ruido (la tinta se esparce), le suma el trazo del mouse y vuelve hacia
+// blanco a razón de u_retorno (0: lo revelado queda).
+export const mascaraFrag = /* glsl */ `
+uniform sampler2D u_previo;
+uniform sampler2D u_trazo;
+uniform vec2 u_aspecto;
+uniform float u_dispersion;
+uniform float u_retorno;
+varying vec2 vUv;
+${ruido}
+void main() {
+  vec2 d = fbm(vUv * 20.0) * u_aspecto * u_dispersion;
+  vec3 c = texture2D(u_previo, vUv).rgb;
+  c = min(c, texture2D(u_previo, vUv + vec2(d.x, 0.0)).rgb);
+  c = min(c, texture2D(u_previo, vUv - vec2(d.x, 0.0)).rgb);
+  c = min(c, texture2D(u_previo, vUv + vec2(0.0, d.y)).rgb);
+  c = min(c, texture2D(u_previo, vUv - vec2(0.0, d.y)).rgb);
+  c = min(c, texture2D(u_trazo, vUv).rgb);
+  gl_FragColor = vec4(min(vec3(1.0), c + u_retorno), 1.0);
+}
+`;
+
+// Composición final. Fondo: mezcla la escena de los cuerpos (con bloom) con la de los esqueletos
+// según la máscara. Retrato: sólo el esqueleto, con alfa = revelado (deja ver la foto donde no se
+// pintó; el borde se mueve con ruido). Los dos: scanlines, grano, desaturación y tinte; en tema
+// claro, en negativo.
+export const composicionFrag = /* glsl */ `
+uniform sampler2D u_cuerpo;
+uniform sampler2D u_brillo;
+uniform sampler2D u_esqueleto;
+uniform sampler2D u_mascara;
+uniform sampler2D u_foto;
+uniform float u_retrato;
+uniform float u_hayFoto;      // 1 cuando la silueta de la foto ya está cargada
+uniform float u_revelarTodo;  // fondo: 1 = se ven todos los esqueletos (la entrada); baja a 0
+uniform float u_tiempo;
+uniform float u_claro;
+uniform vec2 u_resolucion;
+uniform vec3 u_tinte;
+uniform vec3 u_fondoClaro;
+uniform vec3 u_huesoClaro;
+varying vec2 vUv;
+${ruido}
+void main() {
+  float m = texture2D(u_mascara, vUv).r;
+  float revelado = 1.0 - m;
+  vec3 esqueleto = texture2D(u_esqueleto, vUv).rgb;
+  vec3 color;
+  float alfa = 1.0;
+  float scan = 1.0 - clamp(sin(vUv.y * u_resolucion.y * 0.69), -1.0, 0.0) * -0.15;
+  if (u_retrato > 0.5) {
+    // borde orgánico que se mueve: el revelado no es un trazo liso
+    float borde = 0.32 + 0.3 * fbm(vUv * 7.0 + u_tiempo * 0.15);
+    float a = smoothstep(borde, borde + 0.3, revelado);
+    float lum = dot(esqueleto, vec3(0.299, 0.587, 0.114));
+    // sin la silueta todavía, la radiografía cubre igual (no queda el hueso translúcido sobre la cara)
+    float silueta = mix(1.0, texture2D(u_foto, vUv).a, u_hayFoto);
+    color = esqueleto * scan;
+    alfa = a * clamp(silueta + lum * 2.5, 0.0, 1.0);
+  } else {
+    vec3 cuerpo = texture2D(u_cuerpo, vUv).rgb + texture2D(u_brillo, vUv).rgb * 0.4;
+    color = mix(cuerpo * scan, esqueleto, max(revelado, u_revelarTodo));
+  }
+  float grano = (azar(vUv * u_resolucion + fract(u_tiempo * 20.0)) - 0.5) * 0.03;
+  color -= grano;
+  float l = dot(color, vec3(0.299, 0.587, 0.114));
+  color = mix(vec3(l), color, 0.985);
+  if (u_claro > 0.5) {
+    // negativo: fondo claro, huesos azul oscuro
+    float k = clamp(l * 1.8, 0.0, 1.0);
+    color = mix(u_fondoClaro, u_huesoClaro, k);
+  } else {
+    color = mix(u_tinte, color, 0.9);
+  }
+  // retrato: alfa premultiplicado (el canvas es transparente)
+  gl_FragColor = vec4(color * alfa, alfa);
+}
+`;

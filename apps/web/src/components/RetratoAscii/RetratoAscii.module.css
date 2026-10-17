@@ -58,6 +58,17 @@
   opacity: 1;
 }
 
+/* Terminada la intro, el ASCII ya no se usa (el hover es el revelado del esqueleto). */
+.ascii.oculto {
+  visibility: hidden;
+}
+
+/* El hero pasó al fondo de esqueletos: la foto (y su revelado) se funden. */
+.apagado > * {
+  opacity: 0 !important;
+  transition: opacity 0.4s ease !important;
+}
+
 .ascii {
   --origen-x: 50%;
   --origen-y: 50%;
