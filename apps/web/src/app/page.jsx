@@ -1,5 +1,6 @@
 import SobreMi from '@/components/SobreMi/SobreMi.jsx';
 import Proyectos from '@/components/Proyectos/Proyectos.jsx';
+import Habilidades from '@/components/Habilidades/Habilidades.jsx';
 import styles from './page.module.css';
 
 const SECCIONES = [
@@ -19,6 +20,8 @@ export default function HomePage() {
           <SobreMi key={seccion.id} />
         ) : seccion.id === 'proyectos' ? (
           <Proyectos key={seccion.id} />
+        ) : seccion.id === 'habilidades' ? (
+          <Habilidades key={seccion.id} />
         ) : (
           <section key={seccion.id} id={seccion.id} className={styles.seccion}>
             <h2>{seccion.titulo}</h2>

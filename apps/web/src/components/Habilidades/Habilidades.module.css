@@ -1,0 +1,233 @@
+/* Sección Habilidades: una pantalla a todo el ancho (sale del <main> de 960 px). */
+.seccion {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  height: 100svh;
+  min-height: 620px;
+  overflow: hidden;
+  background: var(--color-bg);
+  scroll-margin-top: 0;
+}
+
+.encabezado {
+  position: absolute;
+  top: calc(var(--alto-cabecera, 4.5rem) + 1.5rem);
+  left: clamp(1rem, 5vw, 4rem);
+  z-index: 2;
+  max-width: 30rem;
+  pointer-events: none;
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(2rem, 6vw, 4rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--color-fg);
+}
+
+.bajada {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+/* Chips de categoría: vidrio, el activo en azul eléctrico. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+  pointer-events: auto;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.chip:hover,
+.chip:focus-visible {
+  border-color: rgba(10, 92, 255, 0.7);
+  outline: none;
+}
+
+.chip[aria-pressed='true'] {
+  background: #0a5cff;
+  border-color: #0a5cff;
+  color: #fff;
+  box-shadow: 0 0 22px rgba(10, 92, 255, 0.55);
+}
+
+.cuenta {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+:global([data-theme='light']) .chip {
+  border-color: rgba(10, 60, 200, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+:global([data-theme='light']) .chip[aria-pressed='true'] {
+  background: #0050ff;
+  border-color: #0050ff;
+  color: #fff;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .chip {
+    border-color: rgba(10, 60, 200, 0.18);
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  :global(:root:not([data-theme='dark'])) .chip[aria-pressed='true'] {
+    background: #0050ff;
+    border-color: #0050ff;
+    color: #fff;
+  }
+}
+
+/* En celular los chips van en una fila que se desliza. */
+@media (max-width: 640px) {
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-right: -1rem;
+    padding-right: 1rem;
+  }
+
+  .chip {
+    flex: none;
+  }
+}
+
+.conMouse {
+  display: inline;
+}
+
+.tactil {
+  display: none;
+}
+
+@media (hover: none) {
+  .conMouse {
+    display: none;
+  }
+
+  .tactil {
+    display: inline;
+  }
+}
+
+/* En vertical la hélice pasa por detrás del título: un velo lo mantiene legible. */
+@media (max-aspect-ratio: 1/1) {
+  .seccion::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 42%;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(var(--color-bg) 45%, transparent);
+  }
+}
+
+.escenario {
+  position: absolute;
+  inset: 0;
+}
+
+.lienzo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  touch-action: pan-y;
+}
+
+.seccion[data-listo='true'] .lienzo {
+  opacity: 1;
+}
+
+/* Con WebGL la lista queda sólo para lectores de pantalla (y como fuente del atlas de logos). */
+.seccion[data-webgl='true'] .lista {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Sin WebGL: las tecnologías como píldoras. */
+.lista {
+  position: absolute;
+  inset: calc(var(--alto-cabecera, 4.5rem) + 10rem) clamp(1rem, 5vw, 4rem) 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 0.5rem;
+  overflow: auto;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-chip-bg);
+  color: var(--color-fg);
+  font-size: 0.85rem;
+  transition: opacity 0.3s ease;
+}
+
+.item[data-fuera='true'] {
+  opacity: 0.25;
+}
+
+.logo {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.logo svg {
+  width: 100%;
+  height: 100%;
+}

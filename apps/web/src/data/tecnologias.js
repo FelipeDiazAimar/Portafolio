@@ -40,7 +40,36 @@ export const TECNOLOGIAS = [
   { id: 'vercel', nombre: 'Vercel', icono: 'SiVercel', sigla: 'Vc', href: 'https://vercel.com' },
   { id: 'render', nombre: 'Render', icono: 'SiRender', sigla: 'Rn', href: 'https://render.com' },
   { id: 'activedirectory', nombre: 'Active Directory (LDAPS)', icono: null, sigla: 'AD', href: 'https://learn.microsoft.com/windows-server/identity/ad-ds' },
+  // --- Usadas en los repositorios de github.com/FelipeDiazAimar (dependencias reales de cada
+  // proyecto): completan las 64 barras del xilófono de Habilidades sin repetir ninguna.
+  { id: 'radix', nombre: 'Radix UI', icono: 'SiRadixui', sigla: 'Rx', href: 'https://www.radix-ui.com' },
+  { id: 'reacthookform', nombre: 'React Hook Form', icono: 'SiReacthookform', sigla: 'RHF', href: 'https://react-hook-form.com' },
+  { id: 'zod', nombre: 'Zod', icono: 'SiZod', sigla: 'Zd', href: 'https://zod.dev' },
+  { id: 'reactrouter', nombre: 'React Router', icono: 'SiReactrouter', sigla: 'RR', href: 'https://reactrouter.com' },
+  { id: 'leaflet', nombre: 'Leaflet', icono: 'SiLeaflet', sigla: 'Lf', href: 'https://leafletjs.com' },
+  { id: 'vitest', nombre: 'Vitest', icono: 'SiVitest', sigla: 'Vt', href: 'https://vitest.dev' },
+  { id: 'testinglibrary', nombre: 'Testing Library', icono: 'SiTestinglibrary', sigla: 'TL', href: 'https://testing-library.com' },
+  { id: 'prettier', nombre: 'Prettier', icono: 'SiPrettier', sigla: 'Pr', href: 'https://prettier.io' },
+  { id: 'eslint', nombre: 'ESLint', icono: 'SiEslint', sigla: 'ES', href: 'https://eslint.org' },
+  { id: 'axios', nombre: 'Axios', icono: 'SiAxios', sigla: 'Ax', href: 'https://axios-http.com' },
+  { id: 'jwt', nombre: 'JWT', icono: 'SiJsonwebtokens', sigla: 'JWT', href: 'https://jwt.io' },
+  { id: 'threejs', nombre: 'Three.js', icono: 'SiThreedotjs', sigla: '3js', href: 'https://threejs.org' },
+  { id: 'webgl', nombre: 'WebGL', icono: 'SiWebgl', sigla: 'GL', href: 'https://www.khronos.org/webgl' },
+  { id: 'gsap', nombre: 'GSAP', icono: 'SiGreensock', sigla: 'GS', href: 'https://gsap.com' },
+  { id: 'godot', nombre: 'Godot', icono: 'SiGodotengine', sigla: 'Gd', href: 'https://godotengine.org' },
+  { id: 'html', nombre: 'HTML', icono: 'SiHtml5', sigla: 'HTML', href: 'https://developer.mozilla.org/docs/Web/HTML' },
+  { id: 'css', nombre: 'CSS', icono: 'SiCss', sigla: 'CSS', href: 'https://developer.mozilla.org/docs/Web/CSS' },
+  { id: 'bootstrap', nombre: 'Bootstrap', icono: 'SiBootstrap', sigla: 'Bs', href: 'https://getbootstrap.com' },
+  { id: 'git', nombre: 'Git', icono: 'SiGit', sigla: 'Git', href: 'https://git-scm.com' },
+  { id: 'github', nombre: 'GitHub', icono: 'SiGithub', sigla: 'GH', href: 'https://github.com' },
+  { id: 'awss3', nombre: 'Amazon S3', icono: null, sigla: 'S3', href: 'https://aws.amazon.com/s3' },
+  { id: 'genkit', nombre: 'Genkit', icono: null, sigla: 'Gk', href: 'https://genkit.dev' },
+  { id: 'recharts', nombre: 'Recharts', icono: null, sigla: 'Rc', href: 'https://recharts.org' },
+  { id: 'mcp', nombre: 'MCP', icono: null, sigla: 'MCP', href: 'https://modelcontextprotocol.io' },
+  { id: 'claude', nombre: 'Claude', icono: 'SiClaude', sigla: 'Cl', href: 'https://claude.com' },
+  { id: 'lenis', nombre: 'Lenis', icono: null, sigla: 'Ln', href: 'https://lenis.darkroom.engineering' },
 ];
+
 
 // Busca una tecnología por su `id`. Devuelve el objeto o null si no existe.
 export const tecnologiaPorId = (id) => TECNOLOGIAS.find((t) => t.id === id) ?? null;
