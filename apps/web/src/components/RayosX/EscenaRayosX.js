@@ -8,6 +8,7 @@ import {
   LinearFilter,
   Matrix4,
   Mesh,
+  NoBlending,
   Object3D,
   OrthographicCamera,
   Quaternion,
@@ -17,8 +18,6 @@ import {
   Scene,
   ShaderMaterial,
   SRGBColorSpace,
-  Texture,
-  TextureLoader,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -46,6 +45,19 @@ function suavizarGeometria(geometria) {
   soldada.computeVertexNormals();
   base.dispose();
   return soldada;
+}
+
+// '#rrggbb' o 'rgb(r, g, b)' → [r, g, b] en 0..1 (sRGB, sin convertir).
+function colorCss(texto) {
+  const t = String(texto).trim();
+  const hex = t.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const h = hex[1].length === 3 ? hex[1].split('').map((c) => c + c).join('') : hex[1];
+    const n = parseInt(h, 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  }
+  const rgb = t.match(/rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/i);
+  return rgb ? [rgb[1] / 255, rgb[2] / 255, rgb[3] / 255] : null;
 }
 
 // Carga compartida de los dos modelos (Draco, decodificador local en /public/draco/).
@@ -138,7 +150,7 @@ class TrazoMouse {
 /* ------------------------------------------------------------------------ */
 // modo 'retrato': un esqueleto de frente sobre la foto, canvas transparente, revelado persistente.
 // modo 'fondo': la escena del demo de costado (cuerpos y esqueletos) a pantalla completa.
-// opciones: { tema, reducido, tactil, foto (imagen ya cargada o url, sólo retrato), alCuadro(dtMs),
+// opciones: { tema, reducido, tactil, alCuadro(dtMs),
 //   entrada (sólo fondo): { x, y, alto } en px del canvas — dónde estaba tu cráneo en la foto }
 export class EscenaRayosX {
   constructor(lienzo, modo, opciones = {}) {
@@ -169,7 +181,7 @@ export class EscenaRayosX {
     const opcionesMascara = { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false, type: HalfFloatType };
     this.mascaras = [new WebGLRenderTarget(1, 1, opcionesMascara), new WebGLRenderTarget(1, 1, opcionesMascara)];
     // los cuerpos se ven sólo como bloom: un desenfoque grande y suave
-    this.brillo = this.retrato ? null : new GaussianBlurPass({ kernelSize: 63, iterations: 4, resolutionScale: 0.25 });
+    this.brillo = this.retrato ? null : new GaussianBlurPass({ kernelSize: 35, iterations: 2, resolutionScale: 0.5 });
 
     this.trazo = new TrazoMouse(1, 1, this.cfg.pincel);
     this.armarPantalla();
@@ -208,9 +220,7 @@ export class EscenaRayosX {
       u_brillo: { value: this.destinoBrillo.texture },
       u_esqueleto: { value: this.destinoEsqueleto.texture },
       u_mascara: { value: null },
-      u_foto: { value: new Texture() },
       u_retrato: { value: this.retrato ? 1 : 0 },
-      u_hayFoto: { value: 0 },
       u_revelarTodo: { value: 0 },
       u_tiempo: { value: 0 },
       u_claro: { value: 0 },
@@ -219,27 +229,15 @@ export class EscenaRayosX {
       u_fondoClaro: { value: new Color(...COLORES.claro.fondo) },
       u_huesoClaro: { value: new Color(...COLORES.claro.hueso) },
       u_fuerzaBrillo: { value: FONDO.fuerzaBrillo },
+      u_nitidezCuerpo: { value: FONDO.nitidezCuerpo },
+      u_fondoPagina: { value: new Color(0, 0, 0) },
     };
     this.escenaComposicion = new Scene();
     this.escenaComposicion.add(
-      new Mesh(plano, new ShaderMaterial({ vertexShader: cuadroVert, fragmentShader: composicionFrag, uniforms: this.uComposicion, depthTest: false, depthWrite: false, transparent: this.retrato }))
+      // sin mezcla: el shader ya escribe el color premultiplicado; mezclarlo otra vez lo multiplicaba
+      // dos veces por el alfa y el borde suave del revelado quedaba como una línea gris
+      new Mesh(plano, new ShaderMaterial({ vertexShader: cuadroVert, fragmentShader: composicionFrag, uniforms: this.uComposicion, depthTest: false, depthWrite: false, blending: NoBlending }))
     );
-    if (this.retrato && this.opciones.foto) {
-      // la silueta de la foto (su alfa) decide dónde puede verse el fondo oscuro de la radiografía:
-      // se usa la imagen que ya cargó la intro; si no hay, se baja
-      const foto = this.opciones.foto;
-      const usar = (t) => {
-        this.uComposicion.u_foto.value = t;
-        this.uComposicion.u_hayFoto.value = 1;
-      };
-      if (typeof foto !== 'string' && foto.complete && foto.naturalWidth) {
-        const t = new Texture(foto);
-        t.needsUpdate = true;
-        usar(t);
-      } else {
-        new TextureLoader().load(typeof foto === 'string' ? foto : foto.src, usar);
-      }
-    }
   }
 
   armarEscenas() {
@@ -406,6 +404,9 @@ export class EscenaRayosX {
     const atributo = document.documentElement.getAttribute('data-theme');
     const actual = atributo === 'light' || atributo === 'dark' ? atributo : tema;
     this.uComposicion.u_claro.value = TEMA_CLARO_RAYOSX && actual === 'light' ? 1 : 0;
+    // el fondo del revelado del retrato copia el de la página (token --color-bg, en sRGB)
+    const fondo = colorCss(getComputedStyle(document.documentElement).getPropertyValue('--color-bg'));
+    if (fondo) this.uComposicion.u_fondoPagina.value.setRGB(fondo[0], fondo[1], fondo[2]);
   }
 
   /* ------------------------------- entrada ------------------------------- */
@@ -565,7 +566,6 @@ export class EscenaRayosX {
     this.escenaMascara.children[0].material.dispose();
     this.escenaComposicion.children[0].material.dispose();
     this.escenaMascara.children[0].geometry.dispose();
-    this.uComposicion.u_foto.value?.dispose();
     this.renderer.dispose();
   }
 }

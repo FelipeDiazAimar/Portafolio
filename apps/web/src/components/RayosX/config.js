@@ -4,7 +4,7 @@
 // `skeleton.glb`) vienen de ese repositorio.
 
 // Tiempo con el cursor sobre la foto hasta que todo el hero pasa al fondo de esqueletos.
-export const DISPARO_FONDO_MS = 4000;
+export const DISPARO_FONDO_MS = 6000;
 
 // Tema claro: se prueba un negativo (fondo claro, huesos azul oscuro). En false, la escena es
 // oscura en los dos temas.
@@ -38,8 +38,9 @@ export const FONDO = {
   parallax: [0.125, 0.075],
   suavizado: 0.25, // segundos
   niebla: [1, 5],
-  // intensidad de los cuerpos (que se ven sólo como bloom)
-  fuerzaBrillo: 1.0,
+  // los cuerpos: un poco de la imagen nítida más su bloom (el demo es sólo bloom: quedaba muy borroso)
+  nitidezCuerpo: 0.45,
+  fuerzaBrillo: 0.75,
   // cuánto más lejos que el demo va la cámara (para que entren más esqueletos)
   alejar: 1.45,
   // tu esqueleto vuela desde la foto hasta su lugar en la grilla

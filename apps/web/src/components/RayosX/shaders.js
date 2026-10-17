@@ -117,9 +117,7 @@ uniform sampler2D u_cuerpo;
 uniform sampler2D u_brillo;
 uniform sampler2D u_esqueleto;
 uniform sampler2D u_mascara;
-uniform sampler2D u_foto;
 uniform float u_retrato;
-uniform float u_hayFoto;      // 1 cuando la silueta de la foto ya está cargada
 uniform float u_revelarTodo;  // fondo: 1 = se ven todos los esqueletos (la entrada); baja a 0
 uniform float u_tiempo;
 uniform float u_claro;
@@ -128,6 +126,8 @@ uniform vec3 u_tinte;
 uniform vec3 u_fondoClaro;
 uniform vec3 u_huesoClaro;
 uniform float u_fuerzaBrillo;
+uniform float u_nitidezCuerpo;
+uniform vec3 u_fondoPagina;    // retrato: el color de fondo de la página (sRGB)
 varying vec2 vUv;
 ${ruido}
 // tone mapping ACES (el del renderer del original) y salida en sRGB
@@ -145,17 +145,22 @@ void main() {
   float alfa = 1.0;
   float scan = 1.0 - clamp(sin(vUv.y * u_resolucion.y * 0.69), -1.0, 0.0) * -0.15;
   if (u_retrato > 0.5) {
-    // borde orgánico que se mueve: el revelado no es un trazo liso
+    // Retrato: el fondo del revelado es el MISMO color que el de la página y los huesos se suman
+    // encima. Así, fuera de la silueta el revelado no se distingue del fondo y adentro tapa la foto,
+    // sin dibujar el contorno de la foto. El borde se mueve con ruido.
     float borde = 0.32 + 0.3 * fbm(vUv * 7.0 + u_tiempo * 0.15);
     float a = smoothstep(borde, borde + 0.3, revelado);
-    float lum = dot(esqueleto, vec3(0.299, 0.587, 0.114));
-    // sin la silueta todavía, la radiografía cubre igual (no queda el hueso translúcido sobre la cara)
-    float silueta = mix(1.0, texture2D(u_foto, vUv).a, u_hayFoto);
-    color = esqueleto * scan;
-    alfa = a * clamp(silueta + lum * 2.5, 0.0, 1.0);
+    vec3 huesos = aSrgb(aces(esqueleto * scan));
+    // en claro, negativo con curva: los huesos quedan azul oscuro pero conservan el volumen
+    float lumH = dot(huesos, vec3(0.299, 0.587, 0.114));
+    vec3 c = u_claro > 0.5
+      ? mix(u_fondoPagina, u_huesoClaro, clamp(pow(lumH, 2.2) * 1.05, 0.0, 0.92))
+      : u_fondoPagina + huesos;
+    gl_FragColor = vec4(c * a, a);
+    return;
   } else {
-    // como el original: los cuerpos se ven SÓLO como bloom (manchas de luz difusas), con scanlines
-    vec3 cuerpo = texture2D(u_brillo, vUv).rgb * u_fuerzaBrillo;
+    // cuerpos: un poco de la imagen nítida más su bloom (manchas de luz), con scanlines
+    vec3 cuerpo = texture2D(u_cuerpo, vUv).rgb * u_nitidezCuerpo + texture2D(u_brillo, vUv).rgb * u_fuerzaBrillo;
     color = mix(cuerpo * scan, esqueleto, max(revelado, u_revelarTodo));
   }
   float grano = (azar(vUv * u_resolucion + fract(u_tiempo * 20.0)) - 0.5) * 0.03;

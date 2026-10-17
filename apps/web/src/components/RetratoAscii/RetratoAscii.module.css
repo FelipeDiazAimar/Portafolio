@@ -38,17 +38,11 @@
   opacity: calc(1 - var(--desvanecido) * var(--desvanecido));
 }
 
-.foto,
-.ascii {
+.foto {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-}
-
-/* Arranca oculta: durante la escritura el clip-path recorta el canvas de
-   verdad, así que si la foto fuera visible asomaría por lo no escrito. */
-.foto {
   object-fit: contain;
   opacity: 0;
   transition: opacity var(--duracion-revelado) ease;
@@ -58,87 +52,10 @@
   opacity: 1;
 }
 
-/* Terminada la intro, el ASCII ya no se usa (el hover es el revelado del esqueleto). */
-.ascii.oculto {
-  visibility: hidden;
-}
-
 /* El hero pasó al fondo de esqueletos: la foto (y su revelado) se funden. */
 .apagado > * {
   opacity: 0 !important;
   transition: opacity 0.4s ease !important;
-}
-
-.ascii {
-  --origen-x: 50%;
-  --origen-y: 50%;
-  --radio: 0px;
-  --borde: 48px;
-}
-
-/* El canvas se desvanece en el cruce hacia la foto, y vuelve a opacity 1
-   —ya tapado por la máscara— cuando el estado pasa a `foto`. */
-.ascii.desvaneciendo {
-  opacity: 0;
-  transition: opacity var(--duracion-revelado) ease;
-}
-
-/* La máscara sólo entra en juego cuando termina la intro: mientras se
-   escribe, quien recorta es el clip-path.
-   Entrando: opaco adentro del círculo, transparente afuera. El ASCII
-   "crece" desde el punto por donde entró el cursor. */
-.ascii.enmascarado {
-  -webkit-mask-image: radial-gradient(
-    circle at var(--origen-x) var(--origen-y),
-    #000 max(0px, calc(var(--radio) - var(--borde))),
-    transparent var(--radio)
-  );
-  mask-image: radial-gradient(
-    circle at var(--origen-x) var(--origen-y),
-    #000 max(0px, calc(var(--radio) - var(--borde))),
-    transparent var(--radio)
-  );
-}
-
-/* Saliendo: la misma máscara con las paradas invertidas. El ASCII se borra
-   desde el punto por donde salió el cursor hacia afuera. */
-.ascii.enmascarado.saliendo {
-  -webkit-mask-image: radial-gradient(
-    circle at var(--origen-x) var(--origen-y),
-    transparent max(0px, calc(var(--radio) - var(--borde))),
-    #000 var(--radio)
-  );
-  mask-image: radial-gradient(
-    circle at var(--origen-x) var(--origen-y),
-    transparent max(0px, calc(var(--radio) - var(--borde))),
-    #000 var(--radio)
-  );
-}
-
-/* Táctil: no hay hover, así que el ASCII aparece con el scroll. A medida que
-   se baja, una línea de escaneo recorre el retrato de arriba hacia abajo y lo
-   convierte en código antes de que se apague del todo. Se SUMA (union) a la
-   máscara radial de la lente, que sigue funcionando con el dedo apoyado.
-   `--desvanecido` (0..1) viene del marco; el escaneo termina antes (x1.7) que
-   el apagado final, así hay un tramo en el que se ve el ASCII completo. */
-.ascii.enmascarado.escaneo {
-  --corte: calc(clamp(0, var(--desvanecido) * 1.7, 1) * 130%);
-  -webkit-mask-image:
-    radial-gradient(
-      circle at var(--origen-x) var(--origen-y),
-      #000 max(0px, calc(var(--radio) - var(--borde))),
-      transparent var(--radio)
-    ),
-    linear-gradient(to bottom, #000 calc(var(--corte) - 30%), transparent var(--corte));
-  mask-image:
-    radial-gradient(
-      circle at var(--origen-x) var(--origen-y),
-      #000 max(0px, calc(var(--radio) - var(--borde))),
-      transparent var(--radio)
-    ),
-    linear-gradient(to bottom, #000 calc(var(--corte) - 30%), transparent var(--corte));
-  -webkit-mask-composite: source-over;
-  mask-composite: add;
 }
 
 /* Teléfono: el retrato se corre hacia la derecha y se corta contra el borde

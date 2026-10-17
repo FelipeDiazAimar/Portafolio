@@ -12,9 +12,9 @@ import estilos from './RayosX.module.css';
 // (acumulados), avisa con `alDisparar` para pasar todo el hero al fondo de esqueletos.
 // El hero no recibe eventos (`pointer-events: none`), así que se escucha en `window` y se compara
 // con el rect del marco, igual que hacía el hover del ASCII.
-// `foto`: la imagen ya cargada (la de la intro) o su url. `alDisparar({ x, y, alto })` recibe dónde
+// `alDisparar({ x, y, alto })` recibe dónde
 // está el cráneo en la pantalla, para que el fondo arranque con tu esqueleto ahí.
-export default function RevelarEsqueleto({ refMarco, foto, activo, alDisparar }) {
+export default function RevelarEsqueleto({ refMarco, activo, alDisparar }) {
   const refLienzo = useRef(null);
   const refMotor = useRef(null);
   const refAlDisparar = useRef(alDisparar);
@@ -52,7 +52,6 @@ export default function RevelarEsqueleto({ refMarco, foto, activo, alDisparar })
       try {
         motor = new EscenaRayosX(lienzo, 'retrato', {
           tema: refTema.current,
-          foto,
           alCuadro: (dtMs) => {
             if (acumulador.sumar(dtMs, estado.adentro)) {
               const r = marco.getBoundingClientRect();
@@ -89,7 +88,7 @@ export default function RevelarEsqueleto({ refMarco, foto, activo, alDisparar })
       motor?.liberar();
       refMotor.current = null;
     };
-  }, [activo, refMarco, foto]);
+  }, [activo, refMarco]);
 
   useEffect(() => {
     refMotor.current?.aplicarTema(tema);
