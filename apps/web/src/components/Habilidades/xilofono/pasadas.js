@@ -25,6 +25,10 @@ export class PasadaEscarcha extends Pass {
     return this.desenfocado.texture;
   }
 
+  get texturaNitida() {
+    return this.nitido.texture;
+  }
+
   set radio(px) {
     this.materialDesenfoque.scale = px / 48;
   }

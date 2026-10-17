@@ -168,6 +168,62 @@
   opacity: 0;
   transition: opacity 0.9s ease;
   touch-action: pan-y;
+  cursor: grab;
+}
+
+.lienzo:active {
+  cursor: grabbing;
+}
+
+/* Controles de la vista: abajo a la derecha, en vidrio como los chips. */
+.controles {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(1rem, 3vw, 2rem);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.control {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+
+.control:hover,
+.control:focus-visible {
+  border-color: rgba(10, 92, 255, 0.7);
+  background: rgba(10, 92, 255, 0.18);
+  outline: none;
+}
+
+:global([data-theme='light']) .control {
+  border-color: rgba(10, 60, 200, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .control {
+    border-color: rgba(10, 60, 200, 0.18);
+    background: rgba(255, 255, 255, 0.55);
+  }
 }
 
 .seccion[data-listo='true'] .lienzo {

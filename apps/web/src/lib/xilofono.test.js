@@ -8,6 +8,8 @@ import {
   distanciaCircular,
   elegirResaltada,
   habilidadDeBarra,
+  limitarZoom,
+  ordenDeBarras,
   resalteContinuo,
 } from './xilofono.js';
 import { escribirHelice } from '../components/Habilidades/xilofono/helice.js';
@@ -97,4 +99,40 @@ test('escribirHelice: barras sobre el radio, paso fijo y la cinta da la vuelta',
   escribirHelice(1, 0.4, cfg, pos1, rot, new Euler(0, 0, 0, 'YXZ'), new Quaternion());
   assert.ok(Math.abs(pos1[1] - pos[4]) < 1e-5);
   assert.ok(Math.abs(pos1[(n - 1) * 3 + 1] - pos[1]) < 1e-5);
+});
+
+test('ordenDeBarras: es una permutación y reparte cada categoría por toda la cinta', () => {
+  const orden = ordenDeBarras(CATEGORIAS, TECNOLOGIAS);
+  const n = TECNOLOGIAS.length;
+  assert.equal(orden.length, n);
+  assert.equal(new Set(orden).size, n);
+  const categoriaDe = new Map();
+  CATEGORIAS.forEach((c) => c.tecnologias.forEach((id) => categoriaDe.set(id, c.id)));
+  const porBarra = orden.map((i) => categoriaDe.get(TECNOLOGIAS[i].id));
+  for (const c of CATEGORIAS) {
+    const lugares = porBarra.flatMap((cat, i) => (cat === c.id ? [i] : []));
+    const k = lugares.length;
+    assert.equal(k, c.tecnologias.length);
+    if (k < 2) continue;
+    // ningún hueco (dando la vuelta) más grande que ~2 veces el reparto ideal
+    for (let j = 0; j < k; j += 1) {
+      const hueco = (lugares[(j + 1) % k] - lugares[j] + n) % n;
+      assert.ok(hueco <= Math.ceil(n / k) * 2, `${c.id}: hueco ${hueco} entre barras`);
+      // y las categorías que no son enormes no quedan nunca pegadas
+      if (k * 2 <= n) assert.ok(hueco >= 2, `${c.id}: dos barras seguidas`);
+    }
+  }
+});
+
+test('ordenDeBarras: las tecnologías sin categoría completan los lugares libres', () => {
+  const tecnologias = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  const orden = ordenDeBarras([{ tecnologias: ['b'] }], tecnologias);
+  assert.deepEqual([...orden].sort(), [0, 1, 2]);
+  assert.equal(orden[0], 1);
+});
+
+test('limitarZoom: acota en los dos sentidos', () => {
+  assert.equal(limitarZoom(0.01), 0.4);
+  assert.equal(limitarZoom(99), 12);
+  assert.equal(limitarZoom(3), 3);
 });

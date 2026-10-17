@@ -19,13 +19,12 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { acercarValores, amortiguar, avanzarFase, elegirResaltada, resalteContinuo } from '@/lib/xilofono.js';
+import { acercarValores, amortiguar, avanzarFase, elegirResaltada, limitarZoom, resalteContinuo } from '@/lib/xilofono.js';
 import { CELDAS, CELDAS_NOMBRES } from './atlas.js';
 import { CAPA_FONDO, CAPA_VIDRIO, ESCARCHA, FLUIDO, PALETAS, XILOFONO, calidad } from './config.js';
 import { AyudaFBO } from './fbo.js';
 import { Fluido } from './fluido.js';
-import { armarGeometria, escribirHelice } from './helice.js';
+import { armarGeometria, crearBarra, escribirHelice } from './helice.js';
 import { PasadaEscarcha } from './pasadas.js';
 import { barraBajoRayo, centroDeBarra, crearEspacio, frenteDeBarra } from './picking.js';
 import { barraFrag, barraVert, fondoFrag, fondoVert } from './shaders.js';
@@ -36,7 +35,6 @@ import { barraFrag, barraVert, fondoFrag, fondoVert } from './shaders.js';
 // lugar de foco (recorrido continuo) y se pueden filtrar por categoría.
 
 const MAX_DT = 1 / 20;
-const URL_MODELO = '/modelos/xilofono.glb';
 
 function texturaDegrade(colores) {
   const lienzo = document.createElement('canvas');
@@ -84,7 +82,17 @@ export class Xilofono {
     this.golpeAnterior = -1;
     this.enFoco = -1;
     this.objetivos = new Float32Array(XILOFONO.cantidad);
-    this.filtro = null; // Set de índices activos, o null = todas
+    this.filtro = null; // Set de barras activas, o null = todas
+    // orden[i] = tecnología de la barra i (las categorías van repartidas por la cinta)
+    this.orden = opciones.orden ?? Array.from({ length: XILOFONO.cantidad }, (_, i) => i);
+    this.barraDe = new Map(this.orden.map((tecnologia, barra) => [tecnologia, barra]));
+
+    // vista libre: giro sobre el eje propio de la hélice, zoom y encuadre vertical
+    this.vista = { giro: 0, giroObjetivo: 0, inercia: 0, zoom: 1, zoomObjetivo: 1, y: 0, yObjetivo: 0, x: 0, xObjetivo: 0 };
+    this.giroFoco = 0;
+    this.distanciaBase = 5;
+    this.arrastre = null;
+    this.dedos = new Map();
     this.objetivosActivas = new Float32Array(XILOFONO.cantidad).fill(1);
     this.centros = Array.from({ length: XILOFONO.cantidad }, () => ({ x: 0, y: 0, z: 0 }));
     this.vector = new Vector3();
@@ -103,6 +111,9 @@ export class Xilofono {
     this.grupo.scale.setScalar(XILOFONO.grupo.escala);
     this.grupo.rotation.set((XILOFONO.grupo.rotXGrados * Math.PI) / 180, 0, (XILOFONO.grupo.rotZGrados * Math.PI) / 180);
     this.escena.add(this.grupo);
+    // eje propio de la hélice: lo que se gira al arrastrar (el grupo de afuera da la inclinación)
+    this.eje = new Group();
+    this.grupo.add(this.eje);
     this.escena.add(this.crearFondo());
 
     this.fluido = new Fluido(this.ayuda, FLUIDO);
@@ -160,13 +171,18 @@ export class Xilofono {
       u_colorResalte: { value: new Color() },
       u_cuerpo: { value: 1 },
       // logo centrado en la cara ancha de la barra (ver mascaraLogo en el shader)
-      u_logoCaja: { value: [-0.2, 0.2, 0.19, 0] },
+      u_logoCaja: { value: [-0.16, 0.16, 0.16, 0] },
       u_tNombres: { value: this.opciones.nombres },
       u_nombresCeldas: { value: new Vector2(...CELDAS_NOMBRES) },
       // el nombre sigue al logo hacia la punta (la barra mide 2,5 de largo)
       u_nombreCaja: { value: [0.26, 1.1, 0.11, 0] },
       u_especular: { value: 0.8 },
       u_opacidad: { value: 0.5 },
+      u_tNitido: { value: null },
+      u_aberracion: { value: 0.14 },
+      u_esmerilado: { value: 0.2 },
+      u_bordeLuz: { value: 1 },
+      u_filtro: { value: 0 },
     };
   }
 
@@ -194,6 +210,7 @@ export class Xilofono {
     this.pasadaEscarcha = new PasadaEscarcha(this.escena, this.camara);
     this.pasadaEscarcha.radio = ESCARCHA.intensidad * ESCARCHA.desenfoqueMaxPx;
     this.uniforms.u_tBackdrop.value = this.pasadaEscarcha.textura;
+    this.uniforms.u_tNitido.value = this.pasadaEscarcha.texturaNitida;
     this.pasadas = [this.pasadaEscarcha, new RenderPass(this.escena, this.camara)];
     // Las barras son transparentes (no escriben profundidad), así que la oclusión ambiental
     // del original no tendría de dónde sacarla: no se usa.
@@ -202,16 +219,8 @@ export class Xilofono {
   }
 
   async cargar() {
-    let modelo;
-    try {
-      const gltf = await new GLTFLoader().loadAsync(URL_MODELO);
-      modelo = gltf.scene.children[0].geometry;
-    } catch (error) {
-      console.error('[Xilofono] no cargó el modelo de la barra', error);
-      return false;
-    }
-    if (this.liberado) return false;
-    this.instancias = armarGeometria(modelo, XILOFONO, (i) => i);
+    const modelo = crearBarra();
+    this.instancias = armarGeometria(modelo, XILOFONO, (i) => this.orden[i]);
     // Vidrio de verdad: transparente, sin escribir profundidad, así se ven las barras de atrás.
     this.material = new ShaderMaterial({
       uniforms: this.uniforms,
@@ -224,7 +233,7 @@ export class Xilofono {
     this.malla = new Mesh(this.instancias.geometria, this.material);
     this.malla.frustumCulled = false;
     this.malla.layers.enable(CAPA_VIDRIO);
-    this.grupo.add(this.malla);
+    this.eje.add(this.malla);
     // compila antes del primer cuadro visible para no trabar el scroll al entrar
     await this.renderer.compileAsync(this.escena, this.camara).catch(() => {});
     return true;
@@ -243,14 +252,15 @@ export class Xilofono {
     this.uniforms.u_cuerpo.value = p.cuerpo;
     this.uniforms.u_transmission.value = p.transmision;
     this.uniforms.u_opacidad.value = p.opacidad;
+    this.uniforms.u_bordeLuz.value = p.bordeLuz;
     this.uniforms.u_tGradient.value?.dispose();
     this.uniforms.u_tGradient.value = texturaDegrade(p.tinte);
   }
 
-  // Filtro por categoría: `indices` (barras de la categoría) o null para todas. Las demás
-  // quedan como vidrio vacío y la cinta se apura entre ellas.
-  filtrar(indices) {
-    this.filtro = indices && indices.length ? new Set(indices) : null;
+  // Filtro por categoría: `tecnologias` (índices en el catálogo) o null para todas. Las demás
+  // barras quedan como vidrio vacío y la cinta se apura entre ellas.
+  filtrar(tecnologias) {
+    this.filtro = tecnologias && tecnologias.length ? new Set(tecnologias.map((t) => this.barraDe.get(t))) : null;
     for (let i = 0; i < XILOFONO.cantidad; i += 1) this.objetivosActivas[i] = !this.filtro || this.filtro.has(i) ? 1 : 0;
   }
 
@@ -269,6 +279,116 @@ export class Xilofono {
     this.golpeAnterior = -1;
   }
 
+  /* ---------------------------- vista libre ---------------------------- */
+  // Arrastre: en horizontal gira la hélice sobre su eje; en vertical, con zoom, la recorre.
+  // Dos dedos: pellizco para el zoom. (x, y) relativos al canvas.
+  bajarPuntero(id, x, y) {
+    this.dedos.set(id, { x, y });
+    if (this.dedos.size === 1) {
+      this.arrastre = { x, y, t: performance.now(), movido: false };
+      this.vista.inercia = 0;
+    } else if (this.dedos.size === 2) {
+      this.arrastre = null;
+      const [a, b] = [...this.dedos.values()];
+      this.pellizco = { distancia: Math.hypot(a.x - b.x, a.y - b.y), zoom: this.vista.zoomObjetivo };
+    }
+  }
+
+  arrastrar(id, x, y) {
+    if (!this.dedos.has(id)) return false;
+    this.dedos.set(id, { x, y });
+    if (this.dedos.size === 2 && this.pellizco) {
+      const [a, b] = [...this.dedos.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      this.zoomA((this.pellizco.zoom * d) / Math.max(1, this.pellizco.distancia), (a.x + b.x) / 2, (a.y + b.y) / 2);
+      return true;
+    }
+    const g = this.arrastre;
+    if (!g) return false;
+    const dx = x - g.x;
+    const dy = y - g.y;
+    const ahora = performance.now();
+    if (!g.movido && Math.hypot(dx, dy) < 4) return false;
+    g.movido = true;
+    const paso = (dx / Math.max(1, this.tamano.ancho)) * Math.PI * 2.2;
+    this.vista.giroObjetivo += paso;
+    this.vista.inercia = paso / Math.max(0.008, (ahora - g.t) / 1000);
+    if (this.vista.zoomObjetivo > 1.05) {
+      this.vista.yObjetivo += (dy / Math.max(1, this.tamano.alto)) * this.altoVisible();
+      this.limitarEncuadre();
+    }
+    g.x = x;
+    g.y = y;
+    g.t = ahora;
+    return true;
+  }
+
+  subirPuntero(id) {
+    this.dedos.delete(id);
+    if (this.dedos.size < 2) this.pellizco = null;
+    if (this.dedos.size === 0) this.arrastre = null;
+  }
+
+  get arrastrando() {
+    return Boolean(this.arrastre?.movido) || this.dedos.size > 1;
+  }
+
+  // Alto del mundo visible en el plano de la hélice (para pasar píxeles a unidades).
+  altoVisible() {
+    const d = this.distanciaBase / this.vista.zoom;
+    return 2 * d * Math.tan((this.camara.fov * Math.PI) / 360);
+  }
+
+  // Zoom hacia un punto de la pantalla (x, y en px del canvas): lo que está bajo el cursor
+  // queda bajo el cursor.
+  zoomA(valor, x = this.tamano.ancho / 2, y = this.tamano.alto / 2) {
+    const nuevo = limitarZoom(valor);
+    const antes = this.distanciaBase / this.vista.zoomObjetivo;
+    const despues = this.distanciaBase / nuevo;
+    const tan = Math.tan((this.camara.fov * Math.PI) / 360);
+    const nx = (x / Math.max(1, this.tamano.ancho)) * 2 - 1;
+    const ny = 1 - (y / Math.max(1, this.tamano.alto)) * 2;
+    const aspecto = this.camara.aspect;
+    this.vista.xObjetivo += nx * tan * aspecto * (antes - despues);
+    this.vista.yObjetivo -= ny * tan * (antes - despues);
+    this.vista.zoomObjetivo = nuevo;
+    if (nuevo <= 1.001) {
+      this.vista.xObjetivo = 0;
+      this.vista.yObjetivo = 0;
+    }
+    this.limitarEncuadre();
+  }
+
+  zoomRelativo(factor, x, y) {
+    this.zoomA(this.vista.zoomObjetivo * factor, x, y);
+  }
+
+  limitarEncuadre() {
+    const margen = 2.2;
+    this.vista.xObjetivo = Math.max(-margen, Math.min(margen, this.vista.xObjetivo));
+    this.vista.yObjetivo = Math.max(-margen, Math.min(margen, this.vista.yObjetivo));
+  }
+
+  restablecerVista() {
+    Object.assign(this.vista, { giroObjetivo: Math.round(this.vista.giro / (Math.PI * 2)) * Math.PI * 2, inercia: 0, zoomObjetivo: 1, xObjetivo: 0, yObjetivo: 0 });
+  }
+
+  actualizarVista(dt) {
+    const v = this.vista;
+    if (!this.arrastre && Math.abs(v.inercia) > 0.01) {
+      v.giroObjetivo += v.inercia * dt;
+      v.inercia *= Math.exp(-dt * 3.2);
+    }
+    v.giro = amortiguar(v.giro, v.giroObjetivo, 10, dt);
+    v.zoom = amortiguar(v.zoom, v.zoomObjetivo, 9, dt);
+    v.x = amortiguar(v.x, v.xObjetivo, 9, dt);
+    v.y = amortiguar(v.y, v.yObjetivo, 9, dt);
+    this.eje.rotation.y = v.giro;
+    this.camara.position.set(v.x, v.y, this.distanciaBase / v.zoom);
+    // al girar, la barra que queda de frente cambia: se recalcula el foco
+    if (Math.abs(v.giro - this.giroFoco) > 0.03) this.lugarFoco = null;
+  }
+
   /* ------------------------------- ciclo ------------------------------- */
   redimensionar(ancho, alto) {
     if (ancho === this.tamano.ancho && alto === this.tamano.alto) return;
@@ -278,7 +398,8 @@ export class Xilofono {
     this.camara.aspect = ancho / alto;
     this.uniformsFondo.u_aspecto.value = this.camara.aspect;
     // en pantallas angostas la hélice no entra a lo ancho: se aleja la cámara
-    this.camara.position.z = this.camara.aspect < 1 ? 5 / Math.max(0.55, this.camara.aspect) : 5;
+    this.distanciaBase = this.camara.aspect < 1 ? 5 / Math.max(0.55, this.camara.aspect) : 5;
+    this.camara.position.z = this.distanciaBase / this.vista.zoom;
     // en pantallas anchas la hélice va a la derecha, para dejar el título libre
     this.grupo.position.x = this.camara.aspect > 1.2 ? Math.min(1.1, (this.camara.aspect - 1.2) * 1.6) : 0;
     this.grupo.position.y = this.camara.aspect > 1.2 ? 0 : this.camara.aspect < 1 ? -1.1 : -0.35;
@@ -313,6 +434,7 @@ export class Xilofono {
     this.uniforms.u_time.value = this.tiempo;
 
     this.fluido.resolver(this.puntero, this.tiempo, dt, this.tamano.ancho / this.tamano.alto);
+    this.actualizarVista(dt);
     if (this.instancias) {
       this.actualizarCinta(dt);
       this.grupo.updateMatrixWorld();
@@ -329,7 +451,7 @@ export class Xilofono {
     // con el mouse sobre una barra la cinta se detiene (para leerla); con un filtro, se apura
     // mientras no haya una barra de la categoría en el foco
     let ritmo = 1;
-    if (this.hover !== -1) ritmo = 0;
+    if (this.hover !== -1 || this.arrastrando) ritmo = 0;
     else if (this.filtro && (this.enFoco === -1 || !this.filtro.has(this.enFoco))) ritmo = 7;
     this.faseObjetivo = avanzarFase(this.faseObjetivo, delta, dt, XILOFONO, this.reducido, ritmo);
     this.fase = amortiguar(this.fase, this.faseObjetivo, XILOFONO.scroll.suavizado, dt);
@@ -343,10 +465,10 @@ export class Xilofono {
 
   // Pasar el mouse por una barra la golpea (vaivén) y la resalta mientras esté encima.
   actualizarHover() {
-    if (!this.puntero) return;
+    if (!this.puntero || this.arrastrando) return;
     const { posiciones, rotaciones, caja, golpes } = this.instancias;
     this.raycaster.setFromCamera(this.punteroNdc, this.camara);
-    const i = barraBajoRayo(this.raycaster.ray, posiciones, rotaciones, caja, this.grupo.matrixWorld, this.tiempo, this.uniforms.u_spinSpeed.value, this.espacio);
+    const i = barraBajoRayo(this.raycaster.ray, posiciones, rotaciones, caja, this.eje.matrixWorld, this.tiempo, this.uniforms.u_spinSpeed.value, this.espacio);
     if (i !== -1 && i !== this.golpeAnterior) {
       golpes.setX(i, this.tiempo);
       golpes.needsUpdate = true;
@@ -360,12 +482,13 @@ export class Xilofono {
   calcularFoco() {
     const { posiciones, rotaciones } = this.instancias;
     for (let i = 0; i < XILOFONO.cantidad; i += 1) {
-      const c = centroDeBarra(i, posiciones, this.grupo.matrixWorld, this.vector);
+      const c = centroDeBarra(i, posiciones, this.eje.matrixWorld, this.vector);
       this.centros[i].x = c.x;
       this.centros[i].y = c.y;
       this.centros[i].z = c.z;
-      this.centros[i].frente = frenteDeBarra(i, rotaciones, this.grupo.matrixWorld, this.tiempo, 0, this.direccion, this.espacio);
+      this.centros[i].frente = frenteDeBarra(i, rotaciones, this.eje.matrixWorld, this.tiempo, 0, this.direccion, this.espacio);
     }
+    this.giroFoco = this.vista.giro;
     const barra = elegirResaltada(this.centros);
     const n = XILOFONO.cantidad;
     this.lugarFoco = (((barra + this.faseEscrita) % n) + n) % n;
@@ -397,6 +520,7 @@ export class Xilofono {
     this.enFoco = enFoco;
     if (acercarValores(resaltes.array, this.objetivos, dt, 10)) resaltes.needsUpdate = true;
     if (acercarValores(activas.array, this.objetivosActivas, dt, 6)) activas.needsUpdate = true;
+    this.uniforms.u_filtro.value = amortiguar(this.uniforms.u_filtro.value, this.filtro ? 1 : 0, 6, dt);
   }
 
   liberar() {

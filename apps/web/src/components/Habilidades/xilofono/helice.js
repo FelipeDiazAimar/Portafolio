@@ -1,4 +1,4 @@
-import { Box3, Euler, InstancedBufferAttribute, InstancedBufferGeometry, Quaternion } from 'three';
+import { Box3, CapsuleGeometry, Euler, InstancedBufferAttribute, InstancedBufferGeometry, Quaternion } from 'three';
 
 // Hélice de barras (de helix.ts del original, MIT). Las barras van en una cinta: al avanzar la
 // fase cada una se desliza por la hélice y vuelve a entrar por abajo, así una cantidad fija de
@@ -22,6 +22,17 @@ export function escribirHelice(fase, altoBarra, cfg, posiciones, rotaciones, eul
     rotaciones[i * 4 + 2] = cuaternion.z;
     rotaciones[i * 4 + 3] = cuaternion.w;
   }
+}
+
+// Barra lisa: una cápsula con muchos segmentos, con las medidas del modelo del original
+// (0,2 de grosor, 0,4 de alto, 2,5 de largo). El modelo traía pocos polígonos y al hacer zoom se
+// veían sus lados rectos. Sección elíptica: se arma redonda de radio 0,2 y se aplana en x
+// (applyMatrix4 corrige las normales con la matriz normal, así siguen siendo lisas).
+export function crearBarra() {
+  const barra = new CapsuleGeometry(0.2, 2.1, 24, 96, 1);
+  barra.rotateX(Math.PI / 2); // de vertical (y) a lo largo de z
+  barra.scale(0.5, 1, 1);
+  return barra;
 }
 
 // Geometría instanciada a partir de la barra del modelo: una instancia por lugar de la hélice.

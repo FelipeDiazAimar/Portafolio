@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { TECNOLOGIAS } from '@/data/tecnologias.js';
 import { CATEGORIAS } from '@/data/categoriasTecnologias.js';
+import { ordenDeBarras } from '@/lib/xilofono.js';
 import useTema from '@/hooks/useTema.js';
+import useEmbudo from '@/hooks/useEmbudo.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
 import estilos from './Habilidades.module.css';
@@ -15,8 +17,10 @@ import estilos from './Habilidades.module.css';
 // una barra la golpea, la resalta y frena la cinta. Los chips filtran por categoría.
 // Sin WebGL queda la lista de tecnologías como píldoras (y los chips también la filtran).
 
-// Índice de cada tecnología en el catálogo (= su barra).
+// Índice de cada tecnología en el catálogo (= su celda en los atlas de logos y nombres).
 const INDICE = new Map(TECNOLOGIAS.map((t, i) => [t.id, i]));
+// Qué tecnología va en cada barra: las de una misma categoría repartidas por toda la hélice.
+const ORDEN = ordenDeBarras(CATEGORIAS, TECNOLOGIAS);
 export default function Habilidades() {
   const refSeccion = useRef(null);
   const refLienzo = useRef(null);
@@ -29,6 +33,8 @@ export default function Habilidades() {
   const reducido = useReducedMotion();
   const refTema = useRef(tema);
   refTema.current = tema;
+  // Embudo: si el scroll se detiene cerca de la sección, la acomoda sola en pantalla.
+  useEmbudo(refSeccion);
 
   useEffect(() => {
     if (!hayWebGL()) {
@@ -39,6 +45,7 @@ export default function Habilidades() {
     let motor = null;
     let observadorTamano = null;
     let observadorVista = null;
+    let alRueda = null;
     const lienzo = refLienzo.current;
     const seccion = refSeccion.current;
 
@@ -51,6 +58,7 @@ export default function Habilidades() {
         motor = new Xilofono(lienzo, {
           atlas: atlas.textura,
           nombres: crearAtlasNombres(TECNOLOGIAS.map((t) => t.nombre)),
+          orden: ORDEN,
           tema: refTema.current,
           reducido,
         });
@@ -70,6 +78,15 @@ export default function Habilidades() {
       // el ciclo sólo corre con la sección a la vista
       observadorVista = new IntersectionObserver(([entrada]) => (entrada.isIntersecting ? motor.iniciar() : motor.pausar()), { rootMargin: '120px 0px' });
       observadorVista.observe(seccion);
+      // Zoom con Ctrl + rueda (y el pellizco del trackpad, que llega así). La rueda sola sigue
+      // scrolleando la página.
+      alRueda = (evento) => {
+        if (!evento.ctrlKey && !evento.metaKey) return;
+        evento.preventDefault();
+        const caja = lienzo.getBoundingClientRect();
+        motor.zoomRelativo(Math.exp(-evento.deltaY * 0.0045), evento.clientX - caja.left, evento.clientY - caja.top);
+      };
+      lienzo.addEventListener('wheel', alRueda, { passive: false });
       const [cargado] = await Promise.all([motor.listo, atlas.listo]);
       if (!cancelado && cargado) setListo(true);
       if (!cancelado && !cargado) setConWebGL(false);
@@ -79,6 +96,7 @@ export default function Habilidades() {
       cancelado = true;
       observadorTamano?.disconnect();
       observadorVista?.disconnect();
+      if (alRueda) lienzo.removeEventListener('wheel', alRueda);
       motor?.liberar();
       refMotor.current = null;
     };
@@ -93,13 +111,38 @@ export default function Habilidades() {
     refMotor.current?.filtrar(categoriaActual ? categoriaActual.tecnologias.map((id) => INDICE.get(id)) : null);
   }, [categoriaActual, listo]);
 
-  function alMover(evento) {
+  function posicion(evento) {
     const caja = evento.currentTarget.getBoundingClientRect();
-    refMotor.current?.moverPuntero(evento.clientX - caja.left, evento.clientY - caja.top);
+    return [evento.clientX - caja.left, evento.clientY - caja.top];
   }
 
-  function alSalir() {
-    refMotor.current?.soltarPuntero();
+  function alBajar(evento) {
+    const [x, y] = posicion(evento);
+    refMotor.current?.moverPuntero(x, y);
+    refMotor.current?.bajarPuntero(evento.pointerId, x, y);
+  }
+
+  function alMover(evento) {
+    const [x, y] = posicion(evento);
+    const motor = refMotor.current;
+    if (!motor) return;
+    motor.moverPuntero(x, y);
+    // al empezar a arrastrar se captura el puntero, así el giro sigue aunque salga del canvas
+    if (motor.arrastrar(evento.pointerId, x, y) && !evento.currentTarget.hasPointerCapture(evento.pointerId)) {
+      try {
+        evento.currentTarget.setPointerCapture(evento.pointerId);
+      } catch {
+        /* puntero que ya no está activo: se sigue sin capturar */
+      }
+    }
+  }
+
+  function alSubir(evento) {
+    refMotor.current?.subirPuntero(evento.pointerId);
+  }
+
+  function alSalir(evento) {
+    if (!evento.currentTarget.hasPointerCapture(evento.pointerId)) refMotor.current?.soltarPuntero();
   }
 
   return (
@@ -136,9 +179,28 @@ export default function Habilidades() {
             className={estilos.lienzo}
             aria-hidden="true"
             onPointerMove={alMover}
-            onPointerDown={alMover}
+            onPointerDown={alBajar}
+            onPointerUp={alSubir}
+            onPointerCancel={alSubir}
             onPointerLeave={alSalir}
+            onDoubleClick={() => refMotor.current?.restablecerVista()}
           />
+          {listo && (
+            <div className={estilos.controles} role="group" aria-label="Vista del modelo">
+              <button type="button" className={estilos.control} aria-label="Alejar" onClick={() => refMotor.current?.zoomRelativo(1 / 1.5)}>
+                −
+              </button>
+              <button type="button" className={estilos.control} aria-label="Acercar" onClick={() => refMotor.current?.zoomRelativo(1.5)}>
+                +
+              </button>
+              <button type="button" className={estilos.control} aria-label="Restablecer la vista" onClick={() => refMotor.current?.restablecerVista()}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 3-6.7" />
+                  <path d="M3 4v5h5" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -70,3 +70,53 @@ export function acercarValores(valores, objetivos, dt, lambda = 8) {
 export function habilidadDeBarra(i, totalHabilidades) {
   return ((i % totalHabilidades) + totalHabilidades) % totalHabilidades;
 }
+
+// Orden de las barras en la hélice: reparte cada categoría a intervalos parejos a lo largo de
+// toda la cinta (en vez de dejarlas juntas), así al filtrar quedan salteadas por todo el modelo.
+// De la categoría más grande a la más chica, cada tecnología va al lugar libre más cercano a su
+// posición ideal ((j + desfase) · n / k), evitando quedar pegada a otra de su misma categoría.
+// Devuelve, para cada barra, el índice de la tecnología en `tecnologias`. Las tecnologías que
+// ninguna categoría nombra completan los lugares que sobran.
+export function ordenDeBarras(categorias, tecnologias) {
+  const n = tecnologias.length;
+  const indice = new Map(tecnologias.map((t, i) => [t.id, i]));
+  const lugares = new Array(n).fill(-1);
+  const grupoDe = new Array(n).fill(-1);
+  const usadas = new Set();
+  const grupos = categorias
+    .map((c, g) => ({ g, ids: c.tecnologias.filter((id) => indice.has(id)) }))
+    .sort((a, b) => b.ids.length - a.ids.length || a.g - b.g);
+  grupos.forEach(({ g, ids }, orden) => {
+    const k = ids.length;
+    const desfase = (orden * 0.618034) % 1; // corrido distinto por categoría (proporción áurea)
+    ids.forEach((id, j) => {
+      if (usadas.has(id)) return;
+      const ideal = ((j + desfase) * n) / k;
+      let elegido = -1;
+      let elegidoPegado = -1;
+      for (let d = 0; d < n && elegido === -1; d += 1) {
+        for (const lugar of [Math.round(ideal + d), Math.round(ideal - d)]) {
+          const l = ((lugar % n) + n) % n;
+          if (lugares[l] !== -1) continue;
+          const pegado = grupoDe[(l + 1) % n] === g || grupoDe[(l - 1 + n) % n] === g;
+          if (!pegado) {
+            elegido = l;
+            break;
+          }
+          if (elegidoPegado === -1) elegidoPegado = l;
+        }
+      }
+      const l = elegido !== -1 ? elegido : elegidoPegado;
+      lugares[l] = indice.get(id);
+      grupoDe[l] = g;
+      usadas.add(id);
+    });
+  });
+  const sobrantes = tecnologias.map((_, i) => i).filter((i) => !lugares.includes(i));
+  return lugares.map((v) => (v === -1 ? sobrantes.shift() : v)).filter((v) => v !== undefined);
+}
+
+// Zoom de la vista: se acota para que la cámara no quede del otro lado del modelo.
+export function limitarZoom(valor, minimo = 0.4, maximo = 12) {
+  return Math.min(maximo, Math.max(minimo, valor));
+}

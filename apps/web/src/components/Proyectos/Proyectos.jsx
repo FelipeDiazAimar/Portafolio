@@ -16,6 +16,7 @@ import NavegacionMixta from './NavegacionMixta.jsx';
 import TarjetaMarca from './TarjetaMarca.jsx';
 import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
+import useEmbudo from '@/hooks/useEmbudo.js';
 
 // Marquesina: la grilla inclinada deja huecos en las esquinas si sólo están los 13 proyectos,
 // así que se repiten los necesarios (más cuanto más grande la pantalla) hasta cubrirla, sin
@@ -54,10 +55,6 @@ const TITULO_VISIBLE_MS = 4000;
 const ESCALA_TITULO = 0.2;
 const MARGEN_TITULO = 32;
 const ALTO_HEADER = 72;
-// Embudo de scroll: dentro de esta fracción del alto de pantalla, la sección se centra sola
-// tras quedar quieta ese tiempo.
-const EMBUDO_FRACCION = 0.45;
-const EMBUDO_ESPERA_MS = 220;
 
 export default function Proyectos() {
   const proyectos = useMemo(() => listarProyectos(), []);
@@ -158,37 +155,7 @@ export default function Proyectos() {
   }, [elegir]);
 
   // Embudo: al pasar por la sección, si el scroll se detiene cerca, la centra sola en pantalla.
-  useEffect(() => {
-    const panel = refPanel.current;
-    if (!panel) return undefined;
-    let espera = 0;
-    let dedos = 0;
-    const intentar = () => {
-      if (dedos > 0 || document.documentElement.dataset.sinIman) return;
-      const distancia = panel.getBoundingClientRect().top;
-      if (Math.abs(distancia) < 2 || Math.abs(distancia) > window.innerHeight * EMBUDO_FRACCION) return;
-      window.scrollTo({ top: window.scrollY + distancia, behavior: 'smooth' });
-    };
-    const alScroll = () => {
-      clearTimeout(espera);
-      espera = setTimeout(intentar, EMBUDO_ESPERA_MS);
-    };
-    const alTocar = (evento) => {
-      dedos = evento.touches.length;
-      if (!dedos) alScroll();
-    };
-    window.addEventListener('scroll', alScroll, { passive: true });
-    window.addEventListener('touchstart', alTocar, { passive: true });
-    window.addEventListener('touchend', alTocar, { passive: true });
-    window.addEventListener('touchcancel', alTocar, { passive: true });
-    return () => {
-      clearTimeout(espera);
-      window.removeEventListener('scroll', alScroll);
-      window.removeEventListener('touchstart', alTocar);
-      window.removeEventListener('touchend', alTocar);
-      window.removeEventListener('touchcancel', alTocar);
-    };
-  }, []);
+  useEmbudo(refPanel);
 
   // Teclado con la sección a la vista: flechas recorren, Escape vuelve a la marquesina.
   useEffect(() => {

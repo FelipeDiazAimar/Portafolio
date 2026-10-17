@@ -106,6 +106,11 @@ uniform vec3 u_colorResalte;
 uniform float u_cuerpo;        // brillo del cuerpo del vidrio
 uniform float u_especular;
 uniform float u_opacidad;     // alfa base del vidrio
+uniform sampler2D u_tNitido;  // el fondo sin desenfocar (lo que se ve a través de la lente)
+uniform float u_aberracion;   // separación de colores en los bordes
+uniform float u_esmerilado;   // 0 = vidrio limpio, 1 = esmerilado
+uniform float u_bordeLuz;     // brillo de la línea de borde
+uniform float u_filtro;       // 0..1: hay una categoría elegida
 uniform vec4 u_logoCaja;       // zMin, zMax, ySemi, (sin uso)
 uniform sampler2D u_tNombres;  // atlas con el nombre de cada habilidad
 uniform vec2 u_nombresCeldas;  // columnas, filas del atlas de nombres
@@ -129,19 +134,10 @@ const float AMBIENT_MIX = 0.6;
 const float FLUID_GATE_MAX = 0.2;
 const float TINT_OPACITY_DROP = 0.6;
 const float SHEEN_MIX = 0.35;
-const float RIM_LIFT = 0.06;
 
 // Iridiscencia en la gama del sitio (el original recorría todo el arcoíris).
 vec3 iridescence(float t) {
   return mix(u_iridA, u_iridB, 0.5 + 0.5 * cos(2.0 * PI * t));
-}
-
-vec3 proceduralEnv(vec3 dir) {
-  float t = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
-  vec3 ground = vec3(0.12, 0.12, 0.14);
-  vec3 horizon = vec3(0.60, 0.62, 0.68);
-  vec3 sky = vec3(0.95, 0.97, 1.0);
-  return t < 0.5 ? mix(ground, horizon, t * 2.0) : mix(horizon, sky, (t - 0.5) * 2.0);
 }
 
 // Coordenadas de lectura sobre la cara: x crece hacia la derecha de la pantalla a lo largo de
@@ -167,23 +163,29 @@ vec2 enCelda(vec2 uv, float celda, vec2 celdas) {
 
 // Logo de la habilidad: en las dos caras anchas de la barra (normal local en ±x), un cuadrado
 // al centro. Se lee del atlas en la celda de esta instancia.
+// Cuánto de la cara ancha es este punto: la sección es curva, así que en vez de cortar de golpe
+// (el logo quedaba mochado) se desvanece hacia arriba y abajo.
+float enCara() {
+  return smoothstep(0.12, 0.42, abs(vLocalNormal.x));
+}
+
 float mascaraLogo() {
   // sólo en la cara que mira a la cámara: la de atrás se ve a través del vidrio y duplicaría
-  if (!gl_FrontFacing || abs(vLocalNormal.x) < 0.6) return 0.0;
+  if (!gl_FrontFacing) return 0.0;
   float lado = u_logoCaja.y - u_logoCaja.x;
   vec2 l = lectura();
   vec2 uv = vec2((l.x - u_logoCaja.x) / lado, (l.y + u_logoCaja.z) / (2.0 * u_logoCaja.z));
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-  return texture2D(u_tAtlas, enCelda(uv, floor(vSkill + 0.5), vec2(u_atlasCeldas))).a;
+  return texture2D(u_tAtlas, enCelda(uv, floor(vSkill + 0.5), vec2(u_atlasCeldas))).a * enCara();
 }
 
 // Nombre de la habilidad, a continuación del logo: sólo aparece en la barra resaltada.
 float mascaraNombre() {
-  if (!gl_FrontFacing || abs(vLocalNormal.x) < 0.6 || vResalte < 0.01) return 0.0;
+  if (!gl_FrontFacing || vResalte < 0.01) return 0.0;
   vec2 l = lectura();
   vec2 uv = vec2((l.x - u_nombreCaja.x) / (u_nombreCaja.y - u_nombreCaja.x), (l.y + u_nombreCaja.z) / (2.0 * u_nombreCaja.z));
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-  return texture2D(u_tNombres, enCelda(uv, floor(vSkill + 0.5), u_nombresCeldas)).a * smoothstep(0.2, 0.9, vResalte);
+  return texture2D(u_tNombres, enCelda(uv, floor(vSkill + 0.5), u_nombresCeldas)).a * smoothstep(0.2, 0.9, vResalte) * enCara();
 }
 
 void main() {
@@ -197,34 +199,56 @@ void main() {
   vec3 lighting = ambient * AMBIENT_MIX + diffuse * (1.0 - AMBIENT_MIX);
 
   float velocity = smoothstep(0.0, FLUID_GATE_MAX, length(texture2D(u_tFluid, vScreenUv).xy));
+  // Con una categoría elegida, todas sus barras se tiñen (no sólo la del foco).
+  float deCategoria = vActiva * u_filtro;
   // el resaltado revela el tinte igual que pasar el mouse
-  float reveal = clamp(max(velocity * u_fluidStrength, vResalte * 0.85), 0.0, 1.0);
+  float reveal = clamp(max(max(velocity * u_fluidStrength, vResalte * 0.9), deCategoria * 0.8), 0.0, 1.0);
   vec3 tint = texture2D(u_tGradient, vec2(fract(vTintOffset * u_tintWrap), 0.5)).rgb;
-  tint = mix(tint, u_colorResalte, vResalte);
-
-  vec3 albedo = mix(vec3(u_cuerpo), tint, reveal * u_tintStrength);
-  vec3 body = lighting * albedo;
-
-  vec2 buv = vScreenUv + N.xy * u_refractStrength * 1.6;
-  vec3 trans = texture2D(u_tBackdrop, buv).rgb;
-  trans = mix(trans, tint, reveal);
-
-  vec3 frosted = mix(body, trans, u_transmission * (1.0 - TINT_OPACITY_DROP * reveal));
+  tint = mix(tint, u_colorResalte, max(vResalte, deCategoria * 0.5));
 
   float edge = clamp(1.0 - max(dot(N, V), 0.0), 0.0, 1.0);
   float fres = pow(edge, u_fresnelPower);
 
-  vec3 sheen = proceduralEnv(reflect(-V, N));
-  vec3 color = mix(frosted, sheen, fres * SHEEN_MIX);
-  color += fres * RIM_LIFT;
-  // brillo especular nítido: es lo que más se lee como vidrio
+  // Liquid glass: la barra es una lente convexa. Perfil del mapa de desplazamiento del botón
+  // "Tahoe" (sin(d^0.8 · π)): nada en el centro, máximo antes del borde y vuelve a bajar en el
+  // filo, así el contorno queda limpio. Separa los colores donde más desvía (aberración
+  // cromática) y deja ver el fondo nítido en vez de un cuerpo de color.
+  float lente = sin(pow(edge, 0.8) * PI);
+  vec2 desvio = N.xy * u_refractStrength * (0.2 + 1.8 * lente);
+  vec2 uvFondo = vScreenUv + desvio;
+  vec2 separacion = desvio * u_aberracion;
+  vec3 nitido = vec3(
+    texture2D(u_tNitido, uvFondo - separacion).r,
+    texture2D(u_tNitido, uvFondo).g,
+    texture2D(u_tNitido, uvFondo + separacion).b
+  );
+  vec3 trans = mix(nitido, texture2D(u_tBackdrop, uvFondo).rgb, u_esmerilado);
+
+  vec3 body = lighting * vec3(u_cuerpo);
+  vec3 vidrio = mix(body, trans, u_transmission);
+  // vidrio teñido: el color filtra lo de atrás (multiplica) y suma un poco de luz propia
+  vec3 tenido = trans * tint * 1.5 + tint * 0.22;
+  vidrio = mix(vidrio, tenido, reveal * u_tintStrength);
+
+  // Reflejo del entorno teñido con el propio fondo (no un cielo gris): sin esto, en las barras
+  // vistas de costado aparecía una franja blanca a lo largo.
+  vec3 sheen = mix(trans, vec3(1.0), 0.25);
+  vec3 color = mix(vidrio, sheen, fres * SHEEN_MIX);
+  // borde de luz (como el aro del botón Tahoe): un filo fino, más fuerte del lado de la luz,
+  // y una sombra interior suave del otro. Bien angosto, para que no pinte media barra.
+  vec3 luzBorde = normalize(vec3(-0.45, 0.85, 0.5));
+  float ladoLuz = dot(N, luzBorde);
+  float filo = pow(edge, 9.0);
+  color += filo * (0.35 + 0.65 * smoothstep(-0.2, 0.8, ladoLuz)) * u_bordeLuz;
+  color *= 1.0 - pow(edge, 6.0) * 0.22 * smoothstep(0.2, -0.6, ladoLuz);
+  // brillo especular: un punto chico, no una línea a lo largo de la barra
   vec3 H = normalize(normalize(LIGHT_DIR) + V);
-  color += pow(max(dot(N, H), 0.0), 90.0) * u_especular;
+  color += pow(max(dot(N, H), 0.0), 220.0) * u_especular;
   color += tint * reveal * u_tintGlow;
 
   float phase = edge * u_iridCycles + N.y * 0.5 + u_iridShift;
   vec3 irid = iridescence(phase);
-  color += irid * (pow(edge, u_iridPower) * u_iridStrength + u_iridBody * edge);
+  color += irid * (pow(edge, u_iridPower) * u_iridStrength + u_iridBody * edge) * 0.5;
 
   // logo: color de la paleta; resaltado, blanco y más presente. Fuera del filtro, casi no se ve.
   float logo = mascaraLogo() * (1.0 - fres * 0.6) * mix(0.12, 1.0, vActiva);

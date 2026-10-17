@@ -63,10 +63,11 @@ export const PALETAS = {
     tinte: ['#0038ff', '#0057ff', '#1f7bff', '#00a6ff', '#0057ff'],
     iridA: '#0057ff',
     iridB: '#7fd4ff',
-    cuerpo: 0.35, // brillo del cuerpo del vidrio (blanco = 1)
-    transmision: 0.96, // cuánto fondo desenfocado deja ver
-    opacidad: 0.42, // alfa base del vidrio (el borde y el logo suben a opaco)
-    especular: 1,
+    cuerpo: 0.2, // brillo del cuerpo del vidrio (blanco = 1)
+    transmision: 0.97, // cuánto del fondo (refractado) deja ver
+    opacidad: 0.62, // alfa base del vidrio (el borde y el logo suben a opaco)
+    especular: 0.6,
+    bordeLuz: 0.8,
   },
   claro: {
     fondoA: '#f4f7ff',
@@ -78,8 +79,9 @@ export const PALETAS = {
     iridA: '#1f6bff',
     iridB: '#a8d8ff',
     cuerpo: 1,
-    transmision: 0.96,
-    opacidad: 0.5,
-    especular: 0.8,
+    transmision: 0.93,
+    opacidad: 0.62,
+    especular: 0.5,
+    bordeLuz: 0.6,
   },
 };
