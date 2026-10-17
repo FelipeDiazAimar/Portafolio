@@ -83,3 +83,10 @@
 .capa-contacto {
   background: linear-gradient(135deg, #3b1020 0%, #731f45 100%);
 }
+
+/* Con el fondo de rayos X (manchas claras), el texto del hero lleva una sombra oscura para leerse. */
+:global(html[data-rayosx]) .capa-inicio {
+  text-shadow:
+    0 1px 3px rgba(0, 6, 24, 0.85),
+    0 2px 26px rgba(0, 8, 30, 0.75);
+}

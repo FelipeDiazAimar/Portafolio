@@ -22,8 +22,10 @@ void main() {
 }
 `;
 
-// Fresnel: oscuro de frente y brillante en la silueta (de ahí el aspecto de radiografía); se apaga
-// hacia abajo y con la distancia (la niebla del original).
+// Como el original (fresnelMaterial.js): su "fresnel" es pow(1 - dot(normal, -vista), 1) = 1 + cos,
+// o sea brillante DE FRENTE (hasta 2) y más tenue en la silueta; el color se extrapola más allá del
+// celeste y, con la luz y el tone mapping, queda blanco azulado. Se apaga hacia abajo y con la
+// niebla (a negro). Sale en HDR: el tone mapping va en la composición.
 export const rayosFrag = /* glsl */ `
 uniform vec3 u_nucleo;
 uniform vec3 u_borde;
@@ -38,10 +40,13 @@ varying float vProfundidad;
 void main() {
   vec3 N = normalize(vNormal);
   if (!gl_FrontFacing) N = -N;
-  float fresnel = clamp(1.0 - dot(N, normalize(vVista)), 0.0, 1.0);
-  vec3 color = mix(u_nucleo, u_borde, fresnel);
-  color *= smoothstep(u_alturaBase, u_alturaMax, vAltura);
-  color *= 1.0 + u_emisivo;
+  vec3 V = normalize(vVista);
+  float fresnel = clamp(1.0 + dot(N, V), 0.0, 2.0);
+  vec3 base = mix(u_nucleo, u_borde, fresnel) * smoothstep(u_alturaBase, u_alturaMax, vAltura);
+  // luz puntual (1, 2, 1) con intensidad 0,75 y entorno tenue (0,1), como la escena original
+  vec3 L = normalize((viewMatrix * vec4(1.0, 2.0, 1.0, 0.0)).xyz);
+  float luz = 0.1 + 0.75 * max(dot(N, L), 0.0);
+  vec3 color = base * luz + base * u_emisivo;
   color *= 1.0 - smoothstep(u_niebla.x, u_niebla.y, vProfundidad);
   gl_FragColor = vec4(color, 1.0);
 }
@@ -122,8 +127,16 @@ uniform vec2 u_resolucion;
 uniform vec3 u_tinte;
 uniform vec3 u_fondoClaro;
 uniform vec3 u_huesoClaro;
+uniform float u_fuerzaBrillo;
 varying vec2 vUv;
 ${ruido}
+// tone mapping ACES (el del renderer del original) y salida en sRGB
+vec3 aces(vec3 x) {
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+vec3 aSrgb(vec3 c) {
+  return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+}
 void main() {
   float m = texture2D(u_mascara, vUv).r;
   float revelado = 1.0 - m;
@@ -141,19 +154,21 @@ void main() {
     color = esqueleto * scan;
     alfa = a * clamp(silueta + lum * 2.5, 0.0, 1.0);
   } else {
-    vec3 cuerpo = texture2D(u_cuerpo, vUv).rgb + texture2D(u_brillo, vUv).rgb * 0.4;
+    // como el original: los cuerpos se ven SÓLO como bloom (manchas de luz difusas), con scanlines
+    vec3 cuerpo = texture2D(u_brillo, vUv).rgb * u_fuerzaBrillo;
     color = mix(cuerpo * scan, esqueleto, max(revelado, u_revelarTodo));
   }
   float grano = (azar(vUv * u_resolucion + fract(u_tiempo * 20.0)) - 0.5) * 0.03;
   color -= grano;
   float l = dot(color, vec3(0.299, 0.587, 0.114));
   color = mix(vec3(l), color, 0.985);
+  // los negros suben hacia azul marino (el "bajo contraste" del original), después tone mapping
+  color = mix(u_tinte, color, 0.9);
+  color = aSrgb(aces(color));
   if (u_claro > 0.5) {
     // negativo: fondo claro, huesos azul oscuro
-    float k = clamp(l * 1.8, 0.0, 1.0);
+    float k = clamp(dot(color, vec3(0.299, 0.587, 0.114)) * 1.3, 0.0, 1.0);
     color = mix(u_fondoClaro, u_huesoClaro, k);
-  } else {
-    color = mix(u_tinte, color, 0.9);
   }
   // retrato: alfa premultiplicado (el canvas es transparente)
   gl_FragColor = vec4(color * alfa, alfa);

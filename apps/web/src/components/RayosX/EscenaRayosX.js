@@ -19,7 +19,6 @@ import {
   SRGBColorSpace,
   Texture,
   TextureLoader,
-  UnsignedByteType,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -162,13 +161,15 @@ export class EscenaRayosX {
     this.renderer.setClearColor(0x000000, this.retrato ? 0 : 1);
     this.renderer.outputColorSpace = SRGBColorSpace;
 
-    const opcionesDestino = { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: true };
+    // en HDR (como el original): el brillo de frente pasa de 1 y el tone mapping lo lleva a blanco azulado
+    const opcionesDestino = { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: true, type: HalfFloatType };
     this.destinoCuerpo = new WebGLRenderTarget(1, 1, opcionesDestino);
     this.destinoEsqueleto = new WebGLRenderTarget(1, 1, opcionesDestino);
-    this.destinoBrillo = new WebGLRenderTarget(1, 1, { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false });
+    this.destinoBrillo = new WebGLRenderTarget(1, 1, { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false, type: HalfFloatType });
     const opcionesMascara = { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false, type: HalfFloatType };
     this.mascaras = [new WebGLRenderTarget(1, 1, opcionesMascara), new WebGLRenderTarget(1, 1, opcionesMascara)];
-    this.brillo = this.retrato ? null : new GaussianBlurPass({ kernelSize: 35, iterations: 2, resolutionScale: 0.5 });
+    // los cuerpos se ven sólo como bloom: un desenfoque grande y suave
+    this.brillo = this.retrato ? null : new GaussianBlurPass({ kernelSize: 63, iterations: 4, resolutionScale: 0.25 });
 
     this.trazo = new TrazoMouse(1, 1, this.cfg.pincel);
     this.armarPantalla();
@@ -217,6 +218,7 @@ export class EscenaRayosX {
       u_tinte: { value: new Color(...COLORES.oscuro.tinte) },
       u_fondoClaro: { value: new Color(...COLORES.claro.fondo) },
       u_huesoClaro: { value: new Color(...COLORES.claro.hueso) },
+      u_fuerzaBrillo: { value: FONDO.fuerzaBrillo },
     };
     this.escenaComposicion = new Scene();
     this.escenaComposicion.add(
@@ -540,7 +542,7 @@ export class EscenaRayosX {
       renderer.clear();
       renderer.render(this.escenaCuerpo, this.camara);
       if (!this.brilloListo) {
-        this.brillo.initialize(renderer, true, UnsignedByteType);
+        this.brillo.initialize(renderer, true, HalfFloatType);
         this.brilloListo = true;
       }
       this.brillo.render(renderer, this.destinoCuerpo, this.destinoBrillo);

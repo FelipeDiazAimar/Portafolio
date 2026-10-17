@@ -38,6 +38,8 @@ export const FONDO = {
   parallax: [0.125, 0.075],
   suavizado: 0.25, // segundos
   niebla: [1, 5],
+  // intensidad de los cuerpos (que se ven sólo como bloom)
+  fuerzaBrillo: 1.0,
   // cuánto más lejos que el demo va la cámara (para que entren más esqueletos)
   alejar: 1.45,
   // tu esqueleto vuela desde la foto hasta su lugar en la grilla
