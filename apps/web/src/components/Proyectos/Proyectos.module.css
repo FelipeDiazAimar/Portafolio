@@ -125,10 +125,6 @@
     justify-content: center;
   }
 
-  .tituloHeaderRevelado,
-  .tituloHeaderEncriptado {
-    font-size: 1rem;
-  }
 }
 
 .tituloHeader[data-visible='true'] {
@@ -155,6 +151,15 @@
 .tituloHeaderEncriptado {
   color: var(--color-muted);
   opacity: 0.7;
+}
+
+/* Celular: el título del header centrado, bien legible (va después de la regla base: si no, esta lo pisa) */
+@media (max-width: 768px) {
+  .tituloHeaderRevelado,
+  .tituloHeaderEncriptado {
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+  }
 }
 
 /* La tipografía del título grande va en el <text> del SVG que lo dibuja. */

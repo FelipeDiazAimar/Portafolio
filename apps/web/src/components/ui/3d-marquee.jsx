@@ -24,6 +24,8 @@ export const ThreeDMarquee = ({
   // Columnas de la grilla y ancho de su caja (px): más columnas cubren más a lo ancho.
   columnas = 4,
   anchoCaja = 1720,
+  // Celular: grilla plana y liviana (ver más abajo)
+  plano = false,
 }) => {
   const interactiva = typeof alApuntar === "function";
   const copia = (item) => (item && typeof item === "object" ? { ...item, esCopia: true } : item);
@@ -58,6 +60,97 @@ export const ThreeDMarquee = ({
     // Reparto alternado en `columnas` columnas: con pocas imágenes quedan parejas.
     chunks = Array.from({ length: columnas }, (_, colIndex) => images.filter((_, i) => i % columnas === colIndex));
   }
+  // Una tarjeta (la usan la grilla 3D y la plana)
+  const renderItem = (item, imageIndex) => {
+        const image = typeof item === "string" ? item : item.src ?? item.clave;
+        const clave = typeof item === "string" ? item : item.clave ?? item.src;
+        const titulo = typeof item === "string" ? `Image ${imageIndex + 1}` : item.titulo ?? "";
+        const esCopia = typeof item === "object" && item?.esCopia === true;
+        const activa = Array.isArray(claveActiva)
+          ? claveActiva.includes(clave)
+          : claveActiva !== null && clave === claveActiva;
+        return (
+          <div
+            className="group relative w-full"
+            key={imageIndex + image + (esCopia ? "copia" : "")}
+            data-clave={interactiva && !esCopia ? clave : undefined}
+            data-copia={interactiva && esCopia ? clave : undefined}
+            data-zona-mixto={interactiva ? "marquesina" : undefined}
+            role={interactiva ? "button" : undefined}
+            aria-label={interactiva ? titulo : undefined}
+            aria-hidden={esCopia ? true : undefined}
+            tabIndex={interactiva && !esCopia ? 0 : undefined}
+            style={
+              interactiva
+                ? { cursor: "pointer", opacity: activa ? 0 : 1 }
+                : undefined
+            }
+            onKeyDown={
+              interactiva
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      alApuntar(clave);
+                    }
+                  }
+                : undefined
+            }
+            onClick={interactiva ? () => alApuntar(clave) : undefined}
+          >
+            <GridLineHorizontal className="-top-4" offset="20px" />
+            {item && typeof item === "object" && item.contenido ? (
+              // El realce lo gobierna el contenedor (group-hover), que no se mueve, y el
+              // elemento realzado no recibe el mouse (pointer-events-none): si crecía o
+              // se desplazaba, pisaba a la vecina y el cursor alternaba entre las dos
+              // (la tarjeta "rebotaba"). Ahora sólo crece el contenido, por dentro del
+              // recorte, y se enciende la sombra.
+              <div className="pointer-events-none aspect-[970/700] w-full overflow-hidden rounded-lg ring ring-gray-950/5 transition-shadow duration-300 ease-out group-hover:shadow-2xl [&>*]:transition-transform [&>*]:duration-500 [&>*]:ease-out group-hover:[&>*]:scale-[1.06]">
+                {item.contenido}
+              </div>
+            ) : (
+              // w-full: el original se apoya en el reset de Tailwind (img con
+              // max-width 100%); sin él la imagen salía a 970 px de ancho.
+              <motion.img
+                whileHover={{
+                  y: -10,
+                }}
+                transition={{
+                  duration: 0.3,
+                  ease: "easeInOut",
+                }}
+                key={imageIndex + image}
+                src={image}
+                alt={titulo}
+                className="aspect-[970/700] w-full h-auto rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
+                width={970}
+                height={700}
+              />
+            )}
+          </div>
+        );
+  };
+  // Modo plano (celular): sin 3D, sin inclinación y sin animación por JS. Dos columnas de tarjetas
+  // derechas que suben y bajan lento con una animación CSS (la hace el compositor, sin saltos). El 3D
+  // queda para el viaje de la tarjeta elegida (VistaProyecto).
+  if (plano) {
+    return (
+      <div className={cn("relative mx-auto block overflow-hidden", className)}>
+        <style>{`@keyframes mqPlanoA{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,-34%,0)}}@keyframes mqPlanoB{from{transform:translate3d(0,-34%,0)}to{transform:translate3d(0,0,0)}}@media (prefers-reduced-motion: reduce){[data-mq-plano]{animation:none!important}}`}</style>
+        <div data-escala-marquee className="flex size-full items-start justify-center gap-3 px-3">
+          {chunks.map((subarray, colIndex) => (
+            <div
+              key={colIndex + "plano"}
+              data-mq-plano
+              className="flex min-w-0 flex-1 flex-col gap-3"
+              style={{ animation: `${colIndex % 2 === 0 ? "mqPlanoA" : "mqPlanoB"} ${colIndex % 2 === 0 ? 34 : 42}s ease-in-out infinite alternate`, willChange: "transform" }}
+            >
+              {subarray.map(renderItem)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className={cn(
@@ -88,74 +181,7 @@ export const ThreeDMarquee = ({
                 className="flex flex-col items-start gap-8"
               >
                 <GridLineVertical className="-left-4" offset="80px" />
-                {subarray.map((item, imageIndex) => {
-                  const image = typeof item === "string" ? item : item.src ?? item.clave;
-                  const clave = typeof item === "string" ? item : item.clave ?? item.src;
-                  const titulo = typeof item === "string" ? `Image ${imageIndex + 1}` : item.titulo ?? "";
-                  const esCopia = typeof item === "object" && item?.esCopia === true;
-                  const activa = Array.isArray(claveActiva)
-                    ? claveActiva.includes(clave)
-                    : claveActiva !== null && clave === claveActiva;
-                  return (
-                    <div
-                      className="group relative w-full"
-                      key={imageIndex + image + (esCopia ? "copia" : "")}
-                      data-clave={interactiva && !esCopia ? clave : undefined}
-                      data-copia={interactiva && esCopia ? clave : undefined}
-                      data-zona-mixto={interactiva ? "marquesina" : undefined}
-                      role={interactiva ? "button" : undefined}
-                      aria-label={interactiva ? titulo : undefined}
-                      aria-hidden={esCopia ? true : undefined}
-                      tabIndex={interactiva && !esCopia ? 0 : undefined}
-                      style={
-                        interactiva
-                          ? { cursor: "pointer", opacity: activa ? 0 : 1 }
-                          : undefined
-                      }
-                      onKeyDown={
-                        interactiva
-                          ? (e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                alApuntar(clave);
-                              }
-                            }
-                          : undefined
-                      }
-                      onClick={interactiva ? () => alApuntar(clave) : undefined}
-                    >
-                      <GridLineHorizontal className="-top-4" offset="20px" />
-                      {item && typeof item === "object" && item.contenido ? (
-                        // El realce lo gobierna el contenedor (group-hover), que no se mueve, y el
-                        // elemento realzado no recibe el mouse (pointer-events-none): si crecía o
-                        // se desplazaba, pisaba a la vecina y el cursor alternaba entre las dos
-                        // (la tarjeta "rebotaba"). Ahora sólo crece el contenido, por dentro del
-                        // recorte, y se enciende la sombra.
-                        <div className="pointer-events-none aspect-[970/700] w-full overflow-hidden rounded-lg ring ring-gray-950/5 transition-shadow duration-300 ease-out group-hover:shadow-2xl [&>*]:transition-transform [&>*]:duration-500 [&>*]:ease-out group-hover:[&>*]:scale-[1.06]">
-                          {item.contenido}
-                        </div>
-                      ) : (
-                        // w-full: el original se apoya en el reset de Tailwind (img con
-                        // max-width 100%); sin él la imagen salía a 970 px de ancho.
-                        <motion.img
-                          whileHover={{
-                            y: -10,
-                          }}
-                          transition={{
-                            duration: 0.3,
-                            ease: "easeInOut",
-                          }}
-                          key={imageIndex + image}
-                          src={image}
-                          alt={titulo}
-                          className="aspect-[970/700] w-full h-auto rounded-lg object-cover ring ring-gray-950/5 hover:shadow-2xl"
-                          width={970}
-                          height={700}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+                {subarray.map(renderItem)}
               </motion.div>
             ))}
           </div>

@@ -36,7 +36,11 @@ export function configurarMarquesina(ancho, alto, total) {
   const chico = ancho < 768;
   // Hasta 13 columnas: más que proyectos obligaría a repetir uno en la misma fila.
   // Celular: menos tarjetas (cada una es una capa 3D; el iPhone se queda sin memoria con 54)
-  const columnas = chico ? 5 : limitar(Math.ceil(8 * k), 6, 13);
+  if (chico) {
+    // Celular: grilla plana de 2 columnas × 12 = 24 tarjetas (llena la pantalla; sin 3D)
+    return { columnas: 2, anchoCaja: 0, filas: 12, plano: true, posicion: null };
+  }
+  const columnas = limitar(Math.ceil(8 * k), 6, 13);
   const lado = chico ? 3 : limitar(Math.ceil(5 * k), 4, 9);
   const filas = Math.ceil(total / columnas) + 2 * lado;
   const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;
@@ -54,8 +58,8 @@ export function configurarMarquesina(ancho, alto, total) {
 // Cuánto se ve el título antes de irse y dejar solo la marquesina.
 const TITULO_VISIBLE_MS = 4000;
 const ESCALA_TITULO = 0.2;
-// Celular: el título instalado va centrado en el header y un poco más grande (16 px)
-const ESCALA_TITULO_MOVIL = 0.34;
+// Celular: el título instalado va centrado en el header y un poco más grande (~21 px)
+const ESCALA_TITULO_MOVIL = 0.43;
 // Distancia del borde derecho al título ya instalado: 2rem de margen + 64 px del toggle de tema + 1rem
 // de aire. Tiene que coincidir con `.tituloHeader { right }` del CSS: así viaja directo a su lugar
 // final, sin pasar antes por debajo del toggle.
@@ -274,6 +278,7 @@ export default function Proyectos() {
             alApuntar={elegir}
             claveActiva={ocultas}
             posicionGrilla={marquesina.posicion}
+            plano={marquesina.plano}
             filas={marquesina.filas}
             columnas={marquesina.columnas}
             anchoCaja={marquesina.anchoCaja}
@@ -328,6 +333,7 @@ export default function Proyectos() {
                 alCerrar={cerrar}
                 indice={proyectos.findIndex((p) => p.slug === proyecto.slug)}
                 total={proyectos.length}
+                plano={Boolean(marquesina.plano)}
               />
             ) : null}
           </AnimatePresence>

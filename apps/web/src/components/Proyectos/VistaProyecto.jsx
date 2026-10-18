@@ -20,6 +20,8 @@ function lineaCabecera(proyecto) {
 }
 
 const VIAJE = { duration: 0.75, ease: [0.22, 1, 0.36, 1] };
+// Inclinación (grados) que toma la tarjeta a mitad del viaje en el modo plano
+const VUELO = 22;
 // La inclinación de la marquesina (ver components/ui/3d-marquee.jsx).
 const INCLINACION = { rotateX: 55, rotateZ: -45 };
 
@@ -27,7 +29,7 @@ const INCLINACION = { rotateX: 55, rotateZ: -45 };
 // su tarjeta en la marquesina —mismo lugar, tamaño e inclinación— y viaja hasta ocupar
 // el panel; al cerrarse vuelve a donde esté su tarjeta en ese momento.
 // `medir(slug)` da la caja de la tarjeta en coordenadas del panel; `tamano` = panel.
-export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, alCerrar, indice = 0, total = 0 }) {
+export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, alCerrar, indice = 0, total = 0, plano = false }) {
   const enMarquesina = (cambioDirecto = false) => {
     // Cambio de un proyecto a otro: desaparece de golpe (apenas pasa el cuadro en que el
     // nuevo ya está pintado encima), sin viajar de vuelta a su lugar.
@@ -41,7 +43,8 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
       height: caja.alto,
       borderRadius: 8,
       opacity: 1,
-      ...INCLINACION,
+      // plano (celular): la tarjeta sale derecha y se inclina sólo durante el viaje
+      ...(plano ? { rotateX: [0, VUELO, 0] } : INCLINACION),
       transition: VIAJE,
     };
   };
@@ -59,7 +62,7 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
           height: tamano.alto,
           borderRadius: 0,
           opacity: 1,
-          rotateX: 0,
+          rotateX: plano ? [0, VUELO, 0] : 0,
           rotateZ: 0,
           transition: VIAJE,
         },
@@ -68,7 +71,7 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
   return (
     <motion.article
       className={styles.vista}
-      style={{ '--acento': proyecto.color }}
+      style={{ '--acento': proyecto.color, ...(plano ? { transformPerspective: 1100 } : null) }}
       variants={variantes}
       custom={instantaneo}
       initial={instantaneo ? 'pantalla' : 'marquesina'}
