@@ -9,7 +9,6 @@ import PanelHabilidades from './PanelHabilidades.jsx';
 import DockCategorias from './DockCategorias.jsx';
 import useTema from '@/hooks/useTema.js';
 import useEmbudo from '@/hooks/useEmbudo.js';
-import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
 import estilos from './Habilidades.module.css';
@@ -27,8 +26,6 @@ const INDICE = new Map(TECNOLOGIAS.map((t, i) => [t.id, i]));
 const ORDEN = ordenDeBarras(CATEGORIAS, TECNOLOGIAS);
 export default function Habilidades() {
   const refSeccion = useRef(null);
-  const refEscenario = useRef(null);
-  useUnionSeccion(refEscenario);
   const refLienzo = useRef(null);
   const refLogos = useRef(null);
   const refMotor = useRef(null);
@@ -194,7 +191,7 @@ export default function Habilidades() {
       </div>
 
       {conWebGL && (
-        <div ref={refEscenario} className={estilos.escenario}>
+        <div className={estilos.escenario}>
           <canvas
             ref={refLienzo}
             className={estilos.lienzo}
