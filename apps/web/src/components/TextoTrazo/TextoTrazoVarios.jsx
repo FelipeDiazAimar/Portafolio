@@ -48,7 +48,12 @@ export default function TextoTrazoVarios({
         renglon.map((fragmento) => fragmento.texto).join('')
       );
       const paso = fuente * interlineado;
+      // Altura del renglón sobre su línea de base: el texto se apoya con y = ascenso en lugar de usar
+      // dominant-baseline: text-before-edge, que Safari del iPhone ignora (el título subía y se montaba
+      // sobre la línea de arriba).
+      const ascenso = lienzo.measureText('M').fontBoundingBoxAscent || fuente * 0.96;
       const siguiente = {
+        ascenso,
         ancho,
         fuente,
         paso,
@@ -70,8 +75,7 @@ export default function TextoTrazoVarios({
   const centrado = alinear === 'centro';
   const propiedades = {
     x: centrado && plano ? plano.ancho / 2 : 0,
-    y: 0,
-    dominantBaseline: 'text-before-edge',
+    y: plano ? plano.ascenso : 0,
     textAnchor: centrado ? 'middle' : 'start',
     className: claseTexto,
   };

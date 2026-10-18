@@ -38,7 +38,7 @@ export function configurarMarquesina(ancho, alto, total) {
   // Celular: menos tarjetas (cada una es una capa 3D; el iPhone se queda sin memoria con 54)
   // Celular: la misma grilla diagonal, más angosta y con menos filas (unas 24 tarjetas por tanda)
   const columnas = chico ? 5 : limitar(Math.ceil(8 * k), 6, 13);
-  const lado = chico ? 1 : limitar(Math.ceil(5 * k), 4, 9);
+  const lado = chico ? 2 : limitar(Math.ceil(5 * k), 4, 9);
   const filas = Math.ceil(total / columnas) + 2 * lado;
   const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;
   const altoFilas = filas * (ALTO_TARJETA + SEPARACION_TARJETAS);
@@ -142,6 +142,7 @@ export default function Proyectos() {
   const [listaScrolleada, setListaScrolleada] = useState(false);
   // Adónde viaja el título: la esquina de arriba a la derecha, centrado en la fila del header.
   const refTitulo = useRef(null);
+  const refTituloHeader = useRef(null);
   const [destinoTitulo, setDestinoTitulo] = useState({ x: 0, y: 0 });
   // Celular: el título va al centro del header (y sin tu nombre al lado: ver data-en-proyectos).
   const [movil, setMovil] = useState(false);
@@ -154,15 +155,37 @@ export default function Proyectos() {
   }, []);
   const escalaTitulo = movil ? ESCALA_TITULO_MOVIL : ESCALA_TITULO;
   useLayoutEffect(() => {
-    if (!tituloVisto || !refTitulo.current || !tamano.ancho) return;
+    if (!tituloVisto || !refTitulo.current || !tamano.ancho) return undefined;
     const titulo = refTitulo.current.querySelector('h2');
     const ancho = (titulo?.offsetWidth ?? refTitulo.current.offsetWidth) * escalaTitulo;
-    setDestinoTitulo({
-      // el título ya nace centrado en el panel: en celular se queda en x = 0
-      x: movil ? 0 : tamano.ancho / 2 - MARGEN_TITULO - ancho / 2,
-      // Centro de la fila del header (72 px de alto) respecto del centro del panel.
-      y: ALTO_HEADER / 2 - tamano.alto / 2,
-    });
+    const calcular = () => {
+      // Celular: el destino es el título del header, que va fijo en la fila del header (con el notch).
+      // Se mide en pantalla contra el centro de la cabecera (que no se anima), así viaja justo hasta ahí
+      // aunque la sección no esté pegada al borde de arriba, y se corrige si la página se mueve mientras
+      // viaja (antes se pasaba de largo).
+      const cajaHeader = refTituloHeader.current?.getBoundingClientRect();
+      const cajaBase = refTitulo.current?.parentElement?.getBoundingClientRect();
+      const bloque = refTitulo.current;
+      const desfaseTitulo = titulo ? titulo.offsetTop + titulo.offsetHeight / 2 - bloque.offsetHeight / 2 : 0;
+      const medida = movil && cajaHeader && cajaBase && cajaBase.height > 0;
+      setDestinoTitulo({
+        // el título ya nace centrado en el panel: en celular se queda en x = 0
+        x: movil ? 0 : tamano.ancho / 2 - MARGEN_TITULO - ancho / 2,
+        // Centro de la fila del header (72 px de alto) respecto del centro del panel.
+        y: medida
+          ? // el título (no el bloque entero, que incluye las cifras) es lo que tiene que quedar en la fila
+            cajaHeader.top + cajaHeader.height / 2 - (cajaBase.top + cajaBase.height / 2) - desfaseTitulo * escalaTitulo
+          : ALTO_HEADER / 2 - tamano.alto / 2,
+      });
+    };
+    calcular();
+    if (!movil) return undefined;
+    window.addEventListener('scroll', calcular, { passive: true });
+    window.addEventListener('resize', calcular);
+    return () => {
+      window.removeEventListener('scroll', calcular);
+      window.removeEventListener('resize', calcular);
+    };
   }, [tituloVisto, tamano.ancho, tamano.alto, movil, escalaTitulo]);
   // Mientras la sección está a la vista, el header (en celular) no muestra tu nombre.
   useEffect(() => {
@@ -308,14 +331,19 @@ export default function Proyectos() {
             style={{ visibility: enHeader ? 'hidden' : 'visible' }}
           >
             <h2 id="titulo-proyectos" className={styles.titulo}>
-              <TextoTrazo texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer />
+              {movil ? (
+                // celular: texto común (el trazo SVG medía mal la fuente y dejaba las letras pegadas)
+                <span className={styles.tituloPlano}>Proyectos</span>
+              ) : (
+                <TextoTrazo texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer />
+              )}
             </h2>
             <p className={styles.cifras}>{textoCifras}</p>
           </motion.div>
         </div>
 
         {/* Ya en el header: el mismo texto, con el efecto de hover descifrado que tiene el nombre. */}
-        <div className={styles.tituloHeader} data-visible={enHeader && !proyecto ? 'true' : 'false'}>
+        <div ref={refTituloHeader} className={styles.tituloHeader} data-visible={enHeader && !proyecto ? 'true' : 'false'}>
           <TextoDescifrado
             texto="Proyectos"
             activarCon="hover"
