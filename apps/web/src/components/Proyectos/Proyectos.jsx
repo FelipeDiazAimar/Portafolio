@@ -307,8 +307,14 @@ export default function Proyectos() {
       return undefined;
     }
     document.documentElement.dataset.proyectoAbierto = 'true';
+    // Celular: la vista del proyecto es siempre oscura; el color del navegador (notch y barra de estado)
+    // acompaña para que no quede una franja de otro tono arriba
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const previo = meta?.getAttribute('content');
+    if (meta) meta.setAttribute('content', '#05070c');
     return () => {
       delete document.documentElement.dataset.proyectoAbierto;
+      if (meta && previo) meta.setAttribute('content', previo);
     };
   }, [proyecto]);
   // Pasa al proyecto siguiente (+1) o anterior (-1), circular, con el deslizamiento de la vista.

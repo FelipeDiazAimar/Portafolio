@@ -82,3 +82,34 @@ main {
   margin: 0 auto;
   padding: var(--space-3);
 }
+
+/* Celular, con un proyecto abierto: su vista es siempre oscura. El fondo de la página y dos franjas fijas
+   (bajo el notch y bajo la barra del navegador, por debajo de la vista) toman su color: sin esto quedaba una
+   franja de otro tono arriba y abajo. */
+@media (max-width: 768px) {
+  html[data-proyecto-abierto='true'],
+  html[data-proyecto-abierto='true'] body {
+    background-color: #05070c;
+  }
+
+  html[data-proyecto-abierto='true']::before,
+  html[data-proyecto-abierto='true']::after {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 6;
+    background: #05070c;
+    pointer-events: none;
+  }
+
+  html[data-proyecto-abierto='true']::before {
+    top: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 2px);
+  }
+
+  html[data-proyecto-abierto='true']::after {
+    bottom: 0;
+    height: calc(env(safe-area-inset-bottom, 0px) + 140px);
+  }
+}
