@@ -52,6 +52,14 @@
     clip-path: none;
     transition: none;
   }
+
+  /* Los bordes de arriba y de abajo se funden con el fondo (en lugar de la máscara de la marquesina):
+     sin esto la grilla se corta recta contra las secciones vecinas */
+  .velo {
+    background:
+      linear-gradient(to bottom, var(--color-bg) 0%, transparent 24%, transparent 76%, var(--color-bg) 100%),
+      radial-gradient(ellipse calc(50vw * 1.414) calc(50svh * 2.3) at 50% 50%, transparent 34%, var(--color-bg) 92%);
+  }
 }
 
 .marquesina {

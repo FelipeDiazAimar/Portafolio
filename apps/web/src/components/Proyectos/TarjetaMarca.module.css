@@ -28,6 +28,14 @@
   mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
 }
 
+/* Celular: son ~50 tarjetas en capas 3D. La máscara y la sombra con filtro de cada una piden una
+   superficie aparte por tarjeta y el iPhone se quedaba sin memoria: se quitan acá (no en PC). */
+@media (max-width: 768px) {
+  .brillo {
+    display: none;
+  }
+}
+
 .tarjeta[data-claro='true'] .brillo {
   background-image:
     linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
@@ -50,6 +58,12 @@
   max-height: 46%;
   object-fit: contain;
   filter: drop-shadow(0 1.5cqw 3cqw rgba(0, 0, 0, 0.25));
+}
+
+@media (max-width: 768px) {
+  .logo {
+    filter: none;
+  }
 }
 
 .nombre {
