@@ -25,6 +25,10 @@ export const ThreeDMarquee = ({
   // Columnas de la grilla y ancho de su caja (px): más columnas cubren más a lo ancho.
   columnas = 4,
   anchoCaja = 1720,
+  // Tamaño de diseño de la grilla respecto del original (1 = completo). En celular se dibuja a la mitad
+  // (0,5) en lugar de achicarla con scale: el navegador pinta cada capa al tamaño sin escalar, y las
+  // columnas enteras a ese tamaño (x3 de densidad del iPhone) agotaban la memoria.
+  escalaDiseno = 1,
 }) => {
   const interactiva = typeof alApuntar === "function";
   const copia = (item) => (item && typeof item === "object" ? { ...item, esCopia: true } : item);
@@ -148,7 +152,7 @@ export const ThreeDMarquee = ({
       vel: 0,
       periodo: 0,
       // deriva lenta (px/s locales), en sentidos alternados
-      deriva: reducido ? 0 : (i % 2 === 0 ? 1 : -1) * 16,
+      deriva: reducido ? 0 : (i % 2 === 0 ? 1 : -1) * 16 * escalaDiseno,
       pres: null,
       sinClic: false,
     }));
@@ -198,7 +202,7 @@ export const ThreeDMarquee = ({
     };
     // las tandas dependen de la cantidad de columnas y de filas
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnas, filas, images.length]);
+  }, [columnas, filas, images.length, escalaDiseno]);
 
   // Cuánto de la columna (px locales) equivale a un desplazamiento del dedo o del mouse en pantalla:
   // el eje local de la columna se ve inclinado (0,707 · 0,406 por la rotación), escalado por la caja.
@@ -236,7 +240,7 @@ export const ThreeDMarquee = ({
     const dLocal = aLocal(e.clientX - pr.lx, e.clientY - pr.ly);
     l.pos -= dLocal;
     const dtm = Math.max(1, e.timeStamp - pr.lt) / 1000;
-    l.vel = Math.max(-2600, Math.min(2600, 0.5 * l.vel + 0.5 * (-dLocal / dtm)));
+    l.vel = Math.max(-2600 * escalaDiseno, Math.min(2600 * escalaDiseno, 0.5 * l.vel + 0.5 * (-dLocal / dtm)));
     pr.lx = e.clientX;
     pr.ly = e.clientY;
     pr.lt = e.timeStamp;
@@ -297,17 +301,18 @@ export const ThreeDMarquee = ({
       <style>{estiloBase}</style>
       <div className="flex size-full items-center justify-center">
         {/* data-escala-marquee: para medir la escala real de las tarjetas (ver Proyectos). */}
-        <div ref={refEscala} data-escala-marquee style={{ width: anchoCaja, height: 1720 }} className="shrink-0 scale-50 sm:scale-75 lg:scale-100">
+        <div ref={refEscala} data-escala-marquee style={{ width: anchoCaja, height: 1720 * escalaDiseno }} className={cn("shrink-0", escalaDiseno < 1 ? "scale-100" : "scale-50 sm:scale-75 lg:scale-100")}>
           <div
             style={{
               transform: "rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
               gridTemplateColumns: `repeat(${columnas}, minmax(0, 1fr))`,
+              ...(escalaDiseno < 1 ? { gap: 32 * escalaDiseno } : null),
               ...posicionGrilla,
             }}
             className="relative top-96 right-[50%] grid size-full origin-top-left gap-8 transform-3d"
           >
             {chunks.map((subarray, colIndex) => (
-              <div key={colIndex + "marquee"} className="relative flex flex-col items-start gap-8" {...propsLinea(colIndex)}>
+              <div key={colIndex + "marquee"} className="relative flex flex-col items-start gap-8" style={escalaDiseno < 1 ? { gap: 32 * escalaDiseno } : undefined} {...propsLinea(colIndex)}>
                 <GridLineVertical className="-left-4" offset="80px" />
                 {tanda(subarray)}
               </div>

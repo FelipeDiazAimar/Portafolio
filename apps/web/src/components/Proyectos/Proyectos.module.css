@@ -75,6 +75,10 @@
   display: none;
 }
 
+.bajar {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .bandaScroll {
     display: block;
@@ -84,6 +88,30 @@
     z-index: 2;
     height: 17svh;
     touch-action: pan-y;
+  }
+
+  /* flecha hacia abajo al pie de la sección: va a la sección siguiente */
+  .bajar {
+    position: absolute;
+    left: 50%;
+    bottom: calc(1.1rem + env(safe-area-inset-bottom, 0px));
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-left: -22px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background: rgba(5, 7, 12, 0.55);
+    color: #fff;
+    animation: bajarSuave 2s ease-in-out infinite;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .panel[data-activo='true'] .bajar {
+    display: none;
   }
 
   /* toda la marquesina atrapa el gesto (también los huecos entre filas): sólo las bandas scrollean la página */
@@ -293,5 +321,16 @@
     background:
       linear-gradient(to bottom, var(--color-bg) 0%, transparent 26%, transparent 66%, var(--color-bg) 100%),
       radial-gradient(ellipse at 50% 60%, transparent 30%, var(--color-bg) 92%);
+  }
+}
+
+@keyframes bajarSuave {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bajar {
+    animation: none;
   }
 }

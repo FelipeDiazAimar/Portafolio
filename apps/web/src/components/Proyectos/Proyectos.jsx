@@ -40,15 +40,19 @@ export function configurarMarquesina(ancho, alto, total) {
   const columnas = chico ? 5 : limitar(Math.ceil(8 * k), 6, 13);
   const lado = chico ? 2 : limitar(Math.ceil(5 * k), 4, 9);
   const filas = Math.ceil(total / columnas) + 2 * lado;
+  // Celular: la grilla se dibuja ya al tamaño con que se ve (sin scale de por medio): todas las medidas
+  // en px se multiplican por `f`. En PC f = 1 y nada cambia.
+  const f = chico ? (ancho < 640 ? 0.5 : 0.75) : 1;
   const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;
   const altoFilas = filas * (ALTO_TARJETA + SEPARACION_TARJETAS);
   return {
     columnas,
-    anchoCaja,
     filas,
+    f,
+    anchoCaja: anchoCaja * f,
     posicion: {
-      right: `${Math.round(-anchoCaja / 2 + (0.707 * (anchoCaja + altoFilas)) / 2)}px`,
-      top: `${Math.round(860 - (0.406 * (altoFilas - anchoCaja)) / 2)}px`,
+      right: `${Math.round((-anchoCaja / 2 + (0.707 * (anchoCaja + altoFilas)) / 2) * f)}px`,
+      top: `${Math.round((860 - (0.406 * (altoFilas - anchoCaja)) / 2) * f)}px`,
     },
   };
 }
@@ -71,6 +75,21 @@ export default function Proyectos() {
 
   const refPanel = useRef(null);
   const [tamano, setTamano] = useState({ ancho: 0, alto: 0 });
+  // Celular: la marquesina (decenas de tarjetas en capas 3D) sólo existe con la sección cerca de la pantalla;
+  // el resto del tiempo no ocupa memoria (el iPhone cierra la página por memoria). En PC siempre montada.
+  const [marquesinaCerca, setMarquesinaCerca] = useState(true);
+  useLayoutEffect(() => {
+    const panel = refPanel.current;
+    if (!panel || !window.matchMedia('(max-width: 768px)').matches) return undefined;
+    const lejos = () => {
+      const r = panel.getBoundingClientRect();
+      return r.top > window.innerHeight * 2 || r.bottom < -window.innerHeight;
+    };
+    setMarquesinaCerca(!lejos());
+    const o = new IntersectionObserver(([e]) => setMarquesinaCerca(e.isIntersecting), { rootMargin: '100% 0px' });
+    o.observe(panel);
+    return () => o.disconnect();
+  }, []);
   useLayoutEffect(() => {
     const panel = refPanel.current;
     if (!panel) return undefined;
@@ -315,6 +334,7 @@ export default function Proyectos() {
     <section id="proyectos" className={styles.contenedor} aria-labelledby="titulo-proyectos">
       <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'}>
         <div className={styles.fondo}>
+          {marquesinaCerca ? (
           <ThreeDMarquee
             images={tarjetas}
             className={styles.marquesina}
@@ -324,7 +344,9 @@ export default function Proyectos() {
             filas={marquesina.filas}
             columnas={marquesina.columnas}
             anchoCaja={marquesina.anchoCaja}
+            escalaDiseno={marquesina.f}
           />
+          ) : null}
           <div className={styles.velo} aria-hidden="true" />
         </div>
 
@@ -332,6 +354,17 @@ export default function Proyectos() {
             (arriba y abajo) son las que dejan scrollear con el dedo */}
         <div className={`${styles.bandaScroll} ${styles.bandaArriba}`} aria-hidden="true" />
         <div className={`${styles.bandaScroll} ${styles.bandaAbajo}`} aria-hidden="true" />
+        {/* Celular: baja a la sección siguiente */}
+        <button
+          type="button"
+          className={styles.bajar}
+          aria-label="Ir a la sección siguiente"
+          onClick={() => document.getElementById('experiencia')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 9l7 7 7-7" />
+          </svg>
+        </button>
 
         <div className={styles.cabecera}>
           {/* Tras unos segundos el título viaja, achicándose, a la esquina de arriba a la derecha
