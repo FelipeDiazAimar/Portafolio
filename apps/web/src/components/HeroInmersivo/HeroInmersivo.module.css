@@ -27,15 +27,6 @@
   transform: scale(1);
 }
 
-.titulo {
-  font-family: var(--font-sans);
-  font-weight: 800;
-  font-size: clamp(2.5rem, 8vw, 6rem);
-  letter-spacing: -0.03em;
-  color: #fff;
-  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
-}
-
 .capa-inicio {
   justify-content: space-between;
   gap: clamp(1.5rem, 4vw, 4rem);
@@ -62,26 +53,6 @@
     padding-right: 3rem;
     padding-top: 8rem;
   }
-}
-
-.capa-sobre-mi {
-  background: linear-gradient(135deg, #2a2438 0%, #4a3f66 100%);
-}
-
-.capa-proyectos {
-  background: linear-gradient(135deg, #10263b 0%, #1f4d73 100%);
-}
-
-.capa-experiencia {
-  background: linear-gradient(135deg, #3b2a10 0%, #73561f 100%);
-}
-
-.capa-habilidades {
-  background: linear-gradient(135deg, #10322b 0%, #1f7357 100%);
-}
-
-.capa-contacto {
-  background: linear-gradient(135deg, #3b1020 0%, #731f45 100%);
 }
 
 /* Con el fondo de rayos X (manchas claras), el texto del hero lleva una sombra oscura para leerse. */

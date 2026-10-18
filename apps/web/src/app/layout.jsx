@@ -6,6 +6,7 @@ import ThemeToggle from '@/components/ThemeToggle/ThemeToggle.jsx';
 import HeroInmersivo from '@/components/HeroInmersivo/HeroInmersivo.jsx';
 import PiePagina from '@/components/PiePagina/PiePagina.jsx';
 import BarraScroll from '@/components/BarraScroll/BarraScroll.jsx';
+import Teletransporte from '@/components/Teletransporte/Teletransporte.jsx';
 import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import '../styles/globals.css';
 
@@ -57,6 +58,7 @@ export default async function RootLayout({ children }) {
         <ProveedorPortfolio>
           <Bienvenida locale={locale} />
           <BarraScroll />
+          <Teletransporte />
           <ThemeToggle />
           <Header />
           <HeroInmersivo />

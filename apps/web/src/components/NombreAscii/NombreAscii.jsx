@@ -7,6 +7,7 @@ import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
 import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
 import useToqueSobre from '@/hooks/useToqueSobre.js';
+import { irASeccion } from '@/lib/teletransporte.js';
 import useDestelloAleatorio from '@/hooks/useDestelloAleatorio.js';
 import destello from '@/styles/destello.module.css';
 import SubtituloHero from '@/components/SubtituloHero/SubtituloHero.jsx';
@@ -728,6 +729,10 @@ export default function NombreAscii() {
                 <a
                   key={indice}
                   href="#contacto"
+                  onClick={(evento) => {
+                    evento.preventDefault();
+                    irASeccion('contacto');
+                  }}
                   tabIndex={-1}
                   className={styles.hitboxLetra}
                   style={{

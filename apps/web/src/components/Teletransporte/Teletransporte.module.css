@@ -1,0 +1,38 @@
+/* Velo del teletransporte: arranca cubriéndolo todo (el corte pasa tapado) y se disuelve. Está por
+   debajo del header (z-index 900) para que el menú siga a la vista y el mouse no lo pierda. */
+.velo {
+  position: fixed;
+  inset: 0;
+  z-index: 850;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(61, 162, 255, 0.35), transparent 60%),
+    var(--color-bg);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  animation: disolver 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Vista previa (hover): más corto, para que ir de un ítem al siguiente se sienta ágil. */
+.rapido {
+  animation-duration: 0.4s;
+}
+
+@keyframes disolver {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0) saturate(1);
+    -webkit-backdrop-filter: blur(0) saturate(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .velo {
+    animation-duration: 0.01s;
+  }
+}

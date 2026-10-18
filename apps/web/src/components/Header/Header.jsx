@@ -7,7 +7,7 @@ import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegaci
 import MenuMovil from '@/components/MenuMovil/MenuMovil.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
-import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
+import { irASeccion } from '@/lib/teletransporte.js';
 import styles from './Header.module.css';
 
 function IconoPersona() {
@@ -87,7 +87,6 @@ const DEMORA_NOMBRE_MS = 3300;
 
 export default function Header() {
   const estaScrolleado = useScrollPasadoViewport();
-  const { setSeccionActiva } = usePortfolio();
   const refPildoraGrande = useRef(null);
   const [mostrarNombreDescifrado, setMostrarNombreDescifrado] = useState(false);
 
@@ -104,12 +103,11 @@ export default function Header() {
     contenedor.style.setProperty('--raton-y', `${evento.clientY - rect.top}px`);
   }
 
-  // El <header> es sticky, así que ocupa espacio real en el flujo: #inicio
-  // no arranca en el tope del documento sino justo debajo del header, y el
-  // scroll nativo del ancla se quedaba corto. Forzamos scroll a 0 directo.
+  // El <header> es sticky, así que ocupa espacio real en el flujo: #inicio no arranca en el tope
+  // del documento sino justo debajo del header. Se va a 0 directo, con el mismo salto que el menú.
   function irAlInicio(evento) {
     evento.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    irASeccion('inicio');
   }
 
   return (
@@ -164,12 +162,9 @@ export default function Header() {
           >
             <GlassSurface width="auto" height={40} borderRadius={100} {...PROPS_GLASS}>
               <nav className={styles.navGrande}>
-                <ul
-                  className={styles.listaGrande}
-                  onMouseLeave={() => setSeccionActiva('inicio')}
-                >
+                <ul className={styles.listaGrande}>
                   {ENLACES.map((enlace) => (
-                    <li key={enlace.href} onMouseEnter={() => setSeccionActiva(enlace.seccion)}>
+                    <li key={enlace.href}>
                       <ElementoNavegacion enlace={enlace} icono={enlace.icono} variante="grande" />
                     </li>
                   ))}
