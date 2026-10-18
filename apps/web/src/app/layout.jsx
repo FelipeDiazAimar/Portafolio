@@ -7,7 +7,6 @@ import HeroInmersivo from '@/components/HeroInmersivo/HeroInmersivo.jsx';
 import PiePagina from '@/components/PiePagina/PiePagina.jsx';
 import BarraScroll from '@/components/BarraScroll/BarraScroll.jsx';
 import Teletransporte from '@/components/Teletransporte/Teletransporte.jsx';
-import Diagnostico from '@/components/Diagnostico/Diagnostico.jsx';
 import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import '../styles/globals.css';
 
@@ -90,7 +89,6 @@ export default async function RootLayout({ children }) {
           <HeroInmersivo />
           <main>{children}</main>
           <PiePagina />
-          <Diagnostico />
         </ProveedorPortfolio>
       </body>
     </html>
