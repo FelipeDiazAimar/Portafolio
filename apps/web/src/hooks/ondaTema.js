@@ -23,30 +23,19 @@ export default function cambiarTemaConOnda(origen, aplicar) {
   // Evita que las transiciones de color propias mezclen estados dentro de la captura.
   html.classList.add('onda-tema');
 
-  const aro = document.createElement('div');
-  aro.className = 'onda-tema-aro';
-  aro.style.left = `${x}px`;
-  aro.style.top = `${y}px`;
-  document.body.appendChild(aro);
-
   const transicion = document.startViewTransition(aplicar);
 
+  let onda;
   transicion.ready.then(() => {
-    html.animate(
+    onda = html.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radio}px at ${x}px ${y}px)`] },
       { duration: DURACION_MS, easing: CURVA, pseudoElement: '::view-transition-new(root)', fill: 'both' },
-    );
-    aro.animate(
-      [
-        { width: '0px', height: '0px', opacity: 1 },
-        { width: `${radio * 2}px`, height: `${radio * 2}px`, opacity: 0 },
-      ],
-      { duration: DURACION_MS, easing: CURVA, fill: 'both' },
     );
   });
 
   transicion.finished.finally(() => {
-    aro.remove();
+    // Con fill 'both' la animación sobreviviría y taparía la onda del próximo cambio.
+    onda?.cancel();
     html.classList.remove('onda-tema');
   });
 }
