@@ -53,6 +53,8 @@ export function configurarMarquesina(ancho, alto, total) {
 // Cuánto se ve el título antes de irse y dejar solo la marquesina.
 const TITULO_VISIBLE_MS = 4000;
 const ESCALA_TITULO = 0.2;
+// Celular: el título instalado va centrado en el header y un poco más grande (16 px)
+const ESCALA_TITULO_MOVIL = 0.34;
 // Distancia del borde derecho al título ya instalado: 2rem de margen + 64 px del toggle de tema + 1rem
 // de aire. Tiene que coincidir con `.tituloHeader { right }` del CSS: así viaja directo a su lugar
 // final, sin pasar antes por debajo del toggle.
@@ -127,16 +129,32 @@ export default function Proyectos() {
   // Adónde viaja el título: la esquina de arriba a la derecha, centrado en la fila del header.
   const refTitulo = useRef(null);
   const [destinoTitulo, setDestinoTitulo] = useState({ x: 0, y: 0 });
+  // Celular: el título va al centro del header (y sin tu nombre al lado: ver data-en-proyectos).
+  const [movil, setMovil] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const leer = () => setMovil(mq.matches);
+    leer();
+    mq.addEventListener('change', leer);
+    return () => mq.removeEventListener('change', leer);
+  }, []);
+  const escalaTitulo = movil ? ESCALA_TITULO_MOVIL : ESCALA_TITULO;
   useLayoutEffect(() => {
     if (!tituloVisto || !refTitulo.current || !tamano.ancho) return;
     const titulo = refTitulo.current.querySelector('h2');
-    const ancho = (titulo?.offsetWidth ?? refTitulo.current.offsetWidth) * ESCALA_TITULO;
+    const ancho = (titulo?.offsetWidth ?? refTitulo.current.offsetWidth) * escalaTitulo;
     setDestinoTitulo({
-      x: tamano.ancho / 2 - MARGEN_TITULO - ancho / 2,
+      // el título ya nace centrado en el panel: en celular se queda en x = 0
+      x: movil ? 0 : tamano.ancho / 2 - MARGEN_TITULO - ancho / 2,
       // Centro de la fila del header (72 px de alto) respecto del centro del panel.
       y: ALTO_HEADER / 2 - tamano.alto / 2,
     });
-  }, [tituloVisto, tamano.ancho, tamano.alto]);
+  }, [tituloVisto, tamano.ancho, tamano.alto, movil, escalaTitulo]);
+  // Mientras la sección está a la vista, el header (en celular) no muestra tu nombre.
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-en-proyectos', visible);
+    return () => document.documentElement.removeAttribute('data-en-proyectos');
+  }, [visible]);
   useEffect(() => {
     if (!visible) {
       setTituloVisto(false);
@@ -268,7 +286,7 @@ export default function Proyectos() {
           <motion.div
             ref={refTitulo}
             className={styles.tituloBloque}
-            animate={tituloVisto && !reducido ? { x: destinoTitulo.x, y: destinoTitulo.y, scale: ESCALA_TITULO } : { x: 0, y: 0, scale: 1 }}
+            animate={tituloVisto && !reducido ? { x: destinoTitulo.x, y: destinoTitulo.y, scale: escalaTitulo } : { x: 0, y: 0, scale: 1 }}
             transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
             onAnimationComplete={() => {
               if (tituloVisto && !reducido) setEnHeader(true);

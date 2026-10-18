@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
-import { prefiereMovimientoReducido } from '@/lib/entrada.js';
+import { esTactil, prefiereMovimientoReducido } from '@/lib/entrada.js';
 import RevelarEsqueleto from '@/components/RayosX/RevelarEsqueleto.jsx';
+import ZonaTactil from '@/components/RayosX/ZonaTactil.jsx';
 import styles from './RetratoAscii.module.css';
 
 const RUTA_RETRATO = '/retrato.png';
@@ -25,6 +26,8 @@ export default function RetratoAscii({ rayosX = false, alDispararRayosX }) {
   const { seccionActiva } = usePortfolio();
   const refMarco = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [tactil, setTactil] = useState(false);
+  useEffect(() => setTactil(esTactil()), []);
 
   useEffect(() => {
     const demora = prefiereMovimientoReducido() ? 0 : DEMORA_INICIO_MS;
@@ -65,6 +68,8 @@ export default function RetratoAscii({ rayosX = false, alDispararRayosX }) {
         className={`${styles.foto} ${visible ? styles.revelada : ''}`}
       />
       {/* Hover: debajo del cursor aparece el esqueleto (rayos X). */}
+      {/* Táctil: capa que deja pintar con el dedo (la foto) y mover el fondo de esqueletos */}
+      {tactil && visible && seccionActiva === 'inicio' && !prefiereMovimientoReducido() && <ZonaTactil modo={rayosX ? 'fondo' : 'foto'} refMarco={refMarco} />}
       {visible && <RevelarEsqueleto refMarco={refMarco} activo={!rayosX && seccionActiva === 'inicio'} alDisparar={alDispararRayosX} />}
     </div>
   );

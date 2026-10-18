@@ -171,6 +171,11 @@
 }
 
 @media (max-width: 768px) {
+  /* En Proyectos (celular) el header lleva el título de la sección centrado, sin tu nombre. */
+  :global(html[data-en-proyectos]) .logoNombre {
+    display: none;
+  }
+
   .pildoraGrandeWrapper,
   .navMini {
     display: none;

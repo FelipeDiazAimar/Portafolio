@@ -83,11 +83,19 @@ export default function RevelarEsqueleto({ refMarco, activo, alDisparar }) {
     window.addEventListener('pointermove', alMover, { passive: true });
     window.addEventListener('pointerdown', alMover, { passive: true });
     document.addEventListener('mouseleave', alSalir);
+    // el dedo, al levantarse, "sale" de la foto (el mouse sigue ahí aunque no se mueva)
+    const alLevantar = (e) => {
+      if (e.pointerType !== 'mouse') alSalir();
+    };
+    window.addEventListener('pointerup', alLevantar, { passive: true });
+    window.addEventListener('pointercancel', alLevantar, { passive: true });
     return () => {
       cancelado = true;
       window.removeEventListener('pointermove', alMover);
       window.removeEventListener('pointerdown', alMover);
       document.removeEventListener('mouseleave', alSalir);
+      window.removeEventListener('pointerup', alLevantar);
+      window.removeEventListener('pointercancel', alLevantar);
       observador?.disconnect();
       visibilidad?.disconnect();
       motor?.liberar();

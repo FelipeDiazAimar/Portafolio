@@ -30,6 +30,13 @@
   transition-duration: 0.35s;
 }
 
+/* Capa táctil del hero (ver ZonaTactil.jsx): sobre el hero, bajo el header y los botones. */
+.zonaTactil {
+  position: absolute;
+  z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Cruz para volver a la foto: a la derecha del toggle de tema (que se corre para hacerle lugar). */
 .volver {
   position: fixed;

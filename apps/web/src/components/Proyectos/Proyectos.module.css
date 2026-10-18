@@ -103,6 +103,20 @@
   transition: opacity 0.2s ease;
 }
 
+/* Celular: centrado en el header, un poco más grande. */
+@media (max-width: 768px) {
+  .tituloHeader {
+    left: 0;
+    right: 0;
+    justify-content: center;
+  }
+
+  .tituloHeaderRevelado,
+  .tituloHeaderEncriptado {
+    font-size: 1rem;
+  }
+}
+
 .tituloHeader[data-visible='true'] {
   opacity: 1;
   pointer-events: auto;

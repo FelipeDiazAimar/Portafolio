@@ -44,12 +44,18 @@
 /* Celular y tablet: las categorías ocupan todo el ancho al pie de la sección (los controles de zoom
    suben encima). En escritorio no cambia nada. */
 @media (max-width: 900px) {
+  /* el panel (título, buscador) no toca el borde derecho */
+  .encabezado {
+    right: clamp(1rem, 5vw, 4rem);
+    max-width: none;
+  }
+
   .dock {
     left: 0;
     right: 0;
     bottom: 0;
     max-width: none;
-    padding: 0 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    padding: 0 0.5rem calc(0.6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .controles {

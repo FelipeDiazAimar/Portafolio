@@ -123,14 +123,20 @@
     width: 100%;
     max-width: 100%;
     height: auto;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 0.3rem;
+    gap: 0.15rem;
+    /* el dedo desliza por el dock: ningún gesto es de scroll, y no se selecciona nada */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
+  /* El tamaño en reposo llena el ancho (los 10 en una fila); la lupa es por escala (DockCategorias). */
   .item {
-    width: min(52px, calc((100vw - 2rem - 9 * 0.3rem) / 10)) !important;
-    height: min(52px, calc((100vw - 2rem - 9 * 0.3rem) / 10)) !important;
+    width: min(56px, calc((100vw - 1rem - 9 * 0.15rem) / 10));
+    height: min(56px, calc((100vw - 1rem - 9 * 0.15rem) / 10));
   }
 }
 
