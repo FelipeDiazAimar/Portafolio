@@ -69,10 +69,11 @@
   color: #10204a;
 }
 
-/* En celular el toggle no está arriba: la cruz va debajo del botón del menú. */
+/* En celular la cruz va abajo a la derecha (el pulgar llega, y no tapa el menú). */
 @media (max-width: 768px) {
   .volver {
-    top: 4.5rem;
+    top: auto;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
     right: 1rem;
   }
 }

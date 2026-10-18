@@ -313,11 +313,16 @@
     scroll-snap-align: start;
   }
 
+  /* Sobre el carrusel de tecnologías, que va al pie de la vista. */
   .problematica {
-    position: static;
-    order: 3;
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: calc(var(--alto-hud) + 0.5rem);
     width: auto;
-    margin: 1rem;
+    max-height: 38svh;
+    overflow-y: auto;
+    margin: 0;
   }
 }
 

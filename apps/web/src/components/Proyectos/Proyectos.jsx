@@ -214,6 +214,35 @@ export default function Proyectos() {
       delete document.documentElement.dataset.proyectoAbierto;
     };
   }, [proyecto]);
+  // Celular: con un proyecto abierto se pasa al anterior o al siguiente deslizando el dedo de lado
+  // (la lista de proyectos sólo existe en pantallas grandes). Es circular. Se ignora el gesto si
+  // empieza en el carrusel de tecnologías o si es más vertical que horizontal.
+  useEffect(() => {
+    const panel = refPanel.current;
+    if (!panel || !activo) return undefined;
+    let inicio = null;
+    const alEmpezar = (e) => {
+      const t = e.touches[0];
+      inicio = e.touches.length === 1 && !e.target.closest('[class*="carrusel"]') ? { x: t.clientX, y: t.clientY } : null;
+    };
+    const alTerminar = (e) => {
+      if (!inicio || !window.matchMedia('(max-width: 768px)').matches) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - inicio.x;
+      const dy = t.clientY - inicio.y;
+      inicio = null;
+      if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      const i = proyectos.findIndex((p) => p.slug === refActivo.current);
+      if (i < 0) return;
+      elegir(proyectos[(i + (dx < 0 ? 1 : -1) + proyectos.length) % proyectos.length].slug);
+    };
+    panel.addEventListener('touchstart', alEmpezar, { passive: true });
+    panel.addEventListener('touchend', alTerminar, { passive: true });
+    return () => {
+      panel.removeEventListener('touchstart', alEmpezar);
+      panel.removeEventListener('touchend', alTerminar);
+    };
+  }, [activo, proyectos, elegir]);
   const ocultas = useMemo(() => [activo, ...saliendo].filter(Boolean), [activo, saliendo]);
 
   return (
@@ -278,6 +307,8 @@ export default function Proyectos() {
                 reducido={reducido}
                 instantaneo={instantaneo}
                 alCerrar={cerrar}
+                indice={proyectos.findIndex((p) => p.slug === proyecto.slug)}
+                total={proyectos.length}
               />
             ) : null}
           </AnimatePresence>

@@ -27,7 +27,7 @@ const INCLINACION = { rotateX: 55, rotateZ: -45 };
 // su tarjeta en la marquesina —mismo lugar, tamaño e inclinación— y viaja hasta ocupar
 // el panel; al cerrarse vuelve a donde esté su tarjeta en ese momento.
 // `medir(slug)` da la caja de la tarjeta en coordenadas del panel; `tamano` = panel.
-export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, alCerrar }) {
+export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, alCerrar, indice = 0, total = 0 }) {
   const enMarquesina = (cambioDirecto = false) => {
     // Cambio de un proyecto a otro: desaparece de golpe (apenas pasa el cuadro en que el
     // nuevo ya está pintado encima), sin viajar de vuelta a su lugar.
@@ -87,6 +87,11 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
       >
         <div className={styles.velo} aria-hidden="true" />
         <header className={styles.cabecera}>
+          {total > 1 && (
+            <p className={styles.paginador} aria-hidden="true">
+              {String(indice + 1).padStart(2, '0')} / {String(total).padStart(2, '0')} · deslizá para cambiar
+            </p>
+          )}
           {/* La línea y el título se trazan y se rellenan (StrokeFill) cada vez que aparecen. */}
           <p className={styles.linea}>
             {lineaCabecera(proyecto)}

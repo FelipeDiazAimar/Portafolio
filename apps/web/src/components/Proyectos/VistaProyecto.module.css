@@ -99,6 +99,16 @@
   color: #05070c;
 }
 
+/* Contador "08 / 13" del proyecto (sólo en celular, donde no hay lista). */
+.paginador {
+  display: none;
+  margin: 0 0 0.35rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  opacity: 0.75;
+}
+
 /* Celular: la lista es una tira arriba; el contenido se apila y scrollea. */
 @media (max-width: 768px) {
   .vista {
@@ -107,23 +117,32 @@
     --lista: 0px;
   }
 
+  /* El gesto horizontal es de la vista (cambia de proyecto): el navegador sólo hace el vertical. */
+  .vista {
+    touch-action: pan-y;
+  }
+
+  /* De arriba abajo: cabecera (título y enlaces), problemática y, al pie, el carrusel de tecnologías
+     con el botón de cerrar a su derecha. Nada scrollea dentro de la vista. */
   .contenido {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    padding-top: calc(var(--alto-cabecera, 4.5rem) + 112px + 1rem);
+    overflow: hidden;
   }
 
   .cabecera {
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    padding: 0 1.25rem 1rem;
+    position: absolute;
+    top: calc(var(--alto-cabecera, 4.5rem) + 0.75rem);
+    left: 0;
+    right: 0;
+    padding: 0 1.25rem;
+  }
+
+  .paginador {
+    display: block;
   }
 
   .cerrar {
-    top: calc(var(--alto-cabecera, 4.5rem) + 112px + 0.5rem);
+    top: auto;
     right: 1rem;
+    bottom: calc((var(--alto-hud) - 20px) / 2 - 20px + 20px + env(safe-area-inset-bottom, 0px));
   }
 }

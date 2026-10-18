@@ -4,6 +4,9 @@
   /* por encima de la capa de fundido de Sobre mí (z 6): si no, esa capa tapa las tarjetas que salen
      de la sección con un borde recto. Es un bloque: el título y la lista siguen sobre las tarjetas. */
   z-index: 7;
+  /* la marquesina es mucho más ancha que la pantalla: sin esto la página se ensancha en celular
+     (clip, a diferencia de hidden, no corta el eje vertical, donde la marquesina sobresale a propósito) */
+  overflow-x: clip;
   width: 100vw;
   margin-left: calc(50% - 50vw);
 }
@@ -26,6 +29,15 @@
   --corte: 11%;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.1) calc(var(--corte) * 0.3), rgba(0, 0, 0, 0.45) calc(var(--corte) * 0.6), #000 var(--corte), #000 calc(100% - var(--corte)), rgba(0, 0, 0, 0.45) calc(100% - var(--corte) * 0.6), rgba(0, 0, 0, 0.1) calc(100% - var(--corte) * 0.3), transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.1) calc(var(--corte) * 0.3), rgba(0, 0, 0, 0.45) calc(var(--corte) * 0.6), #000 var(--corte), #000 calc(100% - var(--corte)), rgba(0, 0, 0, 0.45) calc(100% - var(--corte) * 0.6), rgba(0, 0, 0, 0.1) calc(100% - var(--corte) * 0.3), transparent 100%);
+  /* sin proyecto abierto la extensión se ve; al abrirlo se recorta a la sección (al cerrar, vuelve
+     recién cuando las tarjetas ya regresaron) */
+  clip-path: inset(0);
+  transition: clip-path 0s 0.9s;
+}
+
+.panel[data-activo='true'] .fondo {
+  clip-path: inset(30svh 0);
+  transition: clip-path 0s;
 }
 
 .marquesina {
@@ -189,16 +201,8 @@
 }
 
 @media (max-width: 768px) {
+  /* En celular no hay lista de proyectos: se pasa de uno a otro deslizando el dedo (Proyectos.jsx). */
   .columnaNav {
-    top: var(--alto-cabecera, 4.5rem);
-    right: 0;
-    bottom: auto;
-    left: 0;
-    width: auto;
-    height: 112px;
-  }
-
-  .columnaNav::before {
     display: none;
   }
 

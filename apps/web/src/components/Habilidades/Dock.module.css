@@ -116,12 +116,21 @@
   border-color: rgba(26, 0, 255, 0.6);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
+  /* Todo el ancho, con los íconos repartidos parejo. El tamaño de cada uno lo escribe la lupa del
+     mouse en línea; acá se fija (en celular no hay mouse). */
   .dock {
+    width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-    height: 70px;
+    height: auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3rem;
+  }
+
+  .item {
+    width: min(52px, calc((100vw - 2rem - 9 * 0.3rem) / 10)) !important;
+    height: min(52px, calc((100vw - 2rem - 9 * 0.3rem) / 10)) !important;
   }
 }
 

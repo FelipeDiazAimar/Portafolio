@@ -154,10 +154,10 @@
 @media (max-width: 768px) {
   /* El presentador apilado (flex en columna) deja el HUD al final, en el flujo: absoluto
      se montaba sobre la tarjeta de la problemática. */
+  /* Al pie de la vista; a la derecha queda lugar para el botón de cerrar. */
   .hud {
-    position: relative;
-    order: 4;
-    flex: none;
+    left: 0;
+    right: 4rem;
   }
 
   /* Angosto, los logos del carrusel le pasan por encima. */
