@@ -7,7 +7,7 @@ import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegaci
 import MenuMovil from '@/components/MenuMovil/MenuMovil.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
-import { irASeccion } from '@/lib/teletransporte.js';
+import { irASeccion, terminarVistaPrevia, vistaPrevia } from '@/lib/teletransporte.js';
 import styles from './Header.module.css';
 
 function IconoPersona() {
@@ -112,7 +112,8 @@ export default function Header() {
 
   return (
     <header className={styles.header}>
-      <a href="#inicio" onClick={irAlInicio} className={styles.logo}>
+      {/* Hover: vista previa del hero (el scroll salta arriba y vuelve al salir). Clic: queda. */}
+      <a href="#inicio" onClick={irAlInicio} onMouseEnter={() => vistaPrevia('inicio')} onMouseLeave={terminarVistaPrevia} className={styles.logo}>
         {mostrarNombreDescifrado ? (
           <TextoDescifrado
             texto="</>"

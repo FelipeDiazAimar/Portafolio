@@ -110,6 +110,8 @@ export function vistaPrevia(id) {
   clearTimeout(temporizadorSalida);
   const y = destinoDeScroll(id, window.scrollY, medirSeccion, maximoScroll());
   if (y === null) return;
+  // ya estás ahí (por ejemplo, el logo estando en el hero): no hay nada que mirar
+  if (!maquina.activa && Math.abs(y - window.scrollY) < 2) return;
   const yaEstaba = maquina.activa && maquina.viendo === id;
   maquina.mirar(id, window.scrollY);
   if (!congelado) congelar(true);
@@ -122,7 +124,7 @@ export function terminarVistaPrevia() {
   if (!maquina.activa) return;
   temporizadorSalida = setTimeout(() => {
     const origen = maquina.volver();
-    if (origen !== null) saltar(origen, true);
+    if (origen !== null && Math.abs(origen - window.scrollY) >= 2) saltar(origen, true);
     congelar(false);
   }, DEMORA_SALIDA_MS);
 }
