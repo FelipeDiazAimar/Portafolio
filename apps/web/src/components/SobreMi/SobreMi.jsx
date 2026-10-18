@@ -137,7 +137,7 @@ function SobreMiRecorrido({ onFallo }) {
       ([e]) => {
         if (!e.isIntersecting) {
           // en el celular el canvas se desmonta al alejarse (memoria de video); en la PC queda montado
-          if (refEsMovil.current) setCerca(false);
+          if (refEsMovil.current || window.matchMedia('(pointer: coarse) and (max-height: 520px)').matches) setCerca(false);
           return;
         }
         setCerca(true);

@@ -26,14 +26,19 @@ const ANCHO_TARJETA = 406;
 const ALTO_TARJETA = 293;
 const SEPARACION_TARJETAS = 32;
 const limitar = (x, min, max) => Math.min(max, Math.max(min, x));
+// Teléfono: pantalla angosta, o táctil y baja (acostado)
+const CONSULTA_TACTIL_BAJO = '(pointer: coarse) and (max-height: 520px)';
+const CONSULTA_MOVIL = `(max-width: 768px), ${CONSULTA_TACTIL_BAJO}`;
 
 // Cuántas columnas y copias hacen falta para el tamaño del panel, y dónde poner la grilla
 // para que el centro de lo que ocupa caiga en el centro de la sección. Un vector (u, v) de
 // la grilla se ve en pantalla como (0,707·(u+v), 0,406·(v−u)) por la inclinación.
-export function configurarMarquesina(ancho, alto, total) {
+export function configurarMarquesina(ancho, alto, total, tactilBajo = false) {
   const escala = ancho >= 1024 ? 1 : ancho >= 640 ? 0.75 : 0.5;
   const k = Math.max(ancho / 1917, alto / 910) / escala;
-  const chico = ancho < 768;
+  // Celular: también con el teléfono acostado (ancho de PC pero táctil y bajo): ahí la grilla de PC, con
+  // más de 100 tarjetas, hacía que el iPhone cerrara la página al girarlo
+  const chico = ancho < 768 || tactilBajo;
   // Hasta 13 columnas: más que proyectos obligaría a repetir uno en la misma fila.
   // Celular: menos tarjetas (cada una es una capa 3D; el iPhone se queda sin memoria con 54)
   // Celular: la misma grilla diagonal, más angosta y con menos filas (unas 24 tarjetas por tanda)
@@ -42,7 +47,7 @@ export function configurarMarquesina(ancho, alto, total) {
   const filas = Math.ceil(total / columnas) + 2 * lado;
   // Celular: la grilla se dibuja ya al tamaño con que se ve (sin scale de por medio): todas las medidas
   // en px se multiplican por `f`. En PC f = 1 y nada cambia.
-  const f = chico ? (ancho < 640 ? 0.5 : 0.75) : 1;
+  const f = chico ? (ancho < 640 ? 0.5 : ancho < 1024 ? 0.75 : 1) : 1;
   const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;
   const altoFilas = filas * (ALTO_TARJETA + SEPARACION_TARJETAS);
   return {
@@ -80,15 +85,21 @@ export default function Proyectos() {
   const [marquesinaCerca, setMarquesinaCerca] = useState(true);
   useLayoutEffect(() => {
     const panel = refPanel.current;
-    if (!panel || !window.matchMedia('(max-width: 768px)').matches) return undefined;
+    const mq = window.matchMedia(CONSULTA_MOVIL);
+    if (!panel) return undefined;
     const lejos = () => {
       const r = panel.getBoundingClientRect();
       return r.top > window.innerHeight * 2 || r.bottom < -window.innerHeight;
     };
-    setMarquesinaCerca(!lejos());
-    const o = new IntersectionObserver(([e]) => setMarquesinaCerca(e.isIntersecting), { rootMargin: '100% 0px' });
+    const evaluar = () => setMarquesinaCerca(!mq.matches || !lejos());
+    evaluar();
+    const o = new IntersectionObserver(([e]) => setMarquesinaCerca(!mq.matches || e.isIntersecting), { rootMargin: '100% 0px' });
     o.observe(panel);
-    return () => o.disconnect();
+    mq.addEventListener('change', evaluar);
+    return () => {
+      o.disconnect();
+      mq.removeEventListener('change', evaluar);
+    };
   }, []);
   useLayoutEffect(() => {
     const panel = refPanel.current;
@@ -276,9 +287,17 @@ export default function Proyectos() {
     [proyectos]
   );
   const proyecto = proyectos.find((p) => p.slug === activo) ?? null;
+  const [tactilBajo, setTactilBajo] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(CONSULTA_TACTIL_BAJO);
+    const leer = () => setTactilBajo(mq.matches);
+    leer();
+    mq.addEventListener('change', leer);
+    return () => mq.removeEventListener('change', leer);
+  }, []);
   const marquesina = useMemo(
-    () => configurarMarquesina(tamano.ancho || 1917, tamano.alto || 910, proyectos.length),
-    [tamano.ancho, tamano.alto, proyectos.length]
+    () => configurarMarquesina(tamano.ancho || 1917, tamano.alto || 910, proyectos.length, tactilBajo),
+    [tamano.ancho, tamano.alto, proyectos.length, tactilBajo]
   );
 
   // El header se acomoda a la vista de un proyecto (navegación a la derecha, junto a la cruz).

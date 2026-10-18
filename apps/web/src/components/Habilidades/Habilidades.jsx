@@ -44,7 +44,7 @@ export default function Habilidades() {
   // sigue ocupando memoria de video y, sumado al resto, Safari cierra la página. En PC queda montado.
   const [cerca, setCerca] = useState(true);
   useEffect(() => {
-    if (!window.matchMedia('(max-width: 900px)').matches) return undefined;
+    if (!window.matchMedia('(max-width: 900px), (pointer: coarse) and (max-height: 520px)').matches) return undefined;
     const seccion = refSeccion.current;
     const o = new IntersectionObserver(([e]) => setCerca(e.isIntersecting), { rootMargin: '60% 0px' });
     o.observe(seccion);
