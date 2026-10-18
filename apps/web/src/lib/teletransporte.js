@@ -81,7 +81,9 @@ export function cantidadDeSaltos() {
 function medirSeccion(id) {
   const el = document.getElementById(id);
   if (!el) return null;
-  return { top: el.getBoundingClientRect().top, margen: parseFloat(getComputedStyle(el).scrollMarginTop) || 0 };
+  // Sin scroll-margin-top: ese margen deja aire sobre el destino cuando se llega por un ancla, pero
+  // en un teletransporte la sección tiene que quedar pegada al borde, sin una franja de la anterior.
+  return { top: el.getBoundingClientRect().top, margen: 0 };
 }
 
 function maximoScroll() {
