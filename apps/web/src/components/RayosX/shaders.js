@@ -166,10 +166,24 @@ void main() {
     float borde = 0.32 + 0.3 * fbm(vUv * 7.0 + u_tiempo * 0.15);
     // dos pasos: primero aparece el CUERPO (la silueta de persona, con su resplandor) en el borde
     // ancho de la mancha, y en el centro, donde el revelado es más fuerte, se ve el esqueleto
-    float aCuerpo = smoothstep(borde * 0.35, borde * 0.35 + 0.26, revelado);
-    float aHueso = smoothstep(borde + 0.06, borde + 0.42, revelado);
+    // el cuerpo aparece con muy poco revelado (borde ancho y borroso) y los huesos sólo donde el
+    // revelado es fuerte: entre uno y otro queda la figura de persona con blur
+    // la máscara se promedia en dos anillos de muestras: el borde del trazo pasa a ser un degradado
+    // ancho (la zona del medio, donde se ve el cuerpo con blur, antes no existía)
+    float suma = (1.0 - m) * 2.0;
+    float peso = 2.0;
+    for (int i = 0; i < 8; i++) {
+      float ang = float(i) * 0.7853982;
+      vec2 d = vec2(cos(ang), sin(ang));
+      suma += (1.0 - texture2D(u_mascara, vUv + d * 0.04).r) * 1.2;
+      suma += (1.0 - texture2D(u_mascara, vUv + d * 0.1).r) * 0.9;
+      peso += 2.0;
+    }
+    revelado = suma / peso;
+    float aCuerpo = smoothstep(0.02 + 0.05 * fbm(vUv * 5.0 - u_tiempo * 0.1), 0.42, revelado);
+    float aHueso = smoothstep(0.5 + 0.1 * (borde - 0.47), 0.86, revelado);
     vec3 luz = texture2D(u_cuerpo, vUv).rgb * u_nitidezCuerpo + texture2D(u_brillo, vUv).rgb * u_fuerzaBrillo;
-    vec3 cuerpoC = aSrgb(aces(luz * scan));
+    vec3 cuerpoC = aSrgb(aces(luz * scan)) * 0.72;
     vec3 huesos = aSrgb(aces(esqueleto * scan));
     vec3 imagen = mix(cuerpoC, huesos, aHueso);
     // en claro, negativo con curva: los huesos quedan azul oscuro pero conservan el volumen

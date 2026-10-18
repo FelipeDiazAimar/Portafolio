@@ -9,15 +9,20 @@
   position: relative;
   height: 100svh;
   min-height: 600px;
-  overflow: hidden;
-  background: var(--color-bg);
+  /* visible: la marquesina sigue por encima y por debajo de la sección (ver .fondo) */
+  overflow: visible;
+  background: transparent;
 }
 
-/* La marquesina 3D ocupa todo el fondo. Sus bordes se funden con el color de la página sólo mientras
-   se ven (useUnionSeccion): con la sección a pantalla completa no se toca nada. */
+/* La marquesina 3D ocupa todo el fondo y sigue 30 % de pantalla por encima y por debajo de la
+   sección: las tarjetas no se cortan en el borde, flotan sobre las secciones vecinas y se desvanecen
+   recién en las puntas de esa extensión. La parte que cae dentro de la sección queda opaca. */
 .fondo {
   position: absolute;
-  inset: 0;
+  inset: -30svh 0;
+  --corte: 11%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.1) calc(var(--corte) * 0.3), rgba(0, 0, 0, 0.45) calc(var(--corte) * 0.6), #000 var(--corte), #000 calc(100% - var(--corte)), rgba(0, 0, 0, 0.45) calc(100% - var(--corte) * 0.6), rgba(0, 0, 0, 0.1) calc(100% - var(--corte) * 0.3), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.1) calc(var(--corte) * 0.3), rgba(0, 0, 0, 0.45) calc(var(--corte) * 0.6), #000 var(--corte), #000 calc(100% - var(--corte)), rgba(0, 0, 0, 0.45) calc(100% - var(--corte) * 0.6), rgba(0, 0, 0, 0.1) calc(100% - var(--corte) * 0.3), transparent 100%);
 }
 
 .marquesina {
@@ -32,7 +37,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, transparent 34%, var(--color-bg) 92%);
+  /* a los costados igual que antes; en vertical es más ancho para no tapar las tarjetas que salen de la sección */
+  background: radial-gradient(ellipse calc(50vw * 1.414) calc(50svh * 2.3) at 50% 50%, transparent 34%, var(--color-bg) 92%);
 }
 
 /* Título centrado sobre la marquesina. Se va tras un rato o al abrir un proyecto. */
@@ -71,7 +77,8 @@
 .tituloHeader {
   position: absolute;
   top: 0;
-  right: 2rem;
+  /* a la izquierda del toggle de tema (64 px de ancho, a 2rem del borde) */
+  right: calc(2rem + 64px + 1rem);
   z-index: 3;
   height: 72px;
   display: flex;
