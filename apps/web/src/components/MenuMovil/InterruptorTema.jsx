@@ -60,21 +60,23 @@ export default function InterruptorTema({ tema, alAlternar }) {
     setPresionado(false);
     setArrastre(null);
     if (!inicio || cancelado) return;
+    // La onda del cambio de tema nace en esta pista.
+    const origen = { currentTarget: evento.currentTarget };
     if (inicio.movido) {
       // Se arrastró: queda donde se soltó.
       const dx = evento.clientX - inicio.x;
       const final = Math.min(RECORRIDO_PX, Math.max(0, inicio.base + dx));
       const quedaOscuro = final > RECORRIDO_PX / 2;
-      if (quedaOscuro !== oscuro) alAlternar();
+      if (quedaOscuro !== oscuro) alAlternar(origen);
     } else {
-      alAlternar();
+      alAlternar(origen);
     }
   }
 
   function alPresionarTecla(evento) {
     if (evento.key === ' ' || evento.key === 'Enter') {
       evento.preventDefault();
-      alAlternar();
+      alAlternar({ currentTarget: evento.currentTarget });
     }
   }
 
