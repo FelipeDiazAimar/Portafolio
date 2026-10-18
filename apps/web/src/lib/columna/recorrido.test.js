@@ -213,3 +213,21 @@ test('sentido: poseCamara subiendo es continua en todo el viaje y sale/llega a l
   }
   assert.ok(Math.hypot(...previa.posicion.map((v, j) => v - poseCanonica(D).posicion[j])) < 1e-9);
 });
+
+test('ventanaDe: no deja saltear ningún hito', async () => {
+  const { ventanaDe, progresoDeEstancia, tramoDe, pesoTotal } = await import('./recorrido.js');
+  const n = 7;
+  // en cada hito: de la estancia anterior a la siguiente
+  for (let i = 0; i < n; i += 1) {
+    const v = ventanaDe(progresoDeEstancia(i, n), n);
+    assert.equal(v.min, i === 0 ? 0 : progresoDeEstancia(i - 1, n));
+    assert.equal(v.max, i === n - 1 ? 1 : progresoDeEstancia(i + 1, n));
+  }
+  // en un viaje: los dos hitos que lo cierran
+  const p = (progresoDeEstancia(2, n) + progresoDeEstancia(3, n)) / 2;
+  assert.equal(tramoDe(p, n).tipo, 'viaje');
+  const v = ventanaDe(p, n);
+  assert.equal(v.min, progresoDeEstancia(2, n));
+  assert.equal(v.max, progresoDeEstancia(3, n));
+  assert.ok(pesoTotal(n) > 0);
+});

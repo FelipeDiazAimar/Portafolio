@@ -133,6 +133,20 @@ export function imanDe(p, n, direccion = 0) {
   return progresoDeEstancia(tramo.t >= UMBRAL_IMAN ? tramo.indice + 1 : tramo.indice, n);
 }
 
+// Barrera de un gesto de scroll: hasta dónde se puede llegar desde el punto `p` sin soltar. Nunca se pasa
+// del centro de la estancia del hito vecino: no hay forma de saltearse un hito (hay que parar en cada uno,
+// y el imán lo estaciona). En una estancia, los vecinos son el anterior y el siguiente; en un viaje, los dos
+// hitos que lo cierran. Más allá del primero y del último no hay tope (se sale de la sección).
+export function ventanaDe(p, n) {
+  const tramo = tramoDe(p, n);
+  const desde = tramo.tipo === 'estancia' ? tramo.indice - 1 : tramo.indice;
+  const hasta = tramo.tipo === 'estancia' ? tramo.indice + 1 : tramo.indice + 1;
+  return {
+    min: desde < 0 ? 0 : progresoDeEstancia(desde, n),
+    max: hasta > n - 1 ? 1 : progresoDeEstancia(hasta, n),
+  };
+}
+
 // Pose de la cámara (en coordenadas de pantalla canónicas: el mundo ya está
 // transformado por estadoDe). `d` = distancia de la pose canónica (vistaParaAltura).
 export const FOV_BASE = 38;

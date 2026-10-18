@@ -6,7 +6,7 @@ import { useMotionValue, useMotionValueEvent, useReducedMotion, useScroll, useSp
 import hitos from '@/data/hitos.json';
 import useConsulta from '@/hooks/useConsulta.js';
 import useTema from '@/hooks/useTema.js';
-import { PESO_VIAJE, activoDe, imanDe, pesoTotal, progresoDeEstado, progresoDeEstancia, tramoDe } from '@/lib/columna/recorrido.js';
+import { PESO_VIAJE, activoDe, imanDe, pesoTotal, progresoDeEstado, progresoDeEstancia, tramoDe, ventanaDe } from '@/lib/columna/recorrido.js';
 import { tiempoModeloMs } from '@/lib/tiempoModelo.js';
 import { bandasDeUnion } from '@/lib/uniones.js';
 import { hayWebGL } from './Escena3D/soporteWebGL.js';
@@ -357,6 +357,75 @@ function SobreMiRecorrido({ onFallo }) {
       window.removeEventListener('touchcancel', alTocar);
     };
   }, [scrollYProgress, scrollAProgreso]);
+
+  // Barrera: la ventana de scroll permitida se fija cuando el scroll se asienta (no se mueve entre dos lecturas)
+  // y vale hasta el centro de la zona de cada hito vecino. Con la rueda o el dedo a toda velocidad no hay forma
+  // de saltearse un hito: se frena ahí, y el imán lo estaciona (hay que soltar y volver a empujar para seguir).
+  useEffect(() => {
+    if (reducido) return undefined;
+    let ventana = null;
+    let espera = 0;
+    let ultimaSenal = 0;
+    const medir = () => {
+      const contenedor = refContenedor.current;
+      if (!contenedor) return null;
+      const caja = contenedor.getBoundingClientRect();
+      // sólo con el panel fijo en pantalla (no al entrar o salir de la sección)
+      if (caja.top > 1 || caja.bottom < window.innerHeight - 1) return null;
+      const recorrido = contenedor.offsetHeight - window.innerHeight;
+      const arriba = caja.top + window.scrollY;
+      return { recorrido, arriba, p: (window.scrollY - arriba) / recorrido };
+    };
+    // "Asentado" = el scroll no se movió entre dos lecturas separadas. Con cuadros lentos (3D pesado) los
+    // eventos de scroll llegan espaciados aunque el dedo siga empujando: no alcanza con el tiempo sin eventos.
+    const asentar = () => {
+      const y0 = window.scrollY;
+      espera = setTimeout(() => {
+        if (Math.abs(window.scrollY - y0) > 1) {
+          asentar();
+          return;
+        }
+        const m = medir();
+        ventana = m ? ventanaDe(m.p, N) : null;
+      }, 400);
+    };
+    // Un gesto nuevo (rueda, dedo o tecla tras una pausa) ancla la ventana donde el scroll estaba quieto, antes
+    // de que se mueva: no depende de cuántos eventos de scroll lleguen después.
+    const alEntrada = () => {
+      const ahora = performance.now();
+      if (ahora - ultimaSenal > 300) {
+        const m = medir();
+        ventana = m ? ventanaDe(m.p, N) : null;
+      }
+      ultimaSenal = ahora;
+    };
+    const alScroll = () => {
+      ultimaSenal = performance.now();
+      clearTimeout(espera);
+      asentar();
+      // los saltos del minimapa, el imán y el autoplay avanzan solos: no se frenan
+      if (refAnimacion.current || refSalto.current || refDestino.current || document.documentElement.dataset.sinIman) return;
+      const m = medir();
+      if (!m) {
+        ventana = null;
+        return;
+      }
+      if (!ventana) ventana = ventanaDe(m.p, N);
+      const tope = m.p > ventana.max ? ventana.max : m.p < ventana.min ? ventana.min : null;
+      if (tope !== null) window.scrollTo({ top: m.arriba + tope * m.recorrido, behavior: 'instant' });
+    };
+    window.addEventListener('scroll', alScroll, { passive: true });
+    window.addEventListener('wheel', alEntrada, { passive: true });
+    window.addEventListener('touchstart', alEntrada, { passive: true });
+    window.addEventListener('keydown', alEntrada);
+    return () => {
+      clearTimeout(espera);
+      window.removeEventListener('scroll', alScroll);
+      window.removeEventListener('wheel', alEntrada);
+      window.removeEventListener('touchstart', alEntrada);
+      window.removeEventListener('keydown', alEntrada);
+    };
+  }, [reducido]);
 
   // Autoplay: si no se toca nada en el primer hito, la línea de tiempo se
   // reproduce sola entera; si el usuario la deja pausada más de 2 min, retoma.

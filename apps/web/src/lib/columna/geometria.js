@@ -1,7 +1,9 @@
 // Geometría de la columna vertebral de "Sobre mí" (unidades de escena). Funciones
 // puras, sin three: las usan el mundo 3D, la cámara y el minimapa.
 
-export const SEPARACION = 9;
+// Distancia entre hitos: 12,6 = 9 · 1,4 (el recorrido físico es 40 % más largo; el scroll de la sección no cambia,
+// ver PESO_* en recorrido.js)
+export const SEPARACION = 12.6;
 export const RADIO_ANCLA = 3.5;
 export const PASO_ANGULO = (140 * Math.PI) / 180;
 export const AMPLITUD_S = 1.4;
