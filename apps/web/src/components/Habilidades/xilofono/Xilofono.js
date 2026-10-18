@@ -2,7 +2,8 @@ import { EffectComposer, EffectPass, RenderPass, SMAAEffect, SMAAPreset } from '
 import {
   CanvasTexture,
   Color,
-  DoubleSide,
+  BackSide,
+  FrontSide,
   Euler,
   Group,
   LinearFilter,
@@ -185,6 +186,7 @@ export class Xilofono {
       u_esfera: { value: 0 },
       u_resolucion: { value: new Vector2(1, 1) },
       u_filo: { value: 9 },
+      u_atras: { value: 0 },
       u_radioEsfera: { value: ARBOL.radioEsfera },
       u_logoEscala: { value: 1 },
       u_nombreOn: { value: 1 },
@@ -293,19 +295,14 @@ export class Xilofono {
     // caja un poco más grande para agarrar el modelo: cubre también el espacio entre barras
     this.cajaAgarre = this.instancias.caja.clone().expandByVector(new Vector3(0.08, 0.14, 0.04));
     // Vidrio de verdad: transparente, sin escribir profundidad, así se ven las barras de atrás.
-    this.material = new ShaderMaterial({
-      uniforms: this.uniforms,
-      vertexShader: barraVert,
-      fragmentShader: barraFrag,
-      side: DoubleSide,
-      transparent: true,
-      depthWrite: false,
-    });
-    this.malla = new Mesh(this.instancias.geometria, this.material);
-    this.malla.frustumCulled = false;
-    this.malla.layers.enable(CAPA_VIDRIO);
-    this.malla.renderOrder = 3;
-    this.eje.add(this.malla);
+    // Sin escritura de profundidad, el orden en que la GPU pinta las caras de una pieza depende de
+    // sus triángulos y del ángulo de vista: según el ángulo, la cara de atrás (sin logo) se pintaba
+    // después y tapaba el logo de la de adelante. Por eso cada pieza va en dos mallas: primero las
+    // caras de atrás y después las de adelante, siempre en ese orden.
+    this.material = this.materialVidrio(this.uniforms, FrontSide);
+    this.materialAtras = this.materialVidrio({ ...this.uniforms, u_atras: { value: 1 } }, BackSide);
+    this.malla = this.mallaVidrio(this.instancias.geometria, this.material, 4);
+    this.mallaAtras = this.mallaVidrio(this.instancias.geometria, this.materialAtras, 3);
     this.armarEsferas();
     this.armarArbol();
     // compila antes del primer cuadro visible para no trabar el scroll al entrar
@@ -357,33 +354,39 @@ export class Xilofono {
     this.arbol?.aplicarTema(tema);
   }
 
+  materialVidrio(uniforms, lado) {
+    return new ShaderMaterial({ uniforms, vertexShader: barraVert, fragmentShader: barraFrag, side: lado, transparent: true, depthWrite: false });
+  }
+
+  mallaVidrio(geometria, material, orden) {
+    const malla = new Mesh(geometria, material);
+    malla.frustumCulled = false;
+    malla.layers.enable(CAPA_VIDRIO);
+    malla.renderOrder = orden;
+    this.eje.add(malla);
+    return malla;
+  }
+
   /* --------------------------------- árbol --------------------------------- */
   // Las esferas del árbol: otra malla con el mismo shader y los mismos datos por instancia. Cada
   // barra se achica mientras su esfera crece (la transición). Material propio sólo para lo que
   // cambia: modo esfera, radio, y sin nombre sobre la superficie.
   armarEsferas() {
-    this.materialEsferas = new ShaderMaterial({
-      uniforms: {
-        ...this.uniforms,
-        u_esfera: { value: 1 },
-        u_nombreOn: { value: 0 },
-        u_logoEscala: { value: 1.2 },
-        u_escalaBarra: { value: new Vector3(1, 1, 1) },
-        u_radioEsfera: { value: 0.0001 },
-      },
-      vertexShader: barraVert,
-      fragmentShader: barraFrag,
-      side: DoubleSide,
-      transparent: true,
-      depthWrite: false,
-    });
+    const uniformes = {
+      ...this.uniforms,
+      u_esfera: { value: 1 },
+      u_nombreOn: { value: 0 },
+      u_logoEscala: { value: 1.2 },
+      u_escalaBarra: { value: new Vector3(1, 1, 1) },
+      u_radioEsfera: { value: 0.0001 },
+    };
+    this.materialEsferas = this.materialVidrio(uniformes, FrontSide);
+    this.materialEsferasAtras = this.materialVidrio({ ...uniformes, u_atras: { value: 1 } }, BackSide);
     this.geometriaEsferas = crearGeometriaEsferas(this.instancias.geometria);
-    this.mallaEsferas = new Mesh(this.geometriaEsferas, this.materialEsferas);
-    this.mallaEsferas.frustumCulled = false;
-    this.mallaEsferas.layers.enable(CAPA_VIDRIO);
-    this.mallaEsferas.renderOrder = 3;
+    this.mallaEsferas = this.mallaVidrio(this.geometriaEsferas, this.materialEsferas, 4);
+    this.mallaEsferasAtras = this.mallaVidrio(this.geometriaEsferas, this.materialEsferasAtras, 3);
     this.mallaEsferas.visible = false;
-    this.eje.add(this.mallaEsferas);
+    this.mallaEsferasAtras.visible = false;
   }
 
   armarArbol() {
@@ -452,7 +455,9 @@ export class Xilofono {
     if (this.mallaEsferas) {
       this.materialEsferas.uniforms.u_radioEsfera.value = R * entra + 0.0001;
       this.mallaEsferas.visible = this.arbolP > 0.45;
+      this.mallaEsferasAtras.visible = this.mallaEsferas.visible;
       this.malla.visible = this.arbolP < 0.95;
+      this.mallaAtras.visible = this.malla.visible;
     }
   }
 
@@ -1006,9 +1011,11 @@ export class Xilofono {
     this.fluido.liberar();
     this.ayuda.liberar();
     this.material?.dispose();
+    this.materialAtras?.dispose();
     this.instancias?.geometria.dispose();
     this.geometriaEsferas?.dispose();
     this.materialEsferas?.dispose();
+    this.materialEsferasAtras?.dispose();
     this.arbol?.liberar();
     this.fondo.geometry.dispose();
     this.materialesFondo.forEach((m) => m.dispose());
