@@ -10,8 +10,12 @@ export const barraVert = /* glsl */ `
 uniform float u_time;
 uniform float u_spinSpeed;  // giro propio de la hélice
 uniform float u_swingScale; // 0..1 (0 con movimiento reducido)
+uniform vec3 u_escalaBarra;  // escala de la barra (la usa el picking); (1,1,1) = barra larga
+uniform float u_esfera;      // 0 = barra, 1 = esfera (árbol)
+uniform float u_radioEsfera;
 uniform vec3 u_swingAxis;   // eje local del vaivén al golpear
 
+attribute vec3 aEsfera;      // forma de esfera de este vértice (dirección unitaria)
 attribute vec3 aPos;
 attribute vec4 aRot;
 attribute float aTintOffset;
@@ -29,8 +33,10 @@ varying vec3 vLocalNormal;
 varying float vSkill;
 varying float vResalte;
 varying float vActiva;
-varying vec3 vEjeLargo; // eje local z (largo de la barra) en mundo
-varying vec3 vEjeAlto;  // eje local y (alto de la barra) en mundo
+varying vec4 vEjes; // largo (xy) y alto (zw) de la barra, proyectados en pantalla
+varying vec3 vCentro;      // centro de la barra en el mundo
+varying vec2 vCentroPantalla; // centro de la barra en pantalla (NDC, con el x multiplicado por el aspecto)
+varying float vEscalaMundo; // escala del modelo en el mundo (para pasar el mundo a unidades locales)
 
 // vaivén al golpear: péndulo amortiguado
 const float SWING_AMP = 0.58;
@@ -57,9 +63,12 @@ void main() {
   vec4 swing = vec4(normalize(u_swingAxis) * sin(halfAng), cos(halfAng));
   rot = qmul(rot, swing);
 
-  vec3 transformedPos = aPos + rotateByQuat(position, rot);
+  // la barra se funde en una esfera al pasar al árbol (misma malla, otra forma)
+  vec3 forma = mix(position * u_escalaBarra, aEsfera * u_radioEsfera, u_esfera);
+  vec3 normalLocal = normalize(mix(normalize(normal / u_escalaBarra), aEsfera, u_esfera));
+  vec3 transformedPos = aPos + rotateByQuat(forma, rot);
   vec4 worldPos = modelMatrix * vec4(transformedPos, 1.0);
-  vec3 rotatedNormal = rotateByQuat(normal, rot);
+  vec3 rotatedNormal = rotateByQuat(normalLocal, rot);
 
   gl_Position = projectionMatrix * viewMatrix * worldPos;
 
@@ -67,13 +76,27 @@ void main() {
   vNormal = normalize(mat3(modelMatrix) * rotatedNormal);
   vScreenUv = gl_Position.xy / gl_Position.w * 0.5 + 0.5;
   vTintOffset = aTintOffset;
-  vLocalPos = position;
-  vLocalNormal = normal;
+  // el logo se dibuja en coordenadas ya escaladas: así no se deforma al achatarse la barra
+  vLocalPos = forma;
+  vLocalNormal = normalLocal;
   vSkill = aSkill;
   vResalte = aResalte;
   vActiva = aActiva;
-  vEjeLargo = mat3(modelMatrix) * rotateByQuat(vec3(0.0, 0.0, 1.0), rot);
-  vEjeAlto = mat3(modelMatrix) * rotateByQuat(vec3(0.0, 1.0, 0.0), rot);
+  // Hacia dónde apuntan en pantalla el largo y el alto de esta barra, con la perspectiva real
+  // (proyectando su centro y dos puntos corridos). Con esto el logo y el nombre se leen derechos
+  // aunque la barra esté cerca de la cámara o en un costado.
+  vec3 centro = (modelMatrix * vec4(aPos, 1.0)).xyz;
+  vCentro = centro;
+  vEscalaMundo = length(modelMatrix[0].xyz);
+  vec3 ejeLargo = mat3(modelMatrix) * rotateByQuat(vec3(0.0, 0.0, 1.0), rot);
+  vec3 ejeAlto = mat3(modelMatrix) * rotateByQuat(vec3(0.0, 1.0, 0.0), rot);
+  mat4 pv = projectionMatrix * viewMatrix;
+  vec4 c0 = pv * vec4(centro, 1.0);
+  vec4 cl = pv * vec4(centro + ejeLargo * 0.05, 1.0);
+  vec4 ca = pv * vec4(centro + ejeAlto * 0.05, 1.0);
+  vec2 aspecto = vec2(projectionMatrix[1][1] / projectionMatrix[0][0], 1.0);
+  vEjes = vec4((cl.xy / cl.w - c0.xy / c0.w) * aspecto, (ca.xy / ca.w - c0.xy / c0.w) * aspecto);
+  vCentroPantalla = (c0.xy / c0.w) * aspecto;
 }
 `;
 
@@ -111,6 +134,13 @@ uniform float u_aberracion;   // separación de colores en los bordes
 uniform float u_esmerilado;   // 0 = vidrio limpio, 1 = esmerilado
 uniform float u_bordeLuz;     // brillo de la línea de borde
 uniform float u_filtro;       // 0..1: hay una categoría elegida
+uniform float u_claro;        // 1 en tema claro
+uniform float u_filo;         // grosor del filo de luz del borde (más alto = más fino)
+uniform float u_destello;     // 0..1: explosión de color (botón o buscador)
+uniform float u_logoEscala;   // 1 en la hélice; mayor en el árbol (la esfera es más chica)
+uniform float u_esfera;       // 0 = barra, 1 = esfera (árbol)
+uniform float u_nombreOn;     // 1 en la hélice; 0 en el árbol (la moneda no tiene lugar para el nombre)
+uniform vec3 u_colorContorno; // contorno de las barras en tema claro
 uniform vec4 u_logoCaja;       // zMin, zMax, ySemi, (sin uso)
 uniform sampler2D u_tNombres;  // atlas con el nombre de cada habilidad
 uniform vec2 u_nombresCeldas;  // columnas, filas del atlas de nombres
@@ -125,8 +155,12 @@ varying vec3 vLocalNormal;
 varying float vSkill;
 varying float vResalte;
 varying float vActiva;
-varying vec3 vEjeLargo;
-varying vec3 vEjeAlto;
+varying vec4 vEjes;
+varying vec3 vCentro;
+varying float vEscalaMundo;
+varying vec2 vCentroPantalla;
+uniform vec2 u_resolucion;   // tamaño del buffer de dibujo, en píxeles
+uniform vec3 u_escalaBarra;
 
 const float PI = 3.141592653589793;
 const vec3 LIGHT_DIR = vec3(0.4, 1.0, 0.35);
@@ -143,14 +177,28 @@ vec3 iridescence(float t) {
 // Coordenadas de lectura sobre la cara: x crece hacia la derecha de la pantalla a lo largo de
 // la barra e y hacia arriba. La hélice gira, así que se ve una cara o la otra, desde arriba o
 // desde abajo: se mira hacia dónde apuntan en pantalla el largo y el alto de esta barra.
-vec2 lectura() {
-  vec2 largo = (viewMatrix * vec4(vEjeLargo, 0.0)).xy;
-  vec2 alto = (viewMatrix * vec4(vEjeAlto, 0.0)).xy;
+//
+// El logo y el nombre son un decal PLANO: el plano central de la barra (el que contiene su largo y
+// su alto) visto desde la cámara. Cada píxel se ubica resolviendo dónde cae en ese plano, sin
+// depender de en qué parte de la superficie curva está. Antes se usaba la posición sobre la
+// curva y, mirando la barra desde arriba, la mitad de abajo del texto caía en la parte de la
+// superficie que da la espalda a la cámara y se descartaba: el texto salía cortado a la mitad.
+// Devuelve (a lo largo de la barra, a lo alto) en unidades locales, y z = 1 si el punto es válido.
+vec3 lectura() {
+  vec2 largo = vEjes.xy / 0.05;
+  vec2 alto = vEjes.zw / 0.05;
+  float det = largo.x * alto.y - largo.y * alto.x;
+  // barra casi de canto: el plano degenera y no hay dónde dibujar
+  if (abs(det) < 1e-4) return vec3(0.0, 0.0, 0.0);
+  float aspecto = u_resolucion.x / u_resolucion.y;
+  vec2 fragmento = (gl_FragCoord.xy / u_resolucion * 2.0 - 1.0) * vec2(aspecto, 1.0);
+  vec2 d = fragmento - vCentroPantalla;
+  vec2 l = vec2(d.x * alto.y - d.y * alto.x, d.y * largo.x - d.x * largo.y) / det;
   float sx = largo.x < 0.0 ? -1.0 : 1.0;
   vec2 derecha = largo * sx;
   vec2 arriba = vec2(-derecha.y, derecha.x);
   float sy = dot(alto, arriba) < 0.0 ? -1.0 : 1.0;
-  return vec2(vLocalPos.z * sx, vLocalPos.y * sy);
+  return vec3(l.x * sx, l.y * sy, 1.0);
 }
 
 // Celda de un atlas de canvas (fila 0 arriba) con flipY: la v de la textura crece hacia arriba.
@@ -169,23 +217,91 @@ float enCara() {
   return smoothstep(0.12, 0.42, abs(vLocalNormal.x));
 }
 
-float mascaraLogo() {
-  // sólo en la cara que mira a la cámara: la de atrás se ve a través del vidrio y duplicaría
-  if (!gl_FrontFacing) return 0.0;
-  float lado = u_logoCaja.y - u_logoCaja.x;
-  vec2 l = lectura();
-  vec2 uv = vec2((l.x - u_logoCaja.x) / lado, (l.y + u_logoCaja.z) / (2.0 * u_logoCaja.z));
+// Apaga la máscara cerca del borde de su celda del atlas: al achicarse la textura, los píxeles de
+// la celda vecina se filtran y dibujan líneas finas con forma de rectángulo alrededor del logo.
+float bordeCelda(vec2 uv) {
+  vec2 d = min(uv, 1.0 - uv);
+  return smoothstep(0.0, 0.07, d.x) * smoothstep(0.0, 0.07, d.y);
+}
+
+// Máximo del alfa de una textura en un entorno de radio d (en uv): engorda la máscara. Se usa
+// para el halo oscuro que va detrás del logo y del nombre cuando están resaltados.
+float muestraAncha(sampler2D t, vec2 p, float d) {
+  float a = texture2D(t, p).a;
+  a = max(a, texture2D(t, p + vec2(d, 0.0)).a);
+  a = max(a, texture2D(t, p - vec2(d, 0.0)).a);
+  a = max(a, texture2D(t, p + vec2(0.0, d)).a);
+  a = max(a, texture2D(t, p - vec2(0.0, d)).a);
+  a = max(a, texture2D(t, p + vec2(d, d) * 0.7).a);
+  a = max(a, texture2D(t, p - vec2(d, d) * 0.7).a);
+  a = max(a, texture2D(t, p + vec2(d, -d) * 0.7).a);
+  a = max(a, texture2D(t, p + vec2(-d, d) * 0.7).a);
+  return a;
+}
+
+// halo > 0: máscara engordada en ese radio (para el halo); 0: el logo tal cual.
+float mascaraLogo(float halo) {
+  // El decal es el mismo plano en la cara de adelante y en la de atrás (se ve a través del
+  // vidrio) y caen en el mismo lugar de la pantalla, así que no hace falta descartar ninguna.
+  float k = u_logoEscala;
+  float lado = (u_logoCaja.y - u_logoCaja.x) * k;
+  vec3 plano = lectura();
+  if (plano.z < 0.5) return 0.0;
+  vec2 l = plano.xy;
+  vec2 uv = vec2((l.x - u_logoCaja.x * k) / lado, (l.y + u_logoCaja.z * k) / (2.0 * u_logoCaja.z * k));
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-  return texture2D(u_tAtlas, enCelda(uv, floor(vSkill + 0.5), vec2(u_atlasCeldas))).a * enCara();
+  vec2 p0 = enCelda(uv, floor(vSkill + 0.5), vec2(u_atlasCeldas));
+  float a;
+  if (halo > 0.0) {
+    // resplandor suave: la textura en un nivel borroso (mip) en vez de copias desplazadas, que al
+    // verse chicas quedaban como trazos sueltos alrededor del logo
+    a = clamp(texture2D(u_tAtlas, p0, halo).a * 2.2, 0.0, 1.0);
+  } else {
+    float d = 0.0011 * u_esfera; // en el árbol el logo es chico: se lo engorda apenas
+    a = d > 0.0 ? muestraAncha(u_tAtlas, p0, d) * 0.9 : texture2D(u_tAtlas, p0).a;
+    a = smoothstep(0.08, 0.5, max(a, texture2D(u_tAtlas, p0).a)); // se afila el borde
+  }
+  return a * bordeCelda(uv) * smoothstep(0.55, 0.9, u_escalaBarra.x);
+}
+
+// Logo sobre la esfera (árbol): un decal que siempre mira a la cámara y se lee derecho, sin
+// importar desde dónde se vea la esfera (con el logo pegado a un plano fijo, las esferas del
+// borde del disco lo mostraban de costado y casi no se veía).
+float mascaraLogoEsfera(vec3 N, vec3 V, float halo) {
+  if (!gl_FrontFacing) return 0.0;
+  vec3 dd = (vWorldPos - vCentro) / vEscalaMundo;
+  vec3 derecha = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+  vec3 arriba = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+  float mitad = u_logoCaja.z * u_logoEscala;
+  vec2 uv = (vec2(dot(dd, derecha), dot(dd, arriba)) + mitad) / (2.0 * mitad);
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
+  vec2 p0 = enCelda(uv, floor(vSkill + 0.5), vec2(u_atlasCeldas));
+  float a;
+  if (halo > 0.0) {
+    a = clamp(texture2D(u_tAtlas, p0, halo).a * 2.2, 0.0, 1.0);
+  } else {
+    // bias negativo: un nivel de detalle más fino; y el umbral baja para que un trazo delgado,
+    // que al achicarse queda a medio alfa, llegue igual a blanco pleno
+    a = muestraAncha(u_tAtlas, p0, 0.0011) * 0.9;
+    a = smoothstep(0.02, 0.26, max(a, texture2D(u_tAtlas, p0, -0.8).a));
+  }
+  return a * smoothstep(0.08, 0.35, dot(N, V)) * bordeCelda(uv);
 }
 
 // Nombre de la habilidad, a continuación del logo: sólo aparece en la barra resaltada.
-float mascaraNombre() {
-  if (!gl_FrontFacing || vResalte < 0.01) return 0.0;
-  vec2 l = lectura();
+float mascaraNombre(float halo) {
+  if (vResalte < 0.01 || u_nombreOn < 0.01) return 0.0;
+  vec3 plano = lectura();
+  if (plano.z < 0.5) return 0.0;
+  vec2 l = plano.xy;
   vec2 uv = vec2((l.x - u_nombreCaja.x) / (u_nombreCaja.y - u_nombreCaja.x), (l.y + u_nombreCaja.z) / (2.0 * u_nombreCaja.z));
+  float enPunta = 1.0; // el decal es plano: la punta redonda no lo estira
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
-  return texture2D(u_tNombres, enCelda(uv, floor(vSkill + 0.5), u_nombresCeldas)).a * smoothstep(0.2, 0.9, vResalte) * enCara();
+  vec2 p0 = enCelda(uv, floor(vSkill + 0.5), u_nombresCeldas);
+  float a = halo > 0.0 ? muestraAncha(u_tNombres, p0, halo) : texture2D(u_tNombres, p0).a;
+  // sin halo: se afila el borde, para que el blanco del nombre llegue a blanco
+  if (halo <= 0.0) a = smoothstep(0.2, 0.62, a);
+  return a * enPunta * smoothstep(0.06, 0.3, vResalte) * u_nombreOn * smoothstep(0.55, 0.9, u_escalaBarra.x) * smoothstep(0.0, 0.03, 1.0 - uv.x) * smoothstep(0.0, 0.006, uv.x) * smoothstep(0.0, 0.04, uv.y) * smoothstep(0.0, 0.04, 1.0 - uv.y);
 }
 
 void main() {
@@ -202,7 +318,7 @@ void main() {
   // Con una categoría elegida, todas sus barras se tiñen (no sólo la del foco).
   float deCategoria = vActiva * u_filtro;
   // el resaltado revela el tinte igual que pasar el mouse
-  float reveal = clamp(max(max(velocity * u_fluidStrength, vResalte * 0.9), deCategoria * 0.8), 0.0, 1.0);
+  float reveal = clamp(max(max(velocity * u_fluidStrength, vResalte * 0.9), max(deCategoria * 0.8, u_destello * 0.95)), 0.0, 1.0);
   vec3 tint = texture2D(u_tGradient, vec2(fract(vTintOffset * u_tintWrap), 0.5)).rgb;
   tint = mix(tint, u_colorResalte, max(vResalte, deCategoria * 0.5));
 
@@ -214,7 +330,7 @@ void main() {
   // filo, así el contorno queda limpio. Separa los colores donde más desvía (aberración
   // cromática) y deja ver el fondo nítido en vez de un cuerpo de color.
   float lente = sin(pow(edge, 0.8) * PI);
-  vec2 desvio = N.xy * u_refractStrength * (0.2 + 1.8 * lente);
+  vec2 desvio = N.xy * u_refractStrength * (0.15 + 0.8 * lente);
   vec2 uvFondo = vScreenUv + desvio;
   vec2 separacion = desvio * u_aberracion;
   vec3 nitido = vec3(
@@ -238,7 +354,7 @@ void main() {
   // y una sombra interior suave del otro. Bien angosto, para que no pinte media barra.
   vec3 luzBorde = normalize(vec3(-0.45, 0.85, 0.5));
   float ladoLuz = dot(N, luzBorde);
-  float filo = pow(edge, 9.0);
+  float filo = pow(edge, u_filo);
   color += filo * (0.35 + 0.65 * smoothstep(-0.2, 0.8, ladoLuz)) * u_bordeLuz;
   color *= 1.0 - pow(edge, 6.0) * 0.22 * smoothstep(0.2, -0.6, ladoLuz);
   // brillo especular: un punto chico, no una línea a lo largo de la barra
@@ -246,22 +362,59 @@ void main() {
   color += pow(max(dot(N, H), 0.0), 220.0) * u_especular;
   color += tint * reveal * u_tintGlow;
 
+  // Tema claro: un vidrio blanco sobre un fondo claro casi no se ve. Se le da un contorno azul
+  // oscuro (en vez del filo de luz blanco) y un poco de sombra hacia los bordes.
+  if (u_claro > 0.5) {
+    color = mix(color, u_colorContorno, pow(edge, 2.0) * 0.6);
+    color *= 1.0 - edge * 0.08;
+  }
+
   float phase = edge * u_iridCycles + N.y * 0.5 + u_iridShift;
   vec3 irid = iridescence(phase);
   color += irid * (pow(edge, u_iridPower) * u_iridStrength + u_iridBody * edge) * 0.5;
 
   // logo: color de la paleta; resaltado, blanco y más presente. Fuera del filtro, casi no se ve.
-  float logo = mascaraLogo() * (1.0 - fres * 0.6) * mix(0.12, 1.0, vActiva);
-  vec3 colorLogo = mix(u_colorLogo, vec3(1.0), vResalte * 0.85);
-  color = mix(color, colorLogo, logo * (0.82 + 0.18 * vResalte));
-  float nombre = mascaraNombre() * (1.0 - fres * 0.5);
+  // Al resaltar (hover, toque, búsqueda o explosión) el logo y el nombre van en blanco. Sobre el
+  // vidrio claro se perdían: se les pone detrás una mancha oscura del color de la barra.
+  // El resalte de la barra del foco sube y baja de forma continua (casi nunca llega justo a 1):
+  // con esta curva el texto llega a blanco pleno desde los valores medios.
+  float realce = clamp(max(smoothstep(0.08, 0.35, vResalte), u_destello), 0.0, 1.0);
+  // En tema claro los logos son blancos siempre, y un vidrio claro no los deja ver: todos llevan
+  // detrás una mancha azul. Resaltados, la mancha es oscura como en el tema oscuro.
+  float conMancha = u_claro * (1.0 - realce);
+  if (conMancha > 0.01) {
+    float haloLogo = u_esfera > 0.01 ? mix(mascaraLogo(3.0), mascaraLogoEsfera(N, V, 3.0), u_esfera) : mascaraLogo(3.0);
+    float pastilla = clamp(haloLogo * 1.6, 0.0, 1.0) * conMancha;
+    color = mix(color, vec3(0.08, 0.2, 0.86), pastilla * 0.95);
+  }
+  float logoBarra = mascaraLogo(0.0);
+  float logoMascara = u_esfera > 0.01 ? mix(logoBarra, mascaraLogoEsfera(N, V, 0.0), u_esfera) : logoBarra;
+  // la atenuación del borde (fresnel) apaga el logo en los costados de la barra; en lo resaltado
+  // se quita, porque la cara ancha se ve de costado y el blanco quedaba mezclado con el azul
+  float logo = logoMascara * (1.0 - fres * 0.6 * (1.0 - u_claro) * (1.0 - u_esfera) * (1.0 - realce)) * mix(0.12, 1.0, vActiva);
+  // los logos pasan a blanco al resaltarse, en la explosión y, en el árbol oscuro, siempre un poco
+  float blanco = max(max(realce, u_destello), u_esfera); // en el árbol, siempre blanco puro
+  vec3 colorLogo = mix(u_colorLogo, vec3(1.0), clamp(blanco, 0.0, 1.0));
+  color = mix(color, colorLogo, logo * (0.9 + 0.1 * vResalte));
+  color += colorLogo * logo * 0.3 * realce; // un poco de brillo propio
+  float nombre = mascaraNombre(0.0);
   color = mix(color, vec3(1.0), nombre);
+  color += vec3(1.0) * nombre * 0.2;
 
   // Transparencia: el cuerpo deja ver lo de atrás (otras barras incluidas); el borde, el brillo,
   // el logo y el resaltado son más opacos. Fuera del filtro, la barra casi desaparece.
-  float alfa = u_opacidad + fres * 0.55 + reveal * 0.35;
+  float alfa = u_opacidad + fres * (0.55 + 0.3 * u_claro) + reveal * 0.35;
   alfa = max(alfa, max(logo, nombre));
   alfa *= mix(0.28, 1.0, vActiva);
+  // el texto y el logo resaltados van opacos: si no, el blanco se mezcla con el fondo y se pierde
+  alfa = mix(alfa, 1.0, clamp(max(nombre, logo * realce), 0.0, 1.0));
+  // En el árbol el logo se pinta al final y en blanco puro, sin importar cómo quedó el vidrio
+  // (reflejos, tinte o transparencia): si no, según el ángulo el blanco se mezclaba con el fondo.
+  if (u_esfera > 0.5) {
+    float pleno = logoMascara * mix(0.12, 1.0, vActiva);
+    color = mix(color, vec3(1.0), pleno);
+    alfa = max(alfa, pleno);
+  }
   gl_FragColor = vec4(color, clamp(alfa, 0.0, 1.0));
 }
 `;

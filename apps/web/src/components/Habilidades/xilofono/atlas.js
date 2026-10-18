@@ -18,6 +18,13 @@ function svgAImagen(svg) {
   copia.setAttribute('color', '#ffffff');
   copia.setAttribute('fill', '#ffffff');
   copia.style.color = '#ffffff';
+  // Un contorno blanco fino engorda cada logo (~2 % de su tamaño): a tamaños chicos, como en las
+  // esferas del árbol, un trazo delgado se filtra y queda semitransparente (gris en vez de blanco).
+  const caja = (copia.getAttribute('viewBox') ?? '0 0 24 24').split(/[\s,]+/).map(Number);
+  const ancho = caja[2] || 24;
+  copia.setAttribute('stroke', '#ffffff');
+  copia.setAttribute('stroke-width', String(ancho * 0.03));
+  copia.setAttribute('stroke-linejoin', 'round');
   const texto = new XMLSerializer().serializeToString(copia).replace(/currentColor/g, '#ffffff');
   const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(texto)}`;
   return new Promise((resolver) => {
@@ -50,7 +57,7 @@ function dibujarSigla(ctx, texto, x, y) {
 // barra, a continuación del logo). Con la tipografía del sitio.
 export const CELDAS_NOMBRES = [4, 16]; // 4 columnas × 16 filas = 64
 const ANCHO_NOMBRE = 512;
-const ALTO_NOMBRE = 128;
+const ALTO_NOMBRE = 192; // la franja del nombre en la barra mide 0,84 × 0,32 (2,6:1): la celda va en la misma proporción
 
 export function crearAtlasNombres(nombres) {
   const lienzo = document.createElement('canvas');
@@ -64,18 +71,24 @@ export function crearAtlasNombres(nombres) {
   nombres.forEach((nombre, i) => {
     const x = (i % CELDAS_NOMBRES[0]) * ANCHO_NOMBRE;
     const y = Math.floor(i / CELDAS_NOMBRES[0]) * ALTO_NOMBRE;
-    let tamano = ALTO_NOMBRE * 0.62;
-    ctx.font = `700 ${tamano}px ${familia}`;
+    let tamano = ALTO_NOMBRE * 0.66;
+    ctx.font = `800 ${tamano}px ${familia}`;
     const ancho = ctx.measureText(nombre).width;
     const maximo = ANCHO_NOMBRE - 16;
     if (ancho > maximo) tamano *= maximo / ancho;
-    ctx.font = `700 ${tamano}px ${familia}`;
+    ctx.font = `800 ${tamano}px ${familia}`;
+    // las letras van engordadas con un contorno: al achicarse en pantalla, un trazo fino se
+    // difumina y el blanco se pierde
+    ctx.lineWidth = Math.max(2, tamano * 0.035);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#ffffff';
+    ctx.strokeText(nombre, x + 8, y + ALTO_NOMBRE / 2);
     ctx.fillText(nombre, x + 8, y + ALTO_NOMBRE / 2);
   });
   const textura = new CanvasTexture(lienzo);
   textura.minFilter = LinearMipmapLinearFilter;
   textura.magFilter = LinearFilter;
-  textura.anisotropy = 8;
+  textura.anisotropy = 16;
   return textura;
 }
 

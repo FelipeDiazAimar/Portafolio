@@ -38,7 +38,10 @@ export class PasadaEscarcha extends Pass {
     const capas = this.camara.layers.mask;
     this.camara.layers.set(CAPA_FONDO);
     renderer.setRenderTarget(this.nitido);
+    // `antes`/`despues`: para dibujar el fondo distinto en la versión que refractan las barras
+    this.antes?.();
     renderer.render(this.escena, this.camara);
+    this.despues?.();
     this.camara.layers.mask = capas;
     renderer.setRenderTarget(destino);
     if (!this.desenfoqueListo) {

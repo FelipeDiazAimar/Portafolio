@@ -10,13 +10,17 @@ import {
   habilidadDeBarra,
   limitarZoom,
   ordenDeBarras,
+  progresoBarra,
   resalteContinuo,
+  retardoArbol,
+  suave,
 } from './xilofono.js';
 import { escribirHelice } from '../components/Habilidades/xilofono/helice.js';
 import { XILOFONO } from '../components/Habilidades/xilofono/config.js';
 import { TECNOLOGIAS } from '../data/tecnologias.js';
 import { CATEGORIAS } from '../data/categoriasTecnologias.js';
 import { aOklch, coloresAurora, hexARgb } from '../components/Habilidades/xilofono/aurora.js';
+import { ARBOL, disposicionArbol } from './arbol.js';
 
 test('xilófono: una barra por habilidad, sin repetir', () => {
   assert.equal(TECNOLOGIAS.length, XILOFONO.cantidad);
@@ -147,4 +151,68 @@ test('aurora: colores a OKLCH, siempre 5 lugares y al menos 2 colores', () => {
   assert.equal(azul.cantidad, 3);
   assert.deepEqual(azul.colores[4], azul.colores[2]);
   assert.equal(coloresAurora(['#0057ff']).cantidad, 2);
+});
+
+const ORDEN = ordenDeBarras(CATEGORIAS, TECNOLOGIAS);
+const DISPOSICION = disposicionArbol(CATEGORIAS, ORDEN, TECNOLOGIAS);
+
+test('árbol: cada barra tiene su lugar, sin encimarse', () => {
+  const { nodos } = DISPOSICION;
+  assert.equal(nodos.length, TECNOLOGIAS.length);
+  assert.ok(nodos.every(Boolean));
+  assert.equal(new Set(nodos.map((n) => n.tecnologia)).size, TECNOLOGIAS.length);
+  let minimo = Infinity;
+  for (let i = 0; i < nodos.length; i += 1) {
+    for (let j = i + 1; j < nodos.length; j += 1) {
+      minimo = Math.min(minimo, Math.hypot(nodos[i].x - nodos[j].x, nodos[i].z - nodos[j].z));
+    }
+  }
+  // con menos de un diámetro entre centros, las esferas se pisarían
+  assert.ok(minimo >= 2 * ARBOL.radioEsfera, `esferas demasiado juntas: ${minimo.toFixed(3)}`);
+});
+
+test('árbol: cada categoría tiene su hub y sus ramas salen de él', () => {
+  const { hubs, nodos, aristas, rutas, recorrido } = DISPOSICION;
+  assert.equal(hubs.length, CATEGORIAS.length);
+  hubs.forEach((hub, k) => {
+    assert.equal(hub.barras.length, CATEGORIAS[k].tecnologias.length);
+    assert.ok(Math.abs(Math.hypot(hub.x, hub.z) - ARBOL.radioHub[k % ARBOL.radioHub.length]) < 1e-9);
+  });
+  nodos.forEach((n) => {
+    // el nivel es el anillo: a mayor nivel, más lejos del centro
+    assert.ok(Math.abs(Math.hypot(n.x, n.z) - ARBOL.anillos[n.nivel]) < 1e-9);
+    // la ruta empieza en el núcleo y termina en este nodo
+    const ruta = rutas[n.barra].map((i) => aristas[i]);
+    assert.deepEqual(ruta[0].de, [0, 0, 0]);
+    assert.equal(ruta[ruta.length - 1].barra, n.barra);
+    assert.equal(ruta.length, n.nivel + 2);
+  });
+  assert.deepEqual([...recorrido].sort((a, b) => a - b), nodos.map((n) => n.barra));
+});
+
+test('árbol: una arista por hub y una por barra', () => {
+  const { aristas, hubs } = DISPOSICION;
+  assert.equal(aristas.length, hubs.length + TECNOLOGIAS.length);
+});
+
+test('árbol: una tecnología sin categoría cae en "Otras"', () => {
+  const tecnologias = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  const disp = disposicionArbol([{ id: 'x', nombre: 'X', tecnologias: ['a'] }], [0, 1, 2], tecnologias);
+  assert.equal(disp.hubs.length, 2);
+  assert.equal(disp.hubs[1].id, 'otras');
+  assert.equal(disp.hubs[1].barras.length, 2);
+});
+
+test('transición: curva suave y progreso por barra que siempre llega a 1', () => {
+  assert.equal(suave(-1), 0);
+  assert.equal(suave(2), 1);
+  assert.equal(suave(0.5), 0.5);
+  for (let barra = 0; barra < 64; barra += 1) {
+    for (let nivel = 0; nivel < 3; nivel += 1) {
+      const retardo = retardoArbol(barra, nivel);
+      assert.ok(retardo >= 0 && retardo <= 0.5, `retardo fuera de rango: ${retardo}`);
+      assert.equal(progresoBarra(0, retardo), 0);
+      assert.equal(progresoBarra(1, retardo), 1);
+    }
+  }
 });

@@ -120,3 +120,23 @@ export function ordenDeBarras(categorias, tecnologias) {
 export function limitarZoom(valor, minimo = 0.4, maximo = 12) {
   return Math.min(maximo, Math.max(minimo, valor));
 }
+
+// Curva suave 0..1 (empieza y termina despacio).
+export function suave(t) {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+}
+
+// Progreso propio de cada barra en la transición hélice ↔ árbol: arranca cuando el progreso
+// general llega a su `retardo` y tarda `ventana` en llegar. Con retardos de 0 a 0,5 y ventana
+// de 0,5, todas llegan a 1 justo cuando el progreso general llega a 1.
+export function progresoBarra(progreso, retardo, ventana = 0.5) {
+  return suave((progreso - retardo) / ventana);
+}
+
+// Retardo escalonado: las barras de los anillos de adentro salen primero, y dentro de cada
+// anillo un poco desparejas para que el vuelo se vea orgánico (siempre en 0..0,48).
+export function retardoArbol(barra, nivel) {
+  const azar = (barra * 0.6180339887) % 1;
+  return nivel * 0.14 + azar * 0.2;
+}

@@ -1,0 +1,132 @@
+/* Dock de categorías con lupa. */
+.dock {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+  width: fit-content;
+  height: 84px;
+}
+
+.item {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05) 60%);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.item:hover,
+.item:focus-visible {
+  border-color: rgba(168, 232, 255, 0.9);
+  outline: none;
+}
+
+.item[aria-pressed='true'] {
+  border-color: #a8e8ff;
+  background: radial-gradient(circle at 30% 25%, #3da2ff, #1a00ff 75%);
+  box-shadow:
+    0 0 24px rgba(26, 60, 255, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* el elegido respira */
+.brillo {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(168, 232, 255, 0.7);
+  animation: respirar 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes respirar {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.icono {
+  width: 52%;
+  height: 52%;
+}
+
+.texto {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+/* cartel que aparece arriba del ítem */
+.tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  display: grid;
+  gap: 1px;
+  translate: -50% 0;
+  padding: 0.35rem 0.7rem;
+  border-radius: 12px;
+  border: 1px solid rgba(143, 200, 255, 0.35);
+  background: rgba(6, 10, 30, 0.92);
+  color: #fff;
+  font-size: 0.7rem;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tip strong {
+  font-size: 0.78rem;
+}
+
+.tip span {
+  color: #8fc8ff;
+  font-size: 0.64rem;
+}
+
+/* tema claro: todos los íconos en el mismo azul; el elegido lo marca un aro, no el color */
+:global([data-theme='light']) .item {
+  border-color: rgba(10, 60, 200, 0.28);
+  background: radial-gradient(circle at 30% 25%, #fff, rgba(200, 215, 255, 0.6) 70%);
+  color: #1a3fa8;
+}
+
+:global([data-theme='light']) .item[aria-pressed='true'] {
+  border-color: #1a00ff;
+  background: radial-gradient(circle at 30% 25%, #fff, rgba(168, 190, 255, 0.85) 75%);
+  color: #1a3fa8;
+  box-shadow:
+    0 0 0 2px rgba(26, 0, 255, 0.55),
+    0 0 20px rgba(26, 60, 255, 0.45);
+}
+
+:global([data-theme='light']) .brillo {
+  border-color: rgba(26, 0, 255, 0.6);
+}
+
+@media (max-width: 640px) {
+  .dock {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    height: 70px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brillo {
+    animation: none;
+  }
+}

@@ -5,8 +5,11 @@ import { useReducedMotion } from 'framer-motion';
 import { TECNOLOGIAS } from '@/data/tecnologias.js';
 import { CATEGORIAS } from '@/data/categoriasTecnologias.js';
 import { ordenDeBarras } from '@/lib/xilofono.js';
+import PanelHabilidades from './PanelHabilidades.jsx';
+import DockCategorias from './DockCategorias.jsx';
 import useTema from '@/hooks/useTema.js';
 import useEmbudo from '@/hooks/useEmbudo.js';
+import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
 import estilos from './Habilidades.module.css';
@@ -14,7 +17,8 @@ import estilos from './Habilidades.module.css';
 // Habilidades: un xilófono de vidrio con una barra por tecnología (adaptado de
 // https://github.com/Sujenphea/xylophone, MIT). La cinta de barras avanza sola y con el scroll de
 // la página; cada barra se enciende (con su nombre) al pasar por el foco, y pasar el mouse por
-// una barra la golpea, la resalta y frena la cinta. Los chips filtran por categoría.
+// una barra la golpea, la resalta y frena la cinta. A la izquierda: buscador, explosión de color
+// y chips por categoría (PanelHabilidades).
 // Sin WebGL queda la lista de tecnologías como píldoras (y los chips también la filtran).
 
 // Índice de cada tecnología en el catálogo (= su celda en los atlas de logos y nombres).
@@ -23,12 +27,15 @@ const INDICE = new Map(TECNOLOGIAS.map((t, i) => [t.id, i]));
 const ORDEN = ordenDeBarras(CATEGORIAS, TECNOLOGIAS);
 export default function Habilidades() {
   const refSeccion = useRef(null);
+  const refEscenario = useRef(null);
+  useUnionSeccion(refEscenario);
   const refLienzo = useRef(null);
   const refLogos = useRef(null);
   const refMotor = useRef(null);
   const [conWebGL, setConWebGL] = useState(true);
   const [listo, setListo] = useState(false);
   const [categoria, setCategoria] = useState(null);
+  const [modo, setModo] = useState('helice'); // 'helice' | 'arbol'
   const { tema } = useTema();
   const reducido = useReducedMotion();
   const refTema = useRef(tema);
@@ -59,8 +66,16 @@ export default function Habilidades() {
           atlas: atlas.textura,
           nombres: crearAtlasNombres(TECNOLOGIAS.map((t) => t.nombre)),
           orden: ORDEN,
+          categorias: CATEGORIAS,
+          tecnologias: TECNOLOGIAS,
+          // tocar una categoría del árbol la elige (o la quita si ya estaba)
+          alCategoria: (id) => setCategoria(id),
           tema: refTema.current,
           reducido,
+          // cursor de agarre sólo sobre las barras (el modelo se agarra desde ahí)
+          alCursor: (tipo) => {
+            lienzo.style.cursor = tipo;
+          },
         });
       } catch (error) {
         console.error('[Habilidades] sin xilófono', error);
@@ -107,9 +122,17 @@ export default function Habilidades() {
   }, [tema]);
 
   const categoriaActual = CATEGORIAS.find((c) => c.id === categoria) ?? null;
+  const idsFiltro = categoriaActual ? categoriaActual.tecnologias : null;
   useEffect(() => {
-    refMotor.current?.filtrar(categoriaActual ? categoriaActual.tecnologias.map((id) => INDICE.get(id)) : null);
-  }, [categoriaActual, listo]);
+    const motor = refMotor.current;
+    if (!motor) return;
+    const indices = idsFiltro ? idsFiltro.map((id) => INDICE.get(id)).filter((i) => i !== undefined) : null;
+    motor.filtrar(indices, categoriaActual?.id ?? null);
+  }, [categoriaActual, idsFiltro, listo]);
+
+  useEffect(() => {
+    refMotor.current?.usarArbol(modo === 'arbol');
+  }, [modo, listo]);
 
   function posicion(evento) {
     const caja = evento.currentTarget.getBoundingClientRect();
@@ -119,7 +142,7 @@ export default function Habilidades() {
   function alBajar(evento) {
     const [x, y] = posicion(evento);
     refMotor.current?.moverPuntero(x, y);
-    refMotor.current?.bajarPuntero(evento.pointerId, x, y);
+    if (refMotor.current?.bajarPuntero(evento.pointerId, x, y)) evento.currentTarget.style.cursor = refMotor.current.arrastre?.modo === 'mover' ? 'move' : 'grabbing';
   }
 
   function alMover(evento) {
@@ -138,7 +161,12 @@ export default function Habilidades() {
   }
 
   function alSubir(evento) {
-    refMotor.current?.subirPuntero(evento.pointerId);
+    const [x, y] = posicion(evento);
+    const motor = refMotor.current;
+    if (!motor) return;
+    // un toque (sin arrastrar) sobre una barra la hace explotar en color
+    motor.subirPuntero(evento.pointerId, evento.type === 'pointercancel' ? undefined : x, y);
+    if (evento.currentTarget.style.cursor === 'grabbing') evento.currentTarget.style.cursor = motor.cursorActual;
   }
 
   function alSalir(evento) {
@@ -148,32 +176,25 @@ export default function Habilidades() {
   return (
     <section id="habilidades" ref={refSeccion} className={estilos.seccion} data-webgl={conWebGL} data-listo={listo}>
       <header className={estilos.encabezado}>
-        <h2 className={estilos.titulo}>Habilidades</h2>
-        <p className={estilos.bajada}>
-          {TECNOLOGIAS.length} tecnologías con las que construí mis proyectos.{' '}
-          <span className={estilos.conMouse}>Pasá el mouse por las barras.</span>
-          <span className={estilos.tactil}>Tocá las barras.</span>
-        </p>
-        <div className={estilos.chips} role="group" aria-label="Filtrar por categoría">
-          <button type="button" className={estilos.chip} aria-pressed={categoria === null} onClick={() => setCategoria(null)}>
-            Todas <span className={estilos.cuenta}>{TECNOLOGIAS.length}</span>
-          </button>
-          {CATEGORIAS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={estilos.chip}
-              aria-pressed={categoria === c.id}
-              onClick={() => setCategoria((actual) => (actual === c.id ? null : c.id))}
-            >
-              {c.nombre} <span className={estilos.cuenta}>{c.tecnologias.length}</span>
-            </button>
-          ))}
-        </div>
+        <PanelHabilidades
+          alBuscar={(id) => refMotor.current?.enfocar(INDICE.get(id))}
+          alLimpiar={() => refMotor.current?.limpiarBusqueda()}
+          modo={modo}
+          alModo={setModo}
+        />
       </header>
 
+      {/* Dock de categorías: pegado abajo a la izquierda de la sección, sin contenedor. */}
+      <div className={estilos.dock}>
+        <DockCategorias
+          categoria={categoria}
+          alCategoria={setCategoria}
+          alPrevia={(id) => refMotor.current?.previsualizar(id)}
+        />
+      </div>
+
       {conWebGL && (
-        <div className={estilos.escenario}>
+        <div ref={refEscenario} className={estilos.escenario}>
           <canvas
             ref={refLienzo}
             className={estilos.lienzo}
@@ -208,7 +229,7 @@ export default function Habilidades() {
           de pantalla, y sus logos (los mismos de Proyectos) alimentan el atlas de las barras. */}
       <ul ref={refLogos} className={estilos.lista}>
         {TECNOLOGIAS.map((t) => (
-          <li key={t.id} className={estilos.item} data-fuera={Boolean(categoriaActual && !categoriaActual.tecnologias.includes(t.id))}>
+          <li key={t.id} className={estilos.item} data-fuera={Boolean(idsFiltro && !idsFiltro.includes(t.id))}>
             <span data-logo className={estilos.logo}>
               <IconoTecnologia id={t.id} />
             </span>

@@ -125,6 +125,31 @@ export class Fluido {
     p.velocidad = Math.min(1, p.velocidad * 0.9);
   }
 
+  // Explosión: gotas en todas las direcciones desde `centro` (0..1 desde abajo a la izquierda),
+  // como si el puntero saliera disparado para todos lados. Tiñe las barras alrededor.
+  estallar(centro, tiempo, fuerza = 1.6, rayos = 18) {
+    const g = this.materiales.gota.uniforms;
+    const aspecto = this.config.aspecto || 1;
+    const autoClear = this.renderer.autoClear;
+    this.renderer.autoClear = false;
+    for (let k = 0; k < rayos; k += 1) {
+      const angulo = (k / rayos) * Math.PI * 2 + Math.random() * 0.3;
+      const dx = Math.cos(angulo);
+      const dy = Math.sin(angulo);
+      g.u_tTarget.value = this.fbos.velocidad.leer.texture;
+      g.u_aspectRatio.value = aspecto;
+      g.u_prevPoint.value.copy(centro);
+      g.u_splatPosition.value.set(centro.x + (dx * 0.14) / aspecto, centro.y + dy * 0.14);
+      g.u_splatColor.value.set(dx * aspecto, dy, 0).multiplyScalar(fuerza * 6);
+      g.u_splatRadius.value = 1.4;
+      this.ayuda.dibujar(this.materiales.gota, this.fbos.velocidad.escribir);
+      this.fbos.velocidad.intercambiar();
+    }
+    this.renderer.autoClear = autoClear;
+    this.ultimaEntrada = tiempo;
+    this.uniforms.velocity.value = this.fbos.velocidad.leer.texture;
+  }
+
   resolver(posicion, tiempo, dt, aspecto) {
     this.config.aspecto = aspecto;
     const renderer = this.renderer;

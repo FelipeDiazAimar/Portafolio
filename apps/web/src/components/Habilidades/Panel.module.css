@@ -1,0 +1,657 @@
+/* Columna izquierda de Habilidades: título, bajada, buscador, explosión y categorías. */
+@property --giro {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.panel {
+  pointer-events: none;
+}
+
+/* Se vuelve a montar (y a animar) con cada entrada a la sección. */
+.contenido {
+  display: grid;
+  gap: 1rem;
+}
+
+.contenido > * {
+  pointer-events: auto;
+}
+
+.letra {
+  display: inline-block;
+}
+
+.antetitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8fc8ff;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1f6bff;
+  box-shadow: 0 0 0 0 rgba(31, 107, 255, 0.7);
+  animation: latido 2.2s ease-out infinite;
+}
+
+@keyframes latido {
+  0% {
+    box-shadow: 0 0 0 0 rgba(31, 107, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(31, 107, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(31, 107, 255, 0);
+  }
+}
+
+.titulo {
+  margin: -0.4rem 0 0;
+  line-height: 1;
+  color: var(--color-fg);
+  pointer-events: none;
+}
+
+.tituloTrazo {
+  font-family: var(--font-sans);
+  font-size: clamp(2.4rem, 6vw, 4.4rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.bajada {
+  margin: 0;
+  max-width: 27rem;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: rgba(235, 240, 255, 0.82);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.palabra {
+  display: inline-block;
+  white-space: pre;
+}
+
+.pista {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: #8fc8ff;
+}
+
+.conMouse {
+  display: inline;
+}
+
+.tactil {
+  display: none;
+}
+
+@media (hover: none) {
+  .conMouse {
+    display: none;
+  }
+
+  .tactil {
+    display: inline;
+  }
+}
+
+/* --- buscador + explosión --- */
+/* Botón de la estrellita: explosión de color. Brillo que gira y chispas al tocarlo. */
+.explosion {
+  --giro: 0deg;
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  background: conic-gradient(from var(--giro), #1a00ff, #0a5cff, #a8e8ff, #3da2ff, #1a00ff);
+  color: #fff;
+  box-shadow:
+    0 0 24px rgba(10, 92, 255, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  animation: girar 4s linear infinite;
+}
+
+/* con el árbol activo, un aro punteado gira alrededor de la estrellita */
+.explosion[data-activo='true']::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px dashed rgba(168, 232, 255, 0.85);
+  animation: aro 6s linear infinite;
+}
+
+@keyframes aro {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.explosion svg {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+}
+
+/* --- selector de vista: hélice | árbol --- */
+.filaModos {
+  display: flex;
+}
+
+.modos {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  height: 46px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(143, 200, 255, 0.28);
+  background: rgba(8, 14, 40, 0.55);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+}
+
+.modo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(220, 232, 255, 0.78);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+
+.modo[aria-selected='true'] {
+  color: #fff;
+}
+
+.modoFondo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(110deg, #1a00ff, #0a5cff 55%, #3da2ff);
+  box-shadow:
+    0 0 22px rgba(26, 60, 255, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.modoTexto {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.fila {
+  /* encima de los chips: los resultados del buscador se despliegan sobre ellos */
+  position: relative;
+  z-index: 5;
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  max-width: 31rem;
+}
+
+.buscador {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Campo de vidrio con un borde degradado que gira (más rápido al escribir). */
+.campo {
+  --giro: 0deg;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 46px;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  background: rgba(8, 14, 40, 0.55);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  color: #fff;
+  isolation: isolate;
+  animation: girar 6s linear infinite;
+  cursor: text;
+}
+
+.campo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--giro), #1a00ff, #0a5cff, #a8e8ff, #3da2ff, #1a00ff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.75;
+  transition: opacity 0.3s ease;
+}
+
+.campo::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  z-index: -2;
+  border-radius: inherit;
+  background: conic-gradient(from var(--giro), #1a00ff, #0a5cff, #a8e8ff, #3da2ff, #1a00ff);
+  filter: blur(16px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.campo[data-enfocado='true'] {
+  animation-duration: 2.2s;
+}
+
+.campo[data-enfocado='true']::before {
+  opacity: 1;
+}
+
+.campo[data-enfocado='true']::after {
+  opacity: 0.45;
+}
+
+@keyframes girar {
+  to {
+    --giro: 360deg;
+  }
+}
+
+.lupa {
+  flex: none;
+  color: #8fc8ff;
+}
+
+.campo input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.campo input::placeholder {
+  color: rgba(200, 220, 255, 0.55);
+}
+
+.campo input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.borrar {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: rgba(200, 220, 255, 0.7);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.resultados {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border-radius: 18px;
+  border: 1px solid rgba(143, 200, 255, 0.22);
+  background: rgba(6, 10, 30, 0.96);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: 0 20px 50px rgba(0, 10, 60, 0.5);
+  transform-origin: top center;
+}
+
+.resultado {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.resultado[data-activo='true'] {
+  background: linear-gradient(90deg, rgba(26, 0, 255, 0.45), rgba(10, 92, 255, 0.25));
+}
+
+.resultadoIcono {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #a8e8ff;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.resultadoIcono svg {
+  width: 16px;
+  height: 16px;
+}
+
+.resultadoTexto {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.resultadoNombre {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.resultadoMotivo {
+  overflow: hidden;
+  font-size: 0.72rem;
+  color: rgba(200, 220, 255, 0.65);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.resultadoIr {
+  font-size: 0.8rem;
+  color: rgba(200, 220, 255, 0.5);
+  opacity: 0;
+}
+
+.resultado[data-activo='true'] .resultadoIr {
+  opacity: 1;
+}
+
+.sinResultados {
+  padding: 0.6rem;
+  font-size: 0.8rem;
+  color: rgba(200, 220, 255, 0.7);
+}
+
+/* chispas al cambiar de vista: salen del selector */
+.chispas {
+  position: absolute;
+  inset: 50%;
+  pointer-events: none;
+}
+
+.chispa {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a8e8ff;
+  box-shadow: 0 0 10px #a8e8ff;
+}
+
+.chispa[data-tono='1'] {
+  background: #0a5cff;
+  box-shadow: 0 0 10px #0a5cff;
+}
+
+.chispa[data-tono='2'] {
+  background: #fff;
+  box-shadow: 0 0 10px #fff;
+}
+
+/* --- categorías: el elegido lleva un fondo que viaja de chip en chip --- */
+/* cambiador temporal de opciones de filtro */
+.pruebas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  width: fit-content;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.pruebasTitulo {
+  margin-right: 0.2rem;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9fb4ff;
+}
+
+.prueba {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.prueba[aria-pressed='true'] {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+:global([data-theme='light']) .pruebas {
+  border-color: rgba(10, 60, 200, 0.3);
+}
+
+:global([data-theme='light']) .pruebasTitulo {
+  color: #1a3fa8;
+}
+
+:global([data-theme='light']) .prueba {
+  border-color: rgba(10, 60, 200, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-width: 30rem;
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--color-fg);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.chip:hover,
+.chip:focus-visible {
+  border-color: rgba(143, 200, 255, 0.7);
+  outline: none;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: transparent;
+  color: #fff;
+}
+
+.chipFondo {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(110deg, #1a00ff, #0a5cff 55%, #3da2ff);
+  box-shadow:
+    0 0 24px rgba(26, 60, 255, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.chipTexto {
+  position: relative;
+}
+
+.cuenta {
+  margin-left: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+/* --- tema claro --- */
+:global([data-theme='light']) .antetitulo,
+:global([data-theme='light']) .pista,
+:global([data-theme='light']) .lupa {
+  color: #1a3fa8;
+}
+
+:global([data-theme='light']) .bajada {
+  color: #33405f;
+  text-shadow: none;
+}
+
+:global([data-theme='light']) .campo {
+  background: rgba(255, 255, 255, 0.7);
+  color: #10204a;
+}
+
+:global([data-theme='light']) .campo input::placeholder {
+  color: rgba(16, 32, 74, 0.5);
+}
+
+:global([data-theme='light']) .resultados {
+  border-color: rgba(10, 60, 200, 0.18);
+  background: rgba(255, 255, 255, 0.97);
+}
+
+:global([data-theme='light']) .resultado {
+  color: #10204a;
+}
+
+:global([data-theme='light']) .resultado[data-activo='true'] {
+  background: linear-gradient(90deg, rgba(26, 0, 255, 0.14), rgba(10, 92, 255, 0.06));
+}
+
+:global([data-theme='light']) .resultadoMotivo,
+:global([data-theme='light']) .sinResultados {
+  color: rgba(16, 32, 74, 0.6);
+}
+
+:global([data-theme='light']) .resultadoIcono {
+  background: rgba(10, 60, 200, 0.08);
+  color: #1a3fa8;
+}
+
+:global([data-theme='light']) .modos {
+  border-color: rgba(10, 60, 200, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:global([data-theme='light']) .modo {
+  color: #33405f;
+}
+
+:global([data-theme='light']) .modo[aria-selected='true'] {
+  color: #fff;
+}
+
+:global([data-theme='light']) .chip {
+  border-color: rgba(10, 60, 200, 0.18);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+:global([data-theme='light']) .chip[aria-pressed='true'] {
+  color: #fff;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .bajada {
+    color: #33405f;
+    text-shadow: none;
+  }
+
+  :global(:root:not([data-theme='dark'])) .campo {
+    background: rgba(255, 255, 255, 0.7);
+    color: #10204a;
+  }
+
+  :global(:root:not([data-theme='dark'])) .chip {
+    border-color: rgba(10, 60, 200, 0.18);
+    background: rgba(255, 255, 255, 0.6);
+  }
+}
+
+@media (max-width: 640px) {
+  .fila {
+    flex-wrap: wrap;
+  }
+
+  .chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-right: -1rem;
+    padding-right: 1rem;
+  }
+
+  .chip {
+    flex: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campo,
+  .explosion,
+  .punto {
+    animation: none;
+  }
+}

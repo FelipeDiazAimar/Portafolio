@@ -35,9 +35,21 @@ export const XILOFONO = {
   avanceSolo: 0.32,
 };
 
-// Fondo de la escena: 'aurora' (cortinas de luz, adaptado de <Aurora /> de React Bits) o
-// 'manchas' (el anterior: degradé con manchas de luz). Para volver, cambiar sólo esta línea.
-export const FONDO = 'aurora';
+// Fondo de la escena: 'nebulosa' (elegido), 'aurora', 'malla', 'seda', 'rayos', 'electrico' o
+// 'manchas' (el primero). Para cambiarlo, sólo esta línea.
+export const FONDO = 'nebulosa';
+
+// Colores elegidos. Fondo: paleta "hielo" (los 4 colores de la nebulosa / aurora / etc.).
+export const COLORES_FONDO = { colores: ['#0050ff', '#3da2ff', '#a8e8ff', '#0028d6'], resalte: '#0a6cff' };
+
+// Barras: mezcla de "medianoche" (índigo profundo) y "eléctrico" (azul puro intenso).
+// `logo`: [tema oscuro, tema claro].
+export const BARRAS = {
+  tinte: ['#1a00ff', '#0047ff', '#0a5cff', '#0019ff'],
+  resalte: '#1f3dff',
+  logo: ['#d6ecff', '#ffffff'],
+  irid: ['#0047ff', '#8fc8ff'],
+};
 
 export const AURORA = {
   amplitud: 1, // alto de las ondas del borde
@@ -85,13 +97,13 @@ export const PALETAS = {
     especular: 0.6,
     bordeLuz: 0.8,
     aurora: ['#0a2cff', '#0057ff', '#2f7bff', '#0038ff'],
-    brilloAurora: 0.62, // en oscuro, más tenue: el texto blanco y gris tiene que leerse encima
+    brilloAurora: 0.8, // en oscuro, algo más tenue: el texto tiene que leerse encima
   },
   claro: {
-    fondoA: '#f4f7ff',
-    fondoB: '#d6e2ff',
+    fondoA: '#eef3ff',
+    fondoB: '#c4d5ff',
     manchas: '#3d7bff',
-    logo: '#0047ff',
+    logo: '#ffffff',
     resalte: '#0050ff',
     tinte: ['#0038ff', '#0057ff', '#1f7bff', '#00a6ff', '#0057ff'],
     iridA: '#1f6bff',
