@@ -6,9 +6,24 @@ varying vec3 vNormal;
 varying vec3 vVista;
 varying float vAltura;
 varying float vProfundidad;
+uniform vec2 u_giro;     // giro de la cabeza: (guiñada, cabeceo) en radianes; (0, 0) = quieta
+uniform float u_cuello;  // altura (coordenadas del modelo) donde empieza la cabeza
 void main() {
   vec4 p = vec4(position, 1.0);
   vec3 n = normal;
+  // sólo la cabeza gira: peso 0 bajo el cuello y 1 desde unos centímetros más arriba (el cuello se
+  // tuerce suave). Se gira alrededor del cuello, primero de costado y después hacia arriba o abajo.
+  float w = smoothstep(u_cuello - 0.05, u_cuello + 0.05, position.y);
+  if (w > 0.0 && (u_giro.x != 0.0 || u_giro.y != 0.0)) {
+    float cy = cos(u_giro.x * w), sy = sin(u_giro.x * w);
+    float cx = cos(u_giro.y * w), sx = sin(u_giro.y * w);
+    vec3 q = vec3(position.x, position.y - u_cuello, position.z);
+    q = vec3(q.x * cy + q.z * sy, q.y, -q.x * sy + q.z * cy);
+    q = vec3(q.x, q.y * cx - q.z * sx, q.y * sx + q.z * cx);
+    p = vec4(q.x, q.y + u_cuello, q.z, 1.0);
+    n = vec3(n.x * cy + n.z * sy, n.y, -n.x * sy + n.z * cy);
+    n = vec3(n.x, n.y * cx - n.z * sx, n.y * sx + n.z * cx);
+  }
   #ifdef USE_INSTANCING
     p = instanceMatrix * p;
     n = mat3(instanceMatrix) * n;

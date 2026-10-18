@@ -58,6 +58,9 @@ export const RETRATO = {
   // dónde está la cara en la foto (`public/retrato.png`, 1792×2390): 0..1 del marco, y desde arriba
   calibracion: { centroX: 0.515, centroY: 0.435, alto: 0.42 },
   girarY: 0, // radianes, si el modelo no queda de frente
+  // la cabeza sigue al puntero: altura del cuello (modelo) y límites del giro en radianes
+  cuello: 0.66,
+  giroCabeza: { yaw: 0.65, cabeceo: 0.4, fuerza: 1.6 },
   dispersion: 0.0015,
   retorno: 0,
   pincel: 0.22, // fracción del ancho del marco

@@ -161,6 +161,8 @@ export class EscenaRayosX {
     this.cfg = this.retrato ? RETRATO : FONDO;
     this.reducido = Boolean(opciones.reducido);
     this.tiempo = 0;
+    // compartido por el cuerpo y el esqueleto: la cabeza gira igual en los dos
+    this.giroCabeza = { value: new Vector2(0, 0) };
     this.corriendo = false;
     this.raf = 0;
     this.tamano = { ancho: 0, alto: 0 };
@@ -255,6 +257,8 @@ export class EscenaRayosX {
           u_alturaBase: { value: MATERIAL.alturaBase },
           u_alturaMax: { value: alturaMax },
           u_niebla: { value: new Vector2(...this.cfg.niebla) },
+          u_giro: this.giroCabeza,
+          u_cuello: { value: RETRATO.cuello },
         },
       });
     this.materialCuerpo = material(MATERIAL.alturaCuerpo);
@@ -522,6 +526,21 @@ export class EscenaRayosX {
       this.camara.lookAt(m);
       if (this.entrada) this.avanzarEntrada(dt);
       else this.uComposicion.u_revelarTodo.value = amortiguar(this.uComposicion.u_revelarTodo.value, 0, 1.6, dt);
+    }
+
+    // retrato: la cabeza mira hacia el puntero (suave); sin puntero adentro vuelve a mirar de frente
+    if (this.retrato) {
+      const c = RETRATO.calibracion;
+      const p = this.puntero;
+      const aspecto = this.tamano.ancho / Math.max(1, this.tamano.alto);
+      const dx = p.adentro ? (p.x - c.centroX) * aspecto : 0;
+      const dy = p.adentro ? p.y - c.centroY : 0;
+      const g = RETRATO.giroCabeza;
+      const yaw = this.reducido ? 0 : Math.max(-g.yaw, Math.min(g.yaw, dx * g.fuerza));
+      const cab = this.reducido ? 0 : Math.max(-g.cabeceo, Math.min(g.cabeceo, dy * g.fuerza * 0.8));
+      const v = this.giroCabeza.value;
+      v.set(amortiguar(v.x, yaw, 1 / 0.18, dt), amortiguar(v.y, cab, 1 / 0.18, dt));
+      if (Math.abs(v.x) < 1e-4 && Math.abs(v.y) < 1e-4) v.set(0, 0);
     }
 
     // máscara: trazo del mouse → fluido (ping-pong)
