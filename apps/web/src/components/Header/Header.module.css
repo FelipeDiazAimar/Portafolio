@@ -6,7 +6,8 @@
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
-  padding: 1rem 2rem;
+  /* env(): en el iPhone con la página bajo el notch; en el resto vale 0 y no cambia nada */
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 2rem 1rem;
   /* El header ocupa todo el ancho pero sólo sus piezas reciben el mouse: lo que hay debajo
      (por ejemplo la cruz de Proyectos) tiene que poder tocarse. */
   pointer-events: none;

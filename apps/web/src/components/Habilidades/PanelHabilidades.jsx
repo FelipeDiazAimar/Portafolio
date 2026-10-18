@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AnimatePresence, animate, motion, useInView, useReducedMotion } from 'framer-motion';
 import { TECNOLOGIAS } from '@/data/tecnologias.js';
 import TextoTrazo from '@/components/TextoTrazo/TextoTrazo.jsx';
@@ -98,6 +98,15 @@ function Chispas({ disparo }) {
 // buscador inteligente y la estrellita (alterna entre la hélice y el árbol de habilidades). Las animaciones de entrada se repiten cada vez que se entra a la sección.
 export default function PanelHabilidades({ alBuscar, alLimpiar, modo, alModo }) {
   const ref = useRef(null);
+  // celular: título plano (ver más abajo); se decide antes de pintar para que no parpadee el otro
+  const [movil, setMovil] = useState(false);
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const leer = () => setMovil(mq.matches);
+    leer();
+    mq.addEventListener('change', leer);
+    return () => mq.removeEventListener('change', leer);
+  }, []);
   const dentro = useInView(ref, { amount: 0.3 });
   const reducido = useReducedMotion();
   const [vuelta, setVuelta] = useState(0);
@@ -132,7 +141,9 @@ export default function PanelHabilidades({ alBuscar, alLimpiar, modo, alModo }) 
         </p>
 
         <h2 className={estilos.titulo}>
-          <TextoTrazo texto="Habilidades" claseTexto={estilos.tituloTrazo} duracion={2.2} grosor={2.2} alVer />
+          {/* Celular: texto plano. El trazo animado en SVG con interletrado negativo se amontonaba y
+              vibraba en Safari del iPhone. */}
+          {movil ? <span className={estilos.tituloPlano}>Habilidades</span> : <TextoTrazo texto="Habilidades" claseTexto={estilos.tituloTrazo} duracion={2.2} grosor={2.2} alVer />}
         </h2>
 
         <p className={estilos.bajada}>

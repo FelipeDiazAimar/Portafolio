@@ -40,6 +40,20 @@
   transition: clip-path 0s;
 }
 
+/* Celular: sin extensión ni máscara. Una máscara sobre toda la marquesina 3D obliga al navegador a
+   pintarla entera en una superficie aparte, y el iPhone se quedaba sin memoria ("ocurrió un problema
+   varias veces"). Los bordes se funden con el velo, que es barato. */
+@media (max-width: 768px) {
+  .fondo,
+  .panel[data-activo='true'] .fondo {
+    inset: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+    clip-path: none;
+    transition: none;
+  }
+}
+
 .marquesina {
   display: block;
   width: 100%;

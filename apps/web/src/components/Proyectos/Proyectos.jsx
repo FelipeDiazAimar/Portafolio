@@ -35,7 +35,8 @@ export function configurarMarquesina(ancho, alto, total) {
   const k = Math.max(ancho / 1917, alto / 910) / escala;
   const chico = ancho < 768;
   // Hasta 13 columnas: más que proyectos obligaría a repetir uno en la misma fila.
-  const columnas = chico ? 6 : limitar(Math.ceil(8 * k), 6, 13);
+  // Celular: menos tarjetas (cada una es una capa 3D; el iPhone se queda sin memoria con 54)
+  const columnas = chico ? 5 : limitar(Math.ceil(8 * k), 6, 13);
   const lado = chico ? 3 : limitar(Math.ceil(5 * k), 4, 9);
   const filas = Math.ceil(total / columnas) + 2 * lado;
   const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;

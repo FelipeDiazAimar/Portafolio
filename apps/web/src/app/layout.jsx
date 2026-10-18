@@ -13,6 +13,14 @@ import '../styles/globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const serif = Source_Serif_4({ subsets: ['latin'], variable: '--font-serif', display: 'swap' });
 
+// viewport-fit=cover: la página se extiende bajo el notch y las barras del navegador (sin franjas
+// negras arriba y abajo en el iPhone); los bordes se cuidan con env(safe-area-inset-*) donde hace falta.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
+
 export const metadata = {
   title: 'Felipe Diaz Aimar — Portfolio',
   description: 'Portfolio profesional de desarrollo fullstack.',
@@ -24,6 +32,23 @@ const THEME_INIT_SCRIPT = `(function() {
     if (stored === 'light' || stored === 'dark') {
       document.documentElement.setAttribute('data-theme', stored);
     }
+  } catch (e) {}
+  // Color de la barra de estado / del navegador = fondo de la página, y sigue al cambiar de tema.
+  try {
+    var el = document.documentElement;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      document.head.appendChild(meta);
+    }
+    var aplicar = function() {
+      var t = el.getAttribute('data-theme');
+      if (t !== 'light' && t !== 'dark') t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      meta.setAttribute('content', t === 'light' ? '#f5f6f8' : '#0b0d12');
+    };
+    aplicar();
+    new MutationObserver(aplicar).observe(el, { attributes: true, attributeFilter: ['data-theme'] });
   } catch (e) {}
 })();`;
 
