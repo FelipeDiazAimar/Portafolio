@@ -36,12 +36,9 @@ export function configurarMarquesina(ancho, alto, total) {
   const chico = ancho < 768;
   // Hasta 13 columnas: más que proyectos obligaría a repetir uno en la misma fila.
   // Celular: menos tarjetas (cada una es una capa 3D; el iPhone se queda sin memoria con 54)
-  if (chico) {
-    // Celular: grilla plana de 2 columnas × 12 = 24 tarjetas (llena la pantalla; sin 3D)
-    return { columnas: 2, anchoCaja: 0, filas: 12, plano: true, posicion: null };
-  }
-  const columnas = limitar(Math.ceil(8 * k), 6, 13);
-  const lado = chico ? 3 : limitar(Math.ceil(5 * k), 4, 9);
+  // Celular: la misma grilla diagonal, más angosta y con menos filas (unas 24 tarjetas por tanda)
+  const columnas = chico ? 5 : limitar(Math.ceil(8 * k), 6, 13);
+  const lado = chico ? 1 : limitar(Math.ceil(5 * k), 4, 9);
   const filas = Math.ceil(total / columnas) + 2 * lado;
   const anchoCaja = columnas * ANCHO_TARJETA + (columnas - 1) * SEPARACION_TARJETAS;
   const altoFilas = filas * (ALTO_TARJETA + SEPARACION_TARJETAS);
@@ -108,7 +105,19 @@ export default function Proyectos() {
   // escala de la marquesina (la inclinación la pone la vista).
   const medir = useCallback((slug) => {
     const panel = refPanel.current;
-    const tarjeta = panel?.querySelector(`[data-clave="${slug}"]`);
+    // Con el recorrido infinito hay dos tandas: se usa la tarjeta (original o copia) más cercana al centro
+    // del panel, que es la que se está viendo.
+    const base0 = panel?.getBoundingClientRect();
+    let tarjeta = null;
+    let mejor = Infinity;
+    panel?.querySelectorAll(`[data-clave="${slug}"], [data-copia="${slug}"]`).forEach((n) => {
+      const r = n.getBoundingClientRect();
+      const d = Math.hypot(r.left + r.width / 2 - (base0.left + base0.width / 2), r.top + r.height / 2 - (base0.top + base0.height / 2));
+      if (d < mejor) {
+        mejor = d;
+        tarjeta = n;
+      }
+    });
     if (!panel || !tarjeta) return null;
     const contenedor = tarjeta.closest('[data-escala-marquee]');
     const escala = contenedor ? contenedor.getBoundingClientRect().width / contenedor.offsetWidth : 1;
@@ -278,7 +287,6 @@ export default function Proyectos() {
             alApuntar={elegir}
             claveActiva={ocultas}
             posicionGrilla={marquesina.posicion}
-            plano={marquesina.plano}
             filas={marquesina.filas}
             columnas={marquesina.columnas}
             anchoCaja={marquesina.anchoCaja}
@@ -333,7 +341,6 @@ export default function Proyectos() {
                 alCerrar={cerrar}
                 indice={proyectos.findIndex((p) => p.slug === proyecto.slug)}
                 total={proyectos.length}
-                plano={Boolean(marquesina.plano)}
               />
             ) : null}
           </AnimatePresence>

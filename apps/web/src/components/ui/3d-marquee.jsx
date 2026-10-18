@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 // Adaptado: cada imagen puede ser un string, { src, clave, titulo } o { contenido,
@@ -24,8 +25,6 @@ export const ThreeDMarquee = ({
   // Columnas de la grilla y ancho de su caja (px): más columnas cubren más a lo ancho.
   columnas = 4,
   anchoCaja = 1720,
-  // Celular: grilla plana y liviana (ver más abajo)
-  plano = false,
 }) => {
   const interactiva = typeof alApuntar === "function";
   const copia = (item) => (item && typeof item === "object" ? { ...item, esCopia: true } : item);
@@ -72,6 +71,7 @@ export const ThreeDMarquee = ({
         return (
           <div
             className="group relative w-full"
+            data-mq-item
             key={imageIndex + image + (esCopia ? "copia" : "")}
             data-clave={interactiva && !esCopia ? clave : undefined}
             data-copia={interactiva && esCopia ? clave : undefined}
@@ -129,38 +129,170 @@ export const ThreeDMarquee = ({
           </div>
         );
   };
-  // Modo plano (celular): sin 3D, sin inclinación y sin animación por JS. Dos columnas de tarjetas
-  // derechas que suben y bajan lento con una animación CSS (la hace el compositor, sin saltos). El 3D
-  // queda para el viaje de la tarjeta elegida (VistaProyecto).
-  if (plano) {
-    return (
-      <div className={cn("relative mx-auto block overflow-hidden", className)}>
-        <style>{`@keyframes mqPlanoA{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,-34%,0)}}@keyframes mqPlanoB{from{transform:translate3d(0,-34%,0)}to{transform:translate3d(0,0,0)}}@media (prefers-reduced-motion: reduce){[data-mq-plano]{animation:none!important}}`}</style>
-        <div data-escala-marquee className="flex size-full items-start justify-center gap-3 px-3">
-          {chunks.map((subarray, colIndex) => (
-            <div
-              key={colIndex + "plano"}
-              data-mq-plano
-              className="flex min-w-0 flex-1 flex-col gap-3"
-              style={{ animation: `${colIndex % 2 === 0 ? "mqPlanoA" : "mqPlanoB"} ${colIndex % 2 === 0 ? 34 : 42}s ease-in-out infinite alternate`, willChange: "transform" }}
-            >
-              {subarray.map(renderItem)}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // ---- Recorrido infinito -------------------------------------------------------------------
+  // Cada columna se puede agarrar y arrastrar sin fin (con el mouse o el dedo), con inercia, y por sí
+  // sola deriva despacio. Es infinito porque cada columna lleva su contenido dos veces seguidas: la
+  // posición se reduce al largo de UNA tanda, y al llegar al final es idéntica. La posición se escribe
+  // directo en el transform (sin estado de React: cambia en cada cuadro).
+  const refRaiz = useRef(null);
+  const refEscala = useRef(null);
+  const refLineas = useRef([]);
+  const lineas = useRef([]);
+  useEffect(() => {
+    const els = refLineas.current.filter(Boolean);
+    if (!els.length) return undefined;
+    const reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const info = els.map((el, i) => ({
+      el,
+      pos: 0,
+      vel: 0,
+      periodo: 0,
+      // deriva lenta (px/s locales), en sentidos alternados
+      deriva: reducido ? 0 : (i % 2 === 0 ? 1 : -1) * 16,
+      pres: null,
+      sinClic: false,
+    }));
+    lineas.current = info;
+    const medirPeriodos = () => {
+      info.forEach((l, i) => {
+        const items = l.el.querySelectorAll(":scope > [data-mq-item]");
+        const n = chunks[i]?.length ?? 0;
+        if (items.length > n && n > 0) {
+          const p = items[n].offsetTop - items[0].offsetTop;
+          if (p > 0) l.periodo = p;
+        }
+      });
+    };
+    medirPeriodos();
+    const observador = new ResizeObserver(medirPeriodos);
+    observador.observe(refRaiz.current);
+    let activo = true;
+    const vigia = new IntersectionObserver(([e]) => {
+      activo = e.isIntersecting;
+    });
+    vigia.observe(refRaiz.current);
+    let raf = 0;
+    let ultimo = performance.now();
+    const cuadro = (t) => {
+      raf = requestAnimationFrame(cuadro);
+      const dt = Math.min(0.05, (t - ultimo) / 1000);
+      ultimo = t;
+      if (!activo) return;
+      info.forEach((l) => {
+        if (!l.periodo) return;
+        if (!l.pres?.mov) {
+          // la inercia de un tirón se apaga hasta quedar en la deriva
+          l.vel += (l.deriva - l.vel) * (1 - Math.exp(-dt * 2.2));
+          l.pos += l.vel * dt;
+        }
+        l.pos = ((l.pos % l.periodo) + l.periodo) % l.periodo;
+        l.el.style.transform = `translate3d(0,${-l.pos}px,0)`;
+      });
+    };
+    raf = requestAnimationFrame(cuadro);
+    return () => {
+      cancelAnimationFrame(raf);
+      observador.disconnect();
+      vigia.disconnect();
+    };
+    // las tandas dependen de la cantidad de columnas y de filas
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnas, filas, images.length]);
+
+  // Cuánto de la columna (px locales) equivale a un desplazamiento del dedo o del mouse en pantalla:
+  // el eje local de la columna se ve inclinado (0,707 · 0,406 por la rotación), escalado por la caja.
+  const aLocal = (dx, dy) => {
+    const caja = refEscala.current;
+    const k = caja && caja.offsetWidth ? caja.getBoundingClientRect().width / caja.offsetWidth : 1;
+    const ax = 0.7071 * k;
+    const ay = 0.4056 * k;
+    return (dx * ax + dy * ay) / (ax * ax + ay * ay);
+  };
+  const alBajar = (i, e) => {
+    const l = lineas.current[i];
+    if (!l || (e.pointerType === "mouse" && e.button !== 0)) return;
+    l.pres = { id: e.pointerId, x0: e.clientX, y0: e.clientY, lx: e.clientX, ly: e.clientY, lt: e.timeStamp, mov: false };
+  };
+  const alMover = (i, e) => {
+    const l = lineas.current[i];
+    const pr = l?.pres;
+    if (!pr || pr.id !== e.pointerId) return;
+    if (!pr.mov) {
+      // hasta pasar unos píxeles es un toque (abre el proyecto), no un arrastre
+      if (Math.hypot(e.clientX - pr.x0, e.clientY - pr.y0) < 6) return;
+      pr.mov = true;
+      pr.lx = e.clientX;
+      pr.ly = e.clientY;
+      pr.lt = e.timeStamp;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+      e.currentTarget.dataset.arrastrando = "1";
+    }
+    const dLocal = aLocal(e.clientX - pr.lx, e.clientY - pr.ly);
+    l.pos -= dLocal;
+    const dtm = Math.max(1, e.timeStamp - pr.lt) / 1000;
+    l.vel = Math.max(-2600, Math.min(2600, 0.5 * l.vel + 0.5 * (-dLocal / dtm)));
+    pr.lx = e.clientX;
+    pr.ly = e.clientY;
+    pr.lt = e.timeStamp;
+  };
+  const alSoltar = (i, e) => {
+    const l = lineas.current[i];
+    if (!l?.pres || l.pres.id !== e.pointerId) return;
+    const movio = l.pres.mov;
+    l.pres = null;
+    delete e.currentTarget.dataset.arrastrando;
+    if (movio) {
+      // el clic que sigue a un arrastre no tiene que abrir el proyecto
+      l.sinClic = true;
+      setTimeout(() => {
+        l.sinClic = false;
+      }, 60);
+    }
+  };
+  const alClicCapturado = (i, e) => {
+    const l = lineas.current[i];
+    if (l?.sinClic) {
+      e.stopPropagation();
+      e.preventDefault();
+      l.sinClic = false;
+    }
+  };
+  const propsLinea = (i) => ({
+    ref: (el) => {
+      refLineas.current[i] = el;
+    },
+    "data-mq-linea": true,
+    onPointerDown: (e) => alBajar(i, e),
+    onPointerMove: (e) => alMover(i, e),
+    onPointerUp: (e) => alSoltar(i, e),
+    onPointerCancel: (e) => alSoltar(i, e),
+    onClickCapture: (e) => alClicCapturado(i, e),
+    onDragStart: (e) => e.preventDefault(),
+  });
+  // touch-action: pan-y deja que un gesto vertical siga siendo scroll de la página; uno más diagonal
+  // u horizontal es del arrastre
+  const estiloBase = "[data-mq-linea]{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;will-change:transform}[data-mq-linea][data-arrastrando],[data-mq-linea][data-arrastrando] *{cursor:grabbing!important}";
+  const tanda = (sub) => (
+    <>
+      {sub.map(renderItem)}
+      {sub.map((item, k) => renderItem(copia(item), k + sub.length))}
+    </>
+  );
+
   return (
     <div
+      ref={refRaiz}
       className={cn(
         "mx-auto block h-[600px] overflow-hidden rounded-2xl max-sm:h-100",
         className,
       )}
     >
+      <style>{estiloBase}</style>
       <div className="flex size-full items-center justify-center">
         {/* data-escala-marquee: para medir la escala real de las tarjetas (ver Proyectos). */}
-        <div data-escala-marquee style={{ width: anchoCaja, height: 1720 }} className="shrink-0 scale-50 sm:scale-75 lg:scale-100">
+        <div ref={refEscala} data-escala-marquee style={{ width: anchoCaja, height: 1720 }} className="shrink-0 scale-50 sm:scale-75 lg:scale-100">
           <div
             style={{
               transform: "rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
@@ -170,19 +302,10 @@ export const ThreeDMarquee = ({
             className="relative top-96 right-[50%] grid size-full origin-top-left gap-8 transform-3d"
           >
             {chunks.map((subarray, colIndex) => (
-              <motion.div
-                animate={{ y: colIndex % 2 === 0 ? 100 : -100 }}
-                transition={{
-                  duration: colIndex % 2 === 0 ? 10 : 15,
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                }}
-                key={colIndex + "marquee"}
-                className="flex flex-col items-start gap-8"
-              >
+              <div key={colIndex + "marquee"} className="relative flex flex-col items-start gap-8" {...propsLinea(colIndex)}>
                 <GridLineVertical className="-left-4" offset="80px" />
-                {subarray.map(renderItem)}
-              </motion.div>
+                {tanda(subarray)}
+              </div>
             ))}
           </div>
         </div>
