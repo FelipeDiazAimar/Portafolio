@@ -53,7 +53,10 @@ export function configurarMarquesina(ancho, alto, total) {
 // Cuánto se ve el título antes de irse y dejar solo la marquesina.
 const TITULO_VISIBLE_MS = 4000;
 const ESCALA_TITULO = 0.2;
-const MARGEN_TITULO = 32;
+// Distancia del borde derecho al título ya instalado: 2rem de margen + 64 px del toggle de tema + 1rem
+// de aire. Tiene que coincidir con `.tituloHeader { right }` del CSS: así viaja directo a su lugar
+// final, sin pasar antes por debajo del toggle.
+const MARGEN_TITULO = 112;
 const ALTO_HEADER = 72;
 
 export default function Proyectos() {

@@ -1,6 +1,9 @@
 /* Sección Proyectos: una pantalla a todo el ancho (sale del <main> de 960 px). */
 .contenedor {
   position: relative;
+  /* por encima de la capa de fundido de Sobre mí (z 6): si no, esa capa tapa las tarjetas que salen
+     de la sección con un borde recto. Es un bloque: el título y la lista siguen sobre las tarjetas. */
+  z-index: 7;
   width: 100vw;
   margin-left: calc(50% - 50vw);
 }
