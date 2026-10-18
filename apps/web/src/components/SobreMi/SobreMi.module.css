@@ -16,14 +16,50 @@
   background: var(--fondo-viaje);
 }
 
-:global([data-theme='light']) .panel {
-  --fondo-viaje: #e9edf5;
+/* Uniones con la sección de arriba (el hero) y la de abajo (Proyectos). Dos capas del color de la
+   página, pegadas al borde del contenedor y tan altas como lo que se ve de ese borde (el alto lo
+   escribe SobreMi.jsx en cada scroll). Con el panel ocupando la pantalla miden 0: no tapan ningún
+   hito. No es una máscara sobre el panel: eso trababa el video y el mundo 3D. */
+.unionArriba,
+.unionAbajo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  height: 0;
+  pointer-events: none;
 }
 
-@media (prefers-color-scheme: light) {
-  :global(:root:not([data-theme='dark'])) .panel {
-    --fondo-viaje: #e9edf5;
-  }
+.unionArriba {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--color-bg) 0%,
+    color-mix(in srgb, var(--color-bg) 97.2%, transparent) 10%,
+    color-mix(in srgb, var(--color-bg) 89.6%, transparent) 20%,
+    color-mix(in srgb, var(--color-bg) 71.8%, transparent) 35%,
+    color-mix(in srgb, var(--color-bg) 50%, transparent) 50%,
+    color-mix(in srgb, var(--color-bg) 28.2%, transparent) 65%,
+    color-mix(in srgb, var(--color-bg) 10.4%, transparent) 80%,
+    color-mix(in srgb, var(--color-bg) 2.8%, transparent) 90%,
+    transparent 100%
+  );
+}
+
+.unionAbajo {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-bg) 0%,
+    color-mix(in srgb, var(--color-bg) 97.2%, transparent) 10%,
+    color-mix(in srgb, var(--color-bg) 89.6%, transparent) 20%,
+    color-mix(in srgb, var(--color-bg) 71.8%, transparent) 35%,
+    color-mix(in srgb, var(--color-bg) 50%, transparent) 50%,
+    color-mix(in srgb, var(--color-bg) 28.2%, transparent) 65%,
+    color-mix(in srgb, var(--color-bg) 10.4%, transparent) 80%,
+    color-mix(in srgb, var(--color-bg) 2.8%, transparent) 90%,
+    transparent 100%
+  );
 }
 
 /* Foto/video del hito: sólo al llegar. Encima, un velo del color de fondo para que el

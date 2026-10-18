@@ -8,6 +8,7 @@ import useConsulta from '@/hooks/useConsulta.js';
 import useTema from '@/hooks/useTema.js';
 import { PESO_VIAJE, activoDe, imanDe, pesoTotal, progresoDeEstado, progresoDeEstancia, tramoDe } from '@/lib/columna/recorrido.js';
 import { tiempoModeloMs } from '@/lib/tiempoModelo.js';
+import { bandasDeUnion } from '@/lib/uniones.js';
 import { hayWebGL } from './Escena3D/soporteWebGL.js';
 import { precargarEscenas } from './Escena3D/escenas/index.js';
 import LimiteErrores from './Escena3D/LimiteErrores.jsx';
@@ -403,12 +404,51 @@ function SobreMiRecorrido({ onFallo }) {
     return () => clearTimeout(id);
   }, [vista.tipo, vista.indice, enPantalla, reducido, scrollAProgreso]);
 
+  // Uniones con el hero (arriba) y con Proyectos (abajo): dos capas del color de la página, pegadas
+  // al borde y tan altas como lo que se ve de ese borde. Con el panel ocupando la pantalla miden 0 y
+  // no tocan ningún hito. Se escribe el alto directo en el nodo, sin estado: cambia en cada scroll.
+  const refUnionArriba = useRef(null);
+  const refUnionAbajo = useRef(null);
+  useEffect(() => {
+    const contenedor = refContenedor.current;
+    if (!contenedor) return undefined;
+    let cuadro = 0;
+    let ultimoArriba = -1;
+    let ultimoAbajo = -1;
+    function actualizar() {
+      cuadro = 0;
+      const caja = contenedor.getBoundingClientRect();
+      const b = bandasDeUnion(caja.top, caja.bottom, window.innerHeight, 0.5);
+      if (b.arriba !== ultimoArriba && refUnionArriba.current) {
+        ultimoArriba = b.arriba;
+        refUnionArriba.current.style.height = `${b.arriba}px`;
+      }
+      if (b.abajo !== ultimoAbajo && refUnionAbajo.current) {
+        ultimoAbajo = b.abajo;
+        refUnionAbajo.current.style.height = `${b.abajo}px`;
+      }
+    }
+    function pedir() {
+      if (!cuadro) cuadro = requestAnimationFrame(actualizar);
+    }
+    actualizar();
+    window.addEventListener('scroll', pedir, { passive: true });
+    window.addEventListener('resize', pedir);
+    return () => {
+      cancelAnimationFrame(cuadro);
+      window.removeEventListener('scroll', pedir);
+      window.removeEventListener('resize', pedir);
+    };
+  }, []);
+
   const hito = hitos[vista.activo];
   const lado = esMovil ? 'arriba' : vista.activo % 2 === 0 ? 'izquierda' : 'derecha';
   const textosVisibles = vista.tipo === 'estancia' && presente;
 
   return (
     <section id="sobre-mi" ref={refContenedor} className={styles.contenedor} style={{ '--peso': pesoTotal(N) }}>
+      <div ref={refUnionArriba} className={styles.unionArriba} aria-hidden="true" />
+      <div ref={refUnionAbajo} className={styles.unionAbajo} aria-hidden="true" />
       <div ref={refPanel} className={styles.panel} data-lado={lado} data-tipo={vista.tipo}>
         <div className={styles.fondo} data-presente={textosVisibles}>
           <FondoHito hitos={hitos} activo={vista.activo} presente={textosVisibles} />

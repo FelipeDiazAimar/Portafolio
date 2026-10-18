@@ -13,7 +13,8 @@
   background: var(--color-bg);
 }
 
-/* La marquesina 3D ocupa todo el fondo. */
+/* La marquesina 3D ocupa todo el fondo. Sus bordes se funden con el color de la página sólo mientras
+   se ven (useUnionSeccion): con la sección a pantalla completa no se toca nada. */
 .fondo {
   position: absolute;
   inset: 0;

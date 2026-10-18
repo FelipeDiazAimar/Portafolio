@@ -17,6 +17,7 @@ import TarjetaMarca from './TarjetaMarca.jsx';
 import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
 import useEmbudo from '@/hooks/useEmbudo.js';
+import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 
 // Marquesina: la grilla inclinada deja huecos en las esquinas si sólo están los 13 proyectos,
 // así que se repiten los necesarios (más cuanto más grande la pantalla) hasta cubrirla, sin
@@ -63,6 +64,9 @@ export default function Proyectos() {
   const textoCifras = `${cifras.total} proyectos · ${cifras.clientes} clientes · ${cifras.laborales} sistemas en planta`;
 
   const refPanel = useRef(null);
+  const refFondo = useRef(null);
+  // los bordes de la marquesina se funden con la página sólo mientras se ven
+  useUnionSeccion(refFondo);
   const [tamano, setTamano] = useState({ ancho: 0, alto: 0 });
   useLayoutEffect(() => {
     const panel = refPanel.current;
@@ -216,7 +220,7 @@ export default function Proyectos() {
   return (
     <section id="proyectos" className={styles.contenedor} aria-labelledby="titulo-proyectos">
       <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'}>
-        <div className={styles.fondo}>
+        <div ref={refFondo} className={styles.fondo}>
           <ThreeDMarquee
             images={tarjetas}
             className={styles.marquesina}

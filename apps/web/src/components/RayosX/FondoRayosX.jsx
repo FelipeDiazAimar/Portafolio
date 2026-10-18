@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import useTema from '@/hooks/useTema.js';
+import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 import { esTactil, prefiereMovimientoReducido } from '@/lib/entrada.js';
 import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
 import estilos from './RayosX.module.css';
@@ -12,6 +13,8 @@ import estilos from './RayosX.module.css';
 export default function FondoRayosX({ activo, entrada }) {
   const refLienzo = useRef(null);
   const refMotor = useRef(null);
+  // el borde de abajo del fondo se funde con la página (y con Sobre mí) a medida que se hace scroll
+  useUnionSeccion(refLienzo, { arriba: false, fraccion: 0.65 });
   const [visible, setVisible] = useState(false);
   const { tema } = useTema();
   const refTema = useRef(tema);
