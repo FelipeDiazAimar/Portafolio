@@ -117,26 +117,32 @@
 }
 
 @media (max-width: 900px) {
-  /* Todo el ancho, con los íconos repartidos parejo. El tamaño de cada uno lo escribe la lupa del
-     mouse en línea; acá se fija (en celular no hay mouse). */
+  /* Carrusel: una fila que se desliza de lado con el dedo. La lupa (DockCategorias) ensancha el ícono
+     bajo el dedo y los vecinos se corren: no se superponen. Los bordes se desvanecen para indicar que
+     hay más. Alto fijo: el ícono agrandado no mueve nada. */
   .dock {
     width: 100%;
     max-width: 100%;
-    height: auto;
+    /* 76 px del ícono con la lupa + el aro y el resplandor del elegido, sin recortarse */
+    height: 116px;
     align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.15rem;
-    /* el dedo desliza por el dock: ningún gesto es de scroll, y no se selecciona nada */
-    touch-action: none;
+    justify-content: flex-start;
+    gap: 0.4rem;
+    padding: 0.9rem 1rem 0.9rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 1rem, #000 calc(100% - 1.5rem), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 1rem, #000 calc(100% - 1.5rem), transparent 100%);
   }
 
-  /* El tamaño en reposo llena el ancho (los 10 en una fila); la lupa es por escala (DockCategorias). */
-  .item {
-    width: min(56px, calc((100vw - 1rem - 9 * 0.15rem) / 10));
-    height: min(56px, calc((100vw - 1rem - 9 * 0.15rem) / 10));
+  .dock::-webkit-scrollbar {
+    display: none;
   }
 }
 
