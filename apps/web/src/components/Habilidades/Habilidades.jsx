@@ -9,7 +9,6 @@ import PanelHabilidades from './PanelHabilidades.jsx';
 import DockCategorias from './DockCategorias.jsx';
 import useTema from '@/hooks/useTema.js';
 import useEmbudo from '@/hooks/useEmbudo.js';
-import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
 import estilos from './Habilidades.module.css';
@@ -27,8 +26,6 @@ const INDICE = new Map(TECNOLOGIAS.map((t, i) => [t.id, i]));
 const ORDEN = ordenDeBarras(CATEGORIAS, TECNOLOGIAS);
 export default function Habilidades() {
   const refSeccion = useRef(null);
-  const refEscenario = useRef(null);
-  useUnionSeccion(refEscenario);
   const refLienzo = useRef(null);
   const refLogos = useRef(null);
   const refMotor = useRef(null);
@@ -174,69 +171,75 @@ export default function Habilidades() {
   }
 
   return (
-    <section id="habilidades" ref={refSeccion} className={estilos.seccion} data-webgl={conWebGL} data-listo={listo}>
-      <header className={estilos.encabezado}>
-        <PanelHabilidades
-          alBuscar={(id) => refMotor.current?.enfocar(INDICE.get(id))}
-          alLimpiar={() => refMotor.current?.limpiarBusqueda()}
-          modo={modo}
-          alModo={setModo}
-        />
-      </header>
-
-      {/* Dock de categorías: pegado abajo a la izquierda de la sección, sin contenedor. */}
-      <div className={estilos.dock}>
-        <DockCategorias
-          categoria={categoria}
-          alCategoria={setCategoria}
-          alPrevia={(id) => refMotor.current?.previsualizar(id)}
-        />
-      </div>
-
-      {conWebGL && (
-        <div ref={refEscenario} className={estilos.escenario}>
-          <canvas
-            ref={refLienzo}
-            className={estilos.lienzo}
-            aria-hidden="true"
-            onPointerMove={alMover}
-            onPointerDown={alBajar}
-            onPointerUp={alSubir}
-            onPointerCancel={alSubir}
-            onPointerLeave={alSalir}
-            onDoubleClick={() => refMotor.current?.restablecerVista()}
+    <div className={estilos.contenedor}>
+      <section id="habilidades" ref={refSeccion} className={estilos.seccion} data-webgl={conWebGL} data-listo={listo}>
+        <header className={estilos.encabezado}>
+          <PanelHabilidades
+            alBuscar={(id) => refMotor.current?.enfocar(INDICE.get(id))}
+            alLimpiar={() => refMotor.current?.limpiarBusqueda()}
+            modo={modo}
+            alModo={setModo}
           />
-          {listo && (
-            <div className={estilos.controles} role="group" aria-label="Vista del modelo">
-              <button type="button" className={estilos.control} aria-label="Alejar" onClick={() => refMotor.current?.zoomRelativo(1 / 1.5)}>
-                −
-              </button>
-              <button type="button" className={estilos.control} aria-label="Acercar" onClick={() => refMotor.current?.zoomRelativo(1.5)}>
-                +
-              </button>
-              <button type="button" className={estilos.control} aria-label="Restablecer la vista" onClick={() => refMotor.current?.restablecerVista()}>
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M3 12a9 9 0 1 0 3-6.7" />
-                  <path d="M3 4v5h5" />
-                </svg>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+        </header>
 
-      {/* Lista real de tecnologías: sin WebGL se ve como píldoras; con WebGL queda para lectores
-          de pantalla, y sus logos (los mismos de Proyectos) alimentan el atlas de las barras. */}
-      <ul ref={refLogos} className={estilos.lista}>
-        {TECNOLOGIAS.map((t) => (
-          <li key={t.id} className={estilos.item} data-fuera={Boolean(idsFiltro && !idsFiltro.includes(t.id))}>
-            <span data-logo className={estilos.logo}>
-              <IconoTecnologia id={t.id} />
-            </span>
-            {t.nombre}
-          </li>
-        ))}
-      </ul>
-    </section>
+        {/* Dock de categorías: pegado abajo a la izquierda de la sección, sin contenedor. */}
+        <div className={estilos.dock}>
+          <DockCategorias
+            categoria={categoria}
+            alCategoria={setCategoria}
+            alPrevia={(id) => refMotor.current?.previsualizar(id)}
+          />
+        </div>
+
+        {conWebGL && (
+          <div className={estilos.escenario}>
+            <canvas
+              ref={refLienzo}
+              className={estilos.lienzo}
+              aria-hidden="true"
+              onPointerMove={alMover}
+              onPointerDown={alBajar}
+              onPointerUp={alSubir}
+              onPointerCancel={alSubir}
+              onPointerLeave={alSalir}
+              onDoubleClick={() => refMotor.current?.restablecerVista()}
+            />
+            {listo && (
+              <div className={estilos.controles} role="group" aria-label="Vista del modelo">
+                <button type="button" className={estilos.control} aria-label="Alejar" onClick={() => refMotor.current?.zoomRelativo(1 / 1.5)}>
+                  −
+                </button>
+                <button type="button" className={estilos.control} aria-label="Acercar" onClick={() => refMotor.current?.zoomRelativo(1.5)}>
+                  +
+                </button>
+                <button type="button" className={estilos.control} aria-label="Restablecer la vista" onClick={() => refMotor.current?.restablecerVista()}>
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                    <path d="M3 4v5h5" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lista real de tecnologías: sin WebGL se ve como píldoras; con WebGL queda para lectores
+            de pantalla, y sus logos (los mismos de Proyectos) alimentan el atlas de las barras. */}
+        <ul ref={refLogos} className={estilos.lista}>
+          {TECNOLOGIAS.map((t) => (
+            <li key={t.id} className={estilos.item} data-fuera={Boolean(idsFiltro && !idsFiltro.includes(t.id))}>
+              <span data-logo className={estilos.logo}>
+                <IconoTecnologia id={t.id} />
+              </span>
+              {t.nombre}
+            </li>
+          ))}
+        </ul>
+      </section>
+      {/* La nebulosa sigue un poco por encima y por debajo de la sección, y la espiral se desvanece
+          contra ella (ver .escenario): sin esto la escena se corta recta contra las secciones vecinas. */}
+      <div className={estilos.brumaArriba} aria-hidden="true" />
+      <div className={estilos.brumaAbajo} aria-hidden="true" />
+    </div>
   );
 }

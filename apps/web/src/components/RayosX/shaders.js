@@ -149,14 +149,20 @@ void main() {
     // encima. Así, fuera de la silueta el revelado no se distingue del fondo y adentro tapa la foto,
     // sin dibujar el contorno de la foto. El borde se mueve con ruido.
     float borde = 0.32 + 0.3 * fbm(vUv * 7.0 + u_tiempo * 0.15);
-    float a = smoothstep(borde, borde + 0.3, revelado);
+    // dos pasos: primero aparece el CUERPO (la silueta de persona, con su resplandor) en el borde
+    // ancho de la mancha, y en el centro, donde el revelado es más fuerte, se ve el esqueleto
+    float aCuerpo = smoothstep(borde * 0.35, borde * 0.35 + 0.26, revelado);
+    float aHueso = smoothstep(borde + 0.06, borde + 0.42, revelado);
+    vec3 luz = texture2D(u_cuerpo, vUv).rgb * u_nitidezCuerpo + texture2D(u_brillo, vUv).rgb * u_fuerzaBrillo;
+    vec3 cuerpoC = aSrgb(aces(luz * scan));
     vec3 huesos = aSrgb(aces(esqueleto * scan));
+    vec3 imagen = mix(cuerpoC, huesos, aHueso);
     // en claro, negativo con curva: los huesos quedan azul oscuro pero conservan el volumen
-    float lumH = dot(huesos, vec3(0.299, 0.587, 0.114));
+    float lumH = dot(imagen, vec3(0.299, 0.587, 0.114));
     vec3 c = u_claro > 0.5
       ? mix(u_fondoPagina, u_huesoClaro, clamp(pow(lumH, 2.2) * 1.05, 0.0, 0.92))
-      : u_fondoPagina + huesos;
-    gl_FragColor = vec4(c * a, a);
+      : u_fondoPagina + imagen;
+    gl_FragColor = vec4(c * aCuerpo, aCuerpo);
     return;
   } else {
     // cuerpos: un poco de la imagen nítida más su bloom (manchas de luz), con scanlines

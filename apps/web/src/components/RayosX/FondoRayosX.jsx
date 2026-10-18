@@ -7,14 +7,18 @@ import { esTactil, prefiereMovimientoReducido } from '@/lib/entrada.js';
 import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
 import estilos from './RayosX.module.css';
 
+// Cuánto se desenfoca el fondo cuando el hero ya casi salió de la pantalla.
+const DESENFOQUE_MAX_PX = 16;
+
 // Fondo del hero: la escena del demo original, de costado (cuerpos y esqueletos en grilla), con el
 // mouse revelando los esqueletos y la cámara acompañándolo. Corre sólo con `activo`.
 // `entrada`: dónde estaba el cráneo de la foto (px de la ventana), para que tu esqueleto arranque ahí.
 export default function FondoRayosX({ activo, entrada }) {
   const refLienzo = useRef(null);
   const refMotor = useRef(null);
-  // el borde de abajo del fondo se funde con la página (y con Sobre mí) a medida que se hace scroll
-  useUnionSeccion(refLienzo, { arriba: false, fraccion: 0.65 });
+  // el borde de abajo del fondo se funde con la página (y con Sobre mí) a medida que se hace scroll,
+  // y además se desenfoca (ver más abajo): la unión no tiene que notarse
+  useUnionSeccion(refLienzo, { arriba: false, fraccion: 0.9 });
   const [visible, setVisible] = useState(false);
   const { tema } = useTema();
   const refTema = useRef(tema);
@@ -57,9 +61,25 @@ export default function FondoRayosX({ activo, entrada }) {
       if (activo) motor.iniciar();
     })();
 
+    // desenfoque que crece con el scroll: en reposo es 0 (no se toca el canvas), y al irse el hero
+    // los esqueletos se vuelven manchas que se funden con Sobre mí
+    let cuadroBlur = 0;
+    const ponerBlur = () => {
+      cuadroBlur = 0;
+      const avance = Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.85)));
+      lienzo.style.setProperty('--desenfoque', `${(avance ** 1.4 * DESENFOQUE_MAX_PX).toFixed(1)}px`);
+    };
+    const alScroll = () => {
+      if (!cuadroBlur) cuadroBlur = requestAnimationFrame(ponerBlur);
+    };
+    ponerBlur();
+    window.addEventListener('scroll', alScroll, { passive: true });
+
     window.addEventListener('pointermove', alMover, { passive: true });
     return () => {
       cancelado = true;
+      cancelAnimationFrame(cuadroBlur);
+      window.removeEventListener('scroll', alScroll);
       window.removeEventListener('pointermove', alMover);
       observador?.disconnect();
       motor?.liberar();

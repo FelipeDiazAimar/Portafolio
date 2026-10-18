@@ -181,7 +181,7 @@ export class EscenaRayosX {
     const opcionesMascara = { minFilter: LinearFilter, magFilter: LinearFilter, depthBuffer: false, type: HalfFloatType };
     this.mascaras = [new WebGLRenderTarget(1, 1, opcionesMascara), new WebGLRenderTarget(1, 1, opcionesMascara)];
     // los cuerpos se ven sólo como bloom: un desenfoque grande y suave
-    this.brillo = this.retrato ? null : new GaussianBlurPass({ kernelSize: 35, iterations: 2, resolutionScale: 0.5 });
+    this.brillo = new GaussianBlurPass({ kernelSize: 35, iterations: 2, resolutionScale: 0.5 });
 
     this.trazo = new TrazoMouse(1, 1, this.cfg.pincel);
     this.armarPantalla();
@@ -285,6 +285,11 @@ export class EscenaRayosX {
       this.modeloEsqueleto = new Mesh(modelos.esqueleto, this.materialEsqueleto);
       this.modeloEsqueleto.rotation.y = RETRATO.girarY;
       this.escenaEsqueleto.add(this.modeloEsqueleto);
+      // el cuerpo (la silueta de persona con su resplandor) va con el mismo encuadre que el esqueleto:
+      // es el paso intermedio antes de que se vean los huesos
+      this.modeloCuerpo = new Mesh(modelos.cuerpo, this.materialCuerpo);
+      this.modeloCuerpo.rotation.y = RETRATO.girarY;
+      this.escenaCuerpo.add(this.modeloCuerpo);
       this.ajustarRetrato();
     } else {
       const lugares = grillaHexagonal(FONDO.cantidad, FONDO.separacion);
@@ -393,10 +398,13 @@ export class EscenaRayosX {
     if (!this.modeloEsqueleto || !this.tamano.alto) return;
     const aspecto = this.tamano.ancho / this.tamano.alto;
     const { escala, x, y } = encuadreRetrato(RETRATO.calibracion, aspecto, RETRATO.craneo);
-    this.modeloEsqueleto.scale.setScalar(escala);
-    this.modeloEsqueleto.position.set(x, y, 0);
+    [this.modeloEsqueleto, this.modeloCuerpo].forEach((modelo) => {
+      if (!modelo) return;
+      modelo.scale.setScalar(escala);
+      modelo.position.set(x, y, 0);
+    });
     // la niebla mide distancia a la cámara (z = 5): se ajusta a la escala para no apagar el modelo
-    this.materialEsqueleto.uniforms.u_niebla.value.set(5 + escala * 2, 5 + escala * 6);
+    [this.materialEsqueleto, this.materialCuerpo].forEach((m) => m.uniforms.u_niebla.value.set(5 + escala * 2, 5 + escala * 6));
   }
 
   // El tema real es el atributo de <html> (el hook puede ir un paso atrás): se lee de ahí si está.
@@ -538,16 +546,14 @@ export class EscenaRayosX {
     renderer.setRenderTarget(this.destinoEsqueleto);
     renderer.clear();
     renderer.render(this.escenaEsqueleto, this.camara);
-    if (!this.retrato) {
-      renderer.setRenderTarget(this.destinoCuerpo);
-      renderer.clear();
-      renderer.render(this.escenaCuerpo, this.camara);
-      if (!this.brilloListo) {
-        this.brillo.initialize(renderer, true, HalfFloatType);
-        this.brilloListo = true;
-      }
-      this.brillo.render(renderer, this.destinoCuerpo, this.destinoBrillo);
+    renderer.setRenderTarget(this.destinoCuerpo);
+    renderer.clear();
+    renderer.render(this.escenaCuerpo, this.camara);
+    if (!this.brilloListo) {
+      this.brillo.initialize(renderer, true, HalfFloatType);
+      this.brilloListo = true;
     }
+    this.brillo.render(renderer, this.destinoCuerpo, this.destinoBrillo);
     this.uComposicion.u_tiempo.value = this.reducido ? 0 : this.tiempo;
     renderer.setRenderTarget(null);
     renderer.clear();
@@ -560,7 +566,7 @@ export class EscenaRayosX {
     this.lienzo.removeEventListener('webglcontextlost', this.alPerder);
     this.lienzo.removeEventListener('webglcontextrestored', this.alRecuperar);
     [this.destinoCuerpo, this.destinoEsqueleto, this.destinoBrillo, ...this.mascaras].forEach((d) => d.dispose());
-    this.brillo?.dispose();
+    this.brillo.dispose();
     this.trazo.liberar();
     [this.materialCuerpo, this.materialEsqueleto].forEach((m) => m.dispose());
     this.escenaMascara.children[0].material.dispose();

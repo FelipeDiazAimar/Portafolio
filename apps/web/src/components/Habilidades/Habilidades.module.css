@@ -44,9 +44,58 @@
 .escenario {
   position: absolute;
   inset: 0;
-  /* La nebulosa se funde arriba y abajo con el color de la página sólo mientras esos bordes se ven
-     (useUnionSeccion). Sólo la escena: el dock, los botones y el panel de la izquierda son hermanos
-     y no se difuminan. */
+  /* La espiral y la nebulosa se desvanecen hacia los bordes de la sección, en vez de cortarse
+     rectas: ahí toma el relevo la bruma de .brumaArriba / .brumaAbajo. Sólo la escena: el dock, los
+     botones y el panel de la izquierda son hermanos y no se difuminan. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0.0%, rgba(0, 0, 0, 0.028) 1.8%, rgba(0, 0, 0, 0.104) 3.6%, rgba(0, 0, 0, 0.282) 6.3%, rgba(0, 0, 0, 0.5) 9.0%, rgba(0, 0, 0, 0.718) 11.7%, rgba(0, 0, 0, 0.896) 14.4%, rgba(0, 0, 0, 0.972) 16.2%, #000 18.0%, #000 82.0%, rgba(0, 0, 0, 0.972) 83.8%, rgba(0, 0, 0, 0.896) 85.6%, rgba(0, 0, 0, 0.718) 88.3%, rgba(0, 0, 0, 0.5) 91.0%, rgba(0, 0, 0, 0.282) 93.7%, rgba(0, 0, 0, 0.104) 96.4%, rgba(0, 0, 0, 0.028) 98.2%, transparent 100.0%);
+  mask-image: linear-gradient(to bottom, transparent 0.0%, rgba(0, 0, 0, 0.028) 1.8%, rgba(0, 0, 0, 0.104) 3.6%, rgba(0, 0, 0, 0.282) 6.3%, rgba(0, 0, 0, 0.5) 9.0%, rgba(0, 0, 0, 0.718) 11.7%, rgba(0, 0, 0, 0.896) 14.4%, rgba(0, 0, 0, 0.972) 16.2%, #000 18.0%, #000 82.0%, rgba(0, 0, 0, 0.972) 83.8%, rgba(0, 0, 0, 0.896) 85.6%, rgba(0, 0, 0, 0.718) 88.3%, rgba(0, 0, 0, 0.5) 91.0%, rgba(0, 0, 0, 0.282) 93.7%, rgba(0, 0, 0, 0.104) 96.4%, rgba(0, 0, 0, 0.028) 98.2%, transparent 100.0%);
+}
+
+/* Contenedor sin estilo propio: sólo ancla las dos brumas a los bordes de la sección. */
+.contenedor {
+  position: relative;
+  --bruma-a: rgba(30, 72, 200, 0.3);
+  --bruma-b: rgba(22, 58, 176, 0.38);
+  --bruma-c: rgba(36, 86, 220, 0.26);
+}
+
+:global([data-theme='light']) .contenedor {
+  --bruma-a: rgba(112, 142, 255, 0.2);
+  --bruma-b: rgba(96, 128, 250, 0.26);
+  --bruma-c: rgba(128, 156, 255, 0.18);
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .contenedor {
+    --bruma-a: rgba(112, 142, 255, 0.2);
+    --bruma-b: rgba(96, 128, 250, 0.26);
+    --bruma-c: rgba(128, 156, 255, 0.18);
+  }
+}
+
+/* La bruma está centrada en el borde de la sección: la mitad sale hacia la sección vecina (sobre su
+   fondo, que es el de la página) y la otra mitad entra, sobre la escena ya desvanecida. Mismo perfil a
+   los dos lados del borde, así no hay costura. Sin eventos: no tapa nada clickeable. */
+.brumaArriba,
+.brumaAbajo {
+  position: absolute;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  height: 64svh;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 34% 50% at 22% 50%, var(--bruma-a), transparent 100%),
+    radial-gradient(ellipse 42% 50% at 57% 50%, var(--bruma-b), transparent 100%),
+    radial-gradient(ellipse 30% 46% at 88% 50%, var(--bruma-c), transparent 100%);
+}
+
+.brumaArriba {
+  top: -32svh;
+}
+
+.brumaAbajo {
+  bottom: -32svh;
 }
 
 .lienzo {

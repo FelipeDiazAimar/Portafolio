@@ -84,6 +84,23 @@
   background: linear-gradient(135deg, #3b1020 0%, #731f45 100%);
 }
 
+/* Con el fondo de rayos X en tema oscuro, el nombre, el subtítulo y la bio van en blanco: el gris
+   (--color-muted y el destello del nombre) se perdía contra las manchas claras de los cuerpos. En tema
+   claro el fondo es claro y los colores normales ya se leen. */
+:global(html[data-rayosx][data-theme='dark']) .capa-inicio {
+  --color-fg: #ffffff;
+  --color-muted: #ffffff;
+  --destello-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(html[data-rayosx]:not([data-theme])) .capa-inicio {
+    --color-fg: #ffffff;
+    --color-muted: #ffffff;
+    --destello-color: #ffffff;
+  }
+}
+
 /* Con el fondo de rayos X (manchas claras), el texto del hero lleva una sombra oscura para leerse. */
 :global(html[data-rayosx]) .capa-inicio {
   text-shadow:

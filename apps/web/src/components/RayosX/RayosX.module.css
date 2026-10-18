@@ -17,6 +17,8 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 1.1s ease;
+  /* --desenfoque lo escribe el componente según el scroll */
+  filter: blur(var(--desenfoque, 0px));
 }
 
 .fondo[data-visible='true'] {
