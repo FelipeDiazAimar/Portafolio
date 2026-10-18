@@ -60,6 +60,24 @@ let congelado = false;
 let temporizadorSalida = 0;
 let saltos = 0;
 
+// Posición real del mouse. Tras un clic el header cambia de forma (píldora grande → mini-píldoras)
+// y el ítem que queda bajo el mouse quieto dispararía una vista previa que nadie pidió (otro salto
+// y otro velo). Hasta que el mouse se mueva de verdad, esos hovers se ignoran.
+const mouse = { x: 0, y: 0 };
+let anclaClic = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  }, { passive: true });
+}
+function mouseQuieto() {
+  if (!anclaClic) return false;
+  if (Math.hypot(mouse.x - anclaClic.x, mouse.y - anclaClic.y) < 6) return true;
+  anclaClic = null;
+  return false;
+}
+
 function avisar() {
   oyentes.forEach((f) => f());
 }
@@ -108,6 +126,7 @@ function congelar(valor) {
 // Hover sobre un ítem del menú: salta a esa sección.
 export function vistaPrevia(id) {
   clearTimeout(temporizadorSalida);
+  if (mouseQuieto()) return;
   const y = destinoDeScroll(id, window.scrollY, medirSeccion, maximoScroll());
   if (y === null) return;
   // ya estás ahí (por ejemplo, el logo estando en el hero): no hay nada que mirar
@@ -136,13 +155,10 @@ export function irASeccion(id) {
   if (y === null) return false;
   const yaEstaba = maquina.activa && maquina.viendo === id;
   maquina.quedarse();
+  // Si el hover ya te llevó ahí, el clic sólo confirma: nada de un segundo velo (parpadeo).
   if (!yaEstaba) saltar(y, false);
-  else {
-    saltos += 1;
-    document.documentElement.dataset.saltoRapido = 'false';
-    avisar();
-  }
   congelar(false);
+  anclaClic = { x: mouse.x, y: mouse.y };
   const hash = id === 'inicio' ? window.location.pathname + window.location.search : `#${id}`;
   window.history.replaceState(null, '', hash);
   return true;
