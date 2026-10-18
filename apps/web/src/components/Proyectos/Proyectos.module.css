@@ -140,6 +140,20 @@
   color: var(--color-muted);
 }
 
+/* Pantallas chicas: las tarjetas ocupan casi todo el ancho y la leyenda se pierde sobre las claras. Más
+   contraste y un halo del color de la página; en escritorio no cambia nada. */
+@media (max-width: 900px) {
+  .cifras {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-fg);
+    text-shadow:
+      0 0 6px var(--color-bg),
+      0 0 14px var(--color-bg),
+      0 0 26px var(--color-bg);
+  }
+}
+
 /* Lista de proyectos: pegada al borde izquierdo, de arriba a abajo (arriba queda detrás del nombre del header) (la franja de
    tecnologías pasa por debajo). Solo existe con un proyecto abierto, por encima de él. */
 .columnaNav {
