@@ -107,5 +107,7 @@ export default function RevelarEsqueleto({ refMarco, activo, alDisparar }) {
     refMotor.current?.aplicarTema(tema);
   }, [tema]);
 
-  return <canvas ref={refLienzo} className={estilos.retrato} aria-hidden="true" />;
+  // sin `activo` el canvas no existe: un canvas WebGL parado sigue ocupando memoria de video (en el
+  // celular, sumado al resto, Safari cierra la página)
+  return activo ? <canvas ref={refLienzo} className={estilos.retrato} aria-hidden="true" /> : null;
 }

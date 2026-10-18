@@ -40,11 +40,24 @@ export default function Habilidades() {
   // Embudo: si el scroll se detiene cerca de la sección, la acomoda sola en pantalla.
   useEmbudo(refSeccion);
 
+  // En el celular el xilófono sólo existe con la sección cerca de la pantalla: un canvas WebGL parado
+  // sigue ocupando memoria de video y, sumado al resto, Safari cierra la página. En PC queda montado.
+  const [cerca, setCerca] = useState(true);
   useEffect(() => {
+    if (!window.matchMedia('(max-width: 900px)').matches) return undefined;
+    const seccion = refSeccion.current;
+    const o = new IntersectionObserver(([e]) => setCerca(e.isIntersecting), { rootMargin: '60% 0px' });
+    o.observe(seccion);
+    return () => o.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!cerca) return undefined;
     if (!hayWebGL()) {
       setConWebGL(false);
       return undefined;
     }
+    setListo(false);
     let cancelado = false;
     let motor = null;
     let observadorTamano = null;
@@ -112,7 +125,7 @@ export default function Habilidades() {
       motor?.liberar();
       refMotor.current = null;
     };
-  }, [reducido]);
+  }, [reducido, cerca]);
 
   useEffect(() => {
     refMotor.current?.aplicarTema(tema);
@@ -191,7 +204,7 @@ export default function Habilidades() {
           />
         </div>
 
-        {conWebGL && (
+        {conWebGL && cerca && (
           <div className={estilos.escenario}>
             <canvas
               ref={refLienzo}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { alCambiarTeletransporte, estaCongelado } from '@/lib/teletransporte.js';
+import { esTactil } from '@/lib/entrada.js';
 import NombreAscii from '@/components/NombreAscii/NombreAscii.jsx';
 import RetratoAscii from '@/components/RetratoAscii/RetratoAscii.jsx';
 import FondoRayosX from '@/components/RayosX/FondoRayosX.jsx';
@@ -43,7 +44,8 @@ export default function HeroInmersivo() {
     <>
       <div className={styles.hero} aria-hidden="true">
         <div className={`${styles.capa} ${styles['capa-inicio']} ${styles.activa}`}>
-          {rayosX && <FondoRayosX activo={enHero} entrada={rayosX} />}
+          {/* en el celular el fondo se desmonta al irse del hero (libera su memoria de video) */}
+          {rayosX && (enHero || !esTactil()) && <FondoRayosX activo={enHero} entrada={rayosX} />}
           <NombreAscii />
           <RetratoAscii rayosX={Boolean(rayosX)} alDispararRayosX={(info) => setRayosX(info ?? { x: 0, y: 0, alto: 0 })} />
         </div>

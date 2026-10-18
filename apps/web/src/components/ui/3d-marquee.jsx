@@ -273,7 +273,7 @@ export const ThreeDMarquee = ({
   });
   // touch-action: pan-y deja que un gesto vertical siga siendo scroll de la página; uno más diagonal
   // u horizontal es del arrastre
-  const estiloBase = "[data-mq-linea]{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;will-change:transform}[data-mq-linea][data-arrastrando],[data-mq-linea][data-arrastrando] *{cursor:grabbing!important}";
+  const estiloBase = "[data-mq-linea]{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;will-change:transform}@media (max-width:768px){[data-mq-linea]{will-change:auto}}[data-mq-linea][data-arrastrando],[data-mq-linea][data-arrastrando] *{cursor:grabbing!important}";
   const tanda = (sub) => (
     <>
       {sub.map(renderItem)}

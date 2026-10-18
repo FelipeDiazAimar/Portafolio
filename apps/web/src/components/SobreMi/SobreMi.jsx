@@ -53,6 +53,8 @@ function SobreMiRecorrido({ onFallo }) {
   const refPanel = useRef(null);
   const reducido = Boolean(useReducedMotion());
   const esMovil = useConsulta('(max-width: 768px)');
+  const refEsMovil = useRef(esMovil);
+  refEsMovil.current = esMovil;
   const claro = useTema().tema === 'light';
 
   const { scrollYProgress } = useScroll({ target: refContenedor, offset: ['start start', 'end end'] });
@@ -133,7 +135,11 @@ function SobreMiRecorrido({ onFallo }) {
     if (!contenedor || !panel) return undefined;
     const precarga = new IntersectionObserver(
       ([e]) => {
-        if (!e.isIntersecting) return;
+        if (!e.isIntersecting) {
+          // en el celular el canvas se desmonta al alejarse (memoria de video); en la PC queda montado
+          if (refEsMovil.current) setCerca(false);
+          return;
+        }
         setCerca(true);
         // Los chunks de todas las escenas se bajan ya: pedirlos en pleno viaje era otro tirón.
         precargarEscenas();
