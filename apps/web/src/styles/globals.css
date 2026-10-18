@@ -35,6 +35,48 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Onda expansiva del cambio de tema (ver hooks/ondaTema.js). La animación la
+   maneja JS: se anulan las del navegador y las transiciones de color propias. */
+html.onda-tema *,
+html.onda-tema *::before,
+html.onda-tema *::after {
+  transition: none !important;
+}
+
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+.onda-tema-aro {
+  view-transition-name: onda-tema-aro;
+  position: fixed;
+  z-index: 9999;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border: 3px solid var(--color-accent);
+  box-shadow: 0 0 40px 6px var(--color-accent), inset 0 0 40px 6px var(--color-accent);
+}
+
+::view-transition-group(onda-tema-aro),
+::view-transition-old(onda-tema-aro),
+::view-transition-new(onda-tema-aro) {
+  animation: none;
+}
+
 main {
   max-width: 960px;
   margin: 0 auto;

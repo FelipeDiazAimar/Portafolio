@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
+import cambiarTemaConOnda from './ondaTema.js';
 
 function leerTemaGuardado() {
   try {
@@ -44,10 +46,13 @@ export default function useTema() {
     return () => observador.disconnect();
   }, []);
 
-  function alternar() {
+  // El evento del clic (si llega) marca desde dónde nace la onda.
+  function alternar(evento) {
     const siguiente = tema === 'dark' ? 'light' : 'dark';
-    setTema(siguiente);
-    document.documentElement.setAttribute('data-theme', siguiente);
+    cambiarTemaConOnda(evento?.currentTarget, () => {
+      flushSync(() => setTema(siguiente));
+      document.documentElement.setAttribute('data-theme', siguiente);
+    });
     try {
       window.localStorage.setItem('theme', siguiente);
     } catch {
