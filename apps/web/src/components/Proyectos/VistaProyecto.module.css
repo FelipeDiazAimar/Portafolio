@@ -109,6 +109,11 @@
   opacity: 0.75;
 }
 
+/* Flechas para pasar de proyecto (sólo celular): sin caja, el glifo solo, con un empujoncito que invita a deslizar */
+.flecha {
+  display: none;
+}
+
 /* Celular: la lista es una tira arriba; el contenido se apila y scrollea. */
 @media (max-width: 768px) {
   .vista {
@@ -140,9 +145,57 @@
     display: block;
   }
 
+  .flecha {
+    position: absolute;
+    top: 42%;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 88px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    opacity: 0.7;
+    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .flechaIzq {
+    left: 0;
+    animation: empujeIzq 2.2s ease-in-out infinite;
+  }
+
+  .flechaDer {
+    right: 0;
+    animation: empujeDer 2.2s ease-in-out infinite;
+  }
+
+  .flecha:active {
+    opacity: 1;
+  }
+
   .cerrar {
     top: auto;
     right: 1rem;
     bottom: calc((var(--alto-hud) - 20px) / 2 - 20px + 20px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes empujeIzq {
+  0%, 60%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-5px); }
+}
+
+@keyframes empujeDer {
+  0%, 60%, 100% { transform: translateX(0); }
+  30% { transform: translateX(5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flechaIzq,
+  .flechaDer {
+    animation: none;
   }
 }

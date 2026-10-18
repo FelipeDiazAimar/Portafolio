@@ -192,6 +192,7 @@ export const ThreeDMarquee = ({
     raf = requestAnimationFrame(cuadro);
     return () => {
       cancelAnimationFrame(raf);
+      window.removeEventListener("wheel", frenarRueda);
       observador.disconnect();
       vigia.disconnect();
     };
@@ -208,6 +209,8 @@ export const ThreeDMarquee = ({
     const ay = 0.4056 * k;
     return (dx * ax + dy * ay) / (ax * ax + ay * ay);
   };
+  // con una fila agarrada la rueda no scrollea la página
+  const frenarRueda = useRef((e) => e.preventDefault()).current;
   const alBajar = (i, e) => {
     const l = lineas.current[i];
     if (!l || (e.pointerType === "mouse" && e.button !== 0)) return;
@@ -228,6 +231,7 @@ export const ThreeDMarquee = ({
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {}
       e.currentTarget.dataset.arrastrando = "1";
+      window.addEventListener("wheel", frenarRueda, { passive: false });
     }
     const dLocal = aLocal(e.clientX - pr.lx, e.clientY - pr.ly);
     l.pos -= dLocal;
@@ -243,6 +247,7 @@ export const ThreeDMarquee = ({
     const movio = l.pres.mov;
     l.pres = null;
     delete e.currentTarget.dataset.arrastrando;
+    window.removeEventListener("wheel", frenarRueda);
     if (movio) {
       // el clic que sigue a un arrastre no tiene que abrir el proyecto
       l.sinClic = true;
@@ -271,9 +276,9 @@ export const ThreeDMarquee = ({
     onClickCapture: (e) => alClicCapturado(i, e),
     onDragStart: (e) => e.preventDefault(),
   });
-  // touch-action: pan-y deja que un gesto vertical siga siendo scroll de la página; uno más diagonal
-  // u horizontal es del arrastre
-  const estiloBase = "[data-mq-linea]{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;will-change:transform}@media (max-width:768px){[data-mq-linea]{will-change:auto}[data-mq-grid]{display:none}}[data-mq-linea][data-arrastrando],[data-mq-linea][data-arrastrando] *{cursor:grabbing!important}";
+  // touch-action: none: mientras se arrastra una fila no se mueve la página (ni con el dedo ni con la
+  // rueda, ver más abajo); en Proyectos hay bandas arriba y abajo que sí dejan scrollear
+  const estiloBase = "[data-mq-linea]{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;will-change:transform}@media (max-width:768px){[data-mq-linea]{will-change:auto}[data-mq-grid]{display:none}}[data-mq-linea][data-arrastrando],[data-mq-linea][data-arrastrando] *{cursor:grabbing!important}";
   const tanda = (sub) => (
     <>
       {sub.map(renderItem)}

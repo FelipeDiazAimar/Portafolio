@@ -89,9 +89,13 @@ export default function Proyectos() {
   // Pasar de un proyecto a otro desde la lista no viaja ni anima el fondo: uno desaparece y
   // aparece el otro. La animación de viaje queda para abrir desde la marquesina y para cerrar.
   const [instantaneo, setInstantaneo] = useState(false);
-  const elegir = useCallback((slug) => {
+  // Celular: de qué lado entra el proyecto nuevo (+1 = viene de la derecha, -1 = de la izquierda, 0 = sin
+  // deslizar). Sólo lo fijan las flechas y el gesto de deslizar.
+  const [direccion, setDireccion] = useState(0);
+  const elegir = useCallback((slug, dir) => {
     if (slug === refActivo.current) return;
     const anterior = refActivo.current;
+    setDireccion(dir === 1 || dir === -1 ? dir : 0);
     setInstantaneo(Boolean(anterior && slug));
     if (anterior) setSaliendo((lista) => (lista.includes(anterior) ? lista : [...lista, anterior]));
     setSaliendo((lista) => lista.filter((s) => s !== slug));
@@ -269,6 +273,15 @@ export default function Proyectos() {
       delete document.documentElement.dataset.proyectoAbierto;
     };
   }, [proyecto]);
+  // Pasa al proyecto siguiente (+1) o anterior (-1), circular, con el deslizamiento de la vista.
+  const navegar = useCallback(
+    (dir) => {
+      const i = proyectos.findIndex((p) => p.slug === refActivo.current);
+      if (i < 0) return;
+      elegir(proyectos[(i + dir + proyectos.length) % proyectos.length].slug, dir);
+    },
+    [proyectos, elegir]
+  );
   // Celular: con un proyecto abierto se pasa al anterior o al siguiente deslizando el dedo de lado
   // (la lista de proyectos sólo existe en pantallas grandes). Es circular. Se ignora el gesto si
   // empieza en el carrusel de tecnologías o si es más vertical que horizontal.
@@ -278,7 +291,7 @@ export default function Proyectos() {
     let inicio = null;
     const alEmpezar = (e) => {
       const t = e.touches[0];
-      inicio = e.touches.length === 1 && !e.target.closest('[class*="carrusel"]') ? { x: t.clientX, y: t.clientY } : null;
+      inicio = e.touches.length === 1 && !e.target.closest('[class*="carrusel"], [data-no-deslizar]') ? { x: t.clientX, y: t.clientY } : null;
     };
     const alTerminar = (e) => {
       if (!inicio || !window.matchMedia('(max-width: 768px)').matches) return;
@@ -287,9 +300,7 @@ export default function Proyectos() {
       const dy = t.clientY - inicio.y;
       inicio = null;
       if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      const i = proyectos.findIndex((p) => p.slug === refActivo.current);
-      if (i < 0) return;
-      elegir(proyectos[(i + (dx < 0 ? 1 : -1) + proyectos.length) % proyectos.length].slug);
+      navegar(dx < 0 ? 1 : -1);
     };
     panel.addEventListener('touchstart', alEmpezar, { passive: true });
     panel.addEventListener('touchend', alTerminar, { passive: true });
@@ -297,7 +308,7 @@ export default function Proyectos() {
       panel.removeEventListener('touchstart', alEmpezar);
       panel.removeEventListener('touchend', alTerminar);
     };
-  }, [activo, proyectos, elegir]);
+  }, [activo, navegar]);
   const ocultas = useMemo(() => [activo, ...saliendo].filter(Boolean), [activo, saliendo]);
 
   return (
@@ -316,6 +327,11 @@ export default function Proyectos() {
           />
           <div className={styles.velo} aria-hidden="true" />
         </div>
+
+        {/* Celular: mientras se arrastra una fila de la marquesina la página no se mueve; estas dos bandas
+            (arriba y abajo) son las que dejan scrollear con el dedo */}
+        <div className={`${styles.bandaScroll} ${styles.bandaArriba}`} aria-hidden="true" />
+        <div className={`${styles.bandaScroll} ${styles.bandaAbajo}`} aria-hidden="true" />
 
         <div className={styles.cabecera}>
           {/* Tras unos segundos el título viaja, achicándose, a la esquina de arriba a la derecha
@@ -357,7 +373,7 @@ export default function Proyectos() {
         </div>
 
         {tamano.ancho > 0 ? (
-          <AnimatePresence custom={instantaneo} onExitComplete={() => setSaliendo([])}>
+          <AnimatePresence custom={{ directo: instantaneo, dir: direccion }} onExitComplete={() => setSaliendo([])}>
             {proyecto ? (
               <VistaProyecto
                 key={proyecto.slug}
@@ -366,6 +382,8 @@ export default function Proyectos() {
                 tamano={tamano}
                 reducido={reducido}
                 instantaneo={instantaneo}
+                direccion={direccion}
+                alNavegar={navegar}
                 alCerrar={cerrar}
                 indice={proyectos.findIndex((p) => p.slug === proyecto.slug)}
                 total={proyectos.length}

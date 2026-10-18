@@ -120,3 +120,20 @@
 .grande .bajada {
   display: none;
 }
+
+/* Celular: el logo (o el nombre) de la vista del proyecto va centrado en el hueco libre, entre los
+   enlaces de arriba y la problemática: antes quedaba debajo del título */
+@media (max-width: 768px) {
+  .grande .contenido {
+    top: calc(44% - 15cqw);
+    left: 50%;
+    width: 30cqw;
+    height: 30cqw;
+    margin-left: -15cqw;
+  }
+
+  .grande .palabra {
+    font-size: 10cqw;
+    white-space: nowrap;
+  }
+}

@@ -176,3 +176,82 @@
     transition: none;
   }
 }
+
+/* Carrusel del celular (HudTecnologiasMovil): se desliza de lado con el dedo */
+.carruselMovil {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+}
+
+.carruselMovil::-webkit-scrollbar {
+  display: none;
+}
+
+.itemMovil {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.45);
+  filter: grayscale(1);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.itemMovil[data-activa='true'] {
+  color: #fff;
+  filter: none;
+}
+
+.iconoMovil {
+  display: grid;
+  place-items: center;
+}
+
+/* esquinas de mira en las del proyecto */
+.itemMovil[data-activa='true']::before,
+.itemMovil[data-activa='true']::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--acento);
+  pointer-events: none;
+}
+
+.itemMovil[data-activa='true']::before {
+  top: 14px;
+  left: 6px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.itemMovil[data-activa='true']::after {
+  bottom: 14px;
+  right: 6px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.itemMovil .nombre {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

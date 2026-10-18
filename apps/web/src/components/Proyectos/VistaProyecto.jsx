@@ -27,10 +27,16 @@ const INCLINACION = { rotateX: 55, rotateZ: -45 };
 // su tarjeta en la marquesina —mismo lugar, tamaño e inclinación— y viaja hasta ocupar
 // el panel; al cerrarse vuelve a donde esté su tarjeta en ese momento.
 // `medir(slug)` da la caja de la tarjeta en coordenadas del panel; `tamano` = panel.
-export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, alCerrar, indice = 0, total = 0 }) {
-  const enMarquesina = (cambioDirecto = false) => {
+export default function VistaProyecto({ proyecto, medir, tamano, reducido, instantaneo = false, direccion = 0, alNavegar, alCerrar, indice = 0, total = 0 }) {
+  // Celular: al pasar de un proyecto a otro (flechas o deslizando) el viejo sale hacia un lado y el nuevo
+  // entra del otro. `custom` llega como { directo, dir } (el AnimatePresence se lo da también al que sale).
+  const chico = tamano.ancho > 0 && tamano.ancho <= 768;
+  const recorrido = tamano.ancho * 0.45;
+  const enMarquesina = (cambio = {}) => {
+    const cambioDirecto = typeof cambio === 'object' ? Boolean(cambio.directo) : Boolean(cambio);
     // Cambio de un proyecto a otro: desaparece de golpe (apenas pasa el cuadro en que el
     // nuevo ya está pintado encima), sin viajar de vuelta a su lugar.
+    if (cambioDirecto && chico && cambio.dir) return { x: -cambio.dir * recorrido, opacity: 0, transition: { duration: 0.32, ease: [0.4, 0, 0.2, 1] } };
     if (cambioDirecto) return { opacity: 0, transition: { duration: 0, delay: 0.15 } };
     const caja = medir(proyecto.slug);
     if (!caja) return { opacity: 0, transition: { duration: 0.25 } };
@@ -45,6 +51,7 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
       transition: VIAJE,
     };
   };
+  const deslizando = instantaneo && chico && direccion !== 0 && !reducido;
   const variantes = reducido
     ? {
         marquesina: { opacity: 0, transition: { duration: 0.2 } },
@@ -61,7 +68,8 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
           opacity: 1,
           rotateX: 0,
           rotateZ: 0,
-          transition: VIAJE,
+          x: 0,
+          transition: deslizando ? { duration: 0.36, ease: [0.22, 1, 0.36, 1] } : VIAJE,
         },
       };
 
@@ -70,8 +78,14 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
       className={styles.vista}
       style={{ '--acento': proyecto.color }}
       variants={variantes}
-      custom={instantaneo}
-      initial={instantaneo ? 'pantalla' : 'marquesina'}
+      custom={{ directo: instantaneo, dir: direccion }}
+      initial={
+        deslizando
+          ? { left: 0, top: 0, width: tamano.ancho, height: tamano.alto, borderRadius: 0, rotateX: 0, rotateZ: 0, x: direccion * recorrido, opacity: 0 }
+          : instantaneo
+            ? 'pantalla'
+            : 'marquesina'
+      }
       animate="pantalla"
       exit="marquesina"
       aria-labelledby={`titulo-${proyecto.slug}`}
@@ -103,6 +117,21 @@ export default function VistaProyecto({ proyecto, medir, tamano, reducido, insta
         </header>
         <Problematica proyecto={proyecto} idPanel={`panel-${proyecto.slug}`} etiquetadoPor={`nav-${proyecto.slug}`} sinFundido={instantaneo} />
         <HudTecnologias proyecto={proyecto} />
+        {total > 1 && alNavegar && (
+          <>
+            {/* Celular: las flechas son el control (sin botón alrededor): tocarlas pasa de proyecto */}
+            <button type="button" className={`${styles.flecha} ${styles.flechaIzq}`} aria-label="Proyecto anterior" onClick={() => alNavegar(-1)}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 4l-8 8 8 8" />
+              </svg>
+            </button>
+            <button type="button" className={`${styles.flecha} ${styles.flechaDer}`} aria-label="Proyecto siguiente" onClick={() => alNavegar(1)}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 4l8 8-8 8" />
+              </svg>
+            </button>
+          </>
+        )}
         <button type="button" className={styles.cerrar} aria-label="Volver a todos los proyectos" onClick={alCerrar}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <path d="M5 5l14 14M19 5L5 19" />

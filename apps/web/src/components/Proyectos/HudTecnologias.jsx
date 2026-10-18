@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useReducedMotion } from 'framer-motion';
 import { TECNOLOGIAS, tecnologiaPorId } from '@/data/tecnologias.js';
 import { IconoTecnologia } from './iconosTecnologias.jsx';
+import HudTecnologiasMovil from './HudTecnologiasMovil.jsx';
 import styles from './HudTecnologias.module.css';
 
 // Franja inferior de la vista del proyecto: una fila de todas las tecnologías que se
@@ -28,7 +29,7 @@ const CRECIMIENTO = 1.7;
 const MAXIMO = MINIMO * CRECIMIENTO;
 const ALCANCE = MINIMO * Math.PI;
 
-export function HudTecnologias({ proyecto }) {
+function HudEscritorio({ proyecto }) {
   const slug = proyecto?.slug ?? '';
   const reduceMotion = useReducedMotion();
 
@@ -217,6 +218,20 @@ export function HudTecnologias({ proyecto }) {
       </div>
     </div>
   );
+}
+
+// Celular: un carrusel que se desliza con el dedo (como el de categorías de Habilidades), con la lupa
+// siguiendo el dedo. En PC, la fila automática de siempre.
+export function HudTecnologias({ proyecto }) {
+  const [movil, setMovil] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const leer = () => setMovil(mq.matches);
+    leer();
+    mq.addEventListener('change', leer);
+    return () => mq.removeEventListener('change', leer);
+  }, []);
+  return movil ? <HudTecnologiasMovil proyecto={proyecto} /> : <HudEscritorio proyecto={proyecto} />;
 }
 
 export default HudTecnologias;
