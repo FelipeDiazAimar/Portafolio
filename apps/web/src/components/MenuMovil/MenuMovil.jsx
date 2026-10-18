@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ListaLineas from '@/components/ListaLineas/ListaLineas.jsx';
 import useTema from '@/hooks/useTema.js';
 import InterruptorTema from './InterruptorTema.jsx';
+import { irASeccion } from '@/lib/teletransporte.js';
 import styles from './MenuMovil.module.css';
 
 // Mismo punto de corte que oculta las píldoras del header (Header.module.css).
@@ -81,12 +82,8 @@ export default function MenuMovil({ enlaces }) {
   function alElegir(indice, item, evento) {
     evento.preventDefault();
     setAbierto(false);
-    // Recién en el cuadro siguiente: con `overflow: hidden` todavía puesto el
-    // scroll suave del ancla no se mueve.
-    requestAnimationFrame(() => {
-      document.querySelector(item.href)?.scrollIntoView({ behavior: 'smooth' });
-      window.history.replaceState(null, '', item.href);
-    });
+    // Recién en el cuadro siguiente: con `overflow: hidden` todavía puesto el scroll no se mueve.
+    requestAnimationFrame(() => irASeccion(item.href.replace(/^#/, '')));
   }
 
   return (
