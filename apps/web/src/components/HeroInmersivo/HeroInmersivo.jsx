@@ -22,7 +22,22 @@ export default function HeroInmersivo() {
   // Tras 4 s con el cursor sobre la foto, el hero pasa al fondo de esqueletos (rayos X) y la foto se
   // funde. Queda así hasta tocar "Volver a la foto".
   const [rayosX, setRayosX] = useState(null); // null, o { x, y, alto }: dónde estaba tu cráneo
-  const conCruz = Boolean(rayosX) && seccionActiva === 'inicio';
+  // ¿Se está viendo el hero? Por scroll: `seccionActiva` sólo cambia con el mouse sobre el menú.
+  // Al irse a otra sección, la cruz y el fondo animado se apagan; al volver, reaparecen.
+  const [enHero, setEnHero] = useState(true);
+  useEffect(() => {
+    function evaluar() {
+      setEnHero(window.scrollY < window.innerHeight * 0.55);
+    }
+    evaluar();
+    window.addEventListener('scroll', evaluar, { passive: true });
+    window.addEventListener('resize', evaluar);
+    return () => {
+      window.removeEventListener('scroll', evaluar);
+      window.removeEventListener('resize', evaluar);
+    };
+  }, []);
+  const conCruz = Boolean(rayosX) && seccionActiva === 'inicio' && enHero;
 
   // la cruz va a la derecha del toggle de tema: el toggle se corre para hacerle lugar
   useEffect(() => {
@@ -42,7 +57,7 @@ export default function HeroInmersivo() {
           >
             {seccion.id === 'inicio' ? (
               <>
-                {rayosX && <FondoRayosX activo={seccionActiva === 'inicio'} entrada={rayosX} />}
+                {rayosX && <FondoRayosX activo={seccionActiva === 'inicio' && enHero} entrada={rayosX} />}
                 <NombreAscii />
                 <RetratoAscii rayosX={Boolean(rayosX)} alDispararRayosX={(info) => setRayosX(info ?? { x: 0, y: 0, alto: 0 })} />
               </>

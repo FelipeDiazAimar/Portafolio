@@ -31,6 +31,7 @@ export default function RevelarEsqueleto({ refMarco, activo, alDisparar }) {
     let cancelado = false;
     let motor = null;
     let observador = null;
+    let visibilidad = null;
     const acumulador = crearAcumulador(DISPARO_FONDO_MS);
     const estado = { adentro: false };
 
@@ -73,7 +74,10 @@ export default function RevelarEsqueleto({ refMarco, activo, alDisparar }) {
       observador = new ResizeObserver(medir);
       observador.observe(marco);
       await motor.listo;
-      if (!cancelado) motor.iniciar();
+      if (cancelado) return;
+      // corre sólo con la foto a la vista (si no, gasta GPU detrás del resto de las secciones)
+      visibilidad = new IntersectionObserver(([e]) => (e.isIntersecting ? motor.iniciar() : motor.pausar()), { threshold: 0.05 });
+      visibilidad.observe(marco);
     })();
 
     window.addEventListener('pointermove', alMover, { passive: true });
@@ -85,6 +89,7 @@ export default function RevelarEsqueleto({ refMarco, activo, alDisparar }) {
       window.removeEventListener('pointerdown', alMover);
       document.removeEventListener('mouseleave', alSalir);
       observador?.disconnect();
+      visibilidad?.disconnect();
       motor?.liberar();
       refMotor.current = null;
     };

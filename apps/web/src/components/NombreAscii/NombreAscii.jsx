@@ -307,6 +307,9 @@ function generarCampo(calco) {
   };
 }
 
+// Orden de las fases: nunca se retrocede a una anterior (salvo al rearmar el campo).
+const ORDEN_FASES = { oculto: 0, onda: 1, revelado: 2, desvanecido: 3 };
+
 // Opacidad y tiempos de cada celda según la fase en curso.
 function estiloDeCelda(celda, fase) {
   if (fase === 'oculto') {
@@ -406,6 +409,8 @@ export default function NombreAscii() {
     const nuevoCampo = generarCampo(calco);
     setCampo(nuevoCampo);
     setCajasLetras(nuevoCampo ? cajasDeLetras(nuevoCampo, refContenedor.current) : []);
+    // campo nuevo, intro nueva: se vuelve a 'oculto' para que la cadena arranque de cero
+    setFase('oculto');
     setCicloCampo((id) => id + 1);
   }, []);
 
@@ -500,17 +505,23 @@ export default function NombreAscii() {
 
   // Encadena las fases. El primer salto va en un frame aparte para que el
   // navegador tenga un estado inicial (opacidad 0) desde donde transicionar.
+  //
+  // Las fases sólo AVANZAN (ver ORDEN_FASES). El frame puede llegar tarde —pestaña en segundo
+  // plano, o una tarea larga en el hilo principal— y entonces los temporizadores de abajo
+  // disparan antes: si el frame atrasado pusiera 'onda' después de 'desvanecido', el nombre
+  // quedaría trabado en la onda para siempre, porque ya no queda ningún temporizador que lo mueva.
   useEffect(() => {
     if (cicloCampo === 0) return;
 
-    const cuadro = requestAnimationFrame(() => setFase('onda'));
+    const avanzarA = (destino) => setFase((actual) => (ORDEN_FASES[destino] > ORDEN_FASES[actual] ? destino : actual));
+    const cuadro = requestAnimationFrame(() => avanzarA('onda'));
 
     const finOnda = DISPERSION_ONDA_MS + DURACION_ONDA_MS + ESPERA_ONDA_MS;
     const finRevelado =
       finOnda + DISPERSION_REVELADO_MS + DURACION_REVELADO_MS + ESPERA_REVELADO_MS;
 
-    const aRevelado = setTimeout(() => setFase('revelado'), finOnda);
-    const aDesvanecido = setTimeout(() => setFase('desvanecido'), finRevelado);
+    const aRevelado = setTimeout(() => avanzarA('revelado'), finOnda);
+    const aDesvanecido = setTimeout(() => avanzarA('desvanecido'), finRevelado);
 
     return () => {
       cancelAnimationFrame(cuadro);
