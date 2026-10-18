@@ -136,6 +136,7 @@ uniform float u_bordeLuz;     // brillo de la línea de borde
 uniform float u_filtro;       // 0..1: hay una categoría elegida
 uniform float u_claro;        // 1 en tema claro
 uniform float u_filo;         // grosor del filo de luz del borde (más alto = más fino)
+uniform float u_atras;        // 1 en la pasada que dibuja las caras de atrás
 uniform float u_destello;     // 0..1: explosión de color (botón o buscador)
 uniform float u_logoEscala;   // 1 en la hélice; mayor en el árbol (la esfera es más chica)
 uniform float u_esfera;       // 0 = barra, 1 = esfera (árbol)
@@ -268,7 +269,7 @@ float mascaraLogo(float halo) {
 // importar desde dónde se vea la esfera (con el logo pegado a un plano fijo, las esferas del
 // borde del disco lo mostraban de costado y casi no se veía).
 float mascaraLogoEsfera(vec3 N, vec3 V, float halo) {
-  if (!gl_FrontFacing) return 0.0;
+  if (u_atras > 0.5) return 0.0;
   vec3 dd = (vWorldPos - vCentro) / vEscalaMundo;
   vec3 derecha = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 arriba = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
@@ -306,7 +307,9 @@ float mascaraNombre(float halo) {
 
 void main() {
   vec3 N = normalize(vNormal);
-  if (!gl_FrontFacing) N = -N;
+  // En la pasada de atrás (BackSide) three invierte el orden de los vértices y gl_FrontFacing
+  // vale lo contrario de lo esperado: se usa un uniform propio.
+  if (u_atras > 0.5) N = -N;
   vec3 V = normalize(cameraPosition - vWorldPos);
 
   float diffuse = max(dot(N, normalize(LIGHT_DIR)), 0.0);
@@ -404,6 +407,9 @@ void main() {
   // Transparencia: el cuerpo deja ver lo de atrás (otras barras incluidas); el borde, el brillo,
   // el logo y el resaltado son más opacos. Fuera del filtro, la barra casi desaparece.
   float alfa = u_opacidad + fres * (0.55 + 0.3 * u_claro) + reveal * 0.35;
+  // La cara de atrás se pinta primero y se ve a través de la de adelante: pesa poco, si no su
+  // color oscuro tiñe de gris toda la pieza.
+  if (u_atras > 0.5) alfa *= 0.22;
   alfa = max(alfa, max(logo, nombre));
   alfa *= mix(0.28, 1.0, vActiva);
   // el texto y el logo resaltados van opacos: si no, el blanco se mezcla con el fondo y se pierde
