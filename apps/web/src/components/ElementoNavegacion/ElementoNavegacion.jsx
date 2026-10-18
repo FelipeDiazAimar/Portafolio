@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import TextoBrillante from '@/components/TextoBrillante/TextoBrillante.jsx';
 import TextoRodante from '@/components/TextoRodante/TextoRodante.jsx';
+import { irASeccion, terminarVistaPrevia, vistaPrevia } from '@/lib/teletransporte.js';
 import styles from './ElementoNavegacion.module.css';
 
 // Coincide con UNMOUNT_DELAY_MS de Bienvenida: el rodillo arranca recién
@@ -27,7 +28,17 @@ export default function ElementoNavegacion({ enlace, icono, variante }) {
 
   return (
     <motion.div layout layoutId={`nav-${enlace.href}`} className={styles[variante]}>
-      <a href={enlace.href} className={styles.enlace}>
+      <a
+        href={enlace.href}
+        className={styles.enlace}
+        // Hover: el scroll salta a la sección real (y vuelve al salir). Clic: queda ahí.
+        onMouseEnter={() => vistaPrevia(enlace.seccion)}
+        onMouseLeave={terminarVistaPrevia}
+        onClick={(evento) => {
+          evento.preventDefault();
+          irASeccion(enlace.seccion);
+        }}
+      >
         <span className={styles.icono}>{icono}</span>
         <span className={styles.texto}>
           {variante === 'grande' ? (

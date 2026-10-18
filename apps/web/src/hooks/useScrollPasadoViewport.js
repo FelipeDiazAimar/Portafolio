@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { alCambiarTeletransporte, estaCongelado } from '@/lib/teletransporte.js';
 
 export default function useScrollPasadoViewport() {
   const [pasado, setPasado] = useState(false);
@@ -9,8 +10,10 @@ export default function useScrollPasadoViewport() {
     let ticking = false;
 
     function actualizar() {
-      setPasado(window.scrollY >= window.innerHeight);
       ticking = false;
+      // durante una vista previa del teletransporte el header queda como estaba
+      if (estaCongelado()) return;
+      setPasado(window.scrollY >= window.innerHeight);
     }
 
     function manejarScroll() {
@@ -21,7 +24,14 @@ export default function useScrollPasadoViewport() {
     }
 
     window.addEventListener('scroll', manejarScroll, { passive: true });
-    return () => window.removeEventListener('scroll', manejarScroll);
+    // al terminar la vista previa se vuelve a medir con el scroll real
+    const quitar = alCambiarTeletransporte(() => {
+      if (!estaCongelado()) window.requestAnimationFrame(actualizar);
+    });
+    return () => {
+      window.removeEventListener('scroll', manejarScroll);
+      quitar();
+    };
   }, []);
 
   return pasado;
