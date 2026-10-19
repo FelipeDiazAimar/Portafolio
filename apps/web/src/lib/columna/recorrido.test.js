@@ -96,18 +96,17 @@ test('llenadoDe: monótono y exacto en cada estancia', () => {
   }
 });
 
-test('imanDe: con dirección, termina el viaje hacia donde se iba', () => {
-  // En el medio del viaje manda la dirección.
+test('imanDe: en un viaje manda siempre el sentido en que se iba (sin retrocesos)', () => {
   assert.equal(imanDe(pViaje(2, 0.3), N, 1), progresoDeEstancia(3, N));
   assert.equal(imanDe(pViaje(2, 0.7), N, -1), progresoDeEstancia(2, N));
-  // Cerca de un hito manda la cercanía: pasarse de largo apenas no salta al siguiente.
-  assert.equal(imanDe(pViaje(2, 0.05), N, 1), progresoDeEstancia(2, N));
-  assert.equal(imanDe(pViaje(2, 0.95), N, -1), progresoDeEstancia(3, N));
-  // Quieto en el centro de una estancia no hace nada.
+  // también cerca de un hito: un empujón chico hacia adelante sigue hacia adelante
+  assert.equal(imanDe(pViaje(2, 0.05), N, 1), progresoDeEstancia(3, N));
+  assert.equal(imanDe(pViaje(2, 0.95), N, -1), progresoDeEstancia(2, N));
+  // quieto en una estancia no hace nada
   assert.equal(imanDe(progresoDeEstancia(3, N), N, 1), null);
 });
 
-test('imanDe: en estancias centra el hito cercano; en viajes decide por el umbral', () => {
+test('imanDe: en estancias no mueve nada; en viajes sin sentido decide por el umbral', () => {
   assert.equal(imanDe(progresoDeEstancia(3, N), N), null);
   assert.equal(imanDe(pViaje(2, UMBRAL_IMAN + 0.01), N), progresoDeEstancia(3, N));
   assert.equal(imanDe(pViaje(2, UMBRAL_IMAN - 0.01), N), progresoDeEstancia(2, N));
@@ -153,19 +152,11 @@ test('opacidadAnio: invisible en los extremos, plena en el medio', () => {
   assert.equal(opacidadAnio(1), 0);
 });
 
-test('imanDe: cerca de un hito lo centra, y se puede salir de la sección por los extremos', () => {
+test('imanDe: dentro de la zona de un hito no se tira para atrás en ningún punto', () => {
   const desvio = (i, pesos) => progresoDeEstancia(i, N) + pesos / W;
-  // Estancia del medio: centrada desde cualquier punto de su zona.
-  assert.equal(imanDe(desvio(3, 1.2), N), progresoDeEstancia(3, N));
-  assert.equal(imanDe(desvio(3, -1.7), N), progresoDeEstancia(3, N));
-  assert.equal(imanDe(desvio(3, 0.02), N), null);
-  // Primer hito: hacia arriba (salir de la sección) no tira para atrás; hacia abajo sí.
-  assert.equal(imanDe(desvio(0, -1), N), null);
-  assert.equal(imanDe(desvio(0, 1), N), progresoDeEstancia(0, N));
-  // Último hito: frena cerca, y pasado el radio ya se sale.
-  assert.equal(imanDe(desvio(N - 1, 2), N), progresoDeEstancia(N - 1, N));
-  assert.equal(imanDe(desvio(N - 1, RADIO_IMAN_ESTANCIA + 0.5), N), null);
-  assert.equal(imanDe(desvio(N - 1, -2), N), progresoDeEstancia(N - 1, N));
+  for (const i of [0, 3, N - 1]) {
+    for (const pesos of [-1.7, -1, -0.02, 0.02, 1, 1.7]) assert.equal(imanDe(desvio(i, pesos), N, 1), null);
+  }
 });
 
 // --- Sentido del viaje: al subir la cámara mira hacia arriba (espejo de bajar). ---

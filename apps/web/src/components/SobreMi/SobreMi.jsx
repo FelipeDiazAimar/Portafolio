@@ -8,9 +8,10 @@ import useConsulta from '@/hooks/useConsulta.js';
 import useTema from '@/hooks/useTema.js';
 import { PESO_VIAJE, activoDe, imanDe, pesoTotal, progresoDeEstado, progresoDeEstancia, tramoDe, ventanaDe } from '@/lib/columna/recorrido.js';
 import { tiempoModeloMs } from '@/lib/tiempoModelo.js';
+import { alCambiarTeletransporte } from '@/lib/teletransporte.js';
 import { bandasDeUnion } from '@/lib/uniones.js';
 import { hayWebGL } from './Escena3D/soporteWebGL.js';
-import { precargarEscenas } from './Escena3D/escenas/index.js';
+import { cargadorEscena, precargarEscenas } from './Escena3D/escenas/index.js';
 import LimiteErrores from './Escena3D/LimiteErrores.jsx';
 import FondoHito from './FondoHito.jsx';
 import EncabezadoHito from './EncabezadoHito.jsx';
@@ -27,6 +28,8 @@ const MundoColumna = dynamic(() => import('./Columna3D/MundoColumna.jsx'), { ssr
 const N = hitos.length;
 const ESPERA_LLEGADA_MS = 400;
 const ESPERA_IMAN_MS = 260;
+// Tope de espera a que cargue el modelo de un hito antes de mostrar su bio igual.
+const ESPERA_CARGA_MAX_MS = 9000;
 // Autoplay: arranque en el primer hito sin tocar nada, y retoma tras 2 min pausado.
 const INICIO_AUTO_MS = 10000;
 const PAUSA_AUTO_MS = 120000;
@@ -159,17 +162,51 @@ function SobreMiRecorrido({ onFallo }) {
   // cumplió su tiempo (primero el modelo, después la bio).
   const [presente, setPresente] = useState(false);
   const [bioVisible, setBioVisible] = useState(false);
+  // Hitos cuyo modelo ya terminó de cargar (lo avisa el mundo 3D; se borra al desmontarse su escena).
+  const [modelosListos, setModelosListos] = useState(() => new Set());
+  const marcarModelo = useCallback((indice, listo = true) => {
+    setModelosListos((previos) => {
+      if (previos.has(indice) === listo) return previos;
+      const siguientes = new Set(previos);
+      if (listo) siguientes.add(indice);
+      else siguientes.delete(indice);
+      return siguientes;
+    });
+  }, []);
   useEffect(() => {
     setPresente(false);
     setBioVisible(false);
     if (vista.tipo !== 'estancia' || !enPantalla) return undefined;
     const llegada = setTimeout(() => setPresente(true), reducido ? 0 : ESPERA_LLEGADA_MS);
-    const bio = setTimeout(() => setBioVisible(true), reducido ? 0 : tiempoModeloMs(hitos[vista.indice].id));
-    return () => {
-      clearTimeout(llegada);
-      clearTimeout(bio);
-    };
+    return () => clearTimeout(llegada);
   }, [vista.tipo, vista.indice, enPantalla, reducido]);
+  // La bio empieza cuando el modelo terminó de CARGAR (no cuando termina su animación). Sin escena o con
+  // la carga trabada, aparece igual a los 9 s.
+  useEffect(() => {
+    if (vista.tipo !== 'estancia' || !enPantalla || !presente) return undefined;
+    const listo = reducido || modelosListos.has(vista.indice) || !cargadorEscena(hitos[vista.indice].id);
+    if (listo) {
+      setBioVisible(true);
+      return undefined;
+    }
+    const respaldo = setTimeout(() => setBioVisible(true), ESPERA_CARGA_MAX_MS);
+    return () => clearTimeout(respaldo);
+  }, [vista.tipo, vista.indice, enPantalla, presente, reducido, modelosListos]);
+
+  // Teletransporte del menú (hover o clic en el header): el scroll salta de golpe y lo mostrado también, en
+  // vez de que el resorte recorra todos los hitos hasta el nuevo lugar.
+  useEffect(
+    () =>
+      alCambiarTeletransporte(() => {
+        const contenedor = refContenedor.current;
+        if (!contenedor) return;
+        const recorrido = contenedor.offsetHeight - window.innerHeight;
+        const p = Math.min(1, Math.max(0, -contenedor.getBoundingClientRect().top / recorrido));
+        suave.jump(p);
+        progresoMostrado.set(p);
+      }),
+    [suave, progresoMostrado]
+  );
 
   // Último gesto real del usuario (ref, sin renders extra): se actualiza con
   // interacción en ventana. El scrollAProgreso programático del autoplay NO pasa
@@ -301,16 +338,18 @@ function SobreMiRecorrido({ onFallo }) {
     (i) => {
       // Click en el minimapa: el usuario tomó control, cuenta como gesto.
       refUltimoGesto.current = Date.now();
-      refViajeMinimapa.current = Date.now() + RITMO_MINIMAPA.maximo + 1500;
       const largo = !reducido && Math.abs(i - refActivo.current) > 1;
+      refViajeMinimapa.current = Date.now() + (largo ? RITMO_MINIMAPA.maximo : MS_MAXIMO_SALTO) + 1500;
       if (largo) {
         refDestinoSalto.current = i;
         refSalto.current = { desde: refActivo.current, hasta: i };
         setSaltoRapido(true);
       }
+      // Hacia un hito vecino el viaje es el normal (el mismo del imán y el autoplay, con modelos y primera
+      // persona), sólo que en automático; el ritmo rápido es para los saltos de varios hitos.
       scrollAProgreso(
         progresoDeEstancia(i, N),
-        largo ? { ...RITMO_MINIMAPA, enEstado: { desde: refActivo.current, hasta: i } } : RITMO_MINIMAPA
+        largo ? { ...RITMO_MINIMAPA, enEstado: { desde: refActivo.current, hasta: i } } : undefined
       );
     },
     [scrollAProgreso, reducido]
@@ -423,7 +462,12 @@ function SobreMiRecorrido({ onFallo }) {
     window.addEventListener('wheel', alEntrada, { passive: true });
     window.addEventListener('touchstart', alEntrada, { passive: true });
     window.addEventListener('keydown', alEntrada);
+    // un teletransporte del menú cambia de lugar de golpe: la ventana vieja ya no vale
+    const quitarTele = alCambiarTeletransporte(() => {
+      ventana = null;
+    });
     return () => {
+      quitarTele();
       clearTimeout(espera);
       window.removeEventListener('scroll', alScroll);
       window.removeEventListener('wheel', alEntrada);
@@ -431,6 +475,59 @@ function SobreMiRecorrido({ onFallo }) {
       window.removeEventListener('keydown', alEntrada);
     };
   }, [reducido]);
+
+  // Al salir de Sobre mí hacia abajo hay que frenar en Proyectos: con la rueda o el dedo a toda velocidad se
+  // pasaba de largo hasta Experiencia. Un gesto que empieza antes de Proyectos no pasa de su borde de arriba
+  // (para seguir hay que soltar y volver a empujar). Los teletransportes del menú no se frenan.
+  useEffect(() => {
+    let limite = null;
+    let ultimaEntrada = 0;
+    let ultimoSalto = 0;
+    let espera = 0;
+    // El límite se fija cuando el scroll descansa (no se movió entre dos lecturas): vale desde el borde de
+    // arriba de Proyectos si se está antes de él, y no hay límite si ya se está en él o más abajo.
+    const fijar = () => {
+      const el = document.getElementById('proyectos');
+      const y = el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null;
+      limite = y !== null && window.scrollY < y - 2 ? y : null;
+    };
+    const asentar = () => {
+      const y0 = window.scrollY;
+      espera = setTimeout(() => {
+        if (Math.abs(window.scrollY - y0) > 1) asentar();
+        else fijar();
+      }, 400);
+    };
+    const alEntrada = () => {
+      ultimaEntrada = performance.now();
+    };
+    const alScroll = () => {
+      clearTimeout(espera);
+      asentar();
+      if (limite === null) return;
+      const ahora = performance.now();
+      // sólo con un gesto real reciente (rueda, dedo arrastrando o teclado, inercia incluida)
+      if (ahora - ultimoSalto < 1500 || ahora - ultimaEntrada > 4000) return;
+      if (window.scrollY > limite) window.scrollTo({ top: limite, behavior: 'instant' });
+    };
+    fijar();
+    window.addEventListener('wheel', alEntrada, { passive: true });
+    window.addEventListener('touchmove', alEntrada, { passive: true });
+    window.addEventListener('keydown', alEntrada);
+    window.addEventListener('scroll', alScroll, { passive: true });
+    const quitarTele = alCambiarTeletransporte(() => {
+      ultimoSalto = performance.now();
+      limite = null;
+    });
+    return () => {
+      quitarTele();
+      clearTimeout(espera);
+      window.removeEventListener('wheel', alEntrada);
+      window.removeEventListener('touchmove', alEntrada);
+      window.removeEventListener('keydown', alEntrada);
+      window.removeEventListener('scroll', alScroll);
+    };
+  }, []);
 
   // Autoplay: si no se toca nada en el primer hito, la línea de tiempo se
   // reproduce sola entera; si el usuario la deja pausada más de 2 min, retoma.
@@ -550,6 +647,7 @@ function SobreMiRecorrido({ onFallo }) {
                 reducido={reducido}
                 claro={claro}
                 visible={enPantalla}
+                alModeloListo={marcarModelo}
                 onError={onFallo}
               />
             </LimiteErrores>

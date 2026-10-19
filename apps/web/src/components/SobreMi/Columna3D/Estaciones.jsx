@@ -63,7 +63,7 @@ const vecinosDe = (centro, n) => {
 // con el viaje ya terminado: la escena nueva se monta oculta, se compila el mundo tal como
 // va a quedar (con la nueva y sin la que se va) y recién entonces se la muestra y se quita
 // la otra. Durante un viaje el conjunto no cambia.
-export default function Estaciones({ hitos, activo, tipo, indiceViaje, origen, visitas, reducido, claro, fraccion, color, ocultarModelos = false }) {
+export default function Estaciones({ hitos, activo, tipo, indiceViaje, origen, visitas, reducido, claro, fraccion, color, ocultarModelos = false, alModeloListo }) {
   const n = hitos.length;
   const compilarMundo = useCompiladorMundo();
   const refsGrupo = useRef(new Map());
@@ -146,6 +146,18 @@ export default function Estaciones({ hitos, activo, tipo, indiceViaje, origen, v
     };
   }, [preparando, vecinosNuevos, vecinosBase, compilarMundo]);
 
+  // Avisa (`alModeloListo(indice, false)`) cuando la escena de un hito se desmonta: si vuelve a montarse,
+  // vuelve a avisar al terminar de cargar.
+  const cercanasAntes = useRef(new Set());
+  useEffect(() => {
+    const ahora = new Set();
+    for (let i = 0; i < n; i += 1) if (vecinosBase.has(i) || i === desde || i === hasta || vecinosNuevos?.has(i)) ahora.add(i);
+    cercanasAntes.current.forEach((i) => {
+      if (!ahora.has(i)) alModeloListo?.(i, false);
+    });
+    cercanasAntes.current = ahora;
+  }, [vecinosBase, vecinosNuevos, desde, hasta, n, alModeloListo]);
+
   return (
     <ContextoMundo.Provider value={compilarMundo}>
       {hitos.map((hito, i) => {
@@ -167,7 +179,10 @@ export default function Estaciones({ hitos, activo, tipo, indiceViaje, origen, v
             fraccion={fraccion}
             color={color}
             registrar={registrar}
-            alLista={() => marcarLista(i)}
+            alLista={() => {
+              marcarLista(i);
+              alModeloListo?.(i, true);
+            }}
           />
         );
       })}

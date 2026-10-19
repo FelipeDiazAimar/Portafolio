@@ -1,0 +1,83 @@
+/* Sección Títulos: tres tarjetas simples bajo el título. */
+.seccion {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 1.25rem;
+  scroll-margin-top: 5rem;
+}
+
+.contenido {
+  width: min(100%, 1040px);
+  display: grid;
+  gap: 2.5rem;
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(2rem, 6vw, 4rem);
+  color: var(--color-fg);
+  text-align: center;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.tarjeta {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  border: 1px solid color-mix(in oklab, var(--color-fg) 16%, transparent);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--color-fg) 4%, transparent);
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.estado {
+  color: var(--color-accent, #3b82f6);
+}
+
+.anio {
+  color: var(--color-muted);
+}
+
+.nombre {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-fg);
+}
+
+.lugar {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 860px) {
+  .lista {
+    grid-template-columns: 1fr;
+  }
+}

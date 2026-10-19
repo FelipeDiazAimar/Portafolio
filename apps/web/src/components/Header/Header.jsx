@@ -30,6 +30,16 @@ function IconoGrid() {
   );
 }
 
+function IconoBirrete() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 9l10-5 10 5-10 5-10-5z" />
+      <path d="M6 11.5V16c0 1.2 2.7 3 6 3s6-1.8 6-3v-4.5" />
+      <path d="M22 9v6" />
+    </svg>
+  );
+}
+
 function IconoMaletin() {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -61,6 +71,7 @@ const ENLACES = [
   { href: '#sobre-mi', seccion: 'sobre-mi', label: 'Sobre mi', icono: <IconoPersona /> },
   { href: '#proyectos', seccion: 'proyectos', label: 'Proyectos', icono: <IconoGrid /> },
   { href: '#experiencia', seccion: 'experiencia', label: 'Experiencia', icono: <IconoMaletin /> },
+  { href: '#titulos', seccion: 'titulos', label: 'Títulos', icono: <IconoBirrete /> },
   { href: '#habilidades', seccion: 'habilidades', label: 'Habilidades', icono: <IconoEstrella /> },
   { href: '#contacto', seccion: 'contacto', label: 'Contáctame', icono: <IconoSobre /> },
 ];

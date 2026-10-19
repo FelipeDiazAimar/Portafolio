@@ -54,7 +54,7 @@ function Niebla({ color }) {
 
 // Escalones de rendimiento (nunca vuelven a subir en la sesión):
 // 1 → sin bloom (queda el halo aditivo); 2 → menos chispas y polvo; 3 → dpr 1.
-export default function MundoColumna({ hitos, refTramo, activo, tipo, indiceViaje, ocultarModelos, origen, visitas, lado, esMovil, reducido, claro, visible, onError }) {
+export default function MundoColumna({ hitos, refTramo, activo, tipo, indiceViaje, ocultarModelos, origen, visitas, lado, esMovil, reducido, claro, visible, onError, alModeloListo }) {
   const n = hitos.length;
   const [colores, setColores] = useState(() => leerColores(claro));
   useEffect(() => setColores(leerColores(claro)), [claro]);
@@ -122,6 +122,7 @@ export default function MundoColumna({ hitos, refTramo, activo, tipo, indiceViaj
           claro={claro}
           fraccion={esMovil ? 1 : 0.5}
           color={colores.acento}
+          alModeloListo={alModeloListo}
         />
       </Rig>
       </ContextoCompositor.Provider>

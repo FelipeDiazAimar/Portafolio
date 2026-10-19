@@ -111,23 +111,13 @@ export function progresoDeEstancia(i, n) {
 }
 
 // Adónde llevar el scroll cuando el usuario lo suelta: sólo actúa en un viaje (las
-// estancias son zonas de descanso). Devuelve null si no hay que mover nada.
-// En el medio de un viaje, `direccion` (+1 bajando, -1 subiendo) lo termina hacia el hito al
-// que se iba (sin dirección decide por el umbral); cerca de cada extremo manda la cercanía.
+// estancias son zonas de descanso: ahí no se mueve nada, así un empujón chico no hace volver atrás).
+// Devuelve null si no hay que mover nada.
+// En un viaje manda SIEMPRE el sentido en que se venía scrolleando (+1 bajando, -1 subiendo): se
+// termina hacia ahí, sin retrocesos. Sin sentido decide por el umbral.
 export function imanDe(p, n, direccion = 0) {
   const tramo = tramoDe(p, n);
-  if (tramo.tipo === 'estancia') {
-    // Cerca de un hito: lleva al centro de su zona. Se puede salir de la sección por los
-    // extremos (hacia arriba desde el primero; hacia abajo desde el último, pasado el radio).
-    const desvio = (tramo.t - 0.5) * pesoEstanciaDe(tramo.indice, n);
-    if (Math.abs(desvio) < DESVIO_MINIMO || Math.abs(desvio) > RADIO_IMAN_ESTANCIA) return null;
-    if (tramo.indice === 0 && desvio < 0) return null;
-    return progresoDeEstancia(tramo.indice, n);
-  }
-  // Embudo: recién salido de un hito (o por llegar a otro) vuelve/sigue hasta él, sin
-  // importar para dónde se venía scrolleando. Pasarse de largo apenas no lo salta.
-  if (tramo.t < ZONA_EMBUDO) return progresoDeEstancia(tramo.indice, n);
-  if (tramo.t > 1 - ZONA_EMBUDO) return progresoDeEstancia(tramo.indice + 1, n);
+  if (tramo.tipo === 'estancia') return null;
   if (direccion > 0) return progresoDeEstancia(tramo.indice + 1, n);
   if (direccion < 0) return progresoDeEstancia(tramo.indice, n);
   return progresoDeEstancia(tramo.t >= UMBRAL_IMAN ? tramo.indice + 1 : tramo.indice, n);

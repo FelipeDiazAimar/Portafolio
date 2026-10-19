@@ -1,12 +1,14 @@
 import SobreMi from '@/components/SobreMi/SobreMi.jsx';
 import Proyectos from '@/components/Proyectos/Proyectos.jsx';
 import Habilidades from '@/components/Habilidades/Habilidades.jsx';
+import Titulos from '@/components/Titulos/Titulos.jsx';
 import styles from './page.module.css';
 
 const SECCIONES = [
   { id: 'sobre-mi', titulo: 'Sobre mí' },
   { id: 'proyectos', titulo: 'Proyectos' },
   { id: 'experiencia', titulo: 'Experiencia' },
+  { id: 'titulos', titulo: 'Títulos' },
   { id: 'habilidades', titulo: 'Habilidades' },
   { id: 'contacto', titulo: 'Contacto' },
 ];
@@ -20,6 +22,8 @@ export default function HomePage() {
           <SobreMi key={seccion.id} />
         ) : seccion.id === 'proyectos' ? (
           <Proyectos key={seccion.id} />
+        ) : seccion.id === 'titulos' ? (
+          <Titulos key={seccion.id} />
         ) : seccion.id === 'habilidades' ? (
           <Habilidades key={seccion.id} />
         ) : (
