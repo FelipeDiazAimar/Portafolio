@@ -106,7 +106,8 @@ export default function MundoColumna({ hitos, refTramo, activo, tipo, indiceViaj
       <ContextoCompositor.Provider value={refCompositor}>
       <Rig n={n} refTramo={refTramo} reducido={reducido} lineal={ocultarModelos}>
         <Columna n={n} refTramo={refTramo} colores={colores} reducido={reducido} />
-        <Vertebras n={n} refTramo={refTramo} colores={colores} reducido={reducido} ocultarCostillas={ocultarModelos} />
+        {/* los arcos que unen cada modelo con la línea de tiempo no se ven durante los viajes */}
+        <Vertebras n={n} refTramo={refTramo} colores={colores} reducido={reducido} ocultarCostillas={ocultarModelos || tipo === 'viaje'} />
         {reducido ? null : <Estela n={n} refTramo={refTramo} color={colores.acento} cantidad={nivel >= 2 ? 60 : 240} />}
         <Polvo n={n} color={colores.acento} cantidad={nivel >= 2 ? 400 : 1200} reducido={reducido} />
         <Estaciones

@@ -93,10 +93,9 @@ export default function Estaciones({ hitos, activo, tipo, indiceViaje, origen, v
       aplicar(false);
     };
   }, [ocultarModelos]);
-  // Las escenas que ya estuvieron montadas se quedan montadas (ocultas, así no cuentan sus luces ni
-  // se dibujan): volver a un hito ya visto, por ejemplo con el menú que teletransporta, no vuelve a
-  // cargar ni a armar la escena. Su animación de entrada sí se repite (ver `visita` y `activa`).
-  const montadas = useRef(new Set());
+  // Sólo están montadas las escenas del hito donde se está parado y las de los hitos de arriba y de abajo: el
+  // resto se desmonta (una escena oculta igual seguía animándose y pesando). Volver a un hito lejano vuelve
+  // a cargarla.
   const listas = useRef(new Set());
   const marcarLista = useCallback((indice) => listas.current.add(indice), []);
 
@@ -152,14 +151,13 @@ export default function Estaciones({ hitos, activo, tipo, indiceViaje, origen, v
       {hitos.map((hito, i) => {
         const enBase = vecinosBase.has(i) || i === desde || i === hasta;
         const enPreparacion = vecinosNuevos?.has(i) ?? false;
-        if (enBase || enPreparacion) montadas.current.add(i);
         return (
           <Estacion
             key={hito.id}
             hito={hito}
             indice={i}
             n={n}
-            cercana={montadas.current.has(i)}
+            cercana={enBase || enPreparacion}
             oculta={!enBase}
             activa={tipo === 'estancia' && i === activo}
             dispersa={!reducido && tipo === 'viaje' && i === origen}

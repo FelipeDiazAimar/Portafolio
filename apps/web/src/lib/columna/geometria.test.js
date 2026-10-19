@@ -8,6 +8,7 @@ import {
   PUNTOS_POR_TRAMO,
   RADIO_ANCLA,
   SEPARACION,
+  alturaDeHito,
   altoTotal,
   ancla,
   aPantalla,
@@ -24,10 +25,10 @@ import {
 const N = 7;
 const cerca = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
 
-test('vertebra: una cada SEPARACION de altura y PASO_ANGULO de giro', () => {
+test('vertebra: a SEPARACION de altura (los tramos largos, 30 % más) y PASO_ANGULO de giro', () => {
   for (let i = 0; i < N; i += 1) {
     const v = vertebra(i, N);
-    assert.ok(cerca(v.centro.y, -i * SEPARACION));
+    assert.ok(cerca(v.centro.y, -alturaDeHito(i)));
     assert.ok(cerca(v.angulo, i * PASO_ANGULO));
   }
 });
@@ -108,4 +109,12 @@ test('puntosMinimapa: todo dentro del recuadro y los hitos de arriba hacia abajo
   for (let i = 0; i < N; i += 1) {
     assert.ok(cerca(camino[i * PUNTOS_POR_TRAMO].x, hitos[i].x) && cerca(camino[i * PUNTOS_POR_TRAMO].y, hitos[i].y));
   }
+});
+
+test('alturaDeHito: los tramos desde 2023→2024 son 30 % más largos y es continua', () => {
+  assert.ok(cerca(alturaDeHito(1) - alturaDeHito(0), SEPARACION));
+  assert.ok(cerca(alturaDeHito(2) - alturaDeHito(1), SEPARACION));
+  assert.ok(cerca(alturaDeHito(3) - alturaDeHito(2), SEPARACION * 1.3));
+  assert.ok(cerca(alturaDeHito(6) - alturaDeHito(5), SEPARACION * 1.3));
+  assert.ok(cerca(alturaDeHito(2.5) - alturaDeHito(2), (alturaDeHito(3) - alturaDeHito(2)) / 2));
 });

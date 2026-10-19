@@ -1,9 +1,9 @@
 // Geometría de la columna vertebral de "Sobre mí" (unidades de escena). Funciones
 // puras, sin three: las usan el mundo 3D, la cámara y el minimapa.
 
-// Distancia entre hitos: 12,6 = 9 · 1,4 (el recorrido físico es 40 % más largo; el scroll de la sección no cambia,
-// ver PESO_* en recorrido.js)
-export const SEPARACION = 12.6;
+// Distancia entre hitos: 16,4 ≈ 9 · 1,4 · 1,3 (el recorrido físico es 82 % más largo que el original; el scroll de la
+// sección no cambia, ver PESO_* en recorrido.js)
+export const SEPARACION = 16.4;
 export const RADIO_ANCLA = 3.5;
 export const PASO_ANGULO = (140 * Math.PI) / 180;
 export const AMPLITUD_S = 1.4;
@@ -12,9 +12,24 @@ export const RADIO_HALO = 0.2;
 // La columna sigue un tramo antes del primer hito (cola) y otro después del último (punta).
 export const EXTRA = SEPARACION;
 
+// Los tramos entre 2023 y 2024, 2024 y 2025, 2025 y 2026 y 2026 y hoy (del tramo 2 en adelante; el 0 es
+// Origen → 2022 y el 1, 2022 → 2023) son 30 % más largos que los primeros.
+export const PRIMER_TRAMO_LARGO = 2;
+export const FACTOR_TRAMO_LARGO = 1.3;
+const factorTramo = (g) => (g >= PRIMER_TRAMO_LARGO ? FACTOR_TRAMO_LARGO : 1);
+
+// Distancia (hacia abajo) del hito 0 al hito fraccionario `s`.
+export function alturaDeHito(s) {
+  const x = Math.max(0, s);
+  const k = Math.floor(x);
+  let y = 0;
+  for (let g = 0; g < k; g += 1) y += SEPARACION * factorTramo(g);
+  return y + (x - k) * SEPARACION * factorTramo(k);
+}
+
 // Alto entre la primera y la última vértebra.
 export function altoTotal(n) {
-  return SEPARACION * Math.max(n - 1, 1);
+  return alturaDeHito(Math.max(n - 1, 1));
 }
 
 // La cola (el tramo antes del primer hito) no sube derecha hasta cortarse contra el borde de
@@ -39,7 +54,7 @@ export function ejeEn(y, n) {
 }
 
 export function vertebra(i, n) {
-  return { centro: ejeEn(-i * SEPARACION, n), angulo: i * PASO_ANGULO };
+  return { centro: ejeEn(-alturaDeHito(i), n), angulo: i * PASO_ANGULO };
 }
 
 // Dónde va el modelo del hito `i`: a RADIO_ANCLA del eje, en su ángulo. El modelo se
@@ -94,7 +109,7 @@ export function fraccionEnAltura(y, n) {
 
 // Fracción del largo a la altura de la vértebra `i`.
 export function longitudHasta(i, n) {
-  return fraccionEnAltura(-i * SEPARACION, n);
+  return fraccionEnAltura(-alturaDeHito(i), n);
 }
 
 // Punto del eje en la fracción `f` del largo (inversa de fraccionEnAltura).
@@ -117,7 +132,7 @@ export function puntoEnFraccion(f, n) {
 // estado `s` (índice de hito fraccionario): el ancla del hito `s` queda en el origen
 // mirando a +z. Mundo = T(0,0,-R) · Ry(-θ) · T(-c).
 export function aPantalla(punto, s, n) {
-  const c = ejeEn(-s * SEPARACION, n);
+  const c = ejeEn(-alturaDeHito(s), n);
   const theta = s * PASO_ANGULO;
   const x = punto.x - c.x;
   const y = punto.y - c.y;
@@ -129,7 +144,7 @@ export function aPantalla(punto, s, n) {
 
 // Lo que necesitan los grupos del mundo 3D para el estado `s`.
 export function transformacionMundo(s, n) {
-  const c = ejeEn(-s * SEPARACION, n);
+  const c = ejeEn(-alturaDeHito(s), n);
   return { pivote: [0, 0, -RADIO_ANCLA], rotacionY: -s * PASO_ANGULO, contenido: [-c.x, -c.y, -c.z] };
 }
 
@@ -145,8 +160,9 @@ export function puntosMinimapa(n, { ancho, alto, margen = 10 }) {
     x: ancho / 2 + (p.x / AMPLITUD_S) * (ancho / 2 - margen / 2),
     y: alto - margen - ((p.y - minimo) / (maximo - minimo)) * (alto - 2 * margen),
   });
+  // Los tramos no miden lo mismo: los puntos se reparten tramo a tramo para que cada hito caiga en un punto.
   const cantidad = Math.max(n - 1, 1) * PUNTOS_POR_TRAMO + 1;
-  const camino = Array.from({ length: cantidad }, (_, k) => aPx(ejeEn(maximo + ((minimo - maximo) * k) / (cantidad - 1), n)));
+  const camino = Array.from({ length: cantidad }, (_, k) => aPx(ejeEn(-alturaDeHito(k / PUNTOS_POR_TRAMO), n)));
   const hitos = Array.from({ length: n }, (_, i) => aPx(vertebra(i, n).centro));
   return { camino, hitos };
 }

@@ -175,11 +175,15 @@ function SobreMiRecorrido({ onFallo }) {
   // interacción en ventana. El scrollAProgreso programático del autoplay NO pasa
   // por estos listeners, así que no cuenta como gesto.
   const refUltimoGesto = useRef(null);
+  // Hasta cuándo dura el viaje del minimapa en curso (marca de tiempo): un click o un toque durante él no lo
+  // frena en ningún hito; sólo lo frenan el giro de la rueda y el teclado.
+  const refViajeMinimapa = useRef(0);
   // Animación de scroll en curso (ver scrollAProgreso): un gesto real la corta.
   const refAnimacion = useRef(0);
   useEffect(() => {
     const marcar = () => {
       refUltimoGesto.current = Date.now();
+      refViajeMinimapa.current = 0;
       cancelAnimationFrame(refAnimacion.current);
       refAnimacion.current = 0;
       // Un salto cortado a mitad de camino no se termina: si siguiera "en vuelo", el imán
@@ -191,7 +195,7 @@ function SobreMiRecorrido({ onFallo }) {
     // como gesto. Lo frenan el giro de la rueda y el teclado.
     const marcarClick = () => {
       refUltimoGesto.current = Date.now();
-      if (!refSalto.current) marcar();
+      if (!refSalto.current && Date.now() > refViajeMinimapa.current) marcar();
     };
     window.addEventListener('pointerdown', marcarClick, { passive: true });
     // La inercia del touchpad sigue mandando eventos de rueda chiquitos después de
@@ -297,6 +301,7 @@ function SobreMiRecorrido({ onFallo }) {
     (i) => {
       // Click en el minimapa: el usuario tomó control, cuenta como gesto.
       refUltimoGesto.current = Date.now();
+      refViajeMinimapa.current = Date.now() + RITMO_MINIMAPA.maximo + 1500;
       const largo = !reducido && Math.abs(i - refActivo.current) > 1;
       if (largo) {
         refDestinoSalto.current = i;
