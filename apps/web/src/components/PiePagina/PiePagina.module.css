@@ -1,3 +1,17 @@
+/* El footer va siempre en blanco (como Contacto), con texto oscuro aunque el
+   sitio esté en tema oscuro: se redefinen los tokens dentro de él. */
+.envoltorio {
+  --color-fg: var(--contacto-texto);
+  background: var(--contacto-fondo);
+  color: var(--contacto-texto);
+}
+
+.superior {
+  display: grid;
+  gap: 4rem;
+  padding: 4.5rem clamp(1.25rem, 8vw, 6rem) 3rem;
+}
+
 /* Alto suficiente para que el stickman (96 px) entre de pie con aire encima:
    el overlay del colapso cubre exactamente esta caja y el piso es su borde
    inferior. */
@@ -9,7 +23,7 @@
   gap: 2rem;
   min-height: 15rem;
   padding: 0 clamp(2rem, 8vw, 6rem) 2rem;
-  border-top: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
+  border-top: 1px solid var(--contacto-linea);
   color: var(--color-fg);
 }
 

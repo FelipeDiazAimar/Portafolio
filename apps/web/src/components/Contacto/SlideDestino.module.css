@@ -1,0 +1,265 @@
+.pista {
+  --p: 0;
+  --sx: -999px;
+  --sy: -999px;
+  --si: 0;
+  --dest: var(--contacto-acento);
+  position: relative;
+  height: 66px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px var(--contacto-linea), 0 18px 50px rgba(20, 40, 90, 0.1);
+  user-select: none;
+  touch-action: pan-y;
+  transition: opacity 0.4s, filter 0.4s;
+}
+
+.pista[data-destino='wa'] {
+  --dest: var(--contacto-whatsapp);
+}
+
+.apagada {
+  opacity: 0.3;
+  filter: saturate(0.3);
+  pointer-events: none;
+}
+
+/* brillo especular del vidrio que sigue al cursor */
+.pista::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(140px circle at var(--sx) var(--sy), rgba(31, 107, 255, calc(0.55 * var(--si))), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.relleno {
+  position: absolute;
+  inset: 5px auto 5px 5px;
+  z-index: 1;
+  width: calc(56px + (100% - 66px) * var(--p));
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--dest) 40%, transparent));
+  opacity: calc(0.1 + var(--p) * 0.9);
+  box-shadow: 0 0 calc(var(--p) * 34px) color-mix(in srgb, var(--dest) 45%, transparent);
+}
+
+.etiqueta {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding-left: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: calc(1 - var(--p) * 2.4);
+  pointer-events: none;
+  background: linear-gradient(100deg, var(--contacto-tenue) 35%, var(--contacto-texto) 50%, var(--contacto-tenue) 65%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brillo 3.2s linear infinite;
+}
+
+@keyframes brillo {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* --- La manija: una tecla de vidrio --- */
+.manija {
+  --estirar: 1;
+  --inclinar: 0deg;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 5;
+  width: 56px;
+  height: 56px;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+  transform: translateX(calc((var(--ancho, 0px) - 66px) * var(--p)));
+}
+
+.manija:active {
+  cursor: grabbing;
+}
+
+/* anillo de progreso alrededor de la tecla */
+.anillo {
+  position: absolute;
+  inset: -3px;
+  border-radius: 21px;
+  background: conic-gradient(from -90deg, var(--dest) calc(var(--p) * 1turn), color-mix(in srgb, var(--dest) 14%, transparent) 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 2px;
+  opacity: calc(0.35 + var(--p) * 0.65);
+}
+
+.tecla {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 90% at 30% 15%, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.55) 45%, rgba(225, 233, 247, 0.9)),
+    #fff;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -4px 8px rgba(20, 40, 90, 0.1),
+    inset 0 0 0 1px rgba(15, 18, 24, 0.06),
+    0 8px 18px rgba(20, 40, 90, 0.18),
+    0 0 calc(var(--p) * 22px) color-mix(in srgb, var(--dest) 50%, transparent);
+  transform: scaleX(var(--estirar)) scaleY(calc(2 - var(--estirar))) rotate(var(--inclinar));
+  transition: box-shadow 0.3s;
+}
+
+/* reflejo de la tecla */
+.tecla::after {
+  content: '';
+  position: absolute;
+  inset: 4px 10px auto;
+  height: 14px;
+  border-radius: 10px;
+  background: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.manija:focus-visible .tecla {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--contacto-acento);
+}
+
+.pista[data-estado='listo'] .tecla {
+  animation: clic 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes clic {
+  40% {
+    transform: scale(0.88);
+  }
+}
+
+/* WhatsApp: logo → "escribiendo…" → ✓✓ */
+.iconoWa {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+}
+
+.logo,
+.escribiendo,
+.ticks {
+  position: absolute;
+  transition: opacity 0.25s, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.logo {
+  width: 26px;
+  height: 26px;
+  color: var(--contacto-whatsapp);
+}
+
+.escribiendo {
+  display: flex;
+  gap: 3px;
+  padding: 6px 7px;
+  border-radius: 10px 10px 10px 3px;
+  background: var(--contacto-whatsapp);
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.escribiendo i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  animation: rebote 0.9s ease-in-out infinite;
+}
+
+.escribiendo i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.escribiendo i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes rebote {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.ticks {
+  width: 24px;
+  height: 16px;
+  stroke: #34a5dd;
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.pista[data-estado='escribiendo'] .logo,
+.pista[data-estado='listo'] .logo {
+  opacity: 0;
+  transform: scale(0.5) rotate(-20deg);
+}
+
+.pista[data-estado='escribiendo'] .escribiendo {
+  opacity: 1;
+  transform: none;
+}
+
+.pista[data-estado='listo'] .ticks {
+  opacity: 1;
+  transform: none;
+}
+
+/* Email: hoja que se pliega en avión con el arrastre */
+.iconoMail {
+  width: 30px;
+  height: 30px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 2px rgba(20, 40, 90, 0.18));
+  transition: opacity 0.2s, transform 0.3s;
+}
+
+.pista[data-icono='fuera'] .iconoMail {
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .etiqueta,
+  .escribiendo i {
+    animation: none;
+  }
+}

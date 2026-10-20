@@ -2,6 +2,7 @@ import SobreMi from '@/components/SobreMi/SobreMi.jsx';
 import Proyectos from '@/components/Proyectos/Proyectos.jsx';
 import Habilidades from '@/components/Habilidades/Habilidades.jsx';
 import Titulos from '@/components/Titulos/Titulos.jsx';
+import Contacto from '@/components/Contacto/Contacto.jsx';
 import styles from './page.module.css';
 
 const SECCIONES = [
@@ -26,6 +27,8 @@ export default function HomePage() {
           <Titulos key={seccion.id} />
         ) : seccion.id === 'habilidades' ? (
           <Habilidades key={seccion.id} />
+        ) : seccion.id === 'contacto' ? (
+          <Contacto key={seccion.id} />
         ) : (
           <section key={seccion.id} id={seccion.id} className={styles.seccion}>
             <h2>{seccion.titulo}</h2>

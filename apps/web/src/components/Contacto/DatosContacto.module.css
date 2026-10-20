@@ -1,0 +1,112 @@
+.datos {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 2.4fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.marca b {
+  display: block;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.marca span {
+  font-size: 0.78rem;
+  color: var(--contacto-tenue);
+}
+
+.lista {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 2.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dato {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.85rem 0.1rem;
+  border-bottom: 1px solid var(--contacto-linea);
+  font-size: 0.95rem;
+  cursor: copy;
+}
+
+.icono {
+  flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--contacto-tenue);
+  transition: color 0.3s, transform 0.3s;
+}
+
+.dato small {
+  min-width: 6.5rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--contacto-tenue);
+}
+
+.valor {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+
+.accion {
+  font-size: 0.72rem;
+  color: var(--contacto-tenue);
+  transition: color 0.3s;
+}
+
+.dato:hover .icono,
+.dato:focus-visible .icono {
+  color: var(--contacto-acento);
+  transform: scale(1.12);
+}
+
+.dato:hover .accion,
+.dato:focus-visible .accion,
+.copiado .valor {
+  color: var(--contacto-acento);
+}
+
+.dato:focus-visible {
+  outline: 2px solid var(--contacto-acento);
+  outline-offset: 2px;
+  border-radius: 0.4rem;
+}
+
+@media (max-width: 1100px) {
+  .lista {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .datos {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .dato {
+    flex-wrap: wrap;
+  }
+
+  .valor {
+    text-align: left;
+  }
+}

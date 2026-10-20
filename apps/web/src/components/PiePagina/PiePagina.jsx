@@ -5,7 +5,11 @@ import dynamic from 'next/dynamic';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
 import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
 import useToqueSobre from '@/hooks/useToqueSobre.js';
+import DatosContacto from '@/components/Contacto/DatosContacto.jsx';
 import styles from './PiePagina.module.css';
+
+// El shader de la gelatina sólo se baja en el cliente.
+const GelatinaResena = dynamic(() => import('@/components/Gelatina/GelatinaResena.jsx'), { ssr: false });
 
 // Mismo motivo que en NombreAscii: matter-js sólo se baja si hay hover fino.
 const ColapsoFisico = dynamic(
@@ -186,32 +190,39 @@ export default function PiePagina() {
   );
 
   return (
-    <footer className={styles.pie} ref={refPie}>
-      <p className={styles.derechos}>© {new Date().getFullYear()}</p>
-
-      <div className={styles.contenedor} ref={refContenedor}>
-        <div
-          ref={refLimpio}
-          className={`${styles.nombre} ${colapso ? styles.oculto : ''}`}
-        >
-          <span>Felipe Diaz Aimar</span>
-        </div>
+    <footer className={styles.envoltorio}>
+      <div className={styles.superior}>
+        <GelatinaResena />
+        <DatosContacto />
       </div>
+      {/* La franja del nombre es la región del colapso: el stickman cae acá. */}
+      <div className={styles.pie} ref={refPie}>
+        <p className={styles.derechos}>© {new Date().getFullYear()}</p>
 
-      {colapso && campo && (
-        <ColapsoFisico
-          campo={campo}
-          modo="stickman"
-          modoEntrada={colapso.tactil ? 'tactil' : 'raton'}
-          refContenedor={refContenedor}
-          posicionInicialRaton={{ x: colapso.x, y: colapso.y }}
-          region={colapso.region}
-          alTerminar={() => {
-            refEsperandoSalida.current = true;
-            setColapso(null);
-          }}
-        />
-      )}
+        <div className={styles.contenedor} ref={refContenedor}>
+          <div
+            ref={refLimpio}
+            className={`${styles.nombre} ${colapso ? styles.oculto : ''}`}
+          >
+            <span>Felipe Diaz Aimar</span>
+          </div>
+        </div>
+
+        {colapso && campo && (
+          <ColapsoFisico
+            campo={campo}
+            modo="stickman"
+            modoEntrada={colapso.tactil ? 'tactil' : 'raton'}
+            refContenedor={refContenedor}
+            posicionInicialRaton={{ x: colapso.x, y: colapso.y }}
+            region={colapso.region}
+            alTerminar={() => {
+              refEsperandoSalida.current = true;
+              setColapso(null);
+            }}
+          />
+        )}
+      </div>
     </footer>
   );
 }

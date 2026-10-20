@@ -58,6 +58,19 @@ html.onda-tema *::after {
   z-index: 2;
 }
 
+/* Contacto y footer van siempre sobre blanco, con acento azul eléctrico /
+   celeste, sin importar el tema del resto del sitio. */
+:root {
+  --contacto-fondo: #f7f8fa;
+  --contacto-texto: #0f1218;
+  --contacto-tenue: rgba(15, 18, 24, 0.52);
+  --contacto-fantasma: rgba(15, 18, 24, 0.2);
+  --contacto-linea: rgba(15, 18, 24, 0.09);
+  --contacto-acento: #1f6bff;
+  --contacto-celeste: #38c6ff;
+  --contacto-whatsapp: #1fae56;
+}
+
 main {
   max-width: 960px;
   margin: 0 auto;

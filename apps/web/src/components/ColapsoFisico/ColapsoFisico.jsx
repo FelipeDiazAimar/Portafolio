@@ -477,10 +477,12 @@ export default function ColapsoFisico({
     // Color leído por cuadro (no una sola vez al montar): el ThemeToggle
     // cambia data-theme en cualquier momento y body tiene transition de
     // color, así que fijarlo en el montaje dejaría los caracteres con el
-    // color viejo, potencialmente invisibles contra el fondo nuevo.
+    // color viejo, potencialmente invisibles contra el fondo nuevo. Se toma del
+    // contenedor y no del body: el footer tiene fondo propio (blanco) con texto
+    // oscuro aunque el sitio esté en tema oscuro.
     function abrirCuadro() {
       ctx.clearRect(0, 0, ancho, alto);
-      return getComputedStyle(document.body).color;
+      return getComputedStyle(refContenedor.current ?? document.body).color;
     }
 
     // Mientras el efecto corre, el nombre lo dibuja ESTE canvas y no el DOM.

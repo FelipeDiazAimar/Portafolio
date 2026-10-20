@@ -1,0 +1,296 @@
+.zona {
+  position: relative;
+  min-height: 100svh;
+  perspective: 1400px;
+}
+
+.cinta {
+  position: absolute;
+  top: 0;
+  left: -200px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.tarjeta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  transform-origin: 50% 16px;
+  transform-style: preserve-3d;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  will-change: transform;
+}
+
+.agarrada {
+  cursor: grabbing;
+}
+
+/* Funda plastificada: más gruesa que antes, con canto biselado que refleja la
+   luz y una lámina interna levemente separada del papel. */
+.cara {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  border-radius: 24px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.28) 40%, rgba(220, 230, 250, 0.42));
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 30px 60px rgba(20, 40, 90, 0.16),
+    0 6px 16px rgba(20, 40, 90, 0.08),
+    inset 0 0 0 1px rgba(15, 18, 24, 0.06),
+    inset 0 2px 1px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(20, 40, 90, 0.12);
+  backdrop-filter: blur(3px);
+}
+
+.dorso {
+  transform: rotateY(180deg);
+}
+
+.ranura {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  z-index: 6;
+  width: 54px;
+  height: 9px;
+  margin-left: -27px;
+  border-radius: 6px;
+  background: rgba(15, 18, 24, 0.32);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.gancho {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  z-index: 7;
+  width: 22px;
+  height: 30px;
+  margin-left: -11px;
+  border: 4px solid #cfd4dc;
+  border-bottom-color: #8f96a3;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.papel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 30px 18px 16px;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--contacto-texto);
+  box-shadow: 0 0 0 1px rgba(15, 18, 24, 0.05);
+}
+
+.franja {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font: 500 9px ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  color: var(--contacto-tenue);
+}
+
+.franja b {
+  font-weight: 500;
+  color: var(--contacto-acento);
+}
+
+/* La foto (PNG sin fondo) va directo sobre el papel: sin marco, se funde por abajo. */
+.foto {
+  position: relative;
+  height: 262px;
+  margin: -8px -18px 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 72%, transparent 100%);
+  mask-image: linear-gradient(#000 72%, transparent 100%);
+}
+
+.foto img {
+  display: block;
+  width: 100%;
+  margin-top: -56px;
+  pointer-events: none;
+}
+
+.nombre {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+}
+
+.rol {
+  margin: 5px 0 10px;
+  font-size: 10.5px;
+  color: var(--contacto-tenue);
+}
+
+.fila {
+  all: unset;
+  display: grid;
+  grid-template-columns: 16px auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6.5px 0;
+  border-top: 1px solid var(--contacto-linea);
+  font-size: 10.5px;
+  cursor: copy;
+}
+
+.fila svg {
+  width: 13px;
+  height: 13px;
+  color: var(--contacto-acento);
+}
+
+.fila small {
+  font: 500 8px ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--contacto-tenue);
+}
+
+.fila span {
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fila:hover span,
+.fila:focus-visible span,
+.copiado span {
+  color: var(--contacto-acento);
+}
+
+.fila:focus-visible {
+  outline: 2px solid var(--contacto-acento);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --- capas del plastificado --- */
+.plastico,
+.brillo,
+.holo {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: 24px;
+  pointer-events: none;
+}
+
+/* textura del laminado: rayitas finísimas y un velo que separa la funda del papel */
+.plastico {
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 30%, transparent 70%, rgba(255, 255, 255, 0.16));
+  box-shadow: inset 0 0 0 12px rgba(255, 255, 255, 0.18);
+}
+
+/* dos reflejos que barren la funda al girar y balancearse */
+.brillo {
+  background:
+    linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.75) 44%, rgba(255, 255, 255, 0.12) 50%, transparent 60%),
+    linear-gradient(115deg, transparent 58%, rgba(255, 255, 255, 0.35) 64%, transparent 70%);
+  background-size: 260% 100%, 220% 100%;
+  background-position: var(--brillo, 50%) 0, calc(var(--brillo, 50%) * 0.6) 0;
+  mix-blend-mode: soft-light;
+}
+
+/* holograma en la esquina inferior, lejos de la cara */
+.holo {
+  background: conic-gradient(from var(--holo, 0deg) at 80% 85%, #ff6ec7, #ffd36e, #6effa6, #6ed8ff, #b46eff, #ff6ec7);
+  mix-blend-mode: color-dodge;
+  opacity: 0.16;
+  -webkit-mask: radial-gradient(circle at 88% 92%, #000, transparent 48%);
+  mask: radial-gradient(circle at 88% 92%, #000, transparent 48%);
+}
+
+.papelDorso {
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 34px 22px;
+  text-align: center;
+}
+
+.grande {
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.grande i {
+  font-style: normal;
+  color: var(--contacto-acento);
+}
+
+.papelDorso p {
+  max-width: 220px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--contacto-tenue);
+}
+
+.qr {
+  width: 196px;
+  height: 196px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(20, 40, 90, 0.16), inset 0 0 0 1px rgba(15, 18, 24, 0.06);
+}
+
+.qr img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.qrPie {
+  font: 500 9px ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--contacto-tenue);
+}
+
+.pista {
+  position: absolute;
+  bottom: 2.5vh;
+  left: 50%;
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--contacto-tenue);
+}
+
+@media (max-width: 900px) {
+  .zona {
+    min-height: 780px;
+  }
+}
+
+@media (max-width: 560px) {
+  .zona {
+    min-height: 660px;
+  }
+}
