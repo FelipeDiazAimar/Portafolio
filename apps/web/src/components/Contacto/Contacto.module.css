@@ -94,7 +94,7 @@
   padding: 0.45rem 0.8rem;
   border: 1px solid var(--contacto-linea);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--contacto-chip);
   font: inherit;
   font-size: 0.75rem;
   color: var(--contacto-tenue);
@@ -108,7 +108,7 @@
 
 .chip[aria-pressed='true'] {
   border-color: color-mix(in srgb, var(--contacto-acento) 55%, transparent);
-  background: color-mix(in srgb, var(--contacto-acento) 10%, white);
+  background: color-mix(in srgb, var(--contacto-acento) 14%, transparent);
   color: var(--contacto-texto);
 }
 
@@ -143,12 +143,13 @@
   transform: none;
 }
 
-/* el avión se lleva las letras */
+/* el avión se lleva las letras: sólo opacity + transform (animar un desenfoque en
+   ~80 letras a la vez hacía tironear el vuelo) */
 .letra.ida {
   opacity: 0;
-  filter: blur(9px);
-  transform: translate(var(--dx, 0), var(--dy, 0)) scale(0.4) rotate(var(--rot, 0));
-  transition: opacity 0.5s ease-in, filter 0.5s, transform 0.7s cubic-bezier(0.5, 0, 0.2, 1);
+  filter: none;
+  transform: translate3d(var(--dx, 0), var(--dy, 0), 0) scale(0.35) rotate(var(--rot, 0));
+  transition: opacity 0.55s ease-in, transform 0.75s cubic-bezier(0.45, 0, 0.2, 1);
 }
 
 .fantasma {
@@ -240,14 +241,14 @@
   max-width: min(440px, 92%);
   padding: 10px 14px 8px;
   border-radius: 18px 18px 4px 18px;
-  background: #d9fdd3;
-  box-shadow: 0 14px 40px rgba(20, 40, 90, 0.12);
+  background: var(--contacto-burbuja);
+  box-shadow: 0 14px 40px var(--contacto-sombra);
   transform-origin: 0 0;
   font-size: 16px;
   font-weight: 400;
   line-height: 1.45;
   letter-spacing: 0;
-  color: #10251a;
+  color: var(--contacto-burbuja-texto);
 }
 
 .meta {
@@ -287,7 +288,7 @@
   padding: 0.6rem 1.1rem;
   border: 1px solid var(--contacto-linea);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--contacto-chip);
   font: inherit;
   font-size: 0.8rem;
   color: var(--contacto-texto);
@@ -315,8 +316,15 @@
   margin: -48px 0 0 -48px;
   opacity: 0;
   pointer-events: none;
-  filter: drop-shadow(0 14px 22px rgba(20, 40, 90, 0.22));
+  filter: drop-shadow(0 14px 22px var(--contacto-sombra));
   will-change: transform;
+}
+
+/* contorno azul: el avión blanco se lee igual sobre el fondo blanco que sobre el oscuro */
+.avion polygon {
+  stroke: var(--contacto-acento);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
 }
 
 @media (max-width: 900px) {

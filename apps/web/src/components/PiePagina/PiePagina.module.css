@@ -1,7 +1,6 @@
-/* El footer va siempre en blanco (como Contacto), con texto oscuro aunque el
-   sitio esté en tema oscuro: se redefinen los tokens dentro de él. */
+/* El footer sigue el tema del sitio (variables --contacto-* de globals.css). */
 .envoltorio {
-  --color-fg: var(--contacto-texto);
+  position: relative;
   background: var(--contacto-fondo);
   color: var(--contacto-texto);
 }
@@ -12,32 +11,14 @@
   padding: 4.5rem clamp(1.25rem, 8vw, 6rem) 3rem;
 }
 
-/* Alto suficiente para que el stickman (96 px) entre de pie con aire encima:
-   el overlay del colapso cubre exactamente esta caja y el piso es su borde
-   inferior. */
+/* Franja de abajo: sólo el ©. El stickman del colapso camina por el borde
+   inferior de TODO el footer (la región del overlay la calcula PiePagina.jsx). */
 .pie {
-  position: relative;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 2rem;
-  min-height: 15rem;
-  padding: 0 clamp(2rem, 8vw, 6rem) 2rem;
+  min-height: 7rem;
+  padding: 0 clamp(1.25rem, 8vw, 6rem) 2rem;
   border-top: 1px solid var(--contacto-linea);
-  color: var(--color-fg);
-}
-
-/* Teléfono: el nombre arriba a la derecha y el © abajo a la izquierda, en vez
-   de intentar que entren en la misma fila. */
-@media (max-width: 640px) {
-  .pie {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 0.75rem;
-    padding: 0 1.25rem 1.75rem;
-    min-height: 14rem;
-  }
 }
 
 .derechos {
@@ -50,11 +31,11 @@
 .contenedor {
   position: relative;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
-/* Misma tipografía que el nombre del hero, más chica. Cada <span> mide
-   exactamente lo que mide su texto: el calco del ASCII se basa en ese rect. */
+/* Misma tipografía que el nombre del hero. Cada <span> mide exactamente lo que
+   mide su texto: el calco del ASCII se basa en ese rect. */
 .nombre {
   display: flex;
   flex-direction: column;
@@ -62,8 +43,9 @@
   font-family: var(--font-sans);
   font-weight: 800;
   letter-spacing: -0.02em;
-  font-size: clamp(1.75rem, 3.4vw, 3rem);
-  color: var(--color-fg);
+  font-size: clamp(2rem, 3.6vw, 3.1rem);
+  line-height: 1.02;
+  color: inherit;
   opacity: 1;
   transition: opacity 0.18s ease;
 }

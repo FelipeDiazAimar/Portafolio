@@ -89,6 +89,14 @@ vec3 sombraGel(vec3 p) {
   float fuerza = (1. - smoothstep(.6, 2.2, s)) * mix(.45, .85, sat);
   return mix(vec3(1), mix(tono, vec3(1), k), fuerza);
 }
+// Exposición: lleva el plano iluminado exactamente al color de fondo de la web (con el tanh
+// final), en claro y en oscuro, y por eso la superficie no deja ningún borde.
+float planoLuz() { return max(normalize(-uLight).y, 0.) * .95 + .36; }
+vec3 exposicion() { return atanh(clamp(uBg, .02, .995)) / planoLuz(); }
+// Ganancia de lo que NO es superficie (rebote de luz, brillos, luz interna de la gelatina). Con
+// fondo claro es la misma de la superficie; con fondo oscuro la superficie queda casi negra
+// pero la luz de la gelatina no se apaga con ella.
+float gananciaLuz() { vec3 e = exposicion(); return max(max(e.r, max(e.g, e.b)), 1.5); }
 vec3 shadeGround(vec3 p, vec3 rd, bool directo) {
   vec3 n = nGround(p), L = -uLight;
   float dif = max(dot(n, L), 0.);
@@ -99,12 +107,11 @@ vec3 shadeGround(vec3 p, vec3 rd, bool directo) {
   vec3 col = (dif * sh * .95 + .36) + spec * sh;
   if (p.y < -GT) col *= .3;                                     // interior de la ranura: gris oscuro
   col *= ao(p, n, directo);
-  // la superficie nunca brilla más que el plano: el canto de la ranura queda del color
-  // del fondo de la web en vez de quemarse a blanco (el rebote azul se suma después)
-  vec3 Ln = normalize(-uLight);
-  col = min(col, vec3(max(Ln.y, 0.) * .95 + .36));
+  // la superficie nunca brilla más que el plano: el canto de la ranura queda del color del
+  // fondo de la web en vez de quemarse a blanco (el rebote de luz se suma después, sin escalar)
+  col = min(col, vec3(planoLuz())) * exposicion();
   vec2 E = uPts[SEG]; vec3 dE = p - vec3(E.x, 0., 0.); float r2 = dot(dE, dE);
-  col += uJelly * (.4 / (r2 * 15. + 1.)) + uJelly * (.3 / (r2 * 40. + 1.)) * abs(n.z);   // rebote de luz
+  col += (uJelly * (.4 / (r2 * 15. + 1.)) + uJelly * (.3 / (r2 * 40. + 1.)) * abs(n.z)) * gananciaLuz();   // rebote de luz
   if (p.y < -.05) {                                             // porcentaje impreso en el piso
     vec2 tuv = vec2((p.x - .68) / .38 + .5, p.z / .33 + .5);
     if (all(greaterThan(tuv, vec2(0))) && all(lessThan(tuv, vec2(1)))) col = mix(col, col * .45, texture(uTexto, tuv).a);
@@ -116,11 +123,11 @@ vec3 marchGround(vec3 ro, vec3 rd) {
   for (int i = 0; i < 48; i++) { float h = ground(ro + rd * t); t += h; if (h < SURF * 6. || t > MAXD) break; }
   return t > MAXD ? vec3(.7) : shadeGround(ro + rd * t, rd, false);
 }
-// lo que refleja la gelatina: arriba, el mismo blanco que el plano (sale del color del
-// fondo de la web tras la exposición); si fuera blanco puro, el borde se quemaría
+// lo que refleja la gelatina: arriba, el mismo tono que el plano (sale del color del fondo de
+// la web tras la exposición); si fuera blanco puro, el borde se quemaría
 vec3 entorno(vec3 d) {
-  float plano = max(normalize(-uLight).y, 0.) * .95 + .36;
-  return mix(vec3(plano * .6), vec3(plano), smoothstep(-.3, .8, d.y));
+  float plano = planoLuz();
+  return mix(vec3(plano * .6), vec3(plano), smoothstep(-.3, .8, d.y)) * exposicion();
 }
 
 void main() {
@@ -136,20 +143,18 @@ void main() {
     float cosi = clamp(dot(-rd, n), 0., 1.), r0 = pow((1. - 1.42) / (1. + 1.42), 2.);
     float F = r0 + (1. - r0) * pow(1. - cosi, 5.);
     vec3 rf = reflect(rd, n);
-    vec3 refl = entorno(rf) + pow(max(dot(rf, L), 0.), 60.) * 1.4 + pow(max(dot(rf, normalize(vec3(-.5, .9, .3))), 0.), 30.) * .5;
+    vec3 refl = entorno(rf) + (pow(max(dot(rf, L), 0.), 60.) * 1.4 + pow(max(dot(rf, normalize(vec3(-.5, .9, .3))), 0.), 30.) * .5) * gananciaLuz();
     float eta = 1. / 1.42, k = 1. - eta * eta * (1. - cosi * cosi);
     vec3 refr = refl;
     if (k > 0.) {
       vec3 rdir = normalize(rd * eta + n * (eta * cosi - sqrt(k)));
       vec3 env = marchGround(p + rdir * .003, rdir);
       vec3 T = exp(-(1. - uJelly) * 20. * tj * tj * .08);      // casi transparente junto al ancla, intensa en la punta
-      refr = env * T + uJelly * 4.5 * max(0., dot(L, rdir)) * tj * tj * tj + uJelly * vec3(1., .8, .6) * .32 * tj * tj;
+      refr = env * T + (uJelly * 4.5 * max(0., dot(L, rdir)) * tj * tj * tj + uJelly * vec3(1., .8, .6) * .32 * tj * tj) * gananciaLuz();
     }
     col = mix(refr, refl, F);
   }
-  // exposición calibrada: la superficie plana sale exactamente del color de fondo de la web
-  vec3 Ln = normalize(-uLight); float plano = max(Ln.y, 0.) * .95 + .36;
-  col = tanh(col * atanh(clamp(uBg, .02, .995)) / plano);
+  col = tanh(col);
   float r = length(vec2(p.x / 1.75, (p.z - .05) / .95));
   float a = t > MAXD ? 0. : 1. - smoothstep(.72, 1.18, r);
   a *= smoothstep(1., .82, abs(ndc.x)) * smoothstep(1., .8, abs(ndc.y));

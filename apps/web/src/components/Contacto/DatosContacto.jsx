@@ -6,12 +6,13 @@ import { ICONOS_CONTACTO } from './iconos.jsx';
 import useCopiar from './useCopiar.js';
 import styles from './DatosContacto.module.css';
 
-export default function DatosContacto() {
+// `nombre`: el nombre ASCII del footer (lo arma PiePagina porque lleva el efecto del stickman).
+export default function DatosContacto({ nombre }) {
   const { copiar, texto, copiando } = useCopiar();
   return (
     <div className={styles.datos}>
       <div className={styles.marca}>
-        <b>Felipe Díaz Aimar</b>
+        {nombre}
         <span>Desarrollador Full Stack · San Francisco, Córdoba, Argentina</span>
       </div>
       <ul className={styles.lista}>

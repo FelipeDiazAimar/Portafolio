@@ -10,9 +10,9 @@ export class Gelatina {
   // Ancla y punta a ±0.85: con la punta redondeada la gelatina llena justo la ranura.
   static MIN_X = -0.2;
   static MAX_X = 0.85;
-  // Altura a la que se sostiene la punta: un poquito levantada para que se
-  // entienda que se puede agarrar (el original usa 0.08).
-  static ALTURA_PUNTA = 0.065;
+  // Altura a la que se sostiene la punta: apenas levantada para que se entienda
+  // que se puede agarrar, sin que parezca un escalón (el original usa 0.08).
+  static ALTURA_PUNTA = 0.04;
 
   // yOffset casi 0 (el original usa -0.03): la cinta ahora es más gruesa y tiene
   // que quedar apoyada sobre el piso de la ranura (y = -0.06) sin atravesarlo.

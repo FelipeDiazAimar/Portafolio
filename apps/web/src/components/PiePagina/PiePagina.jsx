@@ -22,6 +22,8 @@ const ColapsoFisico = dynamic(
 const CARACTERES_DENSOS = 'MW#@$%&B8NQ';
 const SEPARACION_COLUMNAS = 0.6;
 const PISO_SOBRE_BORDE_PX = 16;
+// Aire entre el borde superior de la región y el nombre: ahí caen las letras antes de rebotar.
+const AIRE_SOBRE_NOMBRE_PX = 24;
 
 function elegir(alfabeto) {
   return alfabeto[Math.floor(Math.random() * alfabeto.length)];
@@ -122,16 +124,19 @@ export default function PiePagina() {
     };
   }, [construirCampo]);
 
-  // Rectángulo de página que cubre el overlay del colapso. El piso queda un
-  // poco por encima del borde de la página: si coincidiera, los pies y los
-  // caracteres se verían cortados.
+  // Rectángulo de página que cubre el overlay del colapso: desde un poco arriba
+  // del nombre hasta el borde inferior del footer (el nombre ya no está en la
+  // franja de abajo). El piso queda un poco por encima del borde de la página:
+  // si coincidiera, los pies y los caracteres se verían cortados.
   function regionDelPie() {
     const rectPie = refPie.current.getBoundingClientRect();
+    const rectNombre = refContenedor.current.getBoundingClientRect();
+    const arriba = Math.max(rectPie.top, rectNombre.top - AIRE_SOBRE_NOMBRE_PX);
     return {
       left: rectPie.left + window.scrollX,
-      top: rectPie.top + window.scrollY,
+      top: arriba + window.scrollY,
       width: rectPie.width,
-      height: rectPie.height - PISO_SOBRE_BORDE_PX,
+      height: rectPie.bottom - arriba - PISO_SOBRE_BORDE_PX,
     };
   }
 
@@ -160,18 +165,10 @@ export default function PiePagina() {
       }
       if (refEsperandoSalida.current) return;
 
-      const rectPie = pie.getBoundingClientRect();
       setColapso({
         x: evento.clientX + window.scrollX,
         y: evento.clientY + window.scrollY,
-        region: {
-          left: rectPie.left + window.scrollX,
-          top: rectPie.top + window.scrollY,
-          width: rectPie.width,
-          // El piso queda un poco por encima del borde de la página: si
-          // coincidiera, los pies y los caracteres se verían cortados.
-          height: rectPie.height - PISO_SOBRE_BORDE_PX,
-        },
+        region: regionDelPie(),
       });
     }
 
@@ -190,39 +187,41 @@ export default function PiePagina() {
   );
 
   return (
-    <footer className={styles.envoltorio}>
+    <footer className={styles.envoltorio} ref={refPie}>
       <div className={styles.superior}>
         <GelatinaResena />
-        <DatosContacto />
+        <DatosContacto
+          nombre={
+            <div className={styles.contenedor} ref={refContenedor}>
+              <div
+                ref={refLimpio}
+                className={`${styles.nombre} ${colapso ? styles.oculto : ''}`}
+              >
+                <span>Felipe Diaz</span>
+                <span>Aimar</span>
+              </div>
+            </div>
+          }
+        />
       </div>
-      {/* La franja del nombre es la región del colapso: el stickman cae acá. */}
-      <div className={styles.pie} ref={refPie}>
+      <div className={styles.pie}>
         <p className={styles.derechos}>© {new Date().getFullYear()}</p>
-
-        <div className={styles.contenedor} ref={refContenedor}>
-          <div
-            ref={refLimpio}
-            className={`${styles.nombre} ${colapso ? styles.oculto : ''}`}
-          >
-            <span>Felipe Diaz Aimar</span>
-          </div>
-        </div>
-
-        {colapso && campo && (
-          <ColapsoFisico
-            campo={campo}
-            modo="stickman"
-            modoEntrada={colapso.tactil ? 'tactil' : 'raton'}
-            refContenedor={refContenedor}
-            posicionInicialRaton={{ x: colapso.x, y: colapso.y }}
-            region={colapso.region}
-            alTerminar={() => {
-              refEsperandoSalida.current = true;
-              setColapso(null);
-            }}
-          />
-        )}
       </div>
+
+      {colapso && campo && (
+        <ColapsoFisico
+          campo={campo}
+          modo="stickman"
+          modoEntrada={colapso.tactil ? 'tactil' : 'raton'}
+          refContenedor={refContenedor}
+          posicionInicialRaton={{ x: colapso.x, y: colapso.y }}
+          region={colapso.region}
+          alTerminar={() => {
+            refEsperandoSalida.current = true;
+            setColapso(null);
+          }}
+        />
+      )}
     </footer>
   );
 }

@@ -58,17 +58,110 @@ html.onda-tema *::after {
   z-index: 2;
 }
 
-/* Contacto y footer van siempre sobre blanco, con acento azul eléctrico /
-   celeste, sin importar el tema del resto del sitio. */
+/* Contacto y footer siguen el tema del sitio (mismas reglas que tokens.css):
+   claro = blanco, oscuro = casi negro; el acento es azul eléctrico / celeste en ambos. */
 :root {
+  /* oscuro (por defecto, igual que los tokens) */
+  --contacto-fondo: #0b0d12;
+  --contacto-texto: #f4f5f7;
+  --contacto-tenue: rgba(244, 245, 247, 0.55);
+  --contacto-fantasma: rgba(244, 245, 247, 0.2);
+  --contacto-linea: rgba(255, 255, 255, 0.1);
+  --contacto-acento: #4d8dff;
+  --contacto-celeste: #38c6ff;
+  --contacto-whatsapp: #2fd46b;
+  --contacto-vidrio: rgba(255, 255, 255, 0.07);
+  --contacto-vidrio-borde: rgba(255, 255, 255, 0.14);
+  --contacto-chip: rgba(255, 255, 255, 0.06);
+  --contacto-sombra: rgba(0, 0, 0, 0.5);
+  --contacto-brillo: rgba(255, 255, 255, 0.2);
+  --contacto-brillo-borde: rgba(255, 255, 255, 0.2);
+  --contacto-papel: #141922;
+  --contacto-funda-a: rgba(255, 255, 255, 0.13);
+  --contacto-funda-b: rgba(120, 160, 255, 0.05);
+  --contacto-funda-borde: rgba(255, 255, 255, 0.24);
+  --contacto-cinta: #1c4fd8;
+  --contacto-cinta-texto: rgba(255, 255, 255, 0.92);
+  --contacto-costura: #9fc2ff;
+  --contacto-burbuja: #134d37;
+  --contacto-burbuja-texto: #e9fff1;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --contacto-fondo: #f7f8fa;
+    --contacto-texto: #0f1218;
+    --contacto-tenue: rgba(15, 18, 24, 0.52);
+    --contacto-fantasma: rgba(15, 18, 24, 0.2);
+    --contacto-linea: rgba(15, 18, 24, 0.09);
+    --contacto-acento: #1f6bff;
+    --contacto-whatsapp: #1fae56;
+    --contacto-vidrio: rgba(255, 255, 255, 0.62);
+    --contacto-vidrio-borde: rgba(15, 18, 24, 0.09);
+    --contacto-chip: rgba(255, 255, 255, 0.7);
+    --contacto-sombra: rgba(20, 40, 90, 0.14);
+    --contacto-brillo: rgba(31, 107, 255, 0.55);
+    --contacto-brillo-borde: rgba(255, 255, 255, 0.9);
+    --contacto-papel: #ffffff;
+    --contacto-funda-a: rgba(255, 255, 255, 0.75);
+    --contacto-funda-b: rgba(220, 230, 250, 0.42);
+    --contacto-funda-borde: rgba(255, 255, 255, 0.95);
+    --contacto-cinta: #14171f;
+    --contacto-cinta-texto: rgba(244, 246, 250, 0.88);
+    --contacto-costura: #1f6bff;
+    --contacto-burbuja: #d9fdd3;
+    --contacto-burbuja-texto: #10251a;
+  }
+}
+
+:root[data-theme='light'] {
   --contacto-fondo: #f7f8fa;
   --contacto-texto: #0f1218;
   --contacto-tenue: rgba(15, 18, 24, 0.52);
   --contacto-fantasma: rgba(15, 18, 24, 0.2);
   --contacto-linea: rgba(15, 18, 24, 0.09);
   --contacto-acento: #1f6bff;
-  --contacto-celeste: #38c6ff;
   --contacto-whatsapp: #1fae56;
+  --contacto-vidrio: rgba(255, 255, 255, 0.62);
+  --contacto-vidrio-borde: rgba(15, 18, 24, 0.09);
+  --contacto-chip: rgba(255, 255, 255, 0.7);
+  --contacto-sombra: rgba(20, 40, 90, 0.14);
+  --contacto-brillo: rgba(31, 107, 255, 0.55);
+  --contacto-brillo-borde: rgba(255, 255, 255, 0.9);
+  --contacto-papel: #ffffff;
+  --contacto-funda-a: rgba(255, 255, 255, 0.75);
+  --contacto-funda-b: rgba(220, 230, 250, 0.42);
+  --contacto-funda-borde: rgba(255, 255, 255, 0.95);
+  --contacto-cinta: #14171f;
+  --contacto-cinta-texto: rgba(244, 246, 250, 0.88);
+  --contacto-costura: #1f6bff;
+  --contacto-burbuja: #d9fdd3;
+  --contacto-burbuja-texto: #10251a;
+}
+
+:root[data-theme='dark'] {
+  --contacto-fondo: #0b0d12;
+  --contacto-texto: #f4f5f7;
+  --contacto-tenue: rgba(244, 245, 247, 0.55);
+  --contacto-fantasma: rgba(244, 245, 247, 0.2);
+  --contacto-linea: rgba(255, 255, 255, 0.1);
+  --contacto-acento: #4d8dff;
+  --contacto-whatsapp: #2fd46b;
+  --contacto-vidrio: rgba(255, 255, 255, 0.07);
+  --contacto-vidrio-borde: rgba(255, 255, 255, 0.14);
+  --contacto-chip: rgba(255, 255, 255, 0.06);
+  --contacto-sombra: rgba(0, 0, 0, 0.5);
+  --contacto-brillo: rgba(255, 255, 255, 0.2);
+  --contacto-brillo-borde: rgba(255, 255, 255, 0.2);
+  --contacto-papel: #141922;
+  --contacto-funda-a: rgba(255, 255, 255, 0.13);
+  --contacto-funda-b: rgba(120, 160, 255, 0.05);
+  --contacto-funda-borde: rgba(255, 255, 255, 0.24);
+  --contacto-cinta: #1c4fd8;
+  --contacto-cinta-texto: rgba(255, 255, 255, 0.92);
+  --contacto-costura: #9fc2ff;
+  --contacto-burbuja: #134d37;
+  --contacto-burbuja-texto: #e9fff1;
 }
 
 main {

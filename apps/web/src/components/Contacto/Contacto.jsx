@@ -8,7 +8,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { CORREO, MENSAJE_NERVIOSO, MENSAJES, NUMERO_WHATSAPP } from '@/data/contacto.js';
 import { indiceDeProgreso, pesosAcumulados } from '@/lib/contacto/cadencia.js';
 import { estadoPorHora, horaArgentina, urlCorreo, urlWhatsApp } from '@/lib/contacto/enlaces.js';
-import { crearRutaAvion } from '@/lib/contacto/rutaAvion.js';
+import { crearRutaAvion, fraccionRecorrida } from '@/lib/contacto/rutaAvion.js';
 import Credencial from './Credencial.jsx';
 import FondoLuz from './FondoLuz.jsx';
 import SlideDestino, { AVION } from './SlideDestino.jsx';
@@ -18,7 +18,6 @@ const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'Ar
 const SACUDIDAS_NERVIOSO = 6;
 const COLORES_AVION = ['#ffffff', '#dfe6f3', '#9aa6bb'];
 const easeOutBack = (t) => 1 + 2.6 * (t - 1) ** 3 + 1.6 * (t - 1) ** 2;
-const easeInOutSine = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
 const limitar = (v, a, b) => Math.min(b, Math.max(a, v));
 
 function horaActual() {
@@ -227,41 +226,64 @@ export default function Contacto() {
     const inicio = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     const vueltas = Math.abs(velocidad) > 1.6 ? 2 : 1; // soltarlo con fuerza: doble rizo
     const ruta = crearRutaAvion({ inicio, ancho: window.innerWidth, alto: window.innerHeight, vueltas });
-    const duracion = vueltas === 2 ? 3300 : 2500;
-    const letras = refLetras.current;
-    const llevadas = new Set();
-    let ultimo = null;
-    const t0 = performance.now();
+    const duracion = vueltas === 2 ? 3800 : 3000;
+
+    // Todo lo que cuesta se calcula UNA vez antes de despegar: dentro del cuadro sólo
+    // hay cuentas y un transform, sin leer el layout ni tocar React.
+    const letras = refLetras.current.map((nodo, indice) => {
+      if (!nodo?.dataset.letra) return null;
+      const r = nodo.getBoundingClientRect();
+      return { nodo, indice, x: r.left + r.width / 2, y: r.top + r.height / 2, llevada: false };
+    });
+    const visibles = letras.filter(Boolean);
+    const llevarLetra = (letra, x, y) => {
+      letra.llevada = true;
+      const { nodo } = letra;
+      nodo.style.willChange = 'transform, opacity';
+      nodo.style.setProperty('--dx', `${((x - letra.x) * 0.6).toFixed(1)}px`);
+      nodo.style.setProperty('--dy', `${((y - letra.y) * 0.6).toFixed(1)}px`);
+      nodo.style.setProperty('--rot', `${((letra.indice % 7) - 3) * 14}deg`);
+      nodo.classList.add(styles.ida);
+    };
+
+    let ultimoAgitado = { x: inicio.x, y: inicio.y };
+    let terminado = false;
+    let t0 = null;
     avion.style.opacity = '1';
 
     function cuadro(ahora) {
-      const t = limitar((ahora - t0) / duracion, 0, 1);
-      // velocidad que crece de forma continua: despega suave y se va acelerando
-      const q = ruta.enRuta(ruta.total * t ** 1.75);
-      const entrada = easeInOutSine(limitar(t / 0.16, 0, 1));
-      const x = inicio.x + (q.x - inicio.x) * entrada;
-      const y = inicio.y + (q.y - inicio.y) * entrada;
-      // nace del tamaño del ícono de la manija y crece
-      const nacer = easeOutBack(limitar(t / 0.22, 0, 1));
-      const escala = (0.27 + 0.73 * nacer) * (1 - 0.4 * limitar((t - 0.72) / 0.28, 0, 1)) * (1 - 0.14 * Math.max(0, -Math.cos(q.phi)));
-      avion.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotate(${q.angulo.toFixed(4)}rad) scale(${escala.toFixed(3)})`;
-      if (ultimo && Math.hypot(x - ultimo.x, y - ultimo.y) > 0.6) refFondo.current?.agitar(x, y);
-      ultimo = { x, y };
-      // se lleva el mensaje: las letras se desprenden de la última a la primera
-      const cuantas = Math.floor(letras.length * limitar((t - 0.28) / 0.45, 0, 1));
-      for (let i = letras.length - 1; i >= letras.length - cuantas; i--) {
-        if (llevadas.has(i)) continue;
-        llevadas.add(i);
-        const letra = letras[i];
-        if (!letra?.dataset.letra) continue;
-        const r = letra.getBoundingClientRect();
-        letra.style.setProperty('--dx', `${((x - (r.left + r.width / 2)) * 0.55).toFixed(1)}px`);
-        letra.style.setProperty('--dy', `${((y - (r.top + r.height / 2)) * 0.55).toFixed(1)}px`);
-        letra.style.setProperty('--rot', `${((Math.random() - 0.5) * 50).toFixed(0)}deg`);
-        letra.classList.add(styles.ida);
+      t0 ??= ahora;
+      const t = Math.min(1, (ahora - t0) / duracion);
+      const q = ruta.enRuta(ruta.total * fraccionRecorrida(t));
+      // Nace del tamaño del ícono de la manija y crece con un pequeño rebote.
+      const nacer = easeOutBack(limitar(t / 0.2, 0, 1));
+      const salida = 1 - 0.45 * limitar((t - 0.75) / 0.25, 0, 1);
+      const escala = (0.3 + 0.7 * nacer) * salida;
+      // Se inclina hacia adentro de la curva, como un avión de verdad.
+      const alabeo = q.curvatura * 52;
+      avion.style.transform = `translate3d(${q.x.toFixed(2)}px, ${q.y.toFixed(2)}px, 0) rotate(${q.angulo.toFixed(4)}rad) perspective(520px) rotateX(${alabeo.toFixed(1)}deg) scale(${escala.toFixed(3)})`;
+
+      // Agita la luz del fondo cada tanto, no en cada cuadro.
+      if (Math.hypot(q.x - ultimoAgitado.x, q.y - ultimoAgitado.y) > 18) {
+        refFondo.current?.agitar(q.x, q.y);
+        ultimoAgitado = { x: q.x, y: q.y };
       }
-      if (t < 1) requestAnimationFrame(cuadro);
-      else {
+      // Se lleva el mensaje: las letras que roza se despegan hacia el avión y, desde la
+      // mitad del vuelo, las que sobran se van detrás de él de a pocas.
+      const alcance = 120 * escala + 30;
+      for (const letra of visibles) {
+        if (!letra.llevada && Math.hypot(letra.x - q.x, letra.y - q.y) < alcance) llevarLetra(letra, q.x, q.y);
+      }
+      if (t > 0.45) {
+        const hasta = Math.floor(visibles.length * limitar((t - 0.45) / 0.35, 0, 1));
+        for (let i = visibles.length - 1; i >= visibles.length - hasta; i--) {
+          if (!visibles[i].llevada) llevarLetra(visibles[i], q.x, q.y);
+        }
+      }
+      if (t < 1) {
+        requestAnimationFrame(cuadro);
+      } else if (!terminado) {
+        terminado = true;
         avion.style.opacity = '0';
         setTextoOculto(true);
         terminar();

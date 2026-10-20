@@ -7,14 +7,17 @@ import { useEffect, useRef } from 'react';
 import { DATOS_CONTACTO } from '@/data/contacto.js';
 import { ICONOS_CONTACTO } from './iconos.jsx';
 import useCopiar from './useCopiar.js';
-import { alcanceArrastre, crearCredencial, pasoCredencial, soltar } from './fisicaCredencial.js';
+import { observarTema } from '@/lib/contacto/tema.js';
+import { alcanceArrastre, crearCredencial, estiramiento, pasoCredencial, soltar } from './fisicaCredencial.js';
 import styles from './Credencial.module.css';
 
 const ANCHO = 290;
 const ALTO = 580;
 const HOYO = 16;
 const TEXTO_CINTA = 'HABLEMOS ✦ FELIPE DÍAZ ✦ ';
+// Separación entre letras con la cinta en reposo: el texto está impreso en la tela y se estira con ella.
 const PASO_LETRA = 9;
+const ANCHO_CINTA = 22;
 
 // Curva suave por los puntos medios.
 function trazar(ctx, pts) {
@@ -51,6 +54,17 @@ export default function Credencial() {
     let alto = 0;
     let inclinacion = 0;
     let visible = true;
+    // Colores de la cinta: salen de las variables del tema (se releen cuando cambia).
+    const colores = { cinta: '#14171f', texto: '#fff', costura: '#1f6bff', sombra: 'rgba(0,0,0,.3)' };
+    function leerColores() {
+      const css = getComputedStyle(zona);
+      colores.cinta = css.getPropertyValue('--contacto-cinta').trim() || colores.cinta;
+      colores.texto = css.getPropertyValue('--contacto-cinta-texto').trim() || colores.texto;
+      colores.costura = css.getPropertyValue('--contacto-costura').trim() || colores.costura;
+      colores.sombra = css.getPropertyValue('--contacto-sombra').trim() || colores.sombra;
+    }
+    leerColores();
+    const dejarDeObservarTema = observarTema(leerColores);
 
     function medir() {
       const rect = zona.getBoundingClientRect();
@@ -73,9 +87,11 @@ export default function Credencial() {
     }
 
     function pintar() {
-      const oscuro = '#14171f';
       ctx.clearRect(-200, 0, ancho + 400, alto);
       const pts = [...fis.cuerda.map((q) => ({ ...q })), { x: fis.P.x, y: fis.P.y - 6 }];
+      // Una cinta de tela se afina al estirarse (el volumen se conserva a grandes rasgos).
+      const estirada = Math.max(1, estiramiento(fis));
+      const grosor = Math.max(10, ANCHO_CINTA / Math.sqrt(estirada));
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       // sombra
@@ -83,20 +99,20 @@ export default function Credencial() {
       ctx.translate(6, 8);
       ctx.filter = 'blur(6px)';
       trazar(ctx, pts);
-      ctx.strokeStyle = 'rgba(20, 40, 90, 0.16)';
-      ctx.lineWidth = 26;
+      ctx.strokeStyle = colores.sombra;
+      ctx.lineWidth = grosor + 4;
       ctx.stroke();
       ctx.restore();
       // tela
       trazar(ctx, pts);
-      ctx.strokeStyle = oscuro;
-      ctx.lineWidth = 22;
+      ctx.strokeStyle = colores.cinta;
+      ctx.lineWidth = grosor;
       ctx.stroke();
-      // costuras azules en los bordes
-      ctx.strokeStyle = '#1f6bff';
+      // costuras en los bordes
+      ctx.strokeStyle = colores.costura;
       ctx.lineWidth = 2;
       ctx.globalAlpha = 0.65;
-      for (const dx of [-8.5, 8.5]) {
+      for (const dx of [-(grosor / 2 - 2.5), grosor / 2 - 2.5]) {
         ctx.save();
         ctx.translate(dx, 0);
         trazar(ctx, pts);
@@ -104,32 +120,29 @@ export default function Credencial() {
         ctx.restore();
       }
       ctx.globalAlpha = 1;
-      // texto impreso en la cinta: fijo, se mueve con la tela pero no corre
+      // Texto impreso en la tela: cada letra tiene una posición FIJA sobre la cinta en reposo
+      // y se ubica en el tramo que le toca, así que se estira, se afina y se curva con ella.
       ctx.font = '600 9px Inter, system-ui, sans-serif';
-      ctx.fillStyle = 'rgba(244, 246, 250, 0.88)';
+      ctx.fillStyle = colores.texto;
       ctx.textBaseline = 'middle';
-      let acumulado = 4;
-      let k = 0;
-      for (let i = 0; i < pts.length - 1; i++) {
+      const tramos = fis.cuerda.length - 1;
+      const largoReposo = tramos * fis.seg;
+      for (let k = 0, u = 4; u < largoReposo; k += 1, u += PASO_LETRA) {
+        const i = Math.min(tramos - 1, Math.floor(u / fis.seg));
+        const t = (u - i * fis.seg) / fis.seg;
         const a = pts[i];
         const b = pts[i + 1];
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const d = Math.hypot(dx, dy);
-        while (acumulado < d) {
-          const x = a.x + (dx * acumulado) / d;
-          const y = a.y + (dy * acumulado) / d;
-          if (y > 0) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(Math.atan2(dy, dx));
-            ctx.fillText(TEXTO_CINTA[k % TEXTO_CINTA.length], -3, 0);
-            ctx.restore();
-          }
-          k += 1;
-          acumulado += PASO_LETRA;
-        }
-        acumulado -= d;
+        const x = a.x + (b.x - a.x) * t;
+        const y = a.y + (b.y - a.y) * t;
+        if (y < 0) continue;
+        const local = Math.hypot(b.x - a.x, b.y - a.y) / fis.seg;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.atan2(b.y - a.y, b.x - a.x));
+        // la tinta también se estira a lo largo y se achica a lo ancho
+        ctx.scale(Math.max(1, local), 1 / Math.sqrt(Math.max(1, local)));
+        ctx.fillText(TEXTO_CINTA[k % TEXTO_CINTA.length], -3, 0);
+        ctx.restore();
       }
       // tarjeta
       const angulo = Math.atan2(fis.C.x - fis.P.x, fis.C.y - fis.P.y);
@@ -218,6 +231,7 @@ export default function Credencial() {
     return () => {
       cancelAnimationFrame(cuadro);
       observador.disconnect();
+      dejarDeObservarTema();
       window.removeEventListener('resize', medir);
       tarjeta.removeEventListener('pointerdown', alBajar);
       window.removeEventListener('pointermove', alMover);

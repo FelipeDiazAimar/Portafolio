@@ -16,6 +16,7 @@ export const MENSAJES = {
   proyecto: { chip: 'Proyecto', texto: 'Hola Felipe, vi tu portafolio y tengo un proyecto en mente. ¿Charlamos esta semana?', asunto: 'Tengo un proyecto' },
   colab: { chip: 'Colaboración', texto: 'Hola Felipe, me encantó tu trabajo. ¿Te interesa que colaboremos en algo juntos?', asunto: 'Colaboración' },
   saludo: { chip: 'Solo saludar', texto: 'Hola Felipe, solo pasaba a decirte que tu portafolio está buenísimo. ¡Saludos!', asunto: 'Hola' },
+  empresa: { chip: 'Queremos trabajar con vos', texto: 'Hola Felipe, somos un equipo y queremos trabajar con vos. ¿Hablamos esta semana?', asunto: 'Queremos trabajar con vos' },
 };
 
 export const MENSAJE_NERVIOSO = 'Hola Felipe, perdón, me puse nervioso… ¿empezamos de nuevo?';
