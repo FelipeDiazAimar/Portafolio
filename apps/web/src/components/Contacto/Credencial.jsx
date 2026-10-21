@@ -16,7 +16,7 @@ const ALTO = 580;
 const HOYO = 16;
 const TEXTO_CINTA = 'HABLEMOS ✦ FELIPE DÍAZ ✦ ';
 // Separación entre letras con la cinta en reposo: el texto está impreso en la tela y se estira con ella.
-const PASO_LETRA = 9;
+const PASO_LETRA = 11;
 const ANCHO_CINTA = 22;
 // La cinta cuelga de una argolla enganchada a una placa atornillada a la pared de la sección.
 const PLACA_Y = 36; // centro de la placa: a la altura del header (su logo y botones están en esa línea)
@@ -163,7 +163,7 @@ export default function Credencial() {
       const pts = [...fis.cuerda.map((q) => ({ ...q })), { x: fis.P.x, y: fis.P.y - 6 }];
       // Una cinta de tela se afina al estirarse (el volumen se conserva a grandes rasgos).
       const estirada = Math.max(1, estiramiento(fis));
-      const grosor = Math.max(10, ANCHO_CINTA / Math.sqrt(estirada));
+      const grosor = Math.max(16, ANCHO_CINTA / Math.sqrt(estirada));
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       // tela (con su sombra proyectada; sin ctx.filter, que deja restos en algunos navegadores)
@@ -189,29 +189,35 @@ export default function Credencial() {
         ctx.restore();
       }
       ctx.globalAlpha = 1;
-      // Texto impreso en la tela: cada letra tiene una posición FIJA sobre la cinta en reposo
-      // y se ubica en el tramo que le toca, así que se estira, se afina y se curva con ella.
-      ctx.font = '600 9px Inter, system-ui, sans-serif';
+      // Texto impreso en la tela: las letras se reparten a lo largo del largo REAL de la cinta, con su
+      // tamaño y forma de siempre (si se estiraban junto con la tela, al agrandar la cinta quedaban
+      // ilegibles). Al estirarla aparecen más letras: el texto se repite.
+      ctx.font = '700 10px Inter, system-ui, sans-serif';
       ctx.fillStyle = colores.texto;
       ctx.textBaseline = 'middle';
-      const tramos = fis.cuerda.length - 1;
-      const largoReposo = tramos * fis.seg;
-      for (let k = 0, u = 4; u < largoReposo; k += 1, u += PASO_LETRA) {
-        const i = Math.min(tramos - 1, Math.floor(u / fis.seg));
-        const t = (u - i * fis.seg) / fis.seg;
+      ctx.textAlign = 'center';
+      let recorrido = 0;
+      let proxima = 6;
+      let k = 0;
+      for (let i = 0; i < pts.length - 1; i++) {
         const a = pts[i];
         const b = pts[i + 1];
-        const x = a.x + (b.x - a.x) * t;
-        const y = a.y + (b.y - a.y) * t;
-        if (y < 0) continue;
-        const local = Math.hypot(b.x - a.x, b.y - a.y) / fis.seg;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(Math.atan2(b.y - a.y, b.x - a.x));
-        // la tinta también se estira a lo largo y se achica a lo ancho
-        ctx.scale(Math.max(1, local), 1 / Math.sqrt(Math.max(1, local)));
-        ctx.fillText(TEXTO_CINTA[k % TEXTO_CINTA.length], -3, 0);
-        ctx.restore();
+        const largo = Math.hypot(b.x - a.x, b.y - a.y);
+        while (proxima <= recorrido + largo) {
+          const t = largo ? (proxima - recorrido) / largo : 0;
+          const x = a.x + (b.x - a.x) * t;
+          const y = a.y + (b.y - a.y) * t;
+          if (y > 0) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(Math.atan2(b.y - a.y, b.x - a.x));
+            ctx.fillText(TEXTO_CINTA[k % TEXTO_CINTA.length], 0, 0.5);
+            ctx.restore();
+          }
+          proxima += PASO_LETRA;
+          k += 1;
+        }
+        recorrido += largo;
       }
       // tarjeta
       const angulo = Math.atan2(fis.C.x - fis.P.x, fis.C.y - fis.P.y);
