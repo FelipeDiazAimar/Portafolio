@@ -53,7 +53,8 @@ export default function GelatinaResena() {
   const refNota = useRef(null);
   const [sinWebGL, setSinWebGL] = useState(false);
   const [activa, setActiva] = useState(false);
-  const [frase, setFrase] = useState({ texto: '', clave: 0 });
+  // arranca en 100 %, con su frase
+  const [frase, setFrase] = useState({ texto: fraseDe(100), clave: 0 });
 
   useEffect(() => {
     const lienzo = refLienzo.current;

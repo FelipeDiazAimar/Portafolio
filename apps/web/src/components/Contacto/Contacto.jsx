@@ -27,10 +27,16 @@ function horaActual() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Abre WhatsApp en otra pestaña; si el navegador bloquea la ventana, navega en la misma.
+// Abre WhatsApp SOLO en otra pestaña; si el navegador bloquea la ventana, navega en la misma.
+// Ojo: con la opción 'noopener', window.open devuelve siempre null aunque la pestaña se abra, y
+// se interpretaba como bloqueo (se abría en las dos). Por eso se corta el opener a mano.
 function abrirWhatsApp(url) {
-  const ventana = window.open(url, '_blank', 'noopener');
-  if (!ventana) window.location.href = url;
+  const ventana = window.open(url, '_blank');
+  if (ventana) {
+    ventana.opener = null;
+    return;
+  }
+  window.location.href = url;
 }
 
 export default function Contacto() {
@@ -476,10 +482,10 @@ export default function Contacto() {
           className={`${styles.escenario} ${escribiendo ? styles.escribiendo : ''}`}
           onClick={abrirEditor}
         >
-          <div className={`${styles.fantasma} ${escribiendo || refIndice.current > 0 ? styles.oculto : ''}`}>
+          <div className={`${styles.fantasma} ${escribiendo || editando || refIndice.current > 0 ? styles.oculto : ''}`}>
             Deslizá para escribirme.
           </div>
-          <div ref={refTexto} className={`${styles.texto} ${textoOculto ? styles.textoOculto : ''}`} aria-hidden="true">
+          <div ref={refTexto} className={`${styles.texto} ${textoOculto || editando ? styles.textoOculto : ''}`} aria-hidden="true">
             {palabras.map((trozo, i) => {
               if (/^\s+$/.test(trozo)) {
                 const indice = indiceLetra++;

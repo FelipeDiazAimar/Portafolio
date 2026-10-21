@@ -237,7 +237,7 @@
   border: 0;
   outline: 0;
   resize: none;
-  background: var(--contacto-fondo);
+  background: transparent; /* con el color liso de la página tapaba el degradado y se veía un bloque negro */
   font: inherit;
   letter-spacing: inherit;
   line-height: inherit;
