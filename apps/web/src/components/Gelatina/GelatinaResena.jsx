@@ -4,13 +4,14 @@
 // La física corre en JS (fisicaGelatina.js) y el render es un shader WebGL2
 // (shaderGelatina.js). No guarda nada: es solo para jugar.
 import { useEffect, useRef, useState } from 'react';
-import { Gelatina, suavizarCurva } from './fisicaGelatina.js';
-import { FRAGMENT, PUNTOS_CURVA, VERTEX } from './shaderGelatina.js';
+import { Gelatina, subdividirCurva } from './fisicaGelatina.js';
+import { DOMINIO_SDF, FRAGMENT, FRAGMENT_SDF, PUNTOS_CURVA, TEXELES_SDF, VERTEX } from './shaderGelatina.js';
 import styles from './GelatinaResena.module.css';
 
 const AZUL_ELECTRICO = [0.12, 0.48, 1];
 const LUZ = normalizar([0.19, -0.24, 0.75]);
 const SUAVIZADO_PUNTERO = 0.08; // el MOUSE_SMOOTHING del original
+const SUBDIVISIONES = 8; // cada tramo de la física se parte en 8: 16 tramos → 128 (sin caras visibles)
 
 function normalizar(v) {
   const largo = Math.hypot(...v) || 1;
@@ -60,32 +61,66 @@ export default function GelatinaResena() {
       setSinWebGL(true);
       return undefined;
     }
+    function crearPrograma(fuenteFragmento) {
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compilar(gl, gl.VERTEX_SHADER, VERTEX));
+      gl.attachShader(prog, compilar(gl, gl.FRAGMENT_SHADER, fuenteFragmento));
+      gl.bindAttribLocation(prog, 0, 'a');
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      return prog;
+    }
     let programa;
+    let programaSdf;
+    let texturaSdf;
+    let fbo;
     try {
-      programa = gl.createProgram();
-      gl.attachShader(programa, compilar(gl, gl.VERTEX_SHADER, VERTEX));
-      gl.attachShader(programa, compilar(gl, gl.FRAGMENT_SHADER, FRAGMENT));
-      gl.linkProgram(programa);
-      if (!gl.getProgramParameter(programa, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(programa));
+      // El campo de distancia de la curva se dibuja en una textura de 16 bits en coma flotante.
+      if (!gl.getExtension('EXT_color_buffer_float') && !gl.getExtension('EXT_color_buffer_half_float')) {
+        throw new Error('el navegador no puede dibujar en texturas de coma flotante');
+      }
+      programaSdf = crearPrograma(FRAGMENT_SDF);
+      programa = crearPrograma(FRAGMENT);
+      texturaSdf = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, texturaSdf);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, TEXELES_SDF[0], TEXELES_SDF[1], 0, gl.RGBA, gl.HALF_FLOAT, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      fbo = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texturaSdf, 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+        throw new Error('no se pudo armar la textura del campo de distancia');
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     } catch (error) {
       console.error('[gelatina]', error);
       setSinWebGL(true);
       return undefined;
     }
-    gl.useProgram(programa);
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const atributo = gl.getAttribLocation(programa, 'a');
-    gl.enableVertexAttribArray(atributo);
-    gl.vertexAttribPointer(atributo, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    const uSdf = Object.fromEntries(['uPts', 'uDominio'].map((n) => [n, gl.getUniformLocation(programaSdf, n)]));
     const u = Object.fromEntries(
-      ['uRes', 'uCam', 'uRight', 'uUp', 'uFwd', 'uTan', 'uPts', 'uBox', 'uJelly', 'uLight', 'uBg', 'uTexto'].map((n) => [n, gl.getUniformLocation(programa, n)])
+      ['uRes', 'uCam', 'uRight', 'uUp', 'uFwd', 'uTan', 'uSdf', 'uDominio', 'uPunta', 'uBox', 'uJelly', 'uLight', 'uBg', 'uTexto'].map((n) => [n, gl.getUniformLocation(programa, n)])
     );
     const tanMitadFov = Math.tan(Math.PI / 8);
+    const dominio = [DOMINIO_SDF.x0, DOMINIO_SDF.y0, DOMINIO_SDF.ancho, DOMINIO_SDF.alto];
+    gl.useProgram(programaSdf);
+    gl.uniform4fv(uSdf.uDominio, dominio);
+    gl.useProgram(programa);
     gl.uniform3fv(u.uJelly, AZUL_ELECTRICO);
     gl.uniform3fv(u.uLight, LUZ);
     gl.uniform1f(u.uTan, tanMitadFov);
+    gl.uniform4fv(u.uDominio, dominio);
+    gl.uniform1i(u.uTexto, 0);
+    gl.uniform1i(u.uSdf, 1);
 
     // Porcentaje: se dibuja en un canvas 2D y se sube como textura cuando cambia.
     const lienzoTexto = document.createElement('canvas');
@@ -99,7 +134,6 @@ export default function GelatinaResena() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.uniform1i(u.uTexto, 0);
     let porcentajeDibujado = -1;
     function dibujarPorcentaje(valor) {
       if (valor === porcentajeDibujado) return;
@@ -112,6 +146,8 @@ export default function GelatinaResena() {
       ctxTexto.fillText(String(valor), 196, 84);
       ctxTexto.font = '600 64px ui-monospace, "JetBrains Mono", monospace';
       ctxTexto.fillText('%', 246, 96);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, textura);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, lienzoTexto);
     }
 
@@ -120,6 +156,7 @@ export default function GelatinaResena() {
     let aspecto = 2;
     let sucio = true;
     function medir() {
+      gl.useProgram(programa);
       const rect = lienzo.getBoundingClientRect();
       const escala = Math.min(window.devicePixelRatio || 1, 1.5);
       lienzo.width = Math.max(2, Math.round(rect.width * escala));
@@ -204,6 +241,7 @@ export default function GelatinaResena() {
     medir();
     // El tema cambia el fondo de la página: se vuelve a leer para recalibrar.
     const observadorTema = new MutationObserver(() => {
+      gl.useProgram(programa);
       gl.uniform3fv(u.uBg, fondoDetras(lienzo.parentElement));
       sucio = true;
     });
@@ -223,7 +261,7 @@ export default function GelatinaResena() {
       // En reposo no se redibuja: el shader es caro y la escena no cambia.
       if (visible && (quieto < 3 || sucio)) {
         const piso = gel.baseY + gel.yOffset;
-        const curva = suavizarCurva(gel.pos.map((p) => [p[0], Math.max(p[1], piso)]), piso);
+        const curva = subdividirCurva(gel.pos.map((p) => [p[0], Math.max(p[1], piso)]), SUBDIVISIONES, piso);
         let izq = Infinity;
         let der = -Infinity;
         let abajoY = Infinity;
@@ -236,7 +274,17 @@ export default function GelatinaResena() {
           abajoY = Math.min(abajoY, y);
           arribaY = Math.max(arribaY, y);
         });
-        gl.uniform2fv(u.uPts, puntos);
+        // Pase 1: campo de distancia de la curva, en la textura.
+        gl.useProgram(programaSdf);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.viewport(0, 0, TEXELES_SDF[0], TEXELES_SDF[1]);
+        gl.uniform2fv(uSdf.uPts, puntos);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // Pase 2: la escena, que sólo lee esa textura.
+        gl.viewport(0, 0, lienzo.width, lienzo.height);
+        gl.useProgram(programa);
+        gl.uniform2f(u.uPunta, puntos[(PUNTOS_CURVA - 1) * 2], puntos[(PUNTOS_CURVA - 1) * 2 + 1]);
         gl.uniform4f(u.uBox, izq - 0.25, der + 0.25, abajoY - 0.25, arribaY + 0.25);
         const nota = porcentajeDe(gel.targetX);
         dibujarPorcentaje(nota);
@@ -267,8 +315,11 @@ export default function GelatinaResena() {
       // Sin loseContext(): en modo estricto el efecto se monta dos veces sobre el
       // mismo canvas y el segundo montaje recibiría un contexto ya perdido.
       gl.deleteProgram(programa);
+      gl.deleteProgram(programaSdf);
+      gl.deleteFramebuffer(fbo);
       gl.deleteBuffer(buffer);
       gl.deleteTexture(textura);
+      gl.deleteTexture(texturaSdf);
     };
   }, []);
 

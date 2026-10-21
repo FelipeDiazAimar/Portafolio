@@ -22,6 +22,8 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   will-change: transform;
 }
 
@@ -194,11 +196,9 @@
   pointer-events: none;
 }
 
-/* textura del laminado: rayitas finísimas y un velo que separa la funda del papel */
+/* velo liso de la funda (sin rayas): un brillo suave arriba y abajo que separa el plástico del papel */
 .plastico {
-  background:
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 4px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 30%, transparent 70%, rgba(255, 255, 255, 0.16));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 30%, transparent 70%, rgba(255, 255, 255, 0.16));
   box-shadow: inset 0 0 0 12px color-mix(in srgb, var(--contacto-funda-a) 24%, transparent);
 }
 
@@ -262,6 +262,11 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* mantener apretado el QR no lo agarra como imagen: ni arrastre, ni selección, ni menú táctil */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
 }
 
 .qrPie {

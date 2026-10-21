@@ -18,7 +18,6 @@
   align-items: flex-end;
   min-height: 7rem;
   padding: 0 clamp(1.25rem, 8vw, 6rem) 2rem;
-  border-top: 1px solid var(--contacto-linea);
 }
 
 .derechos {

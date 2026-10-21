@@ -139,18 +139,25 @@ export class Gelatina {
   }
 }
 
-// Catmull-Rom: agrega un punto en medio de cada tramo (17 → 33) para que la
-// curva que dibuja el shader no tenga quiebres.
-export function suavizarCurva(puntos, piso) {
-  const medio = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * 0.5 + (2 * a - 5 * b + 4 * c - d) * 0.25 + (-a + 3 * b - 3 * c + d) * 0.125);
+// Catmull-Rom: subdivide cada tramo en `factor` partes (17 puntos → 129 con factor 8) para que la
+// curva que mide el shader sea lisa: con pocos tramos rectos se notaban las "caras". La curva
+// pasa exactamente por los puntos de la física y nunca baja de `piso` (el piso de la ranura).
+export function subdividirCurva(puntos, factor, piso) {
+  const cr = (a, b, c, d, t) =>
+    0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
   const salida = [];
   for (let i = 0; i < puntos.length - 1; i++) {
     const a = puntos[Math.max(0, i - 1)];
     const b = puntos[i];
     const c = puntos[i + 1];
     const d = puntos[Math.min(puntos.length - 1, i + 2)];
-    salida.push(b, [medio(a[0], b[0], c[0], d[0]), Math.max(piso, medio(a[1], b[1], c[1], d[1]))]);
+    salida.push([b[0], Math.max(piso, b[1])]);
+    for (let k = 1; k < factor; k++) {
+      const t = k / factor;
+      salida.push([cr(a[0], b[0], c[0], d[0], t), Math.max(piso, cr(a[1], b[1], c[1], d[1], t))]);
+    }
   }
-  salida.push(puntos.at(-1));
+  const ultimo = puntos.at(-1);
+  salida.push([ultimo[0], Math.max(piso, ultimo[1])]);
   return salida;
 }

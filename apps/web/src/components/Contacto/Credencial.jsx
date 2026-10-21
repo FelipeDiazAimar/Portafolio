@@ -7,8 +7,8 @@ import { useEffect, useRef } from 'react';
 import { DATOS_CONTACTO } from '@/data/contacto.js';
 import { ICONOS_CONTACTO } from './iconos.jsx';
 import useCopiar from './useCopiar.js';
-import { observarTema } from '@/lib/contacto/tema.js';
-import { alcanceArrastre, crearCredencial, estiramiento, pasoCredencial, soltar } from './fisicaCredencial.js';
+import { observarTema, temaActual } from '@/lib/contacto/tema.js';
+import { crearCredencial, estiramiento, pasoCredencial, soltar } from './fisicaCredencial.js';
 import styles from './Credencial.module.css';
 
 const ANCHO = 290;
@@ -18,6 +18,62 @@ const TEXTO_CINTA = 'HABLEMOS ✦ FELIPE DÍAZ ✦ ';
 // Separación entre letras con la cinta en reposo: el texto está impreso en la tela y se estira con ella.
 const PASO_LETRA = 9;
 const ANCHO_CINTA = 22;
+// La cinta cuelga de una argolla enganchada a una placa atornillada a la pared de la sección.
+const PLACA_Y = 104; // centro de la placa, medido desde el borde de arriba de la sección
+const ARGOLLA_DY = 17; // la argolla cuelga de la placa; la cinta nace en su centro
+const RADIO_PLACA = 16;
+const RADIO_ARGOLLA = 8.5;
+
+function gradienteMetal(ctx, x0, y0, x1, y1, oscuro) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, oscuro ? '#a3aec3' : '#dfe4ee');
+  g.addColorStop(0.5, oscuro ? '#6f788b' : '#a4aebf');
+  g.addColorStop(1, oscuro ? '#4b5365' : '#7c869a');
+  return g;
+}
+
+// Placa redonda atornillada: va DETRÁS de la cinta.
+function dibujarPlaca(ctx, x, y, oscuro) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.32)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 5;
+  ctx.fillStyle = gradienteMetal(ctx, x - RADIO_PLACA, y - RADIO_PLACA, x + RADIO_PLACA, y + RADIO_PLACA, oscuro);
+  ctx.beginPath();
+  ctx.arc(x, y, RADIO_PLACA, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(x, y, RADIO_PLACA - 0.8, Math.PI * 1.05, Math.PI * 1.85);
+  ctx.stroke();
+  // tornillo
+  ctx.fillStyle = oscuro ? '#3b4252' : '#8e98ab';
+  ctx.beginPath();
+  ctx.arc(x, y - 1, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = oscuro ? '#1d2230' : '#5d667a';
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 3, y + 0.6);
+  ctx.lineTo(x + 3, y - 2.6);
+  ctx.stroke();
+}
+
+// Argolla que sostiene la cinta. Se dibuja entera detrás de la cinta y la mitad de abajo POR
+// ENCIMA: así se ve que la cinta pasa por dentro.
+function dibujarArgolla(ctx, x, y, oscuro, sector) {
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 3.4;
+  ctx.strokeStyle = gradienteMetal(ctx, x - RADIO_ARGOLLA, y - RADIO_ARGOLLA, x + RADIO_ARGOLLA, y + RADIO_ARGOLLA, oscuro);
+  ctx.beginPath();
+  if (sector === 'frente') ctx.arc(x, y, RADIO_ARGOLLA, 0.05, Math.PI - 0.05);
+  else ctx.arc(x, y, RADIO_ARGOLLA, 0, Math.PI * 2);
+  ctx.stroke();
+}
 
 // Curva suave por los puntos medios.
 function trazar(ctx, pts) {
@@ -47,67 +103,78 @@ export default function Credencial() {
     const lienzo = refCinta.current;
     const tarjeta = refTarjeta.current;
     const ctx = lienzo.getContext('2d');
-    const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let fis;
     let escala = 1;
     let ancho = 0;
     let alto = 0;
     let inclinacion = 0;
+    let inclinacionObjetivo = 0;
+    let origenX = 0;
     let visible = true;
     // Colores de la cinta: salen de las variables del tema (se releen cuando cambia).
-    const colores = { cinta: '#14171f', texto: '#fff', costura: '#1f6bff', sombra: 'rgba(0,0,0,.3)' };
+    const colores = { cinta: '#14171f', texto: '#fff', costura: '#1f6bff', sombra: 'rgba(0,0,0,.3)', oscuro: false };
     function leerColores() {
       const css = getComputedStyle(zona);
       colores.cinta = css.getPropertyValue('--contacto-cinta').trim() || colores.cinta;
       colores.texto = css.getPropertyValue('--contacto-cinta-texto').trim() || colores.texto;
       colores.costura = css.getPropertyValue('--contacto-costura').trim() || colores.costura;
       colores.sombra = css.getPropertyValue('--contacto-sombra').trim() || colores.sombra;
+      colores.oscuro = temaActual() === 'dark';
     }
     leerColores();
     const dejarDeObservarTema = observarTema(leerColores);
 
     function medir() {
       const rect = zona.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      escala = escalaPara(window.innerWidth);
-      ancho = rect.width;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       alto = Math.max(rect.height, 600);
-      // el lienzo sobra 200 px por lado: la cinta puede salirse de la columna al arrastrar
-      lienzo.width = (ancho + 400) * dpr;
+      ancho = rect.width;
+      origenX = rect.left;
+      const largoCinta = Math.min(96, Math.max(70, alto * 0.1));
+      // La credencial se achica en pantallas angostas o bajas para que entre colgando.
+      const lugar = (alto - PLACA_Y - ARGOLLA_DY - largoCinta * 1.3 - 36) / (ALTO - HOYO);
+      escala = Math.max(0.55, Math.min(escalaPara(window.innerWidth), lugar));
+      // El lienzo cubre TODA la sección (no sólo la columna): la cinta se puede estirar hasta
+      // donde llegue el puntero.
+      const anchoLienzo = window.innerWidth;
+      lienzo.width = anchoLienzo * dpr;
       lienzo.height = alto * dpr;
-      lienzo.style.width = `${ancho + 400}px`;
+      lienzo.style.width = `${anchoLienzo}px`;
       lienzo.style.height = `${alto}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 200 * dpr, 0);
+      lienzo.style.left = `${-origenX}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, origenX * dpr, 0);
       fis = crearCredencial({
-        ancla: { x: ancho * 0.5, y: -30 },
-        largoCinta: alto * 0.12, // es elástica: con el peso se estira ~8 %
+        ancla: { x: ancho * 0.5, y: PLACA_Y + ARGOLLA_DY },
+        largoCinta, // es elástica: con el peso se estira ~20 %
         largoTarjeta: (ALTO - HOYO) * escala,
-        impulso: reducido ? 0 : 2.2,
       });
     }
 
     function pintar() {
-      ctx.clearRect(-200, 0, ancho + 400, alto);
+      // se borra TODO el lienzo en píxeles reales (sin transformación) y luego se vuelve a la del dibujo
+      const dprLienzo = lienzo.width / window.innerWidth;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, lienzo.width, lienzo.height);
+      ctx.setTransform(dprLienzo, 0, 0, dprLienzo, origenX * dprLienzo, 0);
+      dibujarPlaca(ctx, fis.ancla.x, PLACA_Y, colores.oscuro);
+      dibujarArgolla(ctx, fis.ancla.x, fis.ancla.y, colores.oscuro, 'completa');
       const pts = [...fis.cuerda.map((q) => ({ ...q })), { x: fis.P.x, y: fis.P.y - 6 }];
       // Una cinta de tela se afina al estirarse (el volumen se conserva a grandes rasgos).
       const estirada = Math.max(1, estiramiento(fis));
       const grosor = Math.max(10, ANCHO_CINTA / Math.sqrt(estirada));
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      // sombra
+      // tela (con su sombra proyectada; sin ctx.filter, que deja restos en algunos navegadores)
       ctx.save();
-      ctx.translate(6, 8);
-      ctx.filter = 'blur(6px)';
-      trazar(ctx, pts);
-      ctx.strokeStyle = colores.sombra;
-      ctx.lineWidth = grosor + 4;
-      ctx.stroke();
-      ctx.restore();
-      // tela
+      ctx.shadowColor = colores.sombra;
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetX = 6;
+      ctx.shadowOffsetY = 8;
       trazar(ctx, pts);
       ctx.strokeStyle = colores.cinta;
       ctx.lineWidth = grosor;
       ctx.stroke();
+      ctx.restore();
       // costuras en los bordes
       ctx.strokeStyle = colores.costura;
       ctx.lineWidth = 2;
@@ -120,6 +187,8 @@ export default function Credencial() {
         ctx.restore();
       }
       ctx.globalAlpha = 1;
+      // la mitad de abajo de la argolla queda POR ENCIMA de la cinta: la cinta pasa por dentro
+      dibujarArgolla(ctx, fis.ancla.x, fis.ancla.y, colores.oscuro, 'frente');
       // Texto impreso en la tela: cada letra tiene una posición FIJA sobre la cinta en reposo
       // y se ubica en el tramo que le toca, así que se estira, se afina y se curva con ella.
       ctx.font = '600 9px Inter, system-ui, sans-serif';
@@ -153,18 +222,34 @@ export default function Credencial() {
       tarjeta.style.setProperty('--holo', `${((fis.giro * 57 + angulo * 220) % 360).toFixed(0)}deg`);
     }
 
+    // Paso de tiempo FIJO: la física da el mismo resultado a 30, 60 o 144 cuadros por segundo. Con un dt
+    // variable el peso "pesaba más" en equipos lentos y la cinta colgaba mucho más estirada.
+    const PASO_FISICA = 1 / 60;
+    const MAX_PASOS_POR_CUADRO = 5;
+    let acumulado = 0;
     let cuadro = 0;
     let anterior = performance.now();
     function bucle(ahora) {
-      const dt = Math.min(0.033, (ahora - anterior) / 1000);
+      const dt = Math.min(0.25, (ahora - anterior) / 1000);
       anterior = ahora;
+      // la inclinación hacia el cursor se acerca de a poco: nunca da tirones
+      inclinacion += (inclinacionObjetivo - inclinacion) * Math.min(1, dt * 7);
       if (visible) {
-        // un clic corto (para copiar una fila) no tira de la tarjeta
-        const agarre = fis.agarre;
-        if (agarre && !agarre.activo) fis.agarre = null;
-        pasoCredencial(fis, dt);
-        if (agarre && !agarre.activo) fis.agarre = agarre;
+        acumulado += dt;
+        let pasos = 0;
+        while (acumulado >= PASO_FISICA && pasos < MAX_PASOS_POR_CUADRO) {
+          // un clic corto (para copiar una fila) no tira de la tarjeta
+          const agarre = fis.agarre;
+          if (agarre && !agarre.activo) fis.agarre = null;
+          pasoCredencial(fis, PASO_FISICA);
+          if (agarre && !agarre.activo) fis.agarre = agarre;
+          acumulado -= PASO_FISICA;
+          pasos += 1;
+        }
+        if (pasos === MAX_PASOS_POR_CUADRO) acumulado = 0; // equipo muy lento: no se acumula atraso
         pintar();
+      } else {
+        acumulado = 0;
       }
       cuadro = requestAnimationFrame(bucle);
     }
@@ -183,7 +268,7 @@ export default function Credencial() {
       const rect = tarjeta.getBoundingClientRect();
       const cy = rect.top + rect.height / 2;
       const cerca = Math.hypot(evento.clientX - (rect.left + rect.width / 2), evento.clientY - cy) < 340;
-      inclinacion = cerca ? Math.max(-6, Math.min(6, (evento.clientY - cy) / 30)) : 0;
+      inclinacionObjetivo = !fis.agarre && cerca ? Math.max(-6, Math.min(6, (evento.clientY - cy) / 30)) : 0;
       if (!fis.agarre) return;
       const { x, y } = enZona(evento);
       if (!fis.agarre.activo && Math.hypot(x - fis.agarre.inicio.x, y - fis.agarre.inicio.y) > 5) {
@@ -196,15 +281,10 @@ export default function Credencial() {
           /* el puntero ya se soltó */
         }
       }
+      // Sin tope: la tarjeta va exactamente adonde esté el puntero y la cinta se estira lo que haga falta.
       if (fis.agarre.activo) {
-        // no se estira más que su alcance elástico (evita el efecto honda)
-        const alcance = alcanceArrastre(fis, fis.agarre.t);
-        const dx = x - fis.ancla.x;
-        const dy = y - fis.ancla.y;
-        const d = Math.hypot(dx, dy);
-        const k = d > alcance ? alcance / d : 1;
-        fis.agarre.x = fis.ancla.x + dx * k;
-        fis.agarre.y = fis.ancla.y + dy * k;
+        fis.agarre.x = x;
+        fis.agarre.y = y;
       }
     }
     function alSoltar() {
@@ -226,6 +306,7 @@ export default function Credencial() {
     tarjeta.addEventListener('pointerdown', alBajar);
     window.addEventListener('pointermove', alMover, { passive: true });
     window.addEventListener('pointerup', alSoltar);
+    window.addEventListener('pointercancel', alSoltar);
     tarjeta.addEventListener('dblclick', darVuelta);
     cuadro = requestAnimationFrame(bucle);
     return () => {
@@ -236,6 +317,7 @@ export default function Credencial() {
       tarjeta.removeEventListener('pointerdown', alBajar);
       window.removeEventListener('pointermove', alMover);
       window.removeEventListener('pointerup', alSoltar);
+      window.removeEventListener('pointercancel', alSoltar);
       tarjeta.removeEventListener('dblclick', darVuelta);
     };
   }, []);
@@ -252,7 +334,14 @@ export default function Credencial() {
   return (
     <div className={styles.zona} ref={refZona}>
       <canvas ref={refCinta} className={styles.cinta} aria-hidden="true" />
-      <div ref={refTarjeta} className={styles.tarjeta} style={{ width: ANCHO, height: ALTO }}>
+      <div
+        ref={refTarjeta}
+        className={styles.tarjeta}
+        style={{ width: ANCHO, height: ALTO }}
+        // mantener apretado el QR (o cualquier imagen) no debe "agarrarlo" como un archivo arrastrable
+        onDragStart={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className={`${styles.cara} ${styles.frente}`}>
           <span className={styles.gancho} aria-hidden="true" />
           <span className={styles.ranura} aria-hidden="true" />
@@ -302,7 +391,7 @@ export default function Credencial() {
             <p>Si encontrás esta credencial, devolvésela a su dueño: escaneá y escribile.</p>
             <div className={styles.qr}>
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático */}
-              <img src="/qr-whatsapp.svg" alt="" />
+              <img src="/qr-whatsapp.svg" alt="" draggable={false} />
             </div>
             <span className={styles.qrPie}>WhatsApp · wa.me/5493564690844</span>
           </div>

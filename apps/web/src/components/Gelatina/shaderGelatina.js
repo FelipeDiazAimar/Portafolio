@@ -1,22 +1,61 @@
-// Shaders WebGL2 de la gelatina: ray-marching de SDF portado de scene.ts del
-// "Jelly Slider" de TypeGPU. Bandeja con una ranura hundida, gelatina como
-// cinta redondeada (refracción IOR 1.42, Fresnel y Beer-Lambert), sombra
-// proyectada teñida y el porcentaje impreso en el piso de la ranura.
-export const PUNTOS_CURVA = 33;
+// Shaders WebGL2 de la gelatina, portados de scene.ts del "Jelly Slider" de TypeGPU.
+//
+// Dos pases, igual que el original:
+//  1. FRAGMENT_SDF calcula, para cada texel de una textura, la distancia 2D a la curva de la
+//     gelatina (una poligonal de 128 tramos) y a qué altura del recorrido está. Es barato en la GPU
+//     y deja la forma lisa: leída con filtrado bilineal ya no se notan las caras.
+//  2. FRAGMENT hace el ray-marching: bandeja con una ranura hundida, gelatina como cinta
+//     redondeada (refracción IOR 1.42, Fresnel y Beer-Lambert), sombra proyectada teñida y el
+//     porcentaje impreso en el piso de la ranura. Sólo lee la textura del pase 1.
+export const PUNTOS_CURVA = 129; // 16 tramos físicos × 8 subdivisiones + 1
+
+// Rectángulo del mundo que cubre la textura del campo de distancia, y su tamaño en texeles
+// (≈ 5 milésimas de unidad por texel: la cinta mide unos 20 texeles de ancho).
+export const DOMINIO_SDF = { x0: -1.3, y0: -0.35, ancho: 2.6, alto: 1.25 };
+export const TEXELES_SDF = [512, 246];
 
 export const VERTEX = `#version 300 es
 in vec2 a; out vec2 uv;
 void main() { uv = a * .5 + .5; gl_Position = vec4(a, 0., 1.); }`;
 
+// Pase 1: campo de distancia de la curva.
+//   R = distancia a la curva (acotada), G = avance 0..1 a lo largo de ella,
+//   B = cuánto se pasa del extremo de la punta (si lo más cercano es ese extremo), A = ídem del inicio.
+export const FRAGMENT_SDF = `#version 300 es
+precision highp float;
+in vec2 uv; out vec4 salida;
+uniform vec2 uPts[${PUNTOS_CURVA}];
+uniform vec4 uDominio; // x0, y0, ancho, alto
+const int SEG = ${PUNTOS_CURVA - 1};
+void main() {
+  vec2 q = uDominio.xy + uv * uDominio.zw;
+  float d = 1e9, t = 0., bh = 0.; int bi = 0;
+  for (int i = 0; i < SEG; i++) {
+    vec2 a = uPts[i], b = uPts[i + 1], pa = q - a, ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-8), 0., 1.), di = length(pa - ba * h);
+    if (di < d) { d = di; t = (float(i) + h) / float(SEG); bi = i; bh = h; }
+  }
+  float punta = 0., inicio = 0.;
+  if (bi == SEG - 1 && bh > .9999) {
+    // la punta sigue la dirección del último tramo; si ese tramo se pone vertical tiende a +X
+    vec2 E = uPts[SEG], T = normalize(E - uPts[SEG - 1] + vec2(1e-5, 0.));
+    T = normalize(mix(vec2(1, 0), T, smoothstep(.15, .5, T.x)));
+    punta = max(dot(q - E, T), 1e-4);
+  } else if (bi == 0 && bh < .0001) {
+    inicio = max(uPts[0].x - q.x, 1e-4);
+  }
+  salida = vec4(min(d, .6), t, punta, inicio);
+}`;
+
 export const FRAGMENT = `#version 300 es
 precision highp float;
 in vec2 uv; out vec4 color;
 uniform vec2 uRes; uniform vec3 uCam, uRight, uUp, uFwd; uniform float uTan;
-uniform vec2 uPts[${PUNTOS_CURVA}]; uniform vec4 uBox; uniform vec3 uJelly, uLight, uBg;
+uniform sampler2D uSdf; uniform vec4 uDominio; uniform vec2 uPunta;
+uniform vec4 uBox; uniform vec3 uJelly, uLight, uBg;
 uniform sampler2D uTexto;
 // R grande respecto del ancho: la cinta tiene el perfil redondeado (no una lámina cuadrada)
 const float R = .052, HT = .13, GT = .03, GR = .02, SURF = .0008, MAXD = 12.;
-const int SEG = ${PUNTOS_CURVA - 1};
 
 float sdRB(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return min(max(q.x, q.y), 0.) + length(max(q, 0.)) - r; }
 float cutout(vec2 p) { return sdRB(p, vec2(1. + GR, .2 + GR), .2 + GR); }
@@ -24,32 +63,21 @@ float exY(vec3 p, float d, float h) { vec2 w = vec2(d, abs(p.y) - h); return min
 // superficie continua con una ranura redondeada hundida (sin placa ni bordes)
 float ground(vec3 p) { return min(p.y + .06, exY(p, -cutout(p.xz), GT - GR) - GR); }
 
-float curva(vec2 q, out float t, out int bi, out float bh) {
-  float d = 1e9; t = 0.; bi = 0; bh = 0.;
-  for (int i = 0; i < SEG; i++) {
-    vec2 a = uPts[i], b = uPts[i + 1], pa = q - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-8), 0., 1.), di = length(pa - ba * h);
-    if (di < d) { d = di; t = (float(i) + h) / float(SEG); bi = i; bh = h; }
-  }
-  return d;
-}
-// la punta redondeada (vista desde arriba) sólo aplica si lo más cercano es el extremo,
-// y siempre mira hacia ±X: el último tramo puede apuntar hacia arriba
+// campo de distancia del pase 1 (filtrado bilineal); fuera del rectángulo da "lejos"
+vec4 campo(vec2 q) { return texture(uSdf, (q - uDominio.xy) / uDominio.zw); }
+
+// gelatina: cinta extruida en Z con las puntas redondeadas
 float jelly(vec3 p, out float t) {
   t = 0.;
   vec3 q = clamp(p, vec3(uBox.x, uBox.z, -HT - .08), vec3(uBox.y, uBox.w, HT + .08));
   float fuera = length(p - q);
   if (fuera > .05) return fuera;
-  int bi; float bh, d = curva(p.xy, t, bi, bh), dz = abs(p.z) - HT;
-  if (bi == SEG - 1 && bh > .9999) {
-    // la punta sigue la dirección del último tramo (la punta sube un poquito): si fuera
-    // horizontal quedaría una costura; si el tramo se pone vertical, tiende a +X
-    vec2 E = uPts[SEG], T = normalize(uPts[SEG] - uPts[SEG - 1] + vec2(1e-5, 0.));
-    T = normalize(mix(vec2(1, 0), T, smoothstep(.15, .5, T.x)));
-    d = abs(dot(p.xy - E, vec2(-T.y, T.x))); dz = length(vec2(max(dot(p.xy - E, T), 0.), p.z)) - HT;
-  } else if (bi == 0 && bh < .0001) {
-    vec2 S = uPts[0]; d = abs(p.y - S.y); dz = length(vec2(max(S.x - p.x, 0.), p.z)) - HT;
-  }
+  vec4 c = campo(p.xy);
+  float d = c.r, dz = abs(p.z) - HT;
+  t = c.g;
+  // en una punta, lo que se mide es la distancia perpendicular y cuánto se pasa del extremo
+  float pasado = max(c.b, c.a);
+  if (pasado > 0.) { d = sqrt(max(d * d - pasado * pasado, 0.)); dz = length(vec2(pasado, p.z)) - HT; }
   vec2 w = vec2(d, dz); return min(max(w.x, w.y), 0.) + length(max(w, 0.)) - R;
 }
 float scene(vec3 p, out int obj, out float t) { float g = ground(p), j = jelly(p, t); if (j < g) { obj = 1; return j; } obj = 2; return g; }
@@ -58,8 +86,9 @@ vec3 nGround(vec3 p) {
   const vec2 k = vec2(1, -1); const float e = .0006;
   return normalize(k.xyy * ground(p + k.xyy * e) + k.yyx * ground(p + k.yyx * e) + k.yxy * ground(p + k.yxy * e) + k.xxx * ground(p + k.xxx * e));
 }
+// e mayor que un texel (≈ .005): con uno menor la normal se vería a escalones
 vec3 nJelly(vec3 p) {
-  const vec2 k = vec2(1, -1); const float e = .0012; float tt;
+  const vec2 k = vec2(1, -1); const float e = .007; float tt;
   return normalize(k.xyy * jelly(p + k.xyy * e, tt) + k.yyx * jelly(p + k.yyx * e, tt) + k.yxy * jelly(p + k.yxy * e, tt) + k.xxx * jelly(p + k.xxx * e, tt));
 }
 // la AO no usa la cota rápida de la caja: justo afuera daría ~0 y dibujaría un rectángulo
@@ -81,7 +110,7 @@ vec3 sombraGel(vec3 p) {
   vec3 L = -uLight;
   if (L.z >= -.01 || p.z < -.05) return vec3(1);
   float s = -p.z / L.z; vec2 q = p.xy + L.xy * s;
-  float t; int bi; float bh, d = curva(q, t, bi, bh) - R;
+  vec4 c = campo(q); float d = c.r - R, t = c.g;
   float ancho = mix(.012, .16, clamp(s / 1.6, 0., 1.));
   float k = smoothstep(-ancho * .3, ancho, d);
   float sat = clamp(t * 1.4, 0., 1.);
@@ -110,8 +139,11 @@ vec3 shadeGround(vec3 p, vec3 rd, bool directo) {
   // la superficie nunca brilla más que el plano: el canto de la ranura queda del color del
   // fondo de la web en vez de quemarse a blanco (el rebote de luz se suma después, sin escalar)
   col = min(col, vec3(planoLuz())) * exposicion();
-  vec2 E = uPts[SEG]; vec3 dE = p - vec3(E.x, 0., 0.); float r2 = dot(dE, dE);
-  col += (uJelly * (.4 / (r2 * 15. + 1.)) + uJelly * (.3 / (r2 * 40. + 1.)) * abs(n.z)) * gananciaLuz();   // rebote de luz
+  // Rebote de luz de la gelatina sobre el piso. Decae como una gaussiana y llega a CERO a poca
+  // distancia: con una cola larga (1/r²) se sumaba hasta el borde del lienzo y, sobre fondo
+  // oscuro, dibujaba un halo azul con forma de rectángulo.
+  vec3 dE = p - vec3(uPunta.x, 0., 0.); float r2 = dot(dE, dE);
+  col += (uJelly * (.31 * exp(-5.2 * r2)) + uJelly * (.2 * exp(-12. * r2)) * abs(n.z)) * gananciaLuz();
   if (p.y < -.05) {                                             // porcentaje impreso en el piso
     vec2 tuv = vec2((p.x - .68) / .38 + .5, p.z / .33 + .5);
     if (all(greaterThan(tuv, vec2(0))) && all(lessThan(tuv, vec2(1)))) col = mix(col, col * .45, texture(uTexto, tuv).a);

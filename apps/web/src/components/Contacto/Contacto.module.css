@@ -32,9 +32,10 @@
   pointer-events: none;
 }
 
+/* por encima del panel: al arrastrar la credencial hacia la derecha pasa por delante del texto */
 .columnaCredencial {
   position: relative;
-  z-index: 2;
+  z-index: 3;
 }
 
 .panel {

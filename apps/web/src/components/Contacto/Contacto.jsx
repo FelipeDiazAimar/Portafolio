@@ -8,7 +8,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { CORREO, MENSAJE_NERVIOSO, MENSAJES, NUMERO_WHATSAPP } from '@/data/contacto.js';
 import { indiceDeProgreso, pesosAcumulados } from '@/lib/contacto/cadencia.js';
 import { estadoPorHora, horaArgentina, urlCorreo, urlWhatsApp } from '@/lib/contacto/enlaces.js';
-import { crearRutaAvion, fraccionRecorrida } from '@/lib/contacto/rutaAvion.js';
+import { medirHuecosTitulo } from '@/lib/contacto/huecosTitulo.js';
+import { crearRutaAvion, crearRutaPorLetras, fraccionRecorrida } from '@/lib/contacto/rutaAvion.js';
 import Credencial from './Credencial.jsx';
 import FondoLuz from './FondoLuz.jsx';
 import SlideDestino, { AVION } from './SlideDestino.jsx';
@@ -224,9 +225,18 @@ export default function Contacto() {
     }
     refSlides.mail.current.ocultarIcono(true);
     const inicio = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-    const vueltas = Math.abs(velocidad) > 1.6 ? 2 : 1; // soltarlo con fuerza: doble rizo
-    const ruta = crearRutaAvion({ inicio, ancho: window.innerWidth, alto: window.innerHeight, vueltas });
-    const duracion = vueltas === 2 ? 3800 : 3000;
+    // Si el título "Hablemos." se ve en pantalla, el avión hace sus rizos por dentro de la "o" y de la
+    // "b" y se achica para entrar en cada hueco. Si no (p. ej. en el celular, con el título más
+    // arriba), vuela la ruta de siempre: un rizo y afuera (doble rizo si se suelta con fuerza).
+    const huecos = medirHuecosTitulo(document.getElementById('titulo-contacto'));
+    const ancho = window.innerWidth;
+    const alto = window.innerHeight;
+    const porLetras = huecos ? crearRutaPorLetras({ inicio, ancho, alto, letras: huecos }) : null;
+    const vueltas = Math.abs(velocidad) > 1.6 ? 2 : 1;
+    const ruta = porLetras ?? crearRutaAvion({ inicio, ancho, alto, vueltas });
+    const duracion = porLetras ? limitar(ruta.total * 1.5, 3400, 4600) : vueltas === 2 ? 3800 : 3000;
+    // El avión mide ≈ 88 unidades de punta a cola: se achica hasta caber en el hueco de la letra.
+    const escalaHueco = huecos ? limitar((huecos[0].radio * 2 * 0.95) / 88, 0.24, 0.62) : 1;
 
     // Todo lo que cuesta se calcula UNA vez antes de despegar: dentro del cuadro sólo
     // hay cuentas y un transform, sin leer el layout ni tocar React.
@@ -258,7 +268,7 @@ export default function Contacto() {
       // Nace del tamaño del ícono de la manija y crece con un pequeño rebote.
       const nacer = easeOutBack(limitar(t / 0.2, 0, 1));
       const salida = 1 - 0.45 * limitar((t - 0.75) / 0.25, 0, 1);
-      const escala = (0.3 + 0.7 * nacer) * salida;
+      const escala = (0.3 + 0.7 * nacer) * salida * (1 - (1 - escalaHueco) * (q.cercania ?? 0));
       // Se inclina hacia adentro de la curva, como un avión de verdad.
       const alabeo = q.curvatura * 52;
       avion.style.transform = `translate3d(${q.x.toFixed(2)}px, ${q.y.toFixed(2)}px, 0) rotate(${q.angulo.toFixed(4)}rad) perspective(520px) rotateX(${alabeo.toFixed(1)}deg) scale(${escala.toFixed(3)})`;

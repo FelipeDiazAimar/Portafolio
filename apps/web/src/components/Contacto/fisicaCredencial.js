@@ -3,26 +3,26 @@
 export const CINTA_PUNTOS = 18;
 const GRAVEDAD = 2200;
 const SUBPASOS = 3;
-// La cinta es un elástico: pocas iteraciones con rigidez baja la dejan estirarse.
-// Mientras se la agarra es mucho más blanda (se estira varias veces su largo) y al
-// soltarla recupera la firmeza y rebota hasta volver a colgar.
+// La cinta es un elástico: pocas iteraciones con rigidez baja la dejan estirarse. Mientras
+// se la agarra es muy blanda (se puede estirar muchas veces su largo, sin tope) y al soltarla
+// recupera la firmeza.
 const RIGIDEZ_REPOSO = 0.16;
 const RIGIDEZ_ARRASTRE = 0.05;
 const ITERACIONES = 7;
-// Cuántas veces su largo en reposo se puede estirar al arrastrarla.
-export const ESTIRAMIENTO_MAXIMO = 2.6;
-const AMORTIGUACION = 0.991;
-// Cuanto más estirada está la cinta, más frena (un elástico disipa energía al recogerse):
-// sin esto, soltarla muy estirada lanzaba la tarjeta por encima del ancla.
-const ESTIRAMIENTO_SIN_FRENO = 1.3;
-const FRENO_POR_ESTIRAMIENTO = 0.05;
-const FRENO_MAXIMO = 0.06;
+// Amortiguación por subpaso. Agarrada casi no frena (sigue al puntero sin arrastrar peso).
+// Suelta frena fuerte (sobreamortiguada): vuelve a su lugar sin rebotar ni balancearse sola.
+// Se probó un rozamiento que crece con la velocidad y quedaba subamortiguado con poca
+// velocidad, o sea oscilaba: la constante fuerte es la que no rebota.
+const AMORT_AGARRADA = 0.991;
+const AMORT_SUELTA = 0.9;
+// Segundos simulados al crearla: nace ya colgando y quieta, no se balancea sola al cargar.
+const SEGUNDOS_PARA_ASENTAR = 20;
 
-export function crearCredencial({ ancla, largoCinta, largoTarjeta, impulso = 2.2 }) {
+export function crearCredencial({ ancla, largoCinta, largoTarjeta }) {
   const seg = largoCinta / (CINTA_PUNTOS - 1);
   const cuerda = Array.from({ length: CINTA_PUNTOS }, (_, i) => ({ x: ancla.x, y: ancla.y + i * seg }));
   const fin = cuerda.at(-1);
-  return {
+  const f = {
     ancla,
     seg,
     largoTarjeta,
@@ -30,13 +30,17 @@ export function crearCredencial({ ancla, largoCinta, largoTarjeta, impulso = 2.2
     prevCuerda: cuerda.map((q) => ({ ...q })),
     P: { x: fin.x, y: fin.y },
     prevP: { x: fin.x, y: fin.y },
-    // arranca colgando en reposo, con un impulso lateral suave para que se balancee
     C: { x: fin.x, y: fin.y + largoTarjeta },
-    prevC: { x: fin.x - impulso, y: fin.y + largoTarjeta },
+    prevC: { x: fin.x, y: fin.y + largoTarjeta },
     giro: 0,
     vGiro: 0,
     agarre: null, // { x, y, t } mientras se arrastra
   };
+  // Que cuelgue ya estirada por su propio peso, quieta.
+  for (let i = 0; i < SEGUNDOS_PARA_ASENTAR * 60; i++) pasoCredencial(f, 1 / 60);
+  f.giro = 0;
+  f.vGiro = 0;
+  return f;
 }
 
 function integrar(q, prev, h, amortiguacion) {
@@ -52,8 +56,7 @@ export function pasoCredencial(f, dt) {
   const h = dt / SUBPASOS;
   const { cuerda, ancla } = f;
   const rigidez = f.agarre ? RIGIDEZ_ARRASTRE : RIGIDEZ_REPOSO;
-  const freno = Math.min(FRENO_MAXIMO, Math.max(0, (estiramiento(f) - ESTIRAMIENTO_SIN_FRENO) * FRENO_POR_ESTIRAMIENTO));
-  const amortiguacion = AMORTIGUACION - freno;
+  const amortiguacion = f.agarre ? AMORT_AGARRADA : AMORT_SUELTA;
   for (let s = 0; s < SUBPASOS; s++) {
     for (let i = 1; i < cuerda.length; i++) integrar(cuerda[i], f.prevCuerda[i], h, amortiguacion);
     integrar(f.P, f.prevP, h, amortiguacion);
@@ -116,12 +119,6 @@ export function pasoCredencial(f, dt) {
   f.vGiro += Math.min(0.02, Math.max(-0.02, vx * 0.00003)) - Math.sin(f.giro * 2) * 0.012;
   f.vGiro = Math.min(0.22, Math.max(-0.22, f.vGiro * 0.955));
   f.giro += f.vGiro;
-}
-
-// Hasta dónde se puede llevar el punto agarrado: el largo de la cinta estirada al máximo
-// más la parte de la tarjeta que cuelga por debajo del punto agarrado.
-export function alcanceArrastre(f, t) {
-  return f.seg * (CINTA_PUNTOS - 1) * ESTIRAMIENTO_MAXIMO + f.largoTarjeta * t + 30;
 }
 
 // Al soltar conserva la mitad del impulso: se lanza, pero no sale disparada.
