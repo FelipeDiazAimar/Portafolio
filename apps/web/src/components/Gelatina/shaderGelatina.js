@@ -146,7 +146,13 @@ vec3 shadeGround(vec3 p, vec3 rd, bool directo) {
   col += (uJelly * (.31 * exp(-5.2 * r2)) + uJelly * (.2 * exp(-12. * r2)) * abs(n.z)) * gananciaLuz();
   if (p.y < -.05) {                                             // porcentaje impreso en el piso
     vec2 tuv = vec2((p.x - .68) / .38 + .5, p.z / .33 + .5);
-    if (all(greaterThan(tuv, vec2(0))) && all(lessThan(tuv, vec2(1)))) col = mix(col, col * .45, texture(uTexto, tuv).a);
+    if (all(greaterThan(tuv, vec2(0))) && all(lessThan(tuv, vec2(1)))) {
+      float tinta = texture(uTexto, tuv).a;
+      // Sobre fondo claro el número oscurece el piso; sobre fondo oscuro el piso ya es casi negro y
+      // oscurecerlo no se vería: ahí se "ilumina" con un celeste suave.
+      float lum = dot(uBg, vec3(.299, .587, .114));
+      col = lum > .5 ? mix(col, col * .45, tinta) : mix(col, vec3(.55, .72, 1.) * 1.1, tinta * .85);
+    }
   }
   return col;
 }
