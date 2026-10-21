@@ -101,12 +101,27 @@
   }
 }
 
-@media (max-width: 480px) {
+/* Celular: el dato se muestra completo (es lo que se copia). Ícono, etiqueta y "copiar" en una línea
+   y el valor entero, sin cortar con "…", en la de abajo. */
+@media (max-width: 560px) {
   .dato {
     flex-wrap: wrap;
+    row-gap: 0.15rem;
+  }
+
+  .dato small {
+    flex: 1;
+    min-width: 0;
   }
 
   .valor {
+    order: 4;
+    flex: 1 1 100%;
+    overflow: visible;
     text-align: left;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 1.02rem;
   }
 }

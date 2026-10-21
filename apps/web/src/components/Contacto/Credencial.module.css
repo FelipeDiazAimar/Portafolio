@@ -298,3 +298,11 @@
     min-height: 660px;
   }
 }
+
+/* Pantalla táctil: la tarjeta ocupa casi toda la pantalla, así que no puede bloquear el scroll
+   vertical. Se la agarra y se la tira con un gesto horizontal o en diagonal. */
+@media (pointer: coarse) {
+  .tarjeta {
+    touch-action: pan-y;
+  }
+}

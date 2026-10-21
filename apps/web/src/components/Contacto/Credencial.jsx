@@ -19,7 +19,11 @@ const TEXTO_CINTA = 'HABLEMOS ✦ FELIPE DÍAZ ✦ ';
 const PASO_LETRA = 11;
 const ANCHO_CINTA = 22;
 // La cinta cuelga de una argolla enganchada a una placa atornillada a la pared de la sección.
-const PLACA_Y = 36; // centro de la placa: a la altura del header (su logo y botones están en esa línea)
+// Centro de la placa. En pantallas anchas está a la altura del header (a la izquierda de sus botones);
+// en las angostas el logo y los botones ocupan esa línea, así que cuelga debajo.
+const PLACA_Y_ANCHO = 36;
+const PLACA_Y_ANGOSTO = 104;
+const ANCHO_PARA_HEADER = 1180;
 const ARGOLLA_DY = 17; // centro de la argolla, debajo del centro de la placa
 const ENGANCHE_DY = 4; // la cinta nace un poco más abajo del centro de la argolla y queda POR ENCIMA de ella
 const RADIO_PLACA = 16;
@@ -108,6 +112,7 @@ export default function Credencial() {
     let escala = 1;
     let ancho = 0;
     let alto = 0;
+    let placaY = PLACA_Y_ANCHO;
     let inclinacion = 0;
     let inclinacionObjetivo = 0;
     let origenX = 0;
@@ -131,9 +136,10 @@ export default function Credencial() {
       alto = Math.max(rect.height, 600);
       ancho = rect.width;
       origenX = rect.left;
+      placaY = window.innerWidth >= ANCHO_PARA_HEADER ? PLACA_Y_ANCHO : PLACA_Y_ANGOSTO;
       const largoCinta = Math.min(96, Math.max(70, alto * 0.1));
       // La credencial se achica en pantallas angostas o bajas para que entre colgando.
-      const lugar = (alto - PLACA_Y - ARGOLLA_DY - largoCinta * 1.3 - 36) / (ALTO - HOYO);
+      const lugar = (alto - placaY - ARGOLLA_DY - largoCinta * 1.3 - 36) / (ALTO - HOYO);
       escala = Math.max(0.55, Math.min(escalaPara(window.innerWidth), lugar));
       // El lienzo cubre TODA la sección (no sólo la columna): la cinta se puede estirar hasta
       // donde llegue el puntero.
@@ -145,7 +151,7 @@ export default function Credencial() {
       lienzo.style.left = `${-origenX}px`;
       ctx.setTransform(dpr, 0, 0, dpr, origenX * dpr, 0);
       fis = crearCredencial({
-        ancla: { x: ancho * 0.5, y: PLACA_Y + ARGOLLA_DY + ENGANCHE_DY },
+        ancla: { x: ancho * 0.5, y: placaY + ARGOLLA_DY + ENGANCHE_DY },
         largoCinta, // es elástica: con el peso se estira ~20 %
         largoTarjeta: (ALTO - HOYO) * escala,
       });
@@ -157,7 +163,7 @@ export default function Credencial() {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, lienzo.width, lienzo.height);
       ctx.setTransform(dprLienzo, 0, 0, dprLienzo, origenX * dprLienzo, 0);
-      dibujarPlaca(ctx, fis.ancla.x, PLACA_Y, colores.oscuro);
+      dibujarPlaca(ctx, fis.ancla.x, placaY, colores.oscuro);
       // placa y argolla van DETRÁS de la cinta: la cinta nunca pasa por debajo de lo que la sujeta
       dibujarArgolla(ctx, fis.ancla.x, fis.ancla.y - ENGANCHE_DY, colores.oscuro, 'completa');
       const pts = [...fis.cuerda.map((q) => ({ ...q })), { x: fis.P.x, y: fis.P.y - 6 }];
