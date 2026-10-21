@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js';
 import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
+import useEmbudo from '@/hooks/useEmbudo.js';
 import useToqueSobre from '@/hooks/useToqueSobre.js';
 import DatosContacto from '@/components/Contacto/DatosContacto.jsx';
 import styles from './PiePagina.module.css';
@@ -76,6 +77,7 @@ function generarCampoNombre(calco) {
 
 export default function PiePagina() {
   const refPie = useRef(null);
+  useEmbudo(refPie); // al soltar el scroll cerca del footer, se acomoda solo
   const refContenedor = useRef(null);
   const refLimpio = useRef(null);
   const [campo, setCampo] = useState(null);
