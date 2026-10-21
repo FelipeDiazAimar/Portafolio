@@ -237,7 +237,7 @@ export default function Contacto() {
     const porLetras = huecos ? crearRutaPorLetras({ inicio, ancho, alto, letras: huecos }) : null;
     const vueltas = Math.abs(velocidad) > 1.6 ? 2 : 1;
     const ruta = porLetras ?? crearRutaAvion({ inicio, ancho, alto, vueltas });
-    const duracion = porLetras ? limitar(ruta.total * 1.5, 3400, 4600) : vueltas === 2 ? 3800 : 3000;
+    const duracion = porLetras ? limitar(ruta.total * 1.5 * ruta.duracionRelativa, 3800, 5600) : vueltas === 2 ? 3800 : 3000;
     // El avión mide ≈ 88 unidades de punta a cola: se achica hasta caber en el hueco de la letra.
     const escalaHueco = huecos ? limitar((huecos[0].radio * 2 * 0.95) / 88, 0.24, 0.62) : 1;
 
@@ -309,7 +309,7 @@ export default function Contacto() {
         setTextoOculto(true);
       }
       const t = Math.min(1, (transcurrido - CARGA_MS) / duracion);
-      const q = ruta.enRuta(ruta.total * fraccionRecorrida(t));
+      const q = ruta.enRuta(ruta.distanciaPara ? ruta.distanciaPara(fraccionRecorrida(t)) : ruta.total * fraccionRecorrida(t));
       const salida = 1 - 0.45 * limitar((t - 0.75) / 0.25, 0, 1);
       const escala = salida * (1 - (1 - escalaHueco) * (q.cercania ?? 0));
       // Se inclina hacia adentro de la curva, como un avión de verdad.

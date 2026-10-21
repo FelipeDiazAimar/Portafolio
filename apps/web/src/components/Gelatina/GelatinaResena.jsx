@@ -11,6 +11,7 @@ import styles from './GelatinaResena.module.css';
 const AZUL_ELECTRICO = [0.12, 0.48, 1];
 const LUZ = normalizar([0.19, -0.24, 0.75]);
 const SUAVIZADO_PUNTERO = 0.08; // el MOUSE_SMOOTHING del original
+const CORRIMIENTO_X = 0.14; // la escena se corre a la izquierda dentro del lienzo: más lugar para el resplandor
 const SUBDIVISIONES = 8; // cada tramo de la física se parte en 8: 16 tramos → 128 (sin caras visibles)
 
 function normalizar(v) {
@@ -165,9 +166,12 @@ export default function GelatinaResena() {
       gl.uniform2f(u.uRes, lienzo.width, lienzo.height);
       aspecto = rect.width / Math.max(1, rect.height);
       const dir = normalizar([0.024, 2.7, 1.9]);
-      const distancia = Math.max(3.05 / (0.83 * aspecto), 1.7);
+      // Vista un 11 % más ancha y corrida a la derecha: con la nota al 100 % la punta queda cerca del
+      // borde del lienzo y el resplandor azul se cortaba con un borde recto.
+      const distancia = Math.max(3.4 / (0.83 * aspecto), 1.7);
       camara.pos = dir.map((c) => c * distancia);
-      const objetivo = [0, 0.06, 0.02];
+      camara.pos[0] += CORRIMIENTO_X;
+      const objetivo = [CORRIMIENTO_X, 0.06, 0.02];
       camara.frente = normalizar(objetivo.map((c, i) => c - camara.pos[i]));
       camara.derecha = normalizar(cruz(camara.frente, [0, 1, 0]));
       camara.arriba = cruz(camara.derecha, camara.frente);

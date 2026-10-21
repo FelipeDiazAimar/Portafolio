@@ -187,9 +187,10 @@ void main() {
     col = mix(refr, refl, F);
   }
   col = tanh(col);
-  float r = length(vec2(p.x / 1.75, (p.z - .05) / .95));
-  float a = t > MAXD ? 0. : 1. - smoothstep(.72, 1.18, r);
-  a *= smoothstep(1., .82, abs(ndc.x)) * smoothstep(1., .8, abs(ndc.y));
+  float r = length(vec2((p.x - .14) / 1.85, (p.z - .05) / .95));
+  float a = t > MAXD ? 0. : 1. - smoothstep(.62, 1.18, r);
+  // la ventana se apaga con una curva suave (sin borde recto) antes de llegar al borde del lienzo
+  a *= smoothstep(1., .7, abs(ndc.x)) * smoothstep(1., .8, abs(ndc.y));
   // donde se desvanece, el color tiende al fondo: el borde nunca queda blanco ni gris
   col = mix(uBg, col, a);
   color = vec4(col, 1.);

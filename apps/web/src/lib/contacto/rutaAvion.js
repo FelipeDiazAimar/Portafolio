@@ -266,6 +266,24 @@ export function crearRutaPorLetras({ inicio, ancho, alto, letras }) {
 
   const total = n - 1;
   const lerp = (a, b, t) => a + (b - a) * t;
+  // Al pasar por el hueco de una letra el avión frena (queda a ~40 % de su velocidad): así se lo ve
+  // cruzar por dentro de la "o" y de la "b" en vez de pasar de largo. `tau` es el "tiempo" acumulado
+  // a lo largo de la ruta con esa velocidad reducida.
+  const FRENADO_EN_HUECO = 0.6;
+  const tau = new Float64Array(n);
+  for (let i = 1; i < n; i++) tau[i] = tau[i - 1] + 1 / (1 - FRENADO_EN_HUECO * cercanias[i]);
+  // fracción del tiempo (0 a 1, ya con el perfil de aceleración) → distancia recorrida
+  function distanciaPara(fraccion) {
+    const objetivo = Math.min(1, Math.max(0, fraccion)) * tau[n - 1];
+    let a = 0;
+    let b = n - 1;
+    while (b - a > 1) {
+      const m = (a + b) >> 1;
+      if (tau[m] <= objetivo) a = m;
+      else b = m;
+    }
+    return a + (objetivo - tau[a]) / Math.max(1e-9, tau[b] - tau[a]);
+  }
   function enRuta(distancia) {
     const posicion = Math.min(total, Math.max(0, distancia));
     const i = Math.min(n - 2, Math.floor(posicion));
@@ -278,7 +296,7 @@ export function crearRutaPorLetras({ inicio, ancho, alto, letras }) {
       cercania: lerp(cercanias[i], cercanias[i + 1], t),
     };
   }
-  return { total, radio, sentido: 1, letras: ordenadas, enRuta };
+  return { total, radio, sentido: 1, letras: ordenadas, enRuta, distanciaPara, duracionRelativa: tau[n - 1] / total };
 }
 
 // Perfil de velocidad: arranca desde cero (el avioncito "nace" de la manija y

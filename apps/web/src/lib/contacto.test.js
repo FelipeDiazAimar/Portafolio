@@ -51,7 +51,7 @@ test('credencial: se puede agarrar y estirar la cinta todo lo que se quiera', ()
   assert.ok([f.P, f.C, ...f.cuerda].every((q) => Number.isFinite(q.x) && Number.isFinite(q.y)), 'sin NaN');
 });
 
-test('credencial: al soltarla vuelve a su lugar sin rebotar', () => {
+test('credencial: al soltarla vuelve a su lugar como un péndulo amortiguado (pocas oscilaciones, sin rebote vertical)', () => {
   const f = credencialDePrueba();
   const reposo = { x: f.P.x, y: f.P.y };
   arrastrar(f, { x: 900, y: 1000 }, 90);
@@ -63,12 +63,14 @@ test('credencial: al soltarla vuelve a su lugar sin rebotar', () => {
   for (let i = 0; i < cuadros; i++) {
     pasoCredencial(f, 1 / 60);
     minimoY = Math.min(minimoY, f.P.y);
-    const lado = Math.sign(f.C.x - reposo.x);
+    // sólo cuentan las oscilaciones visibles (más de 4 px); el temblor final no
+    const desvio = f.C.x - reposo.x;
+    const lado = Math.abs(desvio) > 4 ? Math.sign(desvio) : 0;
     if (lado !== 0 && lado !== ladoAnterior) cruces += 1;
     if (lado !== 0) ladoAnterior = lado;
   }
   assert.ok(minimoY > reposo.y - 20, `no pasa por encima de su lugar (sube ${(reposo.y - minimoY).toFixed(0)} px de más)`);
-  assert.ok(cruces <= 1, `no se balancea de un lado al otro (${cruces} cruces)`);
+  assert.ok(cruces <= 3, `no se balancea indefinidamente (${cruces} cruces)`);
   assert.ok(distancia(f.P, reposo) < 6, `termina en su lugar (a ${distancia(f.P, reposo).toFixed(1)} px)`);
   assert.ok(estiramiento(f) < 1.3, 'la cinta recupera su largo');
 });
@@ -342,4 +344,27 @@ test('gelatina: sin quiebres visibles (el ángulo entre tramos vecinos es mínim
   }
   // con 16 tramos físicos el quiebre máximo era de decenas de grados; con 128 queda por debajo de ~13°
   assert.ok(mayor < 0.23, `el mayor quiebre entre tramos es de ${((mayor * 180) / Math.PI).toFixed(1)}°`);
+});
+
+test('ruta por letras: el avión frena al cruzar el hueco de cada letra y llega a recorrer toda la ruta', () => {
+  const ruta = rutaPorLetras();
+  assert.ok(ruta.distanciaPara(0) < 1 && Math.abs(ruta.distanciaPara(1) - ruta.total) < 1.5, 'va de 0 a total');
+  let anterior = -1;
+  for (let k = 0; k <= 400; k++) {
+    const d = ruta.distanciaPara(k / 400);
+    assert.ok(d >= anterior, 'nunca retrocede');
+    anterior = d;
+  }
+  // velocidad (px de ruta por unidad de fracción) cerca de un hueco vs. lejos de todos
+  const velocidadEn = (f) => (ruta.distanciaPara(f + 0.002) - ruta.distanciaPara(f - 0.002)) / 0.004;
+  let enHueco = Infinity;
+  let lejos = 0;
+  for (let k = 20; k < 380; k++) {
+    const f = k / 400;
+    const q = ruta.enRuta(ruta.distanciaPara(f));
+    if (q.cercania > 0.95) enHueco = Math.min(enHueco, velocidadEn(f));
+    if (q.cercania === 0) lejos = Math.max(lejos, velocidadEn(f));
+  }
+  assert.ok(enHueco < lejos * 0.6, `en el hueco va más lento (${enHueco.toFixed(0)} contra ${lejos.toFixed(0)})`);
+  assert.ok(ruta.duracionRelativa > 1, 'tarda más que sin frenar');
 });

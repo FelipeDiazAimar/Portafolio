@@ -1,20 +1,24 @@
 // Física de la credencial colgante: una cinta Verlet elástica y la tarjeta como
 // cuerpo rígido de dos puntos (el agujero P y el borde de abajo C).
 export const CINTA_PUNTOS = 18;
-const GRAVEDAD = 9000;
+const GRAVEDAD = 7000;
 const SUBPASOS = 3;
 // La cinta es un elástico: pocas iteraciones con rigidez baja la dejan estirarse. Mientras
 // se la agarra es muy blanda (se puede estirar muchas veces su largo, sin tope) y al soltarla
 // recupera la firmeza.
-const RIGIDEZ_REPOSO = 0.40;
+const RIGIDEZ_REPOSO = 0.7;
 const RIGIDEZ_ARRASTRE = 0.05;
-const ITERACIONES = 7;
-// Amortiguación por subpaso. Agarrada casi no frena (sigue al puntero sin arrastrar peso).
-// Suelta frena fuerte (sobreamortiguada): vuelve a su lugar sin rebotar ni balancearse sola.
-// Se probó un rozamiento que crece con la velocidad y quedaba subamortiguado con poca
-// velocidad, o sea oscilaba: la constante fuerte es la que no rebota.
+// Estirada de más, la cinta tira con la rigidez blanda de siempre (si no, al soltarla desde muy
+// lejos lanzaría la tarjeta hacia arriba como un resorte); cerca del reposo es firme y cuelga tensa.
+const RIGIDEZ_MUY_ESTIRADA = 0.16;
+const ESTIRAMIENTO_FIRME = 1.15;
+const ESTIRAMIENTO_BLANDO = 1.8;
+const ITERACIONES = 12;
+// Amortiguación por subpaso. Agarrada casi no frena (sigue al puntero sin arrastrar peso). Suelta
+// frena lo justo para que, con gravedad real, vuelva como un péndulo amortiguado: una o dos
+// oscilaciones cortas y queda quieta, sin rebotar hacia arriba.
 const AMORT_AGARRADA = 0.991;
-const AMORT_SUELTA = 0.95;
+const AMORT_SUELTA = 0.88;
 // El extremo libre de la tarjeta se frena menos que la cinta: así el giro vuelve a la vertical en ~3 s
 // sin rebotar (con el mismo freno que la cinta tardaba más de 15 s en enderezarse).
 const AMORT_TARJETA_SUELTA = 0.98;
@@ -58,7 +62,8 @@ function integrar(q, prev, h, amortiguacion) {
 export function pasoCredencial(f, dt) {
   const h = dt / SUBPASOS;
   const { cuerda, ancla } = f;
-  const rigidez = f.agarre ? RIGIDEZ_ARRASTRE : RIGIDEZ_REPOSO;
+  const mezcla = Math.min(1, Math.max(0, (estiramiento(f) - ESTIRAMIENTO_FIRME) / (ESTIRAMIENTO_BLANDO - ESTIRAMIENTO_FIRME)));
+  const rigidez = f.agarre ? RIGIDEZ_ARRASTRE : RIGIDEZ_REPOSO + (RIGIDEZ_MUY_ESTIRADA - RIGIDEZ_REPOSO) * mezcla;
   const amortiguacion = f.agarre ? AMORT_AGARRADA : AMORT_SUELTA;
   for (let s = 0; s < SUBPASOS; s++) {
     for (let i = 1; i < cuerda.length; i++) integrar(cuerda[i], f.prevCuerda[i], h, amortiguacion);
