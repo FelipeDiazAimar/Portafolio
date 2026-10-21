@@ -1,12 +1,12 @@
 // Física de la credencial colgante: una cinta Verlet elástica y la tarjeta como
 // cuerpo rígido de dos puntos (el agujero P y el borde de abajo C).
 export const CINTA_PUNTOS = 18;
-const GRAVEDAD = 2200;
+const GRAVEDAD = 9000;
 const SUBPASOS = 3;
 // La cinta es un elástico: pocas iteraciones con rigidez baja la dejan estirarse. Mientras
 // se la agarra es muy blanda (se puede estirar muchas veces su largo, sin tope) y al soltarla
 // recupera la firmeza.
-const RIGIDEZ_REPOSO = 0.16;
+const RIGIDEZ_REPOSO = 0.40;
 const RIGIDEZ_ARRASTRE = 0.05;
 const ITERACIONES = 7;
 // Amortiguación por subpaso. Agarrada casi no frena (sigue al puntero sin arrastrar peso).
@@ -14,7 +14,10 @@ const ITERACIONES = 7;
 // Se probó un rozamiento que crece con la velocidad y quedaba subamortiguado con poca
 // velocidad, o sea oscilaba: la constante fuerte es la que no rebota.
 const AMORT_AGARRADA = 0.991;
-const AMORT_SUELTA = 0.9;
+const AMORT_SUELTA = 0.95;
+// El extremo libre de la tarjeta se frena menos que la cinta: así el giro vuelve a la vertical en ~3 s
+// sin rebotar (con el mismo freno que la cinta tardaba más de 15 s en enderezarse).
+const AMORT_TARJETA_SUELTA = 0.98;
 // Segundos simulados al crearla: nace ya colgando y quieta, no se balancea sola al cargar.
 const SEGUNDOS_PARA_ASENTAR = 20;
 
@@ -60,7 +63,7 @@ export function pasoCredencial(f, dt) {
   for (let s = 0; s < SUBPASOS; s++) {
     for (let i = 1; i < cuerda.length; i++) integrar(cuerda[i], f.prevCuerda[i], h, amortiguacion);
     integrar(f.P, f.prevP, h, amortiguacion);
-    integrar(f.C, f.prevC, h, amortiguacion);
+    integrar(f.C, f.prevC, h, f.agarre ? amortiguacion : AMORT_TARJETA_SUELTA);
     for (let it = 0; it < ITERACIONES; it++) {
       cuerda[0].x = ancla.x;
       cuerda[0].y = ancla.y;

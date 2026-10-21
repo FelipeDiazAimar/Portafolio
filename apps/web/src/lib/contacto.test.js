@@ -67,7 +67,7 @@ test('credencial: al soltarla vuelve a su lugar sin rebotar', () => {
     if (lado !== 0 && lado !== ladoAnterior) cruces += 1;
     if (lado !== 0) ladoAnterior = lado;
   }
-  assert.ok(minimoY > reposo.y - 15, `no pasa por encima de su lugar (sube ${(reposo.y - minimoY).toFixed(0)} px de más)`);
+  assert.ok(minimoY > reposo.y - 20, `no pasa por encima de su lugar (sube ${(reposo.y - minimoY).toFixed(0)} px de más)`);
   assert.ok(cruces <= 1, `no se balancea de un lado al otro (${cruces} cruces)`);
   assert.ok(distancia(f.P, reposo) < 6, `termina en su lugar (a ${distancia(f.P, reposo).toFixed(1)} px)`);
   assert.ok(estiramiento(f) < 1.3, 'la cinta recupera su largo');

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CORREO, MENSAJE_NERVIOSO, MENSAJES, NUMERO_WHATSAPP } from '@/data/contacto.js';
 import { indiceDeProgreso, pesosAcumulados } from '@/lib/contacto/cadencia.js';
+import useEmbudo from '@/hooks/useEmbudo.js';
 import { estadoPorHora, horaArgentina, urlCorreo, urlWhatsApp } from '@/lib/contacto/enlaces.js';
 import { medirHuecosTitulo } from '@/lib/contacto/huecosTitulo.js';
 import { crearRutaAvion, crearRutaPorLetras, fraccionRecorrida } from '@/lib/contacto/rutaAvion.js';
@@ -47,12 +48,14 @@ export default function Contacto() {
   const [vivo, setVivo] = useState('');
 
   const refEscenario = useRef(null);
+  const refSeccion = useRef(null);
   const refTexto = useRef(null);
   const refCursor = useRef(null);
   const refLetras = useRef([]);
   const refIndice = useRef(0);
   const refFondo = useRef(null);
   const refAvion = useRef(null);
+  useEmbudo(refSeccion);
   const refSlideWa = useRef(null);
   const refSlideMail = useRef(null);
   const refSlides = { wa: refSlideWa, mail: refSlideMail };
@@ -243,32 +246,72 @@ export default function Contacto() {
     const letras = refLetras.current.map((nodo, indice) => {
       if (!nodo?.dataset.letra) return null;
       const r = nodo.getBoundingClientRect();
-      return { nodo, indice, x: r.left + r.width / 2, y: r.top + r.height / 2, llevada: false };
+      return { nodo, indice, x: r.left + r.width / 2, y: r.top + r.height / 2 };
     });
     const visibles = letras.filter(Boolean);
-    const llevarLetra = (letra, x, y) => {
-      letra.llevada = true;
-      const { nodo } = letra;
-      nodo.style.willChange = 'transform, opacity';
-      nodo.style.setProperty('--dx', `${((x - letra.x) * 0.6).toFixed(1)}px`);
-      nodo.style.setProperty('--dy', `${((y - letra.y) * 0.6).toFixed(1)}px`);
-      nodo.style.setProperty('--rot', `${((letra.indice % 7) - 3) * 14}deg`);
-      nodo.classList.add(styles.ida);
-    };
+    visibles.forEach((letra, k) => {
+      letra.retraso = (k / Math.max(1, visibles.length)) * 0.5; // sale de a poco, en orden de lectura
+      letra.giro = ((letra.indice % 7) - 3) * 26;
+      letra.arco = ((letra.indice % 5) - 2) * 16;
+      letra.nodo.classList.add(styles.volando);
+    });
 
+    // Una copia del título por ENCIMA del avión: al pasar por la "o" y la "b" se lo ve ir por
+    // dentro de la letra (por el hueco), no volar por delante.
+    const titulo = document.getElementById('titulo-contacto');
+    let copiaTitulo = null;
+    if (huecos && titulo) {
+      const r = titulo.getBoundingClientRect();
+      copiaTitulo = titulo.cloneNode(true);
+      copiaTitulo.removeAttribute('id');
+      copiaTitulo.setAttribute('aria-hidden', 'true');
+      copiaTitulo.classList.add(styles.tituloSobre);
+      Object.assign(copiaTitulo.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      document.body.appendChild(copiaTitulo);
+    }
+
+    const CARGA_MS = 1300; // el texto viaja al avión y se mete adentro; recién después despega
+    const q0 = ruta.enRuta(0);
+    const suave = (v) => v * v * (3 - 2 * v);
     let ultimoAgitado = { x: inicio.x, y: inicio.y };
     let terminado = false;
     let t0 = null;
+    let textoOcultado = false;
     avion.style.opacity = '1';
+
+    function cargar(c) {
+      for (const letra of visibles) {
+        const p = limitar((c - letra.retraso) / 0.5, 0, 1);
+        const e = suave(p) * p; // arranca despacio y se acelera al acercarse
+        const dx = (inicio.x - letra.x) * e;
+        const dy = (inicio.y - letra.y) * e + Math.sin(Math.PI * e) * letra.arco;
+        const { style } = letra.nodo;
+        style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0) rotate(${(letra.giro * e).toFixed(0)}deg) scale(${(1 - 0.9 * e).toFixed(3)})`;
+        style.opacity = String(1 - limitar((e - 0.82) / 0.18, 0, 1));
+      }
+      const nacer = easeOutBack(limitar(c / 0.35, 0, 1));
+      const latido = 1 + 0.07 * Math.sin(c * 38) * limitar(c * 2, 0, 1); // cada letra que entra lo hace latir
+      const escala = (0.3 + 0.7 * nacer) * latido;
+      avion.style.transform = `translate3d(${q0.x.toFixed(2)}px, ${q0.y.toFixed(2)}px, 0) rotate(${q0.angulo.toFixed(4)}rad) scale(${escala.toFixed(3)})`;
+    }
 
     function cuadro(ahora) {
       t0 ??= ahora;
-      const t = Math.min(1, (ahora - t0) / duracion);
+      const transcurrido = ahora - t0;
+      if (transcurrido < CARGA_MS) {
+        cargar(transcurrido / CARGA_MS);
+        requestAnimationFrame(cuadro);
+        return;
+      }
+      if (!textoOcultado) {
+        textoOcultado = true;
+        cargar(1);
+        setTextoOculto(true);
+      }
+      const t = Math.min(1, (transcurrido - CARGA_MS) / duracion);
       const q = ruta.enRuta(ruta.total * fraccionRecorrida(t));
-      // Nace del tamaño del ícono de la manija y crece con un pequeño rebote.
-      const nacer = easeOutBack(limitar(t / 0.2, 0, 1));
       const salida = 1 - 0.45 * limitar((t - 0.75) / 0.25, 0, 1);
-      const escala = (0.3 + 0.7 * nacer) * salida * (1 - (1 - escalaHueco) * (q.cercania ?? 0));
+      const escala = salida * (1 - (1 - escalaHueco) * (q.cercania ?? 0));
       // Se inclina hacia adentro de la curva, como un avión de verdad.
       const alabeo = q.curvatura * 52;
       avion.style.transform = `translate3d(${q.x.toFixed(2)}px, ${q.y.toFixed(2)}px, 0) rotate(${q.angulo.toFixed(4)}rad) perspective(520px) rotateX(${alabeo.toFixed(1)}deg) scale(${escala.toFixed(3)})`;
@@ -278,24 +321,12 @@ export default function Contacto() {
         refFondo.current?.agitar(q.x, q.y);
         ultimoAgitado = { x: q.x, y: q.y };
       }
-      // Se lleva el mensaje: las letras que roza se despegan hacia el avión y, desde la
-      // mitad del vuelo, las que sobran se van detrás de él de a pocas.
-      const alcance = 120 * escala + 30;
-      for (const letra of visibles) {
-        if (!letra.llevada && Math.hypot(letra.x - q.x, letra.y - q.y) < alcance) llevarLetra(letra, q.x, q.y);
-      }
-      if (t > 0.45) {
-        const hasta = Math.floor(visibles.length * limitar((t - 0.45) / 0.35, 0, 1));
-        for (let i = visibles.length - 1; i >= visibles.length - hasta; i--) {
-          if (!visibles[i].llevada) llevarLetra(visibles[i], q.x, q.y);
-        }
-      }
       if (t < 1) {
         requestAnimationFrame(cuadro);
       } else if (!terminado) {
         terminado = true;
         avion.style.opacity = '0';
-        setTextoOculto(true);
+        copiaTitulo?.remove();
         terminar();
       }
     }
@@ -308,7 +339,12 @@ export default function Contacto() {
     setTextoOculto(false);
     setOcupado(false);
     setActivo(null);
-    refLetras.current.forEach((l) => l?.classList.remove(styles.ida));
+    refLetras.current.forEach((l) => {
+      if (!l) return;
+      l.classList.remove(styles.volando);
+      l.style.transform = '';
+      l.style.opacity = '';
+    });
     refSlides.wa.current?.reiniciar();
     refSlides.mail.current?.reiniciar();
     refSlides.mail.current?.ocultarIcono(false);
@@ -357,7 +393,7 @@ export default function Contacto() {
 
   let indiceLetra = 0;
   return (
-    <section id="contacto" className={styles.seccion} aria-labelledby="titulo-contacto">
+    <section id="contacto" ref={refSeccion} className={styles.seccion} aria-labelledby="titulo-contacto">
       <FondoLuz ref={refFondo} />
       <div className={styles.columnaCredencial}>
         <Credencial />

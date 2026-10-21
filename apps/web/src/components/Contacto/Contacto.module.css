@@ -146,11 +146,19 @@
 
 /* el avión se lleva las letras: sólo opacity + transform (animar un desenfoque en
    ~80 letras a la vez hacía tironear el vuelo) */
-.letra.ida {
-  opacity: 0;
+/* letras que viajan al avión: las mueve el script cuadro a cuadro, sin transiciones */
+.letra.volando {
   filter: none;
-  transform: translate3d(var(--dx, 0), var(--dy, 0), 0) scale(0.35) rotate(var(--rot, 0));
-  transition: opacity 0.55s ease-in, transform 0.75s cubic-bezier(0.45, 0, 0.2, 1);
+  transition: none;
+  will-change: transform, opacity;
+}
+
+/* copia del título por encima del avión: se lo ve pasar por dentro de la "o" y de la "b" */
+.tituloSobre {
+  position: fixed;
+  z-index: 32;
+  margin: 0;
+  pointer-events: none;
 }
 
 .fantasma {
@@ -346,7 +354,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .letra,
-  .letra.ida {
+  .letra.volando {
     transition: none;
   }
 

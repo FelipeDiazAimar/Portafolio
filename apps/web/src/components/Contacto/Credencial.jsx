@@ -20,7 +20,8 @@ const PASO_LETRA = 9;
 const ANCHO_CINTA = 22;
 // La cinta cuelga de una argolla enganchada a una placa atornillada a la pared de la sección.
 const PLACA_Y = 104; // centro de la placa, medido desde el borde de arriba de la sección
-const ARGOLLA_DY = 17; // la argolla cuelga de la placa; la cinta nace en su centro
+const ARGOLLA_DY = 17; // centro de la argolla, debajo del centro de la placa
+const ENGANCHE_DY = 4; // la cinta nace un poco más abajo del centro de la argolla y queda POR ENCIMA de ella
 const RADIO_PLACA = 16;
 const RADIO_ARGOLLA = 8.5;
 
@@ -144,7 +145,7 @@ export default function Credencial() {
       lienzo.style.left = `${-origenX}px`;
       ctx.setTransform(dpr, 0, 0, dpr, origenX * dpr, 0);
       fis = crearCredencial({
-        ancla: { x: ancho * 0.5, y: PLACA_Y + ARGOLLA_DY },
+        ancla: { x: ancho * 0.5, y: PLACA_Y + ARGOLLA_DY + ENGANCHE_DY },
         largoCinta, // es elástica: con el peso se estira ~20 %
         largoTarjeta: (ALTO - HOYO) * escala,
       });
@@ -157,7 +158,8 @@ export default function Credencial() {
       ctx.clearRect(0, 0, lienzo.width, lienzo.height);
       ctx.setTransform(dprLienzo, 0, 0, dprLienzo, origenX * dprLienzo, 0);
       dibujarPlaca(ctx, fis.ancla.x, PLACA_Y, colores.oscuro);
-      dibujarArgolla(ctx, fis.ancla.x, fis.ancla.y, colores.oscuro, 'completa');
+      // placa y argolla van DETRÁS de la cinta: la cinta nunca pasa por debajo de lo que la sujeta
+      dibujarArgolla(ctx, fis.ancla.x, fis.ancla.y - ENGANCHE_DY, colores.oscuro, 'completa');
       const pts = [...fis.cuerda.map((q) => ({ ...q })), { x: fis.P.x, y: fis.P.y - 6 }];
       // Una cinta de tela se afina al estirarse (el volumen se conserva a grandes rasgos).
       const estirada = Math.max(1, estiramiento(fis));
@@ -187,8 +189,6 @@ export default function Credencial() {
         ctx.restore();
       }
       ctx.globalAlpha = 1;
-      // la mitad de abajo de la argolla queda POR ENCIMA de la cinta: la cinta pasa por dentro
-      dibujarArgolla(ctx, fis.ancla.x, fis.ancla.y, colores.oscuro, 'frente');
       // Texto impreso en la tela: cada letra tiene una posición FIJA sobre la cinta en reposo
       // y se ubica en el tramo que le toca, así que se estira, se afina y se curva con ella.
       ctx.font = '600 9px Inter, system-ui, sans-serif';
