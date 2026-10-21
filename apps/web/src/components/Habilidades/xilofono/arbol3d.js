@@ -1,20 +1,19 @@
 import {
   AdditiveBlending,
-  BufferGeometry,
   CanvasTexture,
   Color,
   CylinderGeometry,
   DoubleSide,
-  Float32BufferAttribute,
   Group,
   InstancedBufferAttribute,
+  InstancedBufferGeometry,
   InstancedMesh,
   LinearFilter,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
   NormalBlending,
-  Points,
+  PlaneGeometry,
   Quaternion,
   RingGeometry,
   ShaderMaterial,
@@ -26,10 +25,11 @@ import {
   Vector3,
 } from 'three';
 import { amortiguar, suave } from '@/lib/xilofono.js';
+import { ARBOL } from '@/lib/arbol.js';
 
 // Piezas visuales del árbol de habilidades (el diseño sale de lib/arbol.js): núcleo, un nodo por
 // categoría, las ramas con pulsos de luz que viajan hacia afuera, etiquetas y partículas que
-// orbitan. Todo vive en el eje del modelo, así gira con él. Las 64 barras son las del xilófono.
+// logos. Todo vive en el eje del modelo, así gira con él. Las 64 barras son las del xilófono.
 
 const limitar = (t) => Math.min(1, Math.max(0, t));
 
@@ -102,29 +102,66 @@ void main() {
 }
 `;
 
-const PARTICULA_VERT = /* glsl */ `
-attribute float aSemilla;
-uniform float u_time;
-uniform float u_aparece;
-varying float vBrillo;
+// Logo de cada esfera: una etiqueta que siempre mira a la cámara, con un fondo circular que da
+// contraste (el logo blanco sobre vidrio claro u oscuro se perdía). Se dibuja sobre la cara de
+// adelante de la esfera y lee el mismo atlas de logos que las barras.
+const LOGO_VERT = /* glsl */ `
+attribute vec3 aCentro;
+attribute float aSkill;
+attribute float aActiva;
+uniform float u_radio;
+varying vec2 vUv;
+varying float vSkill;
+varying float vActiva;
 void main() {
-  float radio = length(position.xz);
-  float ang = atan(position.z, position.x) + u_time * (0.05 + aSemilla * 0.12) * (1.0 + 1.5 / (radio + 0.5));
-  vec3 p = vec3(cos(ang) * radio, position.y + sin(u_time * 0.7 + aSemilla * 40.0) * 0.12, sin(ang) * radio);
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_Position = projectionMatrix * mv;
-  gl_PointSize = (2.0 + aSemilla * 3.5) * 9.0 / -mv.z * u_aparece;
-  vBrillo = 0.35 + 0.65 * (0.5 + 0.5 * sin(u_time * (1.0 + aSemilla * 2.0) + aSemilla * 30.0));
+  vec4 mv = modelViewMatrix * vec4(aCentro, 1.0);
+  float esc = length(modelMatrix[0].xyz);
+  mv.xy += position.xy * u_radio * 2.0 * 0.7 * esc; // el disco mide ~70 % del diámetro de la esfera
+  vUv = position.xy + 0.5;
+  vSkill = aSkill;
+  vActiva = aActiva;
+  // En pantalla queda justo sobre el centro de la esfera; sólo la PROFUNDIDAD se adelanta hasta su cara
+  // de adelante (si se corriera el punto hacia la cámara, la perspectiva lo desplazaría hacia afuera).
+  vec4 clip = projectionMatrix * mv;
+  vec4 delante = projectionMatrix * (mv + vec4(0.0, 0.0, u_radio * esc * 1.05, 0.0));
+  gl_Position = vec4(clip.xy, delante.z / delante.w * clip.w, clip.w);
 }
 `;
 
-const PARTICULA_FRAG = /* glsl */ `
-uniform vec3 u_c2;
-varying float vBrillo;
+const LOGO_FRAG = /* glsl */ `
+uniform sampler2D u_tAtlas;
+uniform float u_celdas;
+uniform float u_claro;
+uniform float u_aparece;
+varying vec2 vUv;
+varying float vSkill;
+varying float vActiva;
+
+// Celda del atlas (fila 0 arriba, con flipY): uv.y = 1 es el borde de arriba de la celda.
+vec2 enCelda(vec2 uv, float celda, float celdas) {
+  float columna = mod(celda, celdas);
+  float fila = floor(celda / celdas);
+  return vec2((columna + uv.x) / celdas, 1.0 - (fila + 1.0 - uv.y) / celdas);
+}
+
 void main() {
-  float d = length(gl_PointCoord - 0.5);
-  float a = smoothstep(0.5, 0.0, d) * vBrillo;
-  gl_FragColor = vec4(u_c2, a);
+  float r = length(vUv - 0.5) * 2.0;
+  float disco = smoothstep(1.0, 0.93, r);
+  float alfaBase = disco * u_aparece * mix(0.25, 1.0, vActiva);
+  if (alfaBase < 0.04) discard;
+  // el logo ocupa ~78 % del disco; fuera de su celda no hay nada
+  vec2 uv = (vUv - 0.5) / 0.78 + 0.5;
+  float a = 0.0;
+  if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
+    vec2 d = min(uv, 1.0 - uv);
+    float borde = smoothstep(0.0, 0.07, d.x) * smoothstep(0.0, 0.07, d.y);
+    a = smoothstep(0.15, 0.6, texture2D(u_tAtlas, enCelda(uv, floor(vSkill + 0.5), u_celdas)).a) * borde;
+  }
+  vec3 fondo = mix(vec3(0.03, 0.08, 0.3), vec3(0.06, 0.16, 0.78), u_claro);
+  vec3 aro = mix(vec3(0.4, 0.7, 1.0), vec3(0.75, 0.88, 1.0), u_claro);
+  vec3 color = mix(fondo, aro, smoothstep(0.78, 0.97, r) * 0.9);
+  color = mix(color, vec3(1.0), a);
+  gl_FragColor = vec4(color, alfaBase * mix(mix(0.82, 0.92, u_claro), 1.0, a));
 }
 `;
 
@@ -255,7 +292,7 @@ function texturaCartel(nombre, categoria, tema) {
 /* ------------------------------------------------------------------------ */
 export class ArbolHabilidades {
   // disp: salida de disposicionArbol. nombreDe(barra) → nombre de la tecnología de esa barra.
-  constructor(disp, { nombreDe }) {
+  constructor(disp, { nombreDe, atlas, celdas, skills, activas }) {
     this.disp = disp;
     this.nombreDe = nombreDe;
     this.tema = 'dark';
@@ -277,7 +314,7 @@ export class ArbolHabilidades {
     this.crearAristas();
     this.crearNucleo();
     this.hubs = disp.hubs.map((hub, k) => this.crearHub(hub, k));
-    this.crearParticulas();
+    this.crearLogos({ atlas, celdas, skills, activas });
     this.crearCartel();
     this.brilloHubs = new Float32Array(disp.hubs.length).fill(0.4);
     this.escalaHubs = new Float32Array(disp.hubs.length);
@@ -388,28 +425,44 @@ export class ArbolHabilidades {
     return { grupo, orbe, material, aro, aroMaterial, anilloMaterial: aroMaterial, etiqueta, etiquetaMaterial, textura: null, texturaAro: null };
   }
 
-  /* ----------------------------- partículas ----------------------------- */
-  crearParticulas() {
-    const cantidad = 340;
-    const posiciones = new Float32Array(cantidad * 3);
-    const semillas = new Float32Array(cantidad);
-    for (let i = 0; i < cantidad; i += 1) {
-      const radio = 0.9 + Math.pow(Math.random(), 0.7) * 5.6;
-      const angulo = Math.random() * Math.PI * 2;
-      posiciones[i * 3] = Math.cos(angulo) * radio;
-      posiciones[i * 3 + 1] = (Math.random() - 0.5) * 1.1;
-      posiciones[i * 3 + 2] = Math.sin(angulo) * radio;
-      semillas[i] = Math.random();
-    }
-    const geometria = this.geometria(new BufferGeometry());
-    geometria.setAttribute('position', new Float32BufferAttribute(posiciones, 3));
-    geometria.setAttribute('aSemilla', new Float32BufferAttribute(semillas, 1));
-    const puntos = new Points(geometria, this.material({ vertexShader: PARTICULA_VERT, fragmentShader: PARTICULA_FRAG, uniforms: this.uniformes }));
-    puntos.frustumCulled = false;
-    puntos.renderOrder = 0;
-    puntos.raycast = () => {};
-    this.particulas = puntos;
-    this.grupo.add(puntos);
+  /* -------------------------------- logos -------------------------------- */
+  // Una etiqueta por esfera, en su posición final del árbol. `skills` y `activas` son los mismos
+  // atributos por instancia que usan las barras (qué logo del atlas y qué tan encendida está).
+  crearLogos({ atlas, celdas, skills, activas }) {
+    const { nodos } = this.disp;
+    const centros = new Float32Array(nodos.length * 3);
+    nodos.forEach((nodo) => centros.set([nodo.x, nodo.y, nodo.z], nodo.barra * 3));
+    const base = new PlaneGeometry(1, 1);
+    const geometria = this.geometria(new InstancedBufferGeometry());
+    geometria.index = base.index;
+    geometria.setAttribute('position', base.getAttribute('position'));
+    geometria.setAttribute('aCentro', new InstancedBufferAttribute(centros, 3));
+    geometria.setAttribute('aSkill', skills);
+    geometria.setAttribute('aActiva', activas);
+    geometria.instanceCount = nodos.length;
+    this.uniformesLogo = {
+      u_tAtlas: { value: atlas },
+      u_celdas: { value: celdas },
+      u_radio: { value: 0.0001 },
+      u_claro: { value: 0 },
+      u_aparece: { value: 0 },
+    };
+    // sin mezcla aditiva: se maneja aparte para que el tema no la cambie
+    this.materialLogo = new ShaderMaterial({
+      vertexShader: LOGO_VERT,
+      fragmentShader: LOGO_FRAG,
+      uniforms: this.uniformesLogo,
+      transparent: true,
+      depthWrite: true,
+      depthTest: true,
+    });
+    const malla = new Mesh(geometria, this.materialLogo);
+    malla.frustumCulled = false;
+    malla.renderOrder = 5;
+    malla.raycast = () => {};
+    malla.visible = false;
+    this.logos = malla;
+    this.grupo.add(malla);
   }
 
   /* ------------------------------- cartel ------------------------------- */
@@ -435,6 +488,7 @@ export class ArbolHabilidades {
       if (m.blending !== undefined && m !== this.cartel.material && !m.isSpriteMaterial) m.blending = mezcla;
     });
     this.anilloMaterial.color.set(claro ? '#1a3fa8' : '#a8e8ff');
+    this.uniformesLogo.u_claro.value = claro ? 1 : 0;
     this.hubs.forEach((h, k) => {
       const nombre = this.disp.hubs[k].nombre;
       h.textura?.dispose();
@@ -461,6 +515,10 @@ export class ArbolHabilidades {
     if (!visible) return;
     this.uniformes.u_time.value = tiempo;
     this.uniformes.u_aparece.value = suave(limitar((p - 0.55) / 0.4));
+    // logos: crecen con la esfera (mismo radio que el de la malla de esferas) y se encienden al final
+    this.uniformesLogo.u_radio.value = ARBOL.radioEsfera * suave(limitar((p - 0.45) / 0.5)) + 0.0001;
+    this.uniformesLogo.u_aparece.value = suave(limitar((p - 0.8) / 0.2));
+    this.logos.visible = p > 0.8;
     const { disp } = this;
 
     // núcleo: aparece primero y late
@@ -531,6 +589,7 @@ export class ArbolHabilidades {
   liberar() {
     this.geometrias.forEach((g) => g.dispose());
     this.materiales.forEach((m) => m.dispose());
+    this.materialLogo.dispose();
     this.carteles.forEach((c) => c.textura.dispose());
     this.hubs.forEach((h) => {
       h.textura?.dispose();

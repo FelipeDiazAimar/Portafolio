@@ -63,7 +63,7 @@ export function crearAtlasNombres(nombres) {
   const lienzo = document.createElement('canvas');
   lienzo.width = CELDAS_NOMBRES[0] * ANCHO_NOMBRE;
   lienzo.height = CELDAS_NOMBRES[1] * ALTO_NOMBRE;
-  const ctx = lienzo.getContext('2d');
+  const ctx = lienzo.getContext('2d', { willReadFrequently: true }); // por software: ver crearAtlas
   const familia = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'left';
@@ -98,7 +98,9 @@ export function crearAtlas(nodos) {
   const lienzo = document.createElement('canvas');
   lienzo.width = CELDAS * LADO_CELDA;
   lienzo.height = CELDAS * LADO_CELDA;
-  const ctx = lienzo.getContext('2d');
+  // Lienzo por software (willReadFrequently): uno acelerado por GPU puede perder su contenido cuando
+  // se crea el contexto WebGL de la escena, y el atlas quedaba con casi todos los logos borrados.
+  const ctx = lienzo.getContext('2d', { willReadFrequently: true });
   ctx.fillStyle = '#ffffff';
   const textura = new CanvasTexture(lienzo);
   textura.minFilter = LinearMipmapLinearFilter;

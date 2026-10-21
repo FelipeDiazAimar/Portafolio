@@ -269,7 +269,7 @@ float mascaraLogo(float halo) {
 // importar desde dónde se vea la esfera (con el logo pegado a un plano fijo, las esferas del
 // borde del disco lo mostraban de costado y casi no se veía).
 float mascaraLogoEsfera(vec3 N, vec3 V, float halo) {
-  if (u_atras > 0.5) return 0.0;
+  if (u_atras > 0.5 || u_logoEscala < 0.01) return 0.0;
   vec3 dd = (vWorldPos - vCentro) / vEscalaMundo;
   vec3 derecha = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 arriba = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);

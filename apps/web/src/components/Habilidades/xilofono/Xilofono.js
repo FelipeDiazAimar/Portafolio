@@ -376,7 +376,7 @@ export class Xilofono {
       ...this.uniforms,
       u_esfera: { value: 1 },
       u_nombreOn: { value: 0 },
-      u_logoEscala: { value: 1.2 },
+      u_logoEscala: { value: 0 }, // el logo de las esferas lo dibuja ArbolHabilidades (etiquetas), no este decal
       u_escalaBarra: { value: new Vector3(1, 1, 1) },
       u_radioEsfera: { value: 0.0001 },
     };
@@ -410,7 +410,13 @@ export class Xilofono {
       this.arbolRot.set([giroY.x, giroY.y, giroY.z, giroY.w], i * 4);
       this.retardos[i] = retardoArbol(i, nodo.nivel);
     });
-    this.arbol = new ArbolHabilidades(this.disp, { nombreDe: (barra) => tecnologias[this.orden[barra]]?.nombre ?? '' });
+    this.arbol = new ArbolHabilidades(this.disp, {
+      nombreDe: (barra) => tecnologias[this.orden[barra]]?.nombre ?? '',
+      atlas: this.opciones.atlas,
+      celdas: CELDAS,
+      skills: this.instancias.geometria.getAttribute('aSkill'),
+      activas: this.instancias.activas,
+    });
     this.arbol.aplicarTema(this.temaActual ?? 'dark');
     this.eje.add(this.arbol.grupo);
   }
