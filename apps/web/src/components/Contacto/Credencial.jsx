@@ -19,7 +19,7 @@ const TEXTO_CINTA = 'HABLEMOS ✦ FELIPE DÍAZ ✦ ';
 const PASO_LETRA = 9;
 const ANCHO_CINTA = 22;
 // La cinta cuelga de una argolla enganchada a una placa atornillada a la pared de la sección.
-const PLACA_Y = 104; // centro de la placa, medido desde el borde de arriba de la sección
+const PLACA_Y = 36; // centro de la placa: a la altura del header (su logo y botones están en esa línea)
 const ARGOLLA_DY = 17; // centro de la argolla, debajo del centro de la placa
 const ENGANCHE_DY = 4; // la cinta nace un poco más abajo del centro de la argolla y queda POR ENCIMA de ella
 const RADIO_PLACA = 16;

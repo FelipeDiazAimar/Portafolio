@@ -77,7 +77,6 @@ export default function Contacto() {
     const cursor = refCursor.current;
     const letras = refLetras.current;
     if (!escenario || !cursor || !letras.length) return;
-    const base = escenario.getBoundingClientRect();
     let referencia = null;
     let derecha = false;
     for (let i = refIndice.current - 1; i >= 0; i--) {
@@ -89,11 +88,13 @@ export default function Contacto() {
     }
     if (!referencia) referencia = letras.find((l) => l?.dataset.letra);
     if (!referencia) return;
-    const r = referencia.getBoundingClientRect();
-    const altoCursor = r.height * 0.78;
+    // Posición de layout (offsetLeft/Top), no getBoundingClientRect: las letras todavía sin escribir
+    // están corridas con un transform y el cursor quedaba más abajo que el texto.
+    const altoLinea = referencia.offsetHeight;
+    const altoCursor = altoLinea * 0.78;
     cursor.style.height = `${altoCursor}px`;
-    cursor.style.left = `${(derecha ? r.right + 2 : r.left - 4) - base.left}px`;
-    cursor.style.top = `${r.top - base.top + (r.height - altoCursor) / 2}px`;
+    cursor.style.left = `${derecha ? referencia.offsetLeft + referencia.offsetWidth + 2 : referencia.offsetLeft - 4}px`;
+    cursor.style.top = `${referencia.offsetTop + (altoLinea - altoCursor) / 2}px`;
   }, []);
 
   const mostrarHasta = useCallback(
