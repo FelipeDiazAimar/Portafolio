@@ -1,0 +1,336 @@
+/* Vista intermedia "Gracias": cubre el panel de contacto y deja a la vista la credencial. */
+.gracias {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  text-align: center;
+  outline: none;
+  animation: entrar 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+    filter: blur(10px);
+  }
+}
+
+.chispas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* --- sello: anillo + tilde + ondas --- */
+.sello {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(104px, 11vw, 140px);
+  aspect-ratio: 1;
+  margin-bottom: 1.4rem;
+}
+
+.icono {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.halo {
+  stroke: var(--contacto-acento);
+  stroke-width: 1;
+  opacity: 0.18;
+}
+
+.anillo {
+  stroke: var(--contacto-acento);
+  stroke-width: 3.2;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+  filter: drop-shadow(0 0 8px var(--contacto-celeste));
+  animation: trazar 0.9s 0.15s cubic-bezier(0.65, 0, 0.2, 1) both;
+}
+
+.tilde {
+  stroke: var(--contacto-texto);
+  stroke-width: 6;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 10px var(--contacto-celeste));
+  animation: trazar 0.55s 0.85s cubic-bezier(0.65, 0, 0.2, 1) both;
+}
+
+.tilde2 {
+  stroke: var(--contacto-celeste);
+  animation-delay: 1.15s;
+}
+
+/* oculto hasta que le toca: con extremos redondos, un trazo de largo cero se vería como un punto */
+@keyframes trazar {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.onda {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--contacto-acento);
+  opacity: 0;
+  animation: onda 2.6s 0.95s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.onda2 {
+  animation-delay: 1.25s;
+}
+
+.onda3 {
+  animation-delay: 1.55s;
+}
+
+@keyframes onda {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+
+/* --- textos --- */
+.titulo {
+  margin: 0 0 1rem;
+  font-size: clamp(3.4rem, 8vw, 7rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  color: var(--contacto-texto);
+}
+
+.letra {
+  display: inline-block;
+  opacity: 0;
+  animation: letra 0.8s calc(0.55s + var(--i) * 0.065s) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes letra {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em) scale(0.92);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.punto {
+  color: var(--contacto-acento);
+  text-shadow: 0 0 28px var(--contacto-celeste), 0 0 6px var(--contacto-acento);
+}
+
+.detalle {
+  max-width: 28rem;
+  margin: 0 0 1.1rem;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  line-height: 1.5;
+  color: var(--contacto-tenue);
+  opacity: 0;
+  animation: aparecer 0.8s 1.35s ease-out forwards;
+}
+
+.ticket {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 0 0 2.2rem;
+  padding: 0.55rem 1rem;
+  border: 1px dashed var(--contacto-vidrio-borde);
+  border-radius: 999px;
+  font: 500 0.62rem ui-monospace, monospace;
+  letter-spacing: 0.16em;
+  color: var(--contacto-tenue);
+  opacity: 0;
+  animation: aparecer 0.8s 1.6s ease-out forwards;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- cambio entre "esperando" y la pregunta --- */
+.cambio {
+  position: relative;
+  display: grid;
+  min-height: 7.5rem;
+  opacity: 0;
+  animation: aparecer 0.8s 1.9s ease-out forwards;
+}
+
+.espera,
+.otro {
+  grid-area: 1 / 1;
+  margin: 0;
+  transition: opacity 0.6s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s;
+}
+
+.espera {
+  align-self: start;
+  font-size: 0.85rem;
+  color: var(--contacto-tenue);
+}
+
+.espera i {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: latido 1.2s infinite;
+}
+
+.espera i:nth-of-type(2) {
+  animation-delay: 0.2s;
+}
+
+.espera i:nth-of-type(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes latido {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.otro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  opacity: 0;
+  transform: translateY(14px);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+.otro p {
+  margin: 0;
+  font-size: clamp(1.1rem, 1.8vw, 1.45rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--contacto-texto);
+}
+
+.pregunta .espera {
+  opacity: 0;
+  transform: translateY(-10px);
+  filter: blur(6px);
+}
+
+.pregunta .otro {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: auto;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--contacto-acento) 60%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--contacto-acento) 16%, transparent);
+  color: var(--contacto-texto);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 var(--contacto-celeste), 0 10px 30px color-mix(in srgb, var(--contacto-acento) 28%, transparent);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s, box-shadow 0.3s;
+}
+
+.boton:hover,
+.boton:focus-visible {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--contacto-acento) 28%, transparent);
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--contacto-celeste) 35%, transparent), 0 14px 36px color-mix(in srgb, var(--contacto-acento) 38%, transparent);
+}
+
+.boton svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  transition: transform 0.3s;
+}
+
+.boton:hover svg {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gracias,
+  .anillo,
+  .tilde,
+  .onda,
+  .letra,
+  .detalle,
+  .ticket,
+  .cambio {
+    animation: none;
+    opacity: 1;
+    stroke-dashoffset: 0;
+    filter: none;
+  }
+
+  .onda {
+    display: none;
+  }
+
+  .espera i {
+    animation: none;
+  }
+}

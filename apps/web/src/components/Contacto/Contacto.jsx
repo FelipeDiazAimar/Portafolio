@@ -13,6 +13,7 @@ import { medirHuecosTitulo } from '@/lib/contacto/huecosTitulo.js';
 import { crearRutaAvion, crearRutaPorLetras, fraccionRecorrida } from '@/lib/contacto/rutaAvion.js';
 import Credencial from './Credencial.jsx';
 import FondoLuz from './FondoLuz.jsx';
+import Gracias from './Gracias.jsx';
 import SlideDestino, { AVION } from './SlideDestino.jsx';
 import styles from './Contacto.module.css';
 
@@ -41,7 +42,8 @@ export default function Contacto() {
   const [activo, setActivo] = useState(null);
   const [escribiendo, setEscribiendo] = useState(false);
   const [burbuja, setBurbuja] = useState(null);
-  const [verOtro, setVerOtro] = useState(false);
+  const [gracias, setGracias] = useState(null); // vista intermedia tras enviar: { canal, hora }
+  const [pregunta, setPregunta] = useState(false); // la persona volvió: se le pregunta si quiere enviar otro
   const [textoOculto, setTextoOculto] = useState(false);
   const [estado, setEstado] = useState(null);
   const [pista, setPista] = useState('o tocá el texto para escribir el tuyo');
@@ -195,7 +197,7 @@ export default function Contacto() {
       setVivo('Mensaje listo, abriendo WhatsApp');
       abrirWhatsApp(url);
     }, 600);
-    setTimeout(() => setVerOtro(true), 1500);
+    setTimeout(() => mostrarGracias('wa'), 2100);
   }
 
   // FLIP: la burbuja nace del rectángulo del texto escrito.
@@ -218,7 +220,7 @@ export default function Contacto() {
     const terminar = () => {
       setVivo('Mensaje listo, abriendo tu correo');
       window.location.href = url;
-      setVerOtro(true);
+      mostrarGracias('email');
     };
     const rect = refSlides.mail.current?.rectIcono();
     const avion = refAvion.current;
@@ -317,6 +319,7 @@ export default function Contacto() {
       const alabeo = q.curvatura * 52;
       avion.style.transform = `translate3d(${q.x.toFixed(2)}px, ${q.y.toFixed(2)}px, 0) rotate(${q.angulo.toFixed(4)}rad) perspective(520px) rotateX(${alabeo.toFixed(1)}deg) scale(${escala.toFixed(3)})`;
 
+      refFondo.current?.trazar(q.x, q.y); // la estela se redondea con un punto por cuadro
       // Agita la luz del fondo cada tanto, no en cada cuadro.
       if (Math.hypot(q.x - ultimoAgitado.x, q.y - ultimoAgitado.y) > 18) {
         refFondo.current?.agitar(q.x, q.y);
@@ -334,12 +337,13 @@ export default function Contacto() {
     requestAnimationFrame(cuadro);
   }
 
-  function otroMensaje() {
-    setVerOtro(false);
+  // Deja la vista de contacto lista para escribir otro mensaje: sin bloqueos, con los slides en su lugar.
+  function reiniciarVista() {
     setBurbuja(null);
     setTextoOculto(false);
     setOcupado(false);
     setActivo(null);
+    setEscribiendo(false);
     refLetras.current.forEach((l) => {
       if (!l) return;
       l.classList.remove(styles.volando);
@@ -354,6 +358,48 @@ export default function Contacto() {
     refIndice.current = 0;
     mostrarHasta(0, true);
   }
+
+  // Tras enviar, la vista de contacto se reemplaza por el agradecimiento. Por detrás queda todo
+  // reiniciado, así que al volver los slides ya están libres.
+  function mostrarGracias(canal) {
+    setPregunta(false);
+    setGracias({ canal, hora: horaActual() });
+    setTimeout(reiniciarVista, 900);
+  }
+
+  function otroMensaje() {
+    reiniciarVista();
+    setGracias(null);
+    setPregunta(false);
+    setVivo('');
+  }
+
+  // La pregunta "¿otro mensaje?" aparece cuando la persona vuelve a la página (WhatsApp o su correo
+  // se abrieron aparte); si nunca se fue, a los 9 s.
+  useEffect(() => {
+    if (!gracias) return undefined;
+    let salio = false;
+    const alCambiar = () => {
+      if (document.hidden) salio = true;
+      else if (salio) setPregunta(true);
+    };
+    const alPerderFoco = () => {
+      salio = true;
+    };
+    const alRecuperarFoco = () => {
+      if (salio) setPregunta(true);
+    };
+    document.addEventListener('visibilitychange', alCambiar);
+    window.addEventListener('blur', alPerderFoco);
+    window.addEventListener('focus', alRecuperarFoco);
+    const espera = setTimeout(() => setPregunta(true), 9000);
+    return () => {
+      clearTimeout(espera);
+      document.removeEventListener('visibilitychange', alCambiar);
+      window.removeEventListener('blur', alPerderFoco);
+      window.removeEventListener('focus', alRecuperarFoco);
+    };
+  }, [gracias]);
 
   // --- escribir tu propio mensaje ----------------------------------------
   function abrirEditor() {
@@ -400,7 +446,7 @@ export default function Contacto() {
         <Credencial />
       </div>
 
-      <div className={styles.panel}>
+      <div className={`${styles.panel} ${gracias ? styles.conGracias : ''}`}>
         <h2 id="titulo-contacto" className={styles.titulo}>
           Hablemos<span className={styles.punto}>.</span>
         </h2>
@@ -525,9 +571,9 @@ export default function Contacto() {
             alCompletar={(v) => alCompletar('mail', v)}
           />
         </div>
-        <button type="button" className={`${styles.otro} ${verOtro ? styles.verOtro : ''}`} onClick={otroMensaje} tabIndex={verOtro ? 0 : -1}>
-          ¿Otro mensaje?
-        </button>
+        {gracias && (
+          <Gracias canal={gracias.canal} hora={gracias.hora} estado={estado?.texto} pregunta={pregunta} alOtro={otroMensaje} />
+        )}
       </div>
 
       {/* el avioncito que despega de la manija del email */}

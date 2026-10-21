@@ -48,9 +48,15 @@ const FondoLuz = forwardRef(function FondoLuz(_, ref) {
       const luz = refLuz.current;
       if (!luz) return;
       const r = luz.getBoundingClientRect();
-      trazo.current.push({ x, y, e: 0 });
       remolinos.current.push({ x: (x - r.left) / r.width, y: (y - r.top) / r.height, edad: 0, f: 0.55 });
       if (remolinos.current.length > MAX_REMOLINOS) remolinos.current.shift();
+    },
+    // Un punto de la estela por cuadro del vuelo (x, y en píxeles de la ventana).
+    trazar(x, y) {
+      const puntos = trazo.current;
+      const ultimo = puntos.at(-1);
+      if (ultimo && Math.hypot(x - ultimo.x, y - ultimo.y) < 3) return;
+      puntos.push({ x, y, e: 0 });
     },
   }));
 
@@ -158,14 +164,27 @@ const FondoLuz = forwardRef(function FondoLuz(_, ref) {
         puntos[i].e += 0.016;
         if (puntos[i].e >= 1) puntos.splice(i, 1);
       }
-      ectx.lineCap = 'round';
-      for (let i = 1; i < puntos.length; i++) {
-        const vida = 1 - puntos[i].e;
-        ectx.strokeStyle = `rgba(${objetivo.estela}, ${vida * 0.5})`;
-        ectx.lineWidth = 0.8 + vida * 2.2;
+      // Una curva continua y lisa (cuadráticas por los puntos medios), dibujada en tramos de ancho y
+      // transparencia propios. Los tramos se unen en los puntos medios y con extremos planos: así no
+      // hay vértices ni "puntos" donde se superponen trazos semitransparentes.
+      const n = puntos.length;
+      if (n < 3) return;
+      const medio = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+      const TRAMO = 5;
+      ectx.lineCap = 'butt';
+      ectx.lineJoin = 'round';
+      for (let s = 1; s < n - 1; s += TRAMO) {
+        const fin = Math.min(n - 2, s + TRAMO - 1);
+        const vida = 1 - puntos[Math.min(n - 1, s + (TRAMO >> 1))].e;
+        const inicio = medio(puntos[s - 1], puntos[s]);
         ectx.beginPath();
-        ectx.moveTo(puntos[i - 1].x, puntos[i - 1].y);
-        ectx.lineTo(puntos[i].x, puntos[i].y);
+        ectx.moveTo(inicio.x, inicio.y);
+        for (let k = s; k <= fin; k++) {
+          const m = medio(puntos[k], puntos[k + 1]);
+          ectx.quadraticCurveTo(puntos[k].x, puntos[k].y, m.x, m.y);
+        }
+        ectx.strokeStyle = `rgba(${objetivo.estela}, ${vida * 0.55})`;
+        ectx.lineWidth = 0.9 + vida * 2.4;
         ectx.stroke();
       }
     }

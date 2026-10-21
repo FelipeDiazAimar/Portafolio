@@ -61,6 +61,17 @@
   padding: 13vh 6vw 9vh 1vw;
 }
 
+/* con la vista de agradecimiento, lo demás del panel se desvanece y se desenfoca */
+.panel > *:not([role='dialog']) {
+  transition: opacity 0.6s, filter 0.6s;
+}
+
+.conGracias > *:not([role='dialog']) {
+  opacity: 0;
+  filter: blur(12px);
+  pointer-events: none;
+}
+
 .titulo {
   margin: 0 0 1.6rem;
   font-size: clamp(4rem, 9vw, 8.5rem);
@@ -302,29 +313,6 @@
 
 .burbuja[data-fase='leido'] .meta svg {
   stroke: #34a5dd;
-}
-
-.otro {
-  align-self: center;
-  margin-top: 1.6rem;
-  padding: 0.6rem 1.1rem;
-  border: 1px solid var(--contacto-linea);
-  border-radius: 999px;
-  background: var(--contacto-chip);
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--contacto-texto);
-  cursor: pointer;
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
-  transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.verOtro {
-  opacity: 1;
-  transform: none;
-  pointer-events: auto;
 }
 
 /* --- avioncito --- */
