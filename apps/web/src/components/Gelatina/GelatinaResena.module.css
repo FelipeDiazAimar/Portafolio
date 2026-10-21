@@ -107,4 +107,9 @@
   .resena {
     grid-template-columns: 1fr;
   }
+
+  /* un poco más alta, para que la gelatina arqueada tenga lugar al agrandarla */
+  .caja {
+    height: clamp(280px, 62vw, 380px);
+  }
 }

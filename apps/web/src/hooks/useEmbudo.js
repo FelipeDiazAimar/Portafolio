@@ -10,7 +10,9 @@ const EMBUDO_ESPERA_MS = 220;
 // Al pasar por una sección a pantalla completa, si el scroll se detiene cerca de ella, la
 // acomoda sola (su borde de arriba con el de la pantalla). No actúa con el dedo apoyado ni
 // cuando otra parte de la página pidió no imantar (data-sin-iman en <html>).
-export default function useEmbudo(refSeccion) {
+// `fraccionAngosta`: en pantallas angostas (celular) puede usarse una zona de atracción más grande,
+// porque las secciones son mucho más altas que la pantalla.
+export default function useEmbudo(refSeccion, { fraccionAngosta = EMBUDO_FRACCION } = {}) {
   useEffect(() => {
     const seccion = refSeccion.current;
     if (!seccion) return undefined;
@@ -19,7 +21,8 @@ export default function useEmbudo(refSeccion) {
     const intentar = () => {
       if (dedos > 0 || document.documentElement.dataset.sinIman) return;
       const distancia = seccion.getBoundingClientRect().top;
-      if (Math.abs(distancia) < 2 || Math.abs(distancia) > window.innerHeight * EMBUDO_FRACCION) return;
+      const fraccion = window.innerWidth < 900 ? fraccionAngosta : EMBUDO_FRACCION;
+      if (Math.abs(distancia) < 2 || Math.abs(distancia) > window.innerHeight * fraccion) return;
       window.scrollTo({ top: window.scrollY + distancia, behavior: 'smooth' });
     };
     const alScroll = () => {
@@ -41,5 +44,5 @@ export default function useEmbudo(refSeccion) {
       window.removeEventListener('touchend', alTocar);
       window.removeEventListener('touchcancel', alTocar);
     };
-  }, [refSeccion]);
+  }, [refSeccion, fraccionAngosta]);
 }

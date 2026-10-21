@@ -11,6 +11,7 @@ import styles from './GelatinaResena.module.css';
 const AZUL_ELECTRICO = [0.12, 0.48, 1];
 const LUZ = normalizar([0.19, -0.24, 0.75]);
 const SUAVIZADO_PUNTERO = 0.08; // el MOUSE_SMOOTHING del original
+const CORRIMIENTO_X_ANGOSTO = 0.1;
 const CORRIMIENTO_X = 0.14; // la escena se corre a la izquierda dentro del lienzo: más lugar para el resplandor
 const SUBDIVISIONES = 8; // cada tramo de la física se parte en 8: 16 tramos → 128 (sin caras visibles)
 
@@ -169,10 +170,13 @@ export default function GelatinaResena() {
       const dir = normalizar([0.024, 2.7, 1.9]);
       // Vista un 11 % más ancha y corrida a la derecha: con la nota al 100 % la punta queda cerca del
       // borde del lienzo y el resplandor azul se cortaba con un borde recto.
-      const distancia = Math.max(3.4 / (0.83 * aspecto), 1.7);
+      // En el celular el lienzo es angosto y la gelatina se veía muy chica: se acerca la cámara.
+      const angosto = rect.width < 640;
+      const corrimiento = angosto ? CORRIMIENTO_X_ANGOSTO : CORRIMIENTO_X;
+      const distancia = Math.max((angosto ? 2.7 : 3.4) / (0.83 * aspecto), 1.7);
       camara.pos = dir.map((c) => c * distancia);
-      camara.pos[0] += CORRIMIENTO_X;
-      const objetivo = [CORRIMIENTO_X, 0.06, 0.02];
+      camara.pos[0] += corrimiento;
+      const objetivo = [corrimiento, 0.06, 0.02];
       camara.frente = normalizar(objetivo.map((c, i) => c - camara.pos[i]));
       camara.derecha = normalizar(cruz(camara.frente, [0, 1, 0]));
       camara.arriba = cruz(camara.derecha, camara.frente);

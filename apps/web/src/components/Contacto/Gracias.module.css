@@ -45,6 +45,8 @@
   height: 100%;
   overflow: visible;
   fill: none;
+  /* el resplandor va en el <svg> entero: aplicado a cada trazo, Safari lo ignora */
+  filter: drop-shadow(0 0 9px var(--contacto-celeste));
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -58,20 +60,18 @@
 .anillo {
   stroke: var(--contacto-acento);
   stroke-width: 3.2;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
+  stroke-dasharray: var(--largo);
+  stroke-dashoffset: var(--largo);
   transform: rotate(-90deg);
   transform-origin: 60px 60px;
-  filter: drop-shadow(0 0 8px var(--contacto-celeste));
   animation: trazar 0.9s 0.15s cubic-bezier(0.65, 0, 0.2, 1) both;
 }
 
 .tilde {
   stroke: var(--contacto-texto);
   stroke-width: 6;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  filter: drop-shadow(0 0 10px var(--contacto-celeste));
+  stroke-dasharray: var(--largo);
+  stroke-dashoffset: var(--largo);
   animation: trazar 0.55s 0.85s cubic-bezier(0.65, 0, 0.2, 1) both;
 }
 
@@ -83,7 +83,7 @@
 /* oculto hasta que le toca: con extremos redondos, un trazo de largo cero se vería como un punto */
 @keyframes trazar {
   0% {
-    stroke-dashoffset: 1;
+    stroke-dashoffset: var(--largo);
     opacity: 0;
   }
   2% {

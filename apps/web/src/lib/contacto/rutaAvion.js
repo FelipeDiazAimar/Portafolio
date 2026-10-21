@@ -177,29 +177,61 @@ function suavizarGauss(xs, ys, sigma) {
   return { xs: sx, ys: sy };
 }
 
-export function crearRutaPorLetras({ inicio, ancho, alto, letras }) {
+// Con `rizos: false` (pantallas angostas) no hay círculos: es una sola curva suave que sube, gira hacia
+// las letras, cruza el hueco de cada una en línea y se va. Si la manija queda a la izquierda de las
+// letras (en el celular los slides van abajo y a la izquierda), se arma espejada.
+export function crearRutaPorLetras({ inicio, ancho, alto, letras, rizos = true }) {
   if (!letras || letras.length === 0) return null;
+  const mediaX = letras.reduce((suma, l) => suma + l.x, 0) / letras.length;
+  if (inicio.x > mediaX) return construirRutaPorLetras({ inicio, ancho, alto, letras, rizos });
+  const reflejar = (x) => ancho - x;
+  const espejo = construirRutaPorLetras({
+    inicio: { x: reflejar(inicio.x), y: inicio.y },
+    ancho,
+    alto,
+    letras: letras.map((l) => ({ ...l, x: reflejar(l.x) })),
+    rizos,
+  });
+  if (!espejo) return null;
+  return {
+    ...espejo,
+    letras: espejo.letras.map((l) => ({ ...l, x: reflejar(l.x) })),
+    enRuta(distancia) {
+      const q = espejo.enRuta(distancia);
+      return { ...q, x: reflejar(q.x), angulo: Math.PI - q.angulo, curvatura: -q.curvatura };
+    },
+  };
+}
+
+// Arma la ruta suponiendo que el avión sale a la DERECHA de las letras y vuela hacia la izquierda.
+function construirRutaPorLetras({ inicio, ancho, alto, letras, rizos }) {
   // El avión viene de la derecha: se atraviesa primero la letra que está más a la derecha.
   const ordenadas = [...letras].sort((a, b) => b.x - a.x);
   const radioHueco = Math.min(...ordenadas.map((l) => l.radio));
-  const radio = Math.min(62, Math.max(38, radioHueco * 3.4)); // radio del rizo (ya suavizado)
+  // radio del rizo (ya suavizado); sin rizos sólo sirve para normalizar la inclinación de las alas
+  const radio = rizos ? Math.min(62, Math.max(38, radioHueco * 3.4)) : 40;
   // El filtro achica un círculo en exp(-σ²/2R²): se pre-compensa para que, ya suavizado, el rizo
   // tenga exactamente `radio` y su punto más alto caiga en el hueco.
   const radioArmado = radio * Math.exp((SIGMA_PX * SIGMA_PX) / (2 * radio * radio));
   const yHuecos = ordenadas.reduce((suma, l) => suma + l.y, 0) / ordenadas.length;
   const centroY = yHuecos + radio; // el hueco queda en el punto más alto del círculo
-  const yVuelo = centroY + radioArmado; // altura de la recta por la que se entra a cada rizo
+  // altura de la recta por la que se entra a cada rizo; sin rizos, la recta pasa por el centro de los huecos
+  const yVuelo = rizos ? centroY + radioArmado : yHuecos;
+  const carreraMinima = rizos ? CARRERA_MINIMA_PX : 1.2 * SIGMA_PX;
 
   const xDerecha = ordenadas[0].x;
   const xIzquierda = ordenadas.at(-1).x;
-  const radioGiro = Math.min(GIRO_ENTRADA_MAXIMO_PX, inicio.x - xDerecha - CARRERA_MINIMA_PX);
-  const carrera = Math.min(110, xIzquierda - RADIO_SALIDA_PX - 12);
+  const radioGiro = Math.min(GIRO_ENTRADA_MAXIMO_PX, inicio.x - xDerecha - carreraMinima);
+  // con rizos la salida usa siempre el radio de siempre; sin rizos se achica para entrar en el lugar que haya
+  const radioSalida = rizos ? RADIO_SALIDA_PX : Math.min(RADIO_SALIDA_PX, Math.max(28, xIzquierda - 12 - carreraMinima));
+  const carrera = Math.min(110, xIzquierda - radioSalida - 12);
+  const margenLateral = rizos ? radio + 10 : 20;
   const valido =
     radioGiro >= 28 &&
-    carrera >= CARRERA_MINIMA_PX &&
-    ordenadas.every((l) => l.x > radio + 10 && l.x < ancho - radio - 10 && l.y > 24 && Math.abs(l.y - yHuecos) < 8) &&
+    carrera >= carreraMinima &&
+    ordenadas.every((l) => l.x > margenLateral && l.x < ancho - margenLateral && l.y > 24 && Math.abs(l.y - yHuecos) < 8) &&
     yVuelo < alto - 24 &&
-    inicio.y > yVuelo + radioGiro + CARRERA_MINIMA_PX;
+    inicio.y > yVuelo + radioGiro + carreraMinima;
   if (!valido) return null;
 
   const lapiz = new Lapiz(inicio.x, inicio.y, ARRANQUE);
@@ -207,10 +239,10 @@ export function crearRutaPorLetras({ inicio, ancho, alto, letras }) {
   lapiz.arco(radioGiro, Math.PI / 2, -1); // giro a la izquierda: de ir al norte a ir al oeste
   for (const letra of ordenadas) {
     lapiz.recta(lapiz.x - letra.x);
-    lapiz.arco(radioArmado, 2 * Math.PI, 1); // rizo horario que toca la letra por arriba
+    if (rizos) lapiz.arco(radioArmado, 2 * Math.PI, 1); // rizo horario que toca la letra por arriba
   }
   lapiz.recta(carrera);
-  lapiz.arco(RADIO_SALIDA_PX, GIRO_SALIDA, 1); // giro a la derecha: del oeste hacia arriba
+  lapiz.arco(radioSalida, GIRO_SALIDA, 1); // giro a la derecha: del oeste hacia arriba
   lapiz.recta((lapiz.y + 300) / Math.max(0.3, -Math.sin(lapiz.angulo))); // y se va por arriba de la pantalla
 
   // Se extiende en línea recta antes y después para que el filtro no deforme los extremos:

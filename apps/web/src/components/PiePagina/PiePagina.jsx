@@ -7,6 +7,7 @@ import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entr
 import useEmbudo from '@/hooks/useEmbudo.js';
 import useToqueSobre from '@/hooks/useToqueSobre.js';
 import DatosContacto from '@/components/Contacto/DatosContacto.jsx';
+import CierreFooter from './CierreFooter.jsx';
 import styles from './PiePagina.module.css';
 
 // El shader de la gelatina sólo se baja en el cliente.
@@ -77,7 +78,7 @@ function generarCampoNombre(calco) {
 
 export default function PiePagina() {
   const refPie = useRef(null);
-  useEmbudo(refPie); // al soltar el scroll cerca del footer, se acomoda solo
+  useEmbudo(refPie, { fraccionAngosta: 0.6 }); // al soltar el scroll cerca del footer, se acomoda solo
   const refContenedor = useRef(null);
   const refLimpio = useRef(null);
   const [campo, setCampo] = useState(null);
@@ -206,6 +207,7 @@ export default function PiePagina() {
           }
         />
       </div>
+      <CierreFooter />
       <div className={styles.pie}>
         <p className={styles.derechos}>© {new Date().getFullYear()}</p>
       </div>

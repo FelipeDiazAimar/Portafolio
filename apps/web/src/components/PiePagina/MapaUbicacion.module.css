@@ -1,0 +1,67 @@
+.mapa {
+  display: flex;
+  align-items: stretch;
+  gap: 1.4rem;
+  margin: 0;
+}
+
+.lienzo {
+  display: block;
+  flex: none;
+  width: clamp(130px, 14vw, 170px);
+  height: clamp(280px, 30vw, 360px);
+}
+
+/* La leyenda queda a la altura del pin (≈ 30 % desde arriba). */
+.leyenda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-self: flex-start;
+  margin-top: 8%;
+  padding-left: 1rem;
+  border-left: 1px solid var(--contacto-linea);
+  font: 500 0.66rem ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--contacto-tenue);
+}
+
+.titulo {
+  margin-bottom: 0.2rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--contacto-texto);
+}
+
+.hora {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  color: var(--contacto-texto);
+}
+
+.hora i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--contacto-acento);
+  box-shadow: 0 0 10px var(--contacto-celeste);
+  animation: latido 1.8s ease-in-out infinite;
+}
+
+@keyframes latido {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hora i {
+    animation: none;
+  }
+}

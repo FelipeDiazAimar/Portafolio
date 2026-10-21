@@ -121,14 +121,15 @@ export default function Gracias({ canal, hora, estado, pregunta, alOtro }) {
         <span className={`${styles.onda} ${styles.onda3}`} />
         <svg viewBox="0 0 120 120" className={styles.icono}>
           <circle className={styles.halo} cx="60" cy="60" r="54" />
-          <circle className={styles.anillo} cx="60" cy="60" r="54" pathLength="1" />
+          {/* largos explícitos (en vez de pathLength): los navegadores del celular lo resuelven mejor */}
+          <circle className={styles.anillo} cx="60" cy="60" r="54" style={{ '--largo': 341 }} />
           {porWhatsApp ? (
             <>
-              <path className={styles.tilde} d="M34 62l15 15L74 44" pathLength="1" />
-              <path className={`${styles.tilde} ${styles.tilde2}`} d="M58 72l6 6L90 44" pathLength="1" />
+              <path className={styles.tilde} d="M34 62l15 15L74 44" style={{ '--largo': 64 }} />
+              <path className={`${styles.tilde} ${styles.tilde2}`} d="M58 72l6 6L90 44" style={{ '--largo': 53 }} />
             </>
           ) : (
-            <path className={styles.tilde} d="M36 62l17 17L86 42" pathLength="1" />
+            <path className={styles.tilde} d="M36 62l17 17L86 42" style={{ '--largo': 75 }} />
           )}
         </svg>
       </div>

@@ -14,6 +14,13 @@ export default function DatosContacto({ nombre }) {
       <div className={styles.marca}>
         {nombre}
         <span>Desarrollador Full Stack · San Francisco, Córdoba, Argentina</span>
+        <a className={styles.cv} href="/CV-Felipe-Diaz-Aimar.pdf" download="CV-Felipe-Diaz-Aimar.pdf">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />
+          </svg>
+          Descargar CV
+          <small>PDF</small>
+        </a>
       </div>
       <ul className={styles.lista}>
         {DATOS_CONTACTO.map((dato) => {

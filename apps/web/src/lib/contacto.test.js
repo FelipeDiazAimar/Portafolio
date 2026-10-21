@@ -273,8 +273,10 @@ test('ruta por letras: si el diseño no da lugar, devuelve null para usar la rut
   assert.equal(rutaPorLetras({ letras: [{ x: 1075, y: -40, radio: 17 }, { x: 720, y: -40, radio: 17 }] }), null);
   // la manija está por encima de donde tendrían que ir los rizos
   assert.equal(rutaPorLetras({ inicio: { x: 1275, y: 300 } }), null);
-  // la manija está a la izquierda de las letras (el recorrido sale siempre desde la derecha)
-  assert.equal(rutaPorLetras({ inicio: { x: 500, y: 700 } }), null);
+  // la manija está entre las dos letras: no hay por dónde entrar a la primera
+  assert.equal(rutaPorLetras({ inicio: { x: 900, y: 700 } }), null);
+  // a la izquierda de las letras sí hay ruta: se arma espejada
+  assert.ok(rutaPorLetras({ inicio: { x: 500, y: 700 } }));
   // sin letras
   assert.equal(rutaPorLetras({ letras: [] }), null);
 });
@@ -367,4 +369,69 @@ test('ruta por letras: el avión frena al cruzar el hueco de cada letra y llega 
   }
   assert.ok(enHueco < lejos * 0.6, `en el hueco va más lento (${enHueco.toFixed(0)} contra ${lejos.toFixed(0)})`);
   assert.ok(ruta.duracionRelativa > 1, 'tarda más que sin frenar');
+});
+
+// Celular (390 × 844): los slides van abajo y a la izquierda, o sea que la manija queda a la
+// izquierda de las letras y el recorrido tiene que armarse espejado y sin rizos.
+const LETRAS_CELULAR = [
+  { x: 262, y: 296, radio: 7 }, // o
+  { x: 148, y: 296, radio: 7 }, // b
+];
+const rutaCelular = (extra = {}) =>
+  crearRutaPorLetras({ inicio: { x: 58, y: 690 }, ancho: 390, alto: 844, letras: LETRAS_CELULAR, rizos: false, ...extra });
+
+test('ruta por letras en celular: sin rizos, espejada, pasa por el hueco de la "b" y de la "o" y es continua', () => {
+  const ruta = rutaCelular();
+  assert.ok(ruta, 'en el celular tiene que existir (antes caía al recorrido de círculos)');
+  const q0 = ruta.enRuta(0);
+  assert.ok(Math.hypot(q0.x - 58, q0.y - 690) < 1.5, 'sale de la manija');
+  for (const letra of LETRAS_CELULAR) assert.ok(distanciaMinima(ruta, letra) < 3, `cruza el hueco en (${letra.x}, ${letra.y})`);
+  // primero cruza la "b" (la más cercana a la manija, a la izquierda) y después la "o"
+  const posicionDe = (letra) => {
+    let mejor = 0;
+    let mejorDist = Infinity;
+    for (let s = 0; s <= ruta.total; s += 0.5) {
+      const q = ruta.enRuta(s);
+      const d = Math.hypot(q.x - letra.x, q.y - letra.y);
+      if (d < mejorDist) { mejorDist = d; mejor = s; }
+    }
+    return mejor;
+  };
+  assert.ok(posicionDe(LETRAS_CELULAR[1]) < posicionDe(LETRAS_CELULAR[0]), 'la "b" antes que la "o"');
+  // sin rizos: el avión nunca da una vuelta completa (el giro acumulado entre dos puntos cualesquiera < 1,6 π)
+  let acumulado = 0;
+  let giroMaximo = 0;
+  let previo = ruta.enRuta(0).angulo;
+  let minimo = previo;
+  let maximo = previo;
+  for (let s = 1; s <= ruta.total; s += 1) {
+    const a = ruta.enRuta(s).angulo;
+    assert.ok(Math.abs(a - previo) < 0.12, `ángulo continuo (salto de ${(Math.abs(a - previo) * 180 / Math.PI).toFixed(1)}° en s=${s})`);
+    previo = a;
+    minimo = Math.min(minimo, a);
+    maximo = Math.max(maximo, a);
+    acumulado += Math.abs(a);
+  }
+  giroMaximo = maximo - minimo;
+  assert.ok(giroMaximo < 1.6 * Math.PI, `no da vueltas en círculos (rango de ángulos ${(giroMaximo / Math.PI).toFixed(2)} π)`);
+  const fin = ruta.enRuta(ruta.total);
+  assert.ok(fin.y < -100 || fin.x < -100 || fin.x > 390 + 100, 'se va de la pantalla');
+});
+
+test('ruta por letras: en escritorio sigue habiendo rizos y la versión sin rizos no los hace', () => {
+  const conRizos = rutaPorLetras();
+  const sinRizos = rutaPorLetras({ rizos: false });
+  assert.ok(conRizos && sinRizos);
+  const rango = (ruta) => {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let s = 0; s <= ruta.total; s += 1) {
+      const a = ruta.enRuta(s).angulo;
+      min = Math.min(min, a);
+      max = Math.max(max, a);
+    }
+    return max - min;
+  };
+  assert.ok(rango(conRizos) > 4 * Math.PI, 'con rizos hace al menos dos vueltas completas');
+  assert.ok(rango(sinRizos) < 1.6 * Math.PI, 'sin rizos no da vueltas');
 });

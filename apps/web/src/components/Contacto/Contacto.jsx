@@ -243,7 +243,8 @@ export default function Contacto() {
     const huecos = medirHuecosTitulo(document.getElementById('titulo-contacto'));
     const ancho = window.innerWidth;
     const alto = window.innerHeight;
-    const porLetras = huecos ? crearRutaPorLetras({ inicio, ancho, alto, letras: huecos }) : null;
+    // en pantallas angostas el título es chico y los rizos serían círculos enormes: se vuela en una sola curva
+    const porLetras = huecos ? crearRutaPorLetras({ inicio, ancho, alto, letras: huecos, rizos: ancho >= 700 }) : null;
     const vueltas = Math.abs(velocidad) > 1.6 ? 2 : 1;
     const ruta = porLetras ?? crearRutaAvion({ inicio, ancho, alto, vueltas });
     const duracion = porLetras ? limitar(ruta.total * 1.5 * ruta.duracionRelativa, 3800, 5600) : vueltas === 2 ? 3800 : 3000;
