@@ -1,0 +1,1175 @@
+/* Reel de hitos ("Sobre mí"). El contenedor sale del ancho de <main> y es alto: el panel sticky
+   queda fijo mientras se recorre ese alto, y ese recorrido es el paso por los siete hitos. */
+.contenedor {
+  --paso: 70svh;
+  /* Cola: tramo final en que "Hoy" sigue fijo. La marquesina de Proyectos sube 30svh por encima
+     de su sección (a propósito, ver Proyectos.module.css); sin esta cola tapaba la regla de años
+     y el texto del último hito. */
+  --cola: 34svh;
+  /* Respiro: espacio vacío de verdad entre esta sección y Proyectos. */
+  --respiro: 34svh;
+  margin-bottom: var(--respiro);
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  height: calc(100svh + var(--pasos) * var(--paso) + var(--cola));
+}
+
+/* Entre el hero y esta sección no hay borde: por encima del panel va un fundido al color del
+   fondo (el hero se apaga dentro de él en vez de cortarse contra una línea) y, mientras la sección
+   sube, su luz y su trama de puntos aparecen de a poco desde arriba. En reposo sobre el hero
+   (--llega = 0) el fundido no se ve. */
+.contenedor::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 46svh;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-bg) 55%, transparent) 45%, var(--color-bg));
+  opacity: clamp(0, calc(var(--llega, 1) * 4), 1);
+  pointer-events: none;
+}
+
+.panel .luz {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 calc(var(--falta) * 85%));
+  mask-image: linear-gradient(to bottom, transparent, #000 calc(var(--falta) * 85%));
+}
+
+/* la trama ya se funde arriba y abajo; llegando desde el hero, el fundido de arriba es más largo */
+.panel .grano {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 max(16%, calc(var(--falta) * 80%)), #000 84%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 max(16%, calc(var(--falta) * 80%)), #000 84%, transparent);
+}
+
+.cola {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: var(--cola);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.panel {
+  /* curvas y tiempos de la sección (los mismos de las transiciones del resto de la interfaz) */
+  --suave: cubic-bezier(0.22, 1, 0.36, 1);
+  --tinta: var(--color-fg);
+  --tenue: color-mix(in srgb, var(--color-fg) 62%, transparent);
+  --fantasma: color-mix(in srgb, var(--color-fg) 34%, transparent);
+  --superficie: color-mix(in srgb, var(--color-bg) 86%, transparent);
+  --fase: 0;
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--color-bg);
+  color: var(--tinta);
+  /* lo vertical es scroll de la página; lo horizontal mueve la cinta */
+  touch-action: pan-y;
+  cursor: grab;
+  /* cuánto falta para que la sección quede a pantalla completa viniendo del hero (ver --llega) */
+  --falta: calc(1 - var(--llega, 1));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.panel[data-arrastrando='true'] {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Iluminación que varía apenas: dos manchas de luz muy abiertas, una del color del hito. */
+.luz {
+  position: absolute;
+  inset: -12%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 46% at 68% 34%, color-mix(in srgb, var(--acento) 15%, transparent), transparent 72%),
+    radial-gradient(48% 52% at 24% 70%, color-mix(in srgb, var(--color-fg) 6%, transparent), transparent 70%);
+  animation: derivaLuz 22s ease-in-out infinite alternate;
+  transition: opacity 0.9s var(--suave);
+  opacity: 0;
+}
+
+.panel[data-entro='true'] .luz {
+  opacity: 1;
+}
+
+@keyframes derivaLuz {
+  from {
+    transform: translate3d(-2.2%, 1.4%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2.2%, -1.6%, 0) scale(1.06);
+  }
+}
+
+/* Grano de puntos de 6 px. Se funde arriba y abajo para unirse con las secciones vecinas. */
+.grano {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle at center, color-mix(in srgb, var(--color-fg) 20%, transparent) 0.6px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.6;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent);
+}
+
+/* Titular enorme detrás de las portadas, que lo tapan al pasar. */
+.titular {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  margin: 0;
+  /* más ancho que la cinta y un poco más arriba: asoma por encima y a los costados */
+  padding-bottom: 27svh;
+  font-size: clamp(3.5rem, 14.4vw, 18rem);
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: -0.062em;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.renglon {
+  display: block;
+  overflow: hidden;
+  /* aire para los rasgos que bajan (p, z) y los acentos, que el recorte no debe cortar */
+  padding: 0.09em 0.06em 0.11em;
+  margin: -0.09em 0 -0.11em;
+  white-space: nowrap;
+}
+
+.renglon > span {
+  display: block;
+}
+
+.panel[data-entro='false'] .renglon > span {
+  transform: translateY(108%);
+}
+
+.lienzo {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Diorama animado sobre la portada del frente: tres franjas verticales que, juntas, miden lo que
+   su zona en la portada (826 × 742). A cada una una matriz de perspectiva la lleva a su lugar
+   sobre la tarjeta curva en cada cuadro: sólo cambia `transform`. */
+.vivo {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  /* al moverse la cinta se va enseguida: debajo queda el diorama quieto de la textura */
+  transition: opacity 0.09s linear;
+}
+
+.franja {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.vivo[data-visible='true'] {
+  opacity: 1;
+  transition: opacity 0.4s ease-out;
+}
+
+.franja canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dibujo {
+  position: absolute;
+}
+
+/* ---- ficha del hito --------------------------------------------------------------------- */
+.ficha {
+  position: absolute;
+  right: clamp(1.25rem, 3.6vw, 4.5rem);
+  bottom: clamp(5.75rem, 12.5svh, 8.5rem);
+  z-index: 3;
+  width: min(26.5rem, 31vw);
+  padding: 1.25rem 1.375rem 1.375rem;
+  border-radius: 1.25rem;
+  background: var(--superficie);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  /* sombras en capas en vez de borde: la profundidad no la da una línea */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 9%, transparent),
+    0 1px 2px color-mix(in srgb, #000 12%, transparent),
+    0 18px 48px -18px color-mix(in srgb, #000 42%, transparent);
+  cursor: auto;
+  transition:
+    opacity 0.6s var(--suave) 0.55s,
+    transform 0.8s var(--suave) 0.55s;
+}
+
+.panel[data-entro='false'] .ficha {
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.fichaAnio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--tenue);
+}
+
+/* La marca del hito: un punto de su color, con un aro que late, montado sobre la esquina de la
+   ficha. Es hija directa de la ficha (no de un renglón): los renglones se mueven al cambiar de
+   hito y, dentro de uno, la marca aparecía en un lugar y saltaba a la esquina al terminar. */
+.fichaMarca {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -1.375rem 0 0 -1.375rem;
+  pointer-events: none;
+}
+
+.fichaMarca::before,
+.fichaMarca::after {
+  content: '';
+  grid-area: 1 / 1;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+}
+
+.fichaMarca::before {
+  background: var(--acento);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-bg) 78%, transparent),
+    0 2px 10px color-mix(in srgb, #000 45%, transparent);
+  transition: background-color 0.4s ease;
+}
+
+.fichaMarca::after {
+  border: 1.5px solid var(--acento);
+  animation: lateMarca 2.4s ease-out infinite;
+  transition: border-color 0.4s ease;
+}
+
+.panel[data-reducido='true'] .fichaMarca::after {
+  animation: none;
+  opacity: 0;
+}
+
+.fichaTitulo {
+  margin: 0 0 0.625rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(1.5rem, 1.9vw, 2rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+
+.fichaTexto {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.58;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+
+.fichaTexto strong {
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+/* Cambio de hito: los renglones nuevos suben con desenfoque, escalonados 40 ms; la salida es un
+   fundido corto en el lugar (sin volver a bajar), así no se repite la entrada al revés. */
+.ficha [data-renglon] {
+  transition:
+    opacity 0.5s var(--suave),
+    transform 0.5s var(--suave),
+    filter 0.5s var(--suave);
+}
+
+.ficha [data-renglon='2'] {
+  transition-delay: 40ms;
+}
+
+.ficha [data-renglon='3'] {
+  transition-delay: 80ms;
+}
+
+.ficha[data-estado='saliendo'] [data-renglon] {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  transition-delay: 0s;
+}
+
+.ficha[data-estado='oculta'] [data-renglon] {
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(3px);
+  transition: none;
+}
+
+/* ---- la puerta a Proyectos ---------------------------------------------------------------- */
+/* Fija sobre la pantalla y debajo del panel: el panel lleva el vano recortado, así que de todo
+   esto sólo se ve lo que cae dentro del hueco. La caja del vano mide lo que la hoja (190 × 307) y
+   ReelHitos.jsx la apoya sobre el vano del dibujo con una matriz de perspectiva, en cada cuadro. */
+.portal {
+  /* los tonos de la hoja dibujada en el diorama (acento del hito "Hoy") */
+  --hoja: #be4100;
+  --hoja-sombra: #8f3206;
+  --hoja-linea: #ef6f3e;
+  --hoja-brillo: #ffcdbb;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.portal[data-claro='true'] {
+  --hoja: #fc9672;
+  --hoja-sombra: #e2683a;
+  --hoja-linea: #a53800;
+  --hoja-brillo: #561b03;
+}
+
+.portal[data-activo='true'] {
+  visibility: visible;
+}
+
+.vano {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  /* la hoja gira en perspectiva dentro del vano: al abrirse hacia adentro se la ve de canto */
+  perspective: 430px;
+  perspective-origin: 50% 46%;
+  will-change: transform;
+}
+
+/* ya del otro lado, la hoja y el marco quedaron atras */
+.portal[data-cruzado="true"] .hoja,
+.portal[data-cruzado="true"] .jamba {
+  visibility: hidden;
+}
+
+.vano > span {
+  position: absolute;
+  inset: 0;
+}
+
+/* El aire entre la puerta y lo que hay detrás: de lejos, Proyectos se ve un poco velado. */
+.bruma {
+  background: var(--color-bg);
+  opacity: var(--bruma, 0);
+}
+
+/* El espesor del marco: sombra hacia adentro y un filo de luz del color del hito. */
+.jamba {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #ff7d4d 80%, transparent),
+    inset 0 0 26px 5px rgb(0 0 0 / 0.5);
+  opacity: calc(0.25 + var(--lejos, 0));
+}
+
+.hoja {
+  transform-origin: 0 50%;
+  transform: rotateY(calc(var(--abre, 0) * 84deg));
+  background: linear-gradient(90deg, var(--hoja-sombra), var(--hoja) 16%, var(--hoja) 82%, var(--hoja-sombra));
+  box-shadow: inset 0 0 0 1px var(--hoja-linea);
+  will-change: transform;
+}
+
+/* abierta, la hoja queda a contraluz */
+.hoja::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: calc(var(--abre, 0) * 0.42);
+}
+
+.cuarteron {
+  position: absolute;
+  left: 13.7%;
+  right: 13.7%;
+  top: 9.1%;
+  bottom: 51.1%;
+  border: 1px solid var(--hoja-linea);
+  border-radius: 1px;
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.07), rgb(0 0 0 / 0.08));
+}
+
+.cuarteron + .cuarteron {
+  top: 58.6%;
+  bottom: 9.4%;
+}
+
+.picaporte {
+  position: absolute;
+  left: 90%;
+  top: 53.7%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px;
+  border-radius: 50%;
+  background: var(--hoja-brillo);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+/* La luz del otro lado (en el tema oscuro, la oscuridad): un halo del color del fondo que sale
+   del vano, crece con él y al cruzar envuelve la pantalla; ya en Proyectos se disipa. Va por
+   encima del panel. Dónde está, cuánto mide y con qué fuerza lo escribe ReelHitos.jsx. */
+.resplandor {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: var(--fuerza, 0);
+  background: radial-gradient(ellipse calc(var(--r, 100px) * 0.72) var(--r, 100px) at var(--px, 50%) var(--py, 50%), var(--color-bg) 0%, var(--color-bg) 32%, color-mix(in srgb, var(--color-bg) 55%, transparent) 62%, transparent 100%);
+  will-change: opacity;
+}
+
+.portal[data-activo='true'] ~ .resplandor {
+  visibility: visible;
+}
+
+/* ---- visor de cámara sobre la foto o el video abierto en una portada ----------------------- */
+/* Sólo líneas: esquinas de encuadre, una mira al centro, el recuadro de foco y una regla abajo.
+   La caja mide lo que la portada menos un margen y ReelHitos.jsx la apoya encima con una matriz
+   de perspectiva; --k compensa el tamaño (1 px de pantalla = var(--k) px de la caja). */
+.hud {
+  --k: 1;
+  --trazo: calc(1.5px * var(--k));
+  --tinta-visor: rgb(255 255 255 / 0.9);
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  transform-origin: 0 0;
+  pointer-events: none;
+  color: var(--tinta-visor);
+  filter: drop-shadow(0 0 calc(2px * var(--k)) rgb(0 0 0 / 0.55));
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+.hud[data-visible='true'] {
+  opacity: 1;
+  /* espera a que la foto termine de abrirse */
+  transition: opacity 0.4s var(--suave) 0.45s;
+}
+
+.hud > span {
+  position: absolute;
+}
+
+/* esquinas de encuadre */
+.visorEsquina {
+  width: calc(26px * var(--k));
+  height: calc(26px * var(--k));
+  border: 0 solid currentColor;
+}
+
+.visorEsquina:nth-child(1) {
+  left: 0;
+  top: 0;
+  border-left-width: var(--trazo);
+  border-top-width: var(--trazo);
+}
+
+.visorEsquina:nth-child(2) {
+  right: 0;
+  top: 0;
+  border-right-width: var(--trazo);
+  border-top-width: var(--trazo);
+}
+
+.visorEsquina:nth-child(3) {
+  right: 0;
+  bottom: 0;
+  border-right-width: var(--trazo);
+  border-bottom-width: var(--trazo);
+}
+
+.visorEsquina:nth-child(4) {
+  left: 0;
+  bottom: 0;
+  border-left-width: var(--trazo);
+  border-bottom-width: var(--trazo);
+}
+
+/* mira: una cruz fina en el centro */
+.visorMira {
+  left: 50%;
+  top: 50%;
+  width: calc(22px * var(--k));
+  height: calc(22px * var(--k));
+  translate: -50% -50%;
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% calc(1px * var(--k)) no-repeat,
+    linear-gradient(currentColor, currentColor) center / calc(1px * var(--k)) 100% no-repeat;
+  opacity: 0.75;
+}
+
+/* recuadro de foco: cuatro esquinas chicas alrededor del centro, que respiran apenas */
+.visorFoco {
+  left: 50%;
+  top: 50%;
+  width: 30%;
+  height: 40%;
+  translate: -50% -50%;
+  --l: calc(14px * var(--k));
+  --g: calc(1px * var(--k));
+  background:
+    linear-gradient(currentColor, currentColor) left top / var(--l) var(--g) no-repeat,
+    linear-gradient(currentColor, currentColor) left top / var(--g) var(--l) no-repeat,
+    linear-gradient(currentColor, currentColor) right top / var(--l) var(--g) no-repeat,
+    linear-gradient(currentColor, currentColor) right top / var(--g) var(--l) no-repeat,
+    linear-gradient(currentColor, currentColor) left bottom / var(--l) var(--g) no-repeat,
+    linear-gradient(currentColor, currentColor) left bottom / var(--g) var(--l) no-repeat,
+    linear-gradient(currentColor, currentColor) right bottom / var(--l) var(--g) no-repeat,
+    linear-gradient(currentColor, currentColor) right bottom / var(--g) var(--l) no-repeat;
+  opacity: 0.6;
+  animation: enfocaVisor 3.2s ease-in-out infinite;
+}
+
+@keyframes enfocaVisor {
+  50% {
+    scale: 0.965;
+    opacity: 0.85;
+  }
+}
+
+.panel[data-reducido='true'] .visorFoco {
+  animation: none;
+}
+
+/* regla de abajo: marcas parejas, y sobre ella el avance del video del color del hito */
+.visorRegla,
+.visorAvance {
+  left: calc(44px * var(--k));
+  right: calc(150px * var(--k));
+  bottom: calc(10px * var(--k));
+}
+
+.visorRegla {
+  height: calc(7px * var(--k));
+  background: repeating-linear-gradient(90deg, currentColor 0 calc(1px * var(--k)), transparent calc(1px * var(--k)) calc(100% / 40));
+  background-size: 100% 100%;
+  opacity: 0.55;
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 calc(1px * var(--k)), transparent calc(1px * var(--k)) calc(12px * var(--k)));
+  mask-image: repeating-linear-gradient(90deg, #000 0 calc(1px * var(--k)), transparent calc(1px * var(--k)) calc(12px * var(--k)));
+  background: currentColor;
+}
+
+.visorAvance {
+  height: calc(2px * var(--k));
+  background: var(--acento);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--avance, 0));
+}
+
+.visorTiempo {
+  right: calc(40px * var(--k));
+  bottom: calc(4px * var(--k));
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: calc(11px * var(--k));
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* con una foto sola (sin video) no hay avance ni tiempo */
+.hud[data-video='false'] .visorAvance,
+.hud[data-video='false'] .visorTiempo {
+  visibility: hidden;
+}
+
+/* con la foto o el video abierto sobre una portada acercada, sus marcas y la nota se apartan */
+.panel[data-medio='true'] .puntos,
+.panel[data-medio='true'] .nota {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease-out, visibility 0s 0.2s;
+}
+
+/* ---- salida hacia Proyectos y zoom de una portada ----------------------------------------- */
+/* --salida (0–1) lo escribe el scroll de la cola: el titular y lo de abajo se retiran mientras
+   la portada de "Hoy" crece desde su puerta. Con una portada acercada, lo mismo. */
+.titular {
+  opacity: calc(1 - var(--salida, 0) * 1.6);
+  transition: opacity 0.45s var(--suave);
+}
+
+.panel[data-detalle='true'] .titular {
+  opacity: 0.07;
+}
+
+.ficha,
+.regla {
+  filter: opacity(calc(1 - var(--salida, 0) * 2.4));
+}
+
+.panel[data-detalle='true'] .ficha,
+.panel[data-detalle='true'] .regla,
+.panel[data-detalle='true'] .pista {
+  filter: opacity(0);
+  pointer-events: none;
+  transition: filter 0.3s ease-out;
+}
+
+.panel[data-detalle='true'] {
+  cursor: zoom-out;
+}
+
+.fichaPista {
+  margin: 0.75rem 0 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fantasma);
+}
+
+/* Marcas sobre el diorama: un punto del color del hito con un aro que late. El área táctil es
+   de 44 px aunque el punto mida 14. */
+.puntos {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.punto {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -1.375rem 0 0 -1.375rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  animation: apareceMarca 0.5s var(--suave) 0.45s both;
+}
+
+@keyframes apareceMarca {
+  from {
+    opacity: 0;
+  }
+}
+
+.punto::before,
+.punto::after {
+  content: '';
+  grid-area: 1 / 1;
+  border-radius: 50%;
+}
+
+.punto::before {
+  width: 0.875rem;
+  height: 0.875rem;
+  background: var(--acento);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-bg) 78%, transparent),
+    0 2px 10px color-mix(in srgb, #000 45%, transparent);
+  transition:
+    scale 0.2s ease-out,
+    background-color 0.2s ease-out;
+}
+
+.punto::after {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 1.5px solid var(--acento);
+  animation: lateMarca 2.4s ease-out infinite;
+}
+
+@keyframes lateMarca {
+  from {
+    opacity: 0.9;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 3.1;
+  }
+}
+
+.punto:active::before {
+  scale: 0.96;
+}
+
+.punto[aria-pressed='true']::before {
+  scale: 1.25;
+  background: var(--color-fg);
+}
+
+.punto:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -6px;
+}
+
+/* La nota del punto elegido va a la derecha de la portada acercada, fija: siguiendo a su marca
+   tapaba el dibujo. La marca elegida queda blanca y más grande. */
+.nota {
+  position: absolute;
+  top: 50%;
+  right: clamp(1rem, 2.6vw, 3rem);
+  z-index: 5;
+  width: min(19rem, 22vw);
+  translate: 0 -50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+}
+
+.nota[data-visible='true'] {
+  opacity: 1;
+  transition: opacity 0.3s var(--suave);
+}
+
+.notaCaja {
+  padding: 1rem 1.125rem 1.125rem;
+  border-radius: 1.125rem;
+  background: var(--superficie);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 10%, transparent),
+    0 1px 2px color-mix(in srgb, #000 12%, transparent),
+    0 18px 44px -16px color-mix(in srgb, #000 50%, transparent);
+  border-left: 3px solid var(--acento);
+  animation: entraNota 0.45s var(--suave) both;
+}
+
+@keyframes entraNota {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+}
+
+/* El objeto del que habla la nota: un recorte del diorama, sobre su mismo papel. */
+.notaDibujo {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 0 0.75rem;
+  /* radio concéntrico: el de la caja menos su relleno */
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--papel-diorama, #11141b);
+  outline: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+  outline-offset: -1px;
+}
+
+:global([data-theme='light']) .notaDibujo {
+  --papel-diorama: #fbfaf6;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme])) .notaDibujo {
+    --papel-diorama: #fbfaf6;
+  }
+}
+
+.notaTitulo {
+  margin: 0 0 0.375rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+.notaTexto {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--tenue);
+  text-wrap: pretty;
+}
+
+.volver,
+.ayuda {
+  position: absolute;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease-out,
+    scale 0.16s ease-out;
+}
+
+.volver {
+  top: 5.25rem;
+  left: clamp(1rem, 3vw, 3rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--superficie);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 10%, transparent),
+    0 8px 24px -10px color-mix(in srgb, #000 45%, transparent);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.volver:active {
+  scale: 0.96;
+}
+
+.volver:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.ayuda {
+  left: 50%;
+  bottom: 1.5rem;
+  margin: 0;
+  translate: -50% 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--tenue);
+}
+
+.panel[data-detalle='true'] .volver,
+.panel[data-detalle='true'] .ayuda {
+  opacity: 1;
+  transition-delay: 0.35s;
+}
+
+.panel[data-detalle='true'] .volver {
+  pointer-events: auto;
+}
+
+/* ---- regla de años ---------------------------------------------------------------------- */
+.regla {
+  position: absolute;
+  left: 50%;
+  bottom: 2.5rem;
+  z-index: 3;
+  width: min(33rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+  cursor: auto;
+  transition:
+    opacity 0.6s var(--suave) 0.7s,
+    transform 0.8s var(--suave) 0.7s;
+}
+
+.panel[data-entro='false'] .regla,
+.panel[data-entro='false'] .pista {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+}
+
+.etapas {
+  display: grid;
+  grid-template-columns: repeat(calc(var(--total) + 1), 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* El riel une los centros de la primera y la última etapa (medio casillero de cada lado). */
+.riel {
+  position: absolute;
+  top: 0.6875rem;
+  left: calc(50% / (var(--total) + 1));
+  right: calc(50% / (var(--total) + 1));
+  height: 1px;
+  background: color-mix(in srgb, var(--color-fg) 16%, transparent);
+  pointer-events: none;
+}
+
+.cursor {
+  position: absolute;
+  top: -1px;
+  left: calc(var(--fase) / var(--total) * 100%);
+  width: 1.75rem;
+  height: 3px;
+  margin-left: -0.875rem;
+  border-radius: 2px;
+  background: var(--acento);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--acento) 60%, transparent);
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.etapa {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0 0;
+  border: 0;
+  background: none;
+  color: var(--fantasma);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color 0.2s ease,
+    scale 0.16s ease-out;
+}
+
+.marca {
+  width: 1px;
+  height: 0.4375rem;
+  background: currentColor;
+  transition: height 0.3s var(--suave);
+}
+
+.etapaTexto {
+  display: block;
+}
+
+@media (hover: hover) {
+  .etapa:hover {
+    color: var(--tenue);
+  }
+}
+
+.etapa:active {
+  scale: 0.96;
+}
+
+.etapa[aria-current='step'] {
+  color: var(--tinta);
+  font-weight: 600;
+}
+
+.etapa[aria-current='step'] .marca {
+  height: 0.6875rem;
+}
+
+.etapa:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+.pista {
+  position: absolute;
+  left: 50%;
+  bottom: 0.875rem;
+  z-index: 3;
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fantasma);
+  pointer-events: none;
+  transition:
+    opacity 0.5s var(--suave) 0.85s,
+    transform 0.8s var(--suave) 0.85s;
+}
+
+/* ya se entendió cómo se recorre: la pista se retira */
+.panel[data-entro='true'][data-inicio='false'] .pista {
+  opacity: 0;
+  transition-delay: 0s;
+}
+
+.soloLectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- celular: la cinta sube y la ficha va abajo, a todo el ancho ------------------------ */
+@media (max-width: 768px) {
+  /* en celular la nota no persigue a la marca: va abajo, a todo el ancho */
+  .nota {
+    inset: auto 1rem calc(3.5rem + env(safe-area-inset-bottom)) 1rem;
+    width: auto;
+    translate: none;
+  }
+
+  .notaCaja {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+  }
+
+  .volver {
+    top: calc(4.5rem + env(safe-area-inset-top));
+  }
+
+  .contenedor {
+    --paso: 60svh;
+    /* en celular la marquesina no sobresale de su sección: no hace falta cola */
+    --cola: 0svh;
+    --respiro: 16svh;
+  }
+
+  .titular {
+    align-content: start;
+    padding: calc(5.25rem + env(safe-area-inset-top)) 0 0;
+    /* "Todo empezó" tiene que entrar entero en el ancho del teléfono */
+    font-size: 15.4vw;
+  }
+
+  .ficha {
+    left: 1rem;
+    right: 1rem;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    width: auto;
+    padding: 1rem 1.125rem 1.125rem;
+    border-radius: 1.125rem;
+    /* sin desenfoque de fondo: sobre el canvas, en un teléfono, cuesta cuadros */
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+  }
+
+  .fichaTitulo {
+    font-size: 1.375rem;
+  }
+
+  .fichaTexto {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .regla {
+    bottom: calc(1.625rem + env(safe-area-inset-bottom));
+  }
+
+  .etapa {
+    font-size: 0.6875rem;
+  }
+
+  .pista {
+    bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    font-size: 0.625rem;
+  }
+}
+
+/* pantallas bajas: la descripción no puede tapar la portada */
+@media (max-width: 768px) and (max-height: 720px) {
+  .fichaTexto {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 7;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 760px) {
+  .ficha {
+    bottom: 5.25rem;
+    padding: 1rem 1.125rem 1.125rem;
+  }
+
+  .fichaTitulo {
+    font-size: 1.375rem;
+  }
+
+  .fichaTexto {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}
+
+/* ---- movimiento reducido ---------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .luz {
+    animation: none;
+  }
+
+  .punto,
+  .punto::after,
+  .notaCaja {
+    animation: none;
+  }
+
+  .ficha,
+  .regla,
+  .pista,
+  .ficha [data-renglon],
+  .etapa,
+  .marca {
+    transition: none !important;
+  }
+
+  .ficha[data-estado='oculta'] [data-renglon] {
+    transform: none;
+    filter: none;
+  }
+}

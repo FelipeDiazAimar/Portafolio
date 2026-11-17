@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import useTema from '@/hooks/useTema.js';
 import { crearAcumulador } from '@/lib/rayosx.js';
-import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
+import { hayWebGL } from '@/lib/soporteWebGL.js';
 import { DISPARO_FONDO_MS, RETRATO } from './config.js';
 import estilos from './RayosX.module.css';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 
 // Texto que se dibuja: primero el contorno se traza de punta a punta (stroke-dashoffset) y,
@@ -35,23 +35,45 @@ export default function TextoTrazo({
   const [medida, setMedida] = useState(null);
   const reducido = Boolean(useReducedMotion());
   const visible = useInView(refSvg, { once: true, amount: 0.2 });
-  const arrancar = !alVer || visible;
 
   // Primero se mide el texto sin animar (tamaño de la caja y de la fuente); recién después se
   // monta el que se dibuja, ya con su guion.
+  const [fuenteLista, setFuenteLista] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    (document.fonts?.ready ?? Promise.resolve()).then(() => vivo && setFuenteLista(true));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+  const arrancar = fuenteLista && (!alVer || visible);
+  // Al cargar la fuente se descarta la medida para repetirla (el nodo de medición vuelve a montarse).
+  useEffect(() => {
+    if (fuenteLista) setMedida(null);
+  }, [fuenteLista]);
+
+  // Se vuelve a medir cuando la fuente termina de cargar: medir antes dejaba una caja y un guion
+  // equivocados y el trazo salía cortado o parecía instantáneo.
   useLayoutEffect(() => {
-    const nodo = refMedida.current;
-    if (!nodo) return;
-    const caja = nodo.getBBox();
-    const fuente = parseFloat(getComputedStyle(nodo).fontSize) || 16;
-    setMedida({
-      x: caja.x,
-      y: caja.y,
-      ancho: Math.ceil(caja.width) + 2,
-      alto: Math.ceil(caja.height) + 2,
-      guion: Math.ceil(fuente * LARGO_POR_FUENTE),
-    });
-  }, [texto, claseTexto]);
+    let vivo = true;
+    const medir = () => {
+      const nodo = refMedida.current;
+      if (!nodo || !vivo) return;
+      const caja = nodo.getBBox();
+      const fuente = parseFloat(getComputedStyle(nodo).fontSize) || 16;
+      setMedida({
+        x: caja.x,
+        y: caja.y,
+        ancho: Math.ceil(caja.width) + 2,
+        alto: Math.ceil(caja.height) + 2,
+        guion: Math.ceil(fuente * LARGO_POR_FUENTE),
+      });
+    };
+    medir();
+    return () => {
+      vivo = false;
+    };
+  }, [texto, claseTexto, fuenteLista, medida === null]);
 
   return (
     <>

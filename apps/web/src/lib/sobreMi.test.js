@@ -1,9 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dividirResaltado } from './resaltado.js';
-import { mostrarVideo } from './fondoHito.js';
 import { partirEnRenglones } from './renglones.js';
-import { tiempoModeloMs } from './tiempoModelo.js';
 
 test('dividirResaltado: texto sin marcas es un único fragmento normal', () => {
   assert.deepEqual(dividirResaltado('hola mundo'), [{ texto: 'hola mundo', resaltado: false }]);
@@ -39,16 +37,6 @@ test('dividirResaltado: vacío y marcas vacías no generan fragmentos', () => {
   assert.deepEqual(dividirResaltado('****'), []);
 });
 
-test('mostrarVideo: sin foto el video va directo; con foto espera; sin video nunca', () => {
-  const espera = 3;
-  assert.equal(mostrarVideo({ imagen: '/a.jpg', video: '/a.mp4' }, 0, espera), false);
-  assert.equal(mostrarVideo({ imagen: '/a.jpg', video: '/a.mp4' }, 2.9, espera), false);
-  assert.equal(mostrarVideo({ imagen: '/a.jpg', video: '/a.mp4' }, 3, espera), true);
-  assert.equal(mostrarVideo({ video: '/a.mp4' }, 0, espera), true);
-  assert.equal(mostrarVideo({ imagen: '/a.jpg' }, 99, espera), false);
-  assert.equal(mostrarVideo({}, 99, espera), false);
-});
-
 test('partirEnRenglones: ningún renglón supera el ancho y no se pierde ni se repite texto', () => {
   const partes = dividirResaltado('Fui **ayudante de laboratorio** en la UTN y participé en la **reparación, instalación y desarme** de equipos.');
   const medir = (texto) => texto.length * 10;
@@ -82,13 +70,4 @@ test('partirEnRenglones: una palabra más ancha que el renglón queda sola y no 
 
 test('partirEnRenglones: texto vacío no da renglones', () => {
   assert.deepEqual(partirEnRenglones([], 100, () => 1), []);
-});
-
-test('tiempoModeloMs: cada hito tiene una espera razonable y los que animan más esperan más', () => {
-  for (let id = 0; id < 7; id += 1) {
-    const ms = tiempoModeloMs(id);
-    assert.ok(ms >= 4000 && ms <= 14000, `hito ${id}: ${ms} ms`);
-  }
-  assert.ok(tiempoModeloMs(0) > tiempoModeloMs(1), 'la notebook (abrirse + terminal) dura más que la bandera');
-  assert.equal(tiempoModeloMs(999), 8500, 'un hito sin dato usa la espera por defecto');
 });

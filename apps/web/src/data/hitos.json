@@ -4,6 +4,7 @@
     "anio": "Origen",
     "titulo": "Quien repara y mejora",
     "resumen": "Siempre me fascinó todo lo que hacía beep.",
+    "acento": "#f2a23c",
     "descripcion": "Mi sueño fue ser la persona que **soluciona**: la que dedica su tiempo a **reparar, mejorar y proyectar sistemas** para hacer las cosas más fáciles. Desde el principio me gustó la tecnología y tuve una pasión por **cada cosa que hacía beep**.",
     "imagen": "/hito1.jpg"
   },
@@ -12,6 +13,7 @@
     "anio": "2022",
     "titulo": "Abanderado e ingeniería",
     "resumen": "Del ISFA a la UTN.",
+    "acento": "#4fa8f0",
     "descripcion": "Me recibí de **abanderado** en el Instituto San Francisco de Asís (**ISFA**), en San Francisco, Córdoba. Ese mismo año empecé **Ingeniería en Sistemas de Información** en la **UTN San Francisco**.",
     "imagen": "/hito2.jpeg",
     "foco": "75% 50%"
@@ -21,6 +23,7 @@
     "anio": "2023",
     "titulo": "Inglés y adelanto de materias",
     "resumen": "Más libertad para empezar todo lo demás.",
+    "acento": "#e0566b",
     "descripcion": "A mediados de 2023 terminé de cursar inglés en el **EPI** y obtuve la certificación **First de Cambridge**. También **adelanté materias**, lo que me dejó **más libre** para empezar todas las cosas que quería hacer.",
     "imagen": "/hito3.jpeg"
   },
@@ -29,6 +32,7 @@
     "anio": "2024",
     "titulo": "Primeras experiencias",
     "resumen": "Laboratorio, docencia y freelance.",
+    "acento": "#2fb574",
     "descripcion": "Sentí la necesidad de ganar experiencia. Fui **ayudante de laboratorio** en la UTN, donde participé en la **reparación, instalación y desarme de equipos**. Fui **profesor de ingreso** de Programación: Python, C, **diagramas de flujo** y **lógica de procesos**. Empecé a hacer **trabajo freelance**: **JustPhones**, **Calidad Esencia**, **AlgoBonitoSV** y **AsistenteInteligente**.",
     "imagen": "/hito4.jpeg",
     "video": "/videohito4.mp4",
@@ -42,6 +46,7 @@
     "anio": "2025",
     "titulo": "Técnico y docente",
     "resumen": "Más de 90 alumnos y un taller.",
+    "acento": "#8f73f5",
     "descripcion": "Volví a ser **profesor de ingreso**, ahora con **más de 90 alumnos**. Me convertí en **técnico informático** en **Darío Martínez Computación**: reparé PCs, notebooks, impresoras, teléfonos, **hardware y software**. Salió la **web de Darío Martínez Computación**, y los fines de semana trabajé de **bartender y mozo** en boliches y eventos.",
     "imagen": "/hito5.jpeg",
     "video": "/videohito5.mp4"
@@ -51,6 +56,7 @@
     "anio": "2026",
     "titulo": "Fullstack en MBRF",
     "resumen": "Trazabilidad industrial a escala.",
+    "acento": "#3b7bff",
     "descripcion": "Empecé en **MBRF**, en San Jorge, donde sigo como **desarrollador fullstack** en **sistemas de trazabilidad industrial** para las plantas del frigorífico y los centros de distribución de Argentina. Trabajo con **SAP**, aprendí **Kubernetes** y a **coordinar equipos**. En paralelo sigo con **Neifert Automotores** y **Darío Martínez Computación** como freelance, sumando a **compañeros de la facultad** para que también ganen experiencia, y curso el **4.º año** de la carrera.",
     "video": "/videohito6.mp4"
   },
@@ -59,6 +65,7 @@
     "anio": "Hoy",
     "titulo": "Lo que viene",
     "resumen": "Quiero seguir creciendo.",
+    "acento": "#ff7d4d",
     "descripcion": "Busco una **nueva oportunidad** para crecer y seguir adelante en mi vida profesional, desarrollándome en lo que tanto me apasiona.",
     "imagen": "/hito7.jpeg"
   }

@@ -1,0 +1,148 @@
+{
+  "0": [
+    {
+      "x": 0.6362,
+      "y": 0.368,
+      "titulo": "El beep",
+      "texto": "Siempre me fascinó todo lo que hacía beep. Esa curiosidad fue el principio de todo lo demás."
+    },
+    {
+      "x": 0.6919,
+      "y": 0.4337,
+      "titulo": "Reparar y mejorar",
+      "texto": "Mi sueño fue ser la persona que soluciona: la que repara, mejora y proyecta sistemas para que las cosas sean más fáciles."
+    },
+    {
+      "x": 0.4597,
+      "y": 0.2109,
+      "titulo": "Tecnología desde chico",
+      "texto": "Desde el principio me gustó la tecnología: lo que hoy es mi trabajo empezó como una pasión."
+    }
+  ],
+  "1": [
+    {
+      "x": 0.3705,
+      "y": 0.2993,
+      "titulo": "Abanderado del ISFA",
+      "texto": "Terminé el secundario como abanderado del Instituto San Francisco de Asís, en San Francisco, Córdoba."
+    },
+    {
+      "x": 0.646,
+      "y": 0.5511,
+      "titulo": "Ingeniería en Sistemas",
+      "texto": "Ese mismo año, 2022, empecé Ingeniería en Sistemas de Información en la UTN San Francisco. Hoy curso el 4.º año."
+    }
+  ],
+  "2": [
+    {
+      "x": 0.5806,
+      "y": 0.5944,
+      "titulo": "First de Cambridge",
+      "texto": "A mediados de 2023 terminé de cursar inglés en el EPI y obtuve la certificación First de Cambridge."
+    },
+    {
+      "x": 0.5896,
+      "y": 0.3519,
+      "titulo": "Materias adelantadas",
+      "texto": "Adelanté materias de la carrera, y eso me dejó más libre para empezar todas las cosas que quería hacer."
+    }
+  ],
+  "3": [
+    {
+      "x": 0.4943,
+      "y": 0.2549,
+      "titulo": "Ayudante de laboratorio",
+      "texto": "Sentí la necesidad de ganar experiencia y entré como ayudante de laboratorio en la UTN: reparación, instalación y desarme de equipos."
+    },
+    {
+      "x": 0.8321,
+      "y": 0.4155,
+      "titulo": "Profesor de ingreso",
+      "texto": "Di el ingreso de Programación: Python, C, diagramas de flujo y lógica de procesos."
+    },
+    {
+      "x": 0.5134,
+      "y": 0.6921,
+      "titulo": "Cuatro trabajos freelance",
+      "texto": "JustPhones, con pedidos por WhatsApp; Calida Esencia y Algo Bonito SV, con pago por Mercado Pago; y un asistente con IA para estudiar Atención Primaria."
+    }
+  ],
+  "4": [
+    {
+      "x": 0.8058,
+      "y": 0.3985,
+      "titulo": "Más de 90 alumnos",
+      "texto": "Volví a dar el ingreso de Programación, esta vez con más de 90 alumnos."
+    },
+    {
+      "x": 0.5416,
+      "y": 0.1821,
+      "titulo": "Técnico informático",
+      "texto": "En Darío Martínez Computación reparé PCs, notebooks, impresoras y teléfonos, hardware y software. Y les hice el sitio, con un panel de stock y ventas en tiempo real."
+    },
+    {
+      "x": 0.2451,
+      "y": 0.4037,
+      "titulo": "Bartender y mozo",
+      "texto": "Los fines de semana trabajé de bartender y mozo en boliches y eventos."
+    }
+  ],
+  "5": [
+    {
+      "x": 0.5644,
+      "y": 0.4022,
+      "titulo": "Trazabilidad en planta",
+      "texto": "En MBRF, en San Jorge, desarrollo la captura en estación: balanzas, escaneo y etiquetas que llegan a SAP en tiempo real, para las plantas del frigorífico y los centros de distribución."
+    },
+    {
+      "x": 0.8552,
+      "y": 0.5007,
+      "titulo": "SAP",
+      "texto": "Tableros de planeamiento, calidad y stock de cuatro plantas, sincronizados contra SAP HANA."
+    },
+    {
+      "x": 0.5371,
+      "y": 0.7068,
+      "titulo": "Kubernetes y equipo",
+      "texto": "Acá aprendí Kubernetes y a coordinar equipos."
+    },
+    {
+      "x": 0.443,
+      "y": 0.4192,
+      "titulo": "En paralelo",
+      "texto": "Sigo como freelance con Neifert Automotores y Darío Martínez Computación, sumando a compañeros de la facultad para que también ganen experiencia."
+    }
+  ],
+  "6": [
+    {
+      "x": 0.3897,
+      "y": 0.3119,
+      "titulo": "Lo que viene",
+      "texto": "Busco una nueva oportunidad para crecer y seguir adelante en mi vida profesional."
+    },
+    {
+      "x": 0.3769,
+      "y": 0.5528,
+      "titulo": "Listo para lo próximo",
+      "texto": "Quiero seguir desarrollándome en lo que tanto me apasiona."
+    }
+  ],
+  "puerta": [
+    {
+      "x": 0.4298,
+      "y": 0.2049
+    },
+    {
+      "x": 0.3497,
+      "y": 0.2478
+    },
+    {
+      "x": 0.3497,
+      "y": 0.4354
+    },
+    {
+      "x": 0.4298,
+      "y": 0.3925
+    }
+  ]
+}

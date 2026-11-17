@@ -58,7 +58,11 @@ export default function Buscador({ alElegir, alLimpiar }) {
   const [enfocado, setEnfocado] = useState(false);
   const refCampo = useRef(null);
   const idLista = useId();
-  const reducido = useReducedMotion();
+  const reducidoCliente = useReducedMotion();
+  // useReducedMotion difiere entre servidor y primer render del cliente: hasta montar se usa false.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
+  const reducido = montado && reducidoCliente;
   const resultados = useMemo(() => buscarTecnologias(consulta, DATOS), [consulta]);
   const sugerencia = useSugerenciaTipeada(!consulta && !enfocado && !reducido);
 

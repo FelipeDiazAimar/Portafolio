@@ -1,71 +1,157 @@
+/* "Sobre mí" sin WebGL: una línea de tiempo editorial. Sale del ancho de <main>. */
 .plano {
-  padding: 5.5rem 0 4rem;
+  --suave: cubic-bezier(0.22, 1, 0.36, 1);
+  --tenue: color-mix(in srgb, var(--color-fg) 62%, transparent);
+  --fantasma: color-mix(in srgb, var(--color-fg) 34%, transparent);
+  /* el mismo papel con que se generan los dioramas: si no coincide, cada sólido se ve como un parche */
+  --papel: #11141b;
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: clamp(5rem, 12svh, 9rem) clamp(1.25rem, 5vw, 5rem) clamp(4rem, 10svh, 7rem);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:global([data-theme='light']) .plano {
+  --papel: #fbfaf6;
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme])) .plano {
+    --papel: #fbfaf6;
+  }
+}
+
+.cabecera {
+  max-width: 76rem;
+  margin: 0 auto clamp(2.5rem, 7svh, 5rem);
 }
 
 .etiqueta {
-  margin: 0 0 2.5rem;
-  font-size: 0.8rem;
+  margin: 0 0 1rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--tenue);
+}
+
+.titular {
+  margin: 0;
+  font-size: clamp(2.75rem, 9vw, 8rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.058em;
+}
+
+.titular > span {
+  display: block;
 }
 
 .lista {
   display: grid;
-  gap: 4rem;
-  margin: 0;
+  gap: clamp(1rem, 2.4vw, 1.75rem);
+  max-width: 76rem;
+  margin: 0 auto;
   padding: 0;
   list-style: none;
 }
 
 .hito {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: 2rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(1.25rem, 4vw, 4rem);
+  padding: clamp(1.25rem, 2.6vw, 2.25rem);
+  border-radius: 1.75rem;
+  background: var(--papel);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 8%, transparent),
+    0 1px 2px color-mix(in srgb, #000 10%, transparent),
+    0 24px 60px -32px color-mix(in srgb, #000 45%, transparent);
 }
 
-.foto {
-  position: relative;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  border-radius: 1rem;
+/* los hitos alternan de lado: la lectura zigzaguea como una línea de tiempo */
+.hito:nth-child(even) .figura {
+  order: -1;
 }
 
-.imagen {
-  object-fit: cover;
+.anio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--tenue);
 }
 
-.texto {
-  display: grid;
-  gap: 1rem;
+.punto {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--acento);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--acento) 20%, transparent);
+}
+
+.orden {
+  margin-left: auto;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--fantasma);
+}
+
+.titulo {
+  margin: 0 0 0.875rem;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(1.75rem, 3.4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
 }
 
 .bio {
+  max-width: 34rem;
   margin: 0;
-  line-height: 1.7;
-  color: var(--color-fg);
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.62;
+  color: var(--tenue);
+  text-wrap: pretty;
 }
 
 .bio strong {
-  color: var(--color-accent);
+  font-weight: 600;
+  color: var(--color-fg);
 }
 
-.credito {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--color-muted);
+.figura {
+  /* radio concéntrico: el de la tarjeta menos su relleno */
+  border-radius: 0.75rem;
+  overflow: hidden;
 }
 
-.credito a {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.figura img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 @media (max-width: 768px) {
   .hito {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+    border-radius: 1.25rem;
+  }
+
+  .hito .figura,
+  .hito:nth-child(even) .figura {
+    order: -1;
   }
 }

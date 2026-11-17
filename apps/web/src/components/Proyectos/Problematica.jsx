@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import TextoTipeado from '../SobreMi/TextoTipeado.jsx';
+import TextoTipeado from './TextoTipeado.jsx';
 import { FRASES_CLAVE, rangosClave } from '@/lib/resaltadoProblema.js';
 import styles from './PresentadorProyectos.module.css';
 

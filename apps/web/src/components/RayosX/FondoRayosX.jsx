@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import useTema from '@/hooks/useTema.js';
 import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 import { esTactil, prefiereMovimientoReducido } from '@/lib/entrada.js';
-import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
+import { hayWebGL } from '@/lib/soporteWebGL.js';
 import estilos from './RayosX.module.css';
 
 // Cuánto se desenfoca el fondo cuando el hero ya casi salió de la pantalla.

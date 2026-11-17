@@ -10,7 +10,7 @@ import DockCategorias from './DockCategorias.jsx';
 import useTema from '@/hooks/useTema.js';
 import useEmbudo from '@/hooks/useEmbudo.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
-import { hayWebGL } from '@/components/SobreMi/Escena3D/soporteWebGL.js';
+import { hayWebGL } from '@/lib/soporteWebGL.js';
 import estilos from './Habilidades.module.css';
 
 // Habilidades: un xilófono de vidrio con una barra por tecnología (adaptado de

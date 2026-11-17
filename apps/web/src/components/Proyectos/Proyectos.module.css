@@ -61,6 +61,58 @@
   border-radius: 0;
 }
 
+/* Luz que cruza la marquesina en la entrada de la sección (ver `entrar` en Proyectos.jsx). */
+.destello {
+  position: absolute;
+  inset: -30svh 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(112deg, transparent 44%, color-mix(in srgb, var(--color-fg) 20%, transparent) 50%, transparent 56%) no-repeat;
+  background-size: 280% 100%;
+}
+
+/* Entrada de la sección: el canvas de las piezas 3D que se vuelven tarjetas. Ocupa el panel, va
+   sobre la marquesina y debajo del título, y no recibe el mouse (lo sigue por su cuenta). */
+.intro {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  /* los conectores viven dentro del recuadro: el canvas se recorta a él (y se abre a toda la
+     sección cuando las tarjetas salen hacia su lugar, ver Proyectos.jsx) */
+  clip-path: inset(var(--intro-arriba) var(--intro-lado) var(--intro-abajo) round var(--intro-radio));
+}
+
+/* El recuadro: una caja oscura de esquinas redondeadas, debajo del header, donde flotan los
+   conectores. Oscura en los dos temas: es el escenario de las piezas. */
+.panel {
+  --intro-arriba: 5.25rem;
+  --intro-lado: 1.25rem;
+  --intro-abajo: 1.25rem;
+  --intro-radio: 1.75rem;
+}
+
+.introCaja {
+  position: absolute;
+  inset: var(--intro-arriba) var(--intro-lado) var(--intro-abajo);
+  z-index: 1;
+  border-radius: var(--intro-radio);
+  background: radial-gradient(120% 140% at 70% 50%, #1b1d26 0%, #121318 55%, #0d0e12 100%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* sobre el recuadro oscuro el título va claro, también en el tema claro */
+.panel[data-intro='true'] .titulo,
+.panel[data-intro='true'] .cifras {
+  color: #f5f6f8;
+  text-shadow: 0 4px 40px #0d0e12;
+}
+
 /* Funde la marquesina con el fondo por los bordes. */
 .velo {
   position: absolute;
