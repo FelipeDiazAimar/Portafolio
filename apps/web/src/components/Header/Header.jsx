@@ -118,13 +118,13 @@ export default function Header() {
   // del documento sino justo debajo del header. Se va a 0 directo, con el mismo salto que el menú.
   function irAlInicio(evento) {
     evento.preventDefault();
-    irASeccion('inicio');
+    irASeccion('inicio', evento.currentTarget);
   }
 
   return (
     <header className={styles.header}>
       {/* Hover: vista previa del hero (el scroll salta arriba y vuelve al salir). Clic: queda. */}
-      <a href="#inicio" onClick={irAlInicio} onMouseEnter={() => vistaPrevia('inicio')} onMouseLeave={terminarVistaPrevia} className={styles.logo}>
+      <a href="#inicio" onClick={irAlInicio} onMouseEnter={(evento) => vistaPrevia('inicio', evento.currentTarget)} onMouseLeave={terminarVistaPrevia} className={styles.logo}>
         {mostrarNombreDescifrado ? (
           <TextoDescifrado
             texto="</>"

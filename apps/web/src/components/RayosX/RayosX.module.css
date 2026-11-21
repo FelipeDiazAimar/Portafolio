@@ -30,6 +30,40 @@
   transition-duration: 0.35s;
 }
 
+/* La onda de rayos X (ver FondoRayosX): el fondo se ve sólo dentro de un círculo que crece desde
+   tu cráneo (máscara en línea, junto con la de la unión), y este anillo de luz marca su frente. */
+.onda {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.onda[data-ola='true'] {
+  opacity: 1;
+  background: radial-gradient(
+    circle at var(--ola-x) var(--ola-y),
+    transparent calc(var(--ola-r) - 150px),
+    rgba(90, 170, 255, 0.1) calc(var(--ola-r) - 70px),
+    rgba(170, 225, 255, 0.5) calc(var(--ola-r) - 14px),
+    rgba(235, 248, 255, 0.85) calc(var(--ola-r) - 4px),
+    transparent var(--ola-r)
+  );
+  mix-blend-mode: screen;
+}
+
+:global([data-theme='light']) .onda[data-ola='true'] {
+  background: radial-gradient(
+    circle at var(--ola-x) var(--ola-y),
+    transparent calc(var(--ola-r) - 150px),
+    rgba(30, 90, 230, 0.08) calc(var(--ola-r) - 70px),
+    rgba(20, 70, 210, 0.35) calc(var(--ola-r) - 12px),
+    transparent var(--ola-r)
+  );
+  mix-blend-mode: multiply;
+}
+
 /* Capa táctil del hero (ver ZonaTactil.jsx): sobre el hero, bajo el header y los botones. */
 .zonaTactil {
   position: absolute;

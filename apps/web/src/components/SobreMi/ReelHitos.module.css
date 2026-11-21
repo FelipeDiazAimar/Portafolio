@@ -1173,3 +1173,9 @@
     filter: none;
   }
 }
+
+/* La intro de agentes mide la sección ya entrada (ver medirPlano): mientras mide, sin transiciones. */
+.panel[data-midiendo='true'],
+.panel[data-midiendo='true'] * {
+  transition: none !important;
+}

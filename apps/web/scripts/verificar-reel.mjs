@@ -44,7 +44,8 @@ async function abrir({ ancho, alto, movil = false, tema = 'dark', reducido = fal
   await s.enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: movil });
   if (movil) await s.enviar('Emulation.setTouchEmulationEnabled', { enabled: true });
   await s.enviar('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reducido ? 'reduce' : 'no-preference' }] });
-  const previo = [`try{localStorage.setItem('theme','${tema}')}catch(e){}`, `window.__errores=[];const ce=console.error;console.error=(...a)=>{window.__errores.push(a.map(String).join(' ').slice(0,300));ce(...a)};window.addEventListener('error',e=>window.__errores.push('EXC '+e.message))`];
+  // la intro de agentes traba la página unos segundos: estas pruebas son del reel, no de ella
+  const previo = [`try{localStorage.setItem('theme','${tema}');sessionStorage.setItem('portafolio:intro-agentes','1')}catch(e){}`, `window.__errores=[];const ce=console.error;console.error=(...a)=>{window.__errores.push(a.map(String).join(' ').slice(0,300));ce(...a)};window.addEventListener('error',e=>window.__errores.push('EXC '+e.message))`];
   if (sinWebGL) previo.push(`const g=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(t,...r){return /webgl/.test(t)?null:g.call(this,t,...r)}`);
   await s.enviar('Page.addScriptToEvaluateOnNewDocument', { source: previo.join(';') });
   await s.enviar('Page.navigate', { url: `${BASE_URL}/` });

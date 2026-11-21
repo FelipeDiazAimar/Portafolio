@@ -29,6 +29,10 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  /* con el relleno transparente, una sombra de texto heredada se ve A TRAVÉS de la letra (la
+     embarra): se la reemplaza por un drop-shadow, que va sobre la letra ya recortada */
+  text-shadow: none;
+  filter: var(--sombra-destello, none);
   animation: destello-pasar var(--destello-dur, 1.8s) ease-in-out 1 both;
 }
 

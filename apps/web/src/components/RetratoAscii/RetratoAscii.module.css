@@ -52,10 +52,14 @@
   opacity: 1;
 }
 
-/* El hero pasó al fondo de esqueletos: la foto (y su revelado) se funden. */
+/* El hero pasó al fondo de esqueletos: la foto (y su revelado) se disuelven mientras la onda de
+   rayos X sale de la cara: se desenfocan y se apagan, sin cortes. */
 .apagado > * {
   opacity: 0 !important;
-  transition: opacity 0.4s ease !important;
+  filter: blur(14px) !important;
+  transition:
+    opacity 1.2s ease 0.35s,
+    filter 1.2s ease 0.35s !important;
 }
 
 /* Teléfono: el retrato se corre hacia la derecha y se corta contra el borde

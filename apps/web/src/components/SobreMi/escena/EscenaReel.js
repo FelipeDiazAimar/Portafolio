@@ -453,6 +453,19 @@ export function crearEscenaReel({ lienzo, total, reducido = false, alCuadro = nu
     redimensionar,
     ponerTextura,
     esquinas,
+    // Como `esquinas`, pero de dónde va a quedar la portada cuando termine su entrada (antes de
+    // entrar no se ve y no tiene lugar en pantalla). Lo usa la intro para dibujar el plano.
+    esquinasFinales(indice, zona) {
+      const guardadas = portadas.map((p) => p.entrada.t);
+      portadas.forEach((p) => (p.entrada.t = 1));
+      acomodar();
+      escena.updateMatrixWorld(true);
+      const q = esquinas(indice, zona);
+      portadas.forEach((p, i) => (p.entrada.t = guardadas[i]));
+      acomodar();
+      escena.updateMatrixWorld(true);
+      return q;
+    },
     portadaEn,
     // Dónde cae en pantalla un punto de una portada (fracciones de la portada); null si no se ve.
     puntoEn: (indice, fx, fy) => esquinas(indice, { x0: fx, y0: fy, x1: fx, y1: fy })?.[0] ?? null,

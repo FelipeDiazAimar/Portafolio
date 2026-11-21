@@ -124,6 +124,14 @@ uniform vec3 u_iridB;
 // propio: logos, resaltado y paleta
 uniform sampler2D u_tAtlas;
 uniform float u_atlasCeldas;   // celdas por lado del atlas
+uniform sampler2D u_tDioramas; // el mismo atlas, pero con cada logo en diorama (3D renderizado a imagen)
+uniform float u_time;          // para el barrido de luz de los logos
+uniform float u_hayDioramas;   // 1 cuando el atlas de dioramas ya está (hasta entonces, el logo plano)
+uniform float u_dioramaSkill;  // tecnología resaltada o elegida: su diorama toma el color de la marca
+uniform float u_dioramaT;      // 0..1: cuánto color de marca
+uniform vec3 u_dioramaColor;   // el color de la marca de esa tecnología
+uniform sampler2D u_tColores;  // color de marca de cada tecnología (una fila de 64)
+uniform float u_colorRama;     // 0..1: con una categoría elegida, sus barras van en su color
 uniform vec3 u_colorLogo;
 uniform vec3 u_colorResalte;
 uniform float u_cuerpo;        // brillo del cuerpo del vidrio
@@ -265,6 +273,30 @@ float mascaraLogo(float halo) {
   return a * bordeCelda(uv) * smoothstep(0.55, 0.9, u_escalaBarra.x);
 }
 
+// Barrido de luz: cada 6 s una banda cruza el logo en diagonal, con un desfase por tecnología
+// (como el destello del nombre en el hero). uv: 0..1 del logo.
+float barrido(vec2 uv, float skill) {
+  float d = (uv.x + (1.0 - uv.y) * 0.45) / 1.45;
+  float s = fract(u_time / 6.0 + skill * 0.137) * 4.0 - 0.4;
+  return exp(-pow((d - s) / 0.07, 2.0));
+}
+
+vec2 barridoUv = vec2(-1.0); // dónde cae el fragmento en el logo (lo escribe dioramaBarra)
+
+// El diorama del logo (color y alfa), en el mismo lugar y tamaño que el logo plano.
+vec4 dioramaBarra() {
+  float k = u_logoEscala;
+  float lado = (u_logoCaja.y - u_logoCaja.x) * k;
+  vec3 plano = lectura();
+  if (plano.z < 0.5) return vec4(0.0);
+  vec2 l = plano.xy;
+  vec2 uv = vec2((l.x - u_logoCaja.x * k) / lado, (l.y + u_logoCaja.z * k) / (2.0 * u_logoCaja.z * k));
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);
+  vec4 c = texture2D(u_tDioramas, enCelda(uv, floor(vSkill + 0.5), vec2(u_atlasCeldas)));
+  barridoUv = uv;
+  return c * bordeCelda(uv);
+}
+
 // Logo sobre la esfera (árbol): un decal que siempre mira a la cámara y se lee derecho, sin
 // importar desde dónde se vea la esfera (con el logo pegado a un plano fijo, las esferas del
 // borde del disco lo mostraban de costado y casi no se veía).
@@ -384,7 +416,8 @@ void main() {
   float realce = clamp(max(smoothstep(0.08, 0.35, vResalte), u_destello), 0.0, 1.0);
   // En tema claro los logos son blancos siempre, y un vidrio claro no los deja ver: todos llevan
   // detrás una mancha azul. Resaltados, la mancha es oscura como en el tema oscuro.
-  float conMancha = u_claro * (1.0 - realce);
+  // (con los logos en relieve, ya en azul, la mancha sobra)
+  float conMancha = u_claro * (1.0 - realce) * (1.0 - u_hayDioramas);
   if (conMancha > 0.01) {
     float haloLogo = u_esfera > 0.01 ? mix(mascaraLogo(3.0), mascaraLogoEsfera(N, V, 3.0), u_esfera) : mascaraLogo(3.0);
     float pastilla = clamp(haloLogo * 1.6, 0.0, 1.0) * conMancha;
@@ -394,10 +427,26 @@ void main() {
   float logoMascara = u_esfera > 0.01 ? mix(logoBarra, mascaraLogoEsfera(N, V, 0.0), u_esfera) : logoBarra;
   // la atenuación del borde (fresnel) apaga el logo en los costados de la barra; en lo resaltado
   // se quita, porque la cara ancha se ve de costado y el blanco quedaba mezclado con el azul
+  // el logo es su diorama: la forma la da el logo plano (sale del SVG tal cual: algunos íconos
+  // no se dejan extruir enteros) y el relieve, el sombreado del diorama (bisel y reflejos)
+  float conDiorama = u_hayDioramas * (1.0 - u_esfera);
+  vec4 diorama = conDiorama > 0.001 ? dioramaBarra() : vec4(0.0);
+  // relieve: el gris del atlas (0,5 = neutro): el interior queda del color tal cual, el borde se
+  // aclara del lado de la luz y se oscurece del otro
+  float relieve = (diorama.r - 0.5) * smoothstep(0.05, 0.6, diorama.a);
+  float destello = barrido(barridoUv, vSkill) * smoothstep(0.1, 0.5, logoMascara);
+  // la resaltada o elegida toma el color de su marca
+  // la resaltada o elegida toma el color de su marca; con una categoría elegida, todas las suyas
+  float deMarca = max(u_dioramaT * step(abs(vSkill - u_dioramaSkill), 0.5), u_colorRama * smoothstep(0.6, 0.95, vActiva)) * conDiorama;
+  vec3 marca = texture2D(u_tColores, vec2((vSkill + 0.5) / (u_atlasCeldas * u_atlasCeldas), 0.5)).rgb;
   float logo = logoMascara * (1.0 - fres * 0.6 * (1.0 - u_claro) * (1.0 - u_esfera) * (1.0 - realce)) * mix(0.12, 1.0, vActiva);
   // los logos pasan a blanco al resaltarse, en la explosión y, en el árbol oscuro, siempre un poco
   float blanco = max(max(realce, u_destello), u_esfera); // en el árbol, siempre blanco puro
   vec3 colorLogo = mix(u_colorLogo, vec3(1.0), clamp(blanco, 0.0, 1.0));
+  colorLogo = mix(colorLogo, marca, deMarca);
+  colorLogo *= 1.0 + relieve * 1.1 * conDiorama;
+  // el único brillo: el barrido, cada tanto
+  colorLogo = mix(colorLogo, vec3(1.0), clamp(destello, 0.0, 1.0) * 0.75 * conDiorama);
   color = mix(color, colorLogo, logo * (0.9 + 0.1 * vResalte));
   color += colorLogo * logo * 0.3 * realce; // un poco de brillo propio
   float nombre = mascaraNombre(0.0);
@@ -556,7 +605,8 @@ void main() {
   y = mix(y, 1.0 - y, u_invertir);
   float u = v_uv.x;
   float X = (v_uv.x - 0.5) * u_aspecto;
-  float t = u_time;
+  // la aurora cambia de forma muy despacio por diseño: acá va al triple para que se note
+  float t = u_time * 3.0;
 
   vec3 brillo = vec3(0.0);
   float cubre = 0.0;

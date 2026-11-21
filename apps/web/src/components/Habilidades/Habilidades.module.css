@@ -59,7 +59,7 @@
   }
 
   .controles {
-    bottom: calc(116px + 0.5rem + env(safe-area-inset-bottom, 0px));
+    bottom: calc(132px + 0.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

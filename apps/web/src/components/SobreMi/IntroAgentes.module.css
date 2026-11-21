@@ -1,0 +1,202 @@
+/* Intro de agentes (ver IntroAgentes.jsx): va encima de todo el panel y no se toca. */
+.intro {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  font: 600 10px/1 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  letter-spacing: 0.01em;
+}
+
+/* la hoja punteada del editor */
+.grilla {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at center, color-mix(in srgb, var(--color-fg) 22%, transparent) 0.9px, transparent 1.3px);
+  background-size: 18px 18px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent);
+  mask-image: radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent);
+}
+
+.plano {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.forma {
+  opacity: 0;
+  fill: color-mix(in srgb, var(--c) 7%, transparent);
+  stroke: var(--c);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chip,
+.medida,
+.etiqueta {
+  position: absolute;
+  padding: 3px 6px 3px;
+  border-radius: 4px;
+  background: var(--f);
+  color: var(--t);
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+}
+
+.chip {
+  opacity: 0;
+  translate: -1px calc(-100% - 3px);
+  transform-origin: left bottom;
+  font-weight: 500;
+}
+
+.chip b {
+  font-weight: 700;
+}
+
+.medida {
+  opacity: 0;
+  translate: -50% 5px;
+  padding: 2px 5px;
+  font-size: 9px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform;
+}
+
+.flecha {
+  display: block;
+  /* la punta de la flecha cae justo en el punto */
+  translate: -1.5px -1.5px;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.3));
+}
+
+.etiqueta {
+  left: 14px;
+  top: 17px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* la píldora de estado, arriba al centro (abajo está la regla de años) */
+.pildora {
+  position: absolute;
+  left: 50%;
+  top: clamp(4.75rem, 10svh, 5.75rem);
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.9rem 0.45rem 0.5rem;
+  border-radius: 999px;
+  background: #111;
+  color: #f2f2f2;
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow:
+    0 10px 30px rgb(0 0 0 / 0.22),
+    0 2px 6px rgb(0 0 0 / 0.18);
+  white-space: nowrap;
+}
+
+:global([data-theme='dark']) .pildora {
+  background: #f3f1ec;
+  color: #141414;
+}
+
+.avatares {
+  display: flex;
+}
+
+.avatares i {
+  width: 16px;
+  height: 16px;
+  margin-right: -6px;
+  border-radius: 50%;
+  background: var(--f);
+  box-shadow: 0 0 0 1.5px #111;
+  transform: scale(0);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:global([data-theme='dark']) .avatares i {
+  box-shadow: 0 0 0 1.5px #f3f1ec;
+}
+
+.avatares i[data-unido='true'] {
+  transform: scale(1);
+}
+
+.cuenta {
+  margin-left: 0.5rem;
+  font-weight: 700;
+  min-width: 5.5em;
+}
+
+.capas {
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+  min-width: 7.5em;
+}
+
+.barra {
+  position: relative;
+  width: clamp(4rem, 14vw, 9rem);
+  height: 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 20%, transparent);
+  overflow: hidden;
+}
+
+.barra span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease-out;
+}
+
+.pct {
+  min-width: 2.6em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pildora[data-listo='true'] .barra span {
+  background: #3ecf8e;
+}
+
+@media (max-width: 768px) {
+  /* en celular el titular va arriba: la píldora baja al lugar de la pista, debajo de la regla */
+  .pildora {
+    top: auto;
+    bottom: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .capas {
+    display: none;
+  }
+
+  .chip {
+    font-size: 9px;
+  }
+
+  .etiqueta {
+    font-size: 9px;
+  }
+}

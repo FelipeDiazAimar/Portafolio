@@ -102,9 +102,9 @@ void main() {
 }
 `;
 
-// Logo de cada esfera: una etiqueta que siempre mira a la cámara, con un fondo circular que da
-// contraste (el logo blanco sobre vidrio claro u oscuro se perdía). Se dibuja sobre la cara de
-// adelante de la esfera y lee el mismo atlas de logos que las barras.
+// Logo de cada esfera: una etiqueta que siempre mira a la cámara, sobre la cara de adelante de la
+// esfera, con el mismo atlas de logos que las barras. Sin disco de fondo (se veía como otra esfera
+// adentro de la esfera): el contraste lo da un halo suave pegado al logo.
 const LOGO_VERT = /* glsl */ `
 attribute vec3 aCentro;
 attribute float aSkill;
@@ -130,6 +130,14 @@ void main() {
 
 const LOGO_FRAG = /* glsl */ `
 uniform sampler2D u_tAtlas;
+uniform sampler2D u_tDioramas; // los logos en diorama (3D renderizado a imagen), misma grilla
+uniform float u_hayDioramas;   // 1 cuando el atlas de dioramas ya está (hasta entonces, el logo plano)
+uniform float u_dioramaSkill;  // la esfera elegida o apuntada toma el color de su marca
+uniform float u_dioramaT;
+uniform vec3 u_dioramaColor;
+uniform sampler2D u_tColores;  // color de marca de cada tecnología (una fila)
+uniform float u_colorRama;     // 0..1: con una rama elegida, sus nodos van en su color
+uniform float u_tiempo;
 uniform float u_celdas;
 uniform float u_claro;
 uniform float u_aparece;
@@ -145,23 +153,43 @@ vec2 enCelda(vec2 uv, float celda, float celdas) {
 }
 
 void main() {
-  float r = length(vUv - 0.5) * 2.0;
-  float disco = smoothstep(1.0, 0.93, r);
-  float alfaBase = disco * u_aparece * mix(0.25, 1.0, vActiva);
-  if (alfaBase < 0.04) discard;
-  // el logo ocupa ~78 % del disco; fuera de su celda no hay nada
-  vec2 uv = (vUv - 0.5) / 0.78 + 0.5;
-  float a = 0.0;
-  if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
-    vec2 d = min(uv, 1.0 - uv);
-    float borde = smoothstep(0.0, 0.07, d.x) * smoothstep(0.0, 0.07, d.y);
-    a = smoothstep(0.15, 0.6, texture2D(u_tAtlas, enCelda(uv, floor(vSkill + 0.5), u_celdas)).a) * borde;
+  // el logo ocupa ~86 % de la etiqueta; fuera de su celda no hay nada
+  vec2 uv = (vUv - 0.5) / 0.86 + 0.5;
+  if (uv.x <= 0.0 || uv.x >= 1.0 || uv.y <= 0.0 || uv.y >= 1.0) discard;
+  vec2 d = min(uv, 1.0 - uv);
+  float borde = smoothstep(0.0, 0.07, d.x) * smoothstep(0.0, 0.07, d.y);
+  vec2 celda = enCelda(uv, floor(vSkill + 0.5), u_celdas);
+  float a = smoothstep(0.15, 0.6, texture2D(u_tAtlas, celda).a) * borde;
+  // el logo es su diorama: la forma sale de su alfa y el relieve (bisel y luces) de su sombreado
+  float relieve = 1.0;
+  float destello = 0.0;
+  if (u_hayDioramas > 0.5) {
+    vec4 diorama = texture2D(u_tDioramas, celda) * borde;
+
+    // la forma sigue siendo la del logo plano (a): del diorama sólo se toma el sombreado
+    // barrido de luz cada 6 s, con un desfase por tecnología
+    float dB = (uv.x + (1.0 - uv.y) * 0.45) / 1.45;
+    float sB = fract(u_tiempo / 6.0 + vSkill * 0.137) * 4.0 - 0.4;
+    destello = exp(-pow((dB - sB) / 0.07, 2.0));
+    // relieve: el gris del atlas (0,5 = neutro): el interior queda del color tal cual
+    relieve = 1.0 + (diorama.r - 0.5) * 1.1 * smoothstep(0.05, 0.6, diorama.a);
   }
-  vec3 fondo = mix(vec3(0.03, 0.08, 0.3), vec3(0.06, 0.16, 0.78), u_claro);
-  vec3 aro = mix(vec3(0.4, 0.7, 1.0), vec3(0.75, 0.88, 1.0), u_claro);
-  vec3 color = mix(fondo, aro, smoothstep(0.78, 0.97, r) * 0.9);
-  color = mix(color, vec3(1.0), a);
-  gl_FragColor = vec4(color, alfaBase * mix(mix(0.82, 0.92, u_claro), 1.0, a));
+  // la esfera elegida o apuntada toma el color de su marca; con una rama elegida, todos sus nodos
+  float deMarca = max(u_dioramaT * step(abs(vSkill - u_dioramaSkill), 0.5), u_colorRama * smoothstep(0.6, 0.95, vActiva)) * u_hayDioramas;
+  vec3 marca = texture2D(u_tColores, vec2((vSkill + 0.5) / (u_celdas * u_celdas), 0.5)).rgb;
+  // halo: el mismo logo en un nivel borroso del atlas (mip), engordado
+  float h = clamp(texture2D(u_tAtlas, celda, 3.0).a * 2.4, 0.0, 1.0) * borde;
+  // oscuro: logo blanco con halo azul noche; claro: logo azul profundo con halo blanco
+  vec3 tinta = mix(vec3(1.0), vec3(0.04, 0.13, 0.6), u_claro);
+  vec3 halo = mix(vec3(0.0, 0.03, 0.14), vec3(1.0), u_claro);
+  tinta = mix(tinta, marca, deMarca) * relieve;
+  // el único brillo: el barrido, cada tanto
+  tinta = mix(tinta, vec3(1.0), clamp(destello, 0.0, 1.0) * 0.75);
+  // en los nodos con color de marca (sobre la esfera azul de la elegida) el halo sobra: se veía como un cuadrado claro
+  float alfa = max(a, h * mix(0.6, 0.75, u_claro) * (1.0 - 0.9 * deMarca)) * u_aparece * mix(0.25, 1.0, vActiva);
+  if (alfa < 0.01) discard;
+  vec3 color = mix(halo, tinta, a);
+  gl_FragColor = vec4(color, alfa);
 }
 `;
 
@@ -442,6 +470,14 @@ export class ArbolHabilidades {
     geometria.instanceCount = nodos.length;
     this.uniformesLogo = {
       u_tAtlas: { value: atlas },
+      u_tDioramas: { value: atlas },
+      u_hayDioramas: { value: 0 },
+      u_dioramaSkill: { value: -1 },
+      u_dioramaT: { value: 0 },
+      u_dioramaColor: { value: new Color() },
+      u_tColores: { value: null },
+      u_colorRama: { value: 0 },
+      u_tiempo: { value: 0 },
       u_celdas: { value: celdas },
       u_radio: { value: 0.0001 },
       u_claro: { value: 0 },

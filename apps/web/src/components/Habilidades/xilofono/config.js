@@ -33,11 +33,13 @@ export const XILOFONO = {
   scroll: { sensibilidad: 0.004, suavizado: 5 },
   // Barras por segundo: cada una tarda ~3 s en cruzar el foco.
   avanceSolo: 0.32,
+  // Zoom con que arranca (y al que vuelve "restablecer"): un poco más cerca que el encuadre entero.
+  zoomInicial: 1.22,
 };
 
-// Fondo de la escena: 'nebulosa' (elegido), 'aurora', 'malla', 'seda', 'rayos', 'electrico' o
+// Fondo de la escena: 'persianas' (elegido: Gradient Blinds de React Bits), 'aurora', 'grainient', 'plasma', 'liso' (el color de la página), 'nebulosa', 'malla', 'seda', 'rayos', 'electrico' o
 // 'manchas' (el primero). Para cambiarlo, sólo esta línea.
-export const FONDO = 'nebulosa';
+export const FONDO = 'persianas';
 
 // Colores elegidos. Fondo: paleta "hielo" (los 4 colores de la nebulosa / aurora / etc.).
 export const COLORES_FONDO = { colores: ['#0050ff', '#3da2ff', '#a8e8ff', '#0028d6'], resalte: '#0a6cff' };
@@ -47,7 +49,8 @@ export const COLORES_FONDO = { colores: ['#0050ff', '#3da2ff', '#a8e8ff', '#0028
 export const BARRAS = {
   tinte: ['#1a00ff', '#0047ff', '#0a5cff', '#0019ff'],
   resalte: '#1f3dff',
-  logo: ['#d6ecff', '#ffffff'],
+  // [tema oscuro, tema claro]; en el claro, azul profundo (en blanco no se leían sobre el vidrio claro)
+  logo: ['#d6ecff', '#1a3fa8'],
   irid: ['#0047ff', '#8fc8ff'],
 };
 
@@ -59,7 +62,7 @@ export const AURORA = {
   resplandor: 0.7, // cuánto se derrama la luz pasando el borde
   brillo: 1,
   capas: 2, // cortinas (1..3); las de atrás, más tenues
-  velocidad: 0.6,
+  velocidad: 1.6, // el original corre a 1: a 0,6 apenas se notaba que se movía
   desdeAbajo: false, // false: cuelga desde arriba
 };
 
@@ -103,7 +106,8 @@ export const PALETAS = {
     fondoA: '#eef3ff',
     fondoB: '#c4d5ff',
     manchas: '#3d7bff',
-    logo: '#ffffff',
+    // los logos (dioramas) en azul profundo: en blanco, sobre el vidrio claro no se leían
+    logo: '#1a3fa8',
     resalte: '#0050ff',
     tinte: ['#0038ff', '#0057ff', '#1f7bff', '#00a6ff', '#0057ff'],
     iridA: '#1f6bff',

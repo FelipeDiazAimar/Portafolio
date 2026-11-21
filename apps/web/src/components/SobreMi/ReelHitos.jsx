@@ -20,6 +20,8 @@ import { dentroDeCuadrilatero, faseDeProgreso, hitoCercano, hitoDestino, hitosDe
 import { matrizCss } from '@/lib/reel/homografia.js';
 import puntosHitos from '@/data/puntosHitos.json';
 import { TITULAR } from './titular.js';
+import IntroAgentes, { introPendiente } from './IntroAgentes.jsx';
+import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import styles from './ReelHitos.module.css';
 
 const ESPERA_IMAN_MS = 170;
@@ -201,6 +203,10 @@ export default function ReelHitos({ hitos, alFallar }) {
   const [arrastrando, setArrastrando] = useState(false);
   // cuántos fondos del diorama animado hay compuestos (avisa al efecto que los usa)
   const [fondosListos, setFondosListos] = useState(0);
+  // Intro de agentes: 'esperando' (pedida, falta la escena), el plano medido (en curso) o null.
+  const [intro, setIntro] = useState(null);
+  const refConIntro = useRef(null);
+  const refTrabaIntro = useRef(null);
 
   // ---- medidas del recorrido -------------------------------------------------------------
   const medir = useCallback(() => {
@@ -269,9 +275,13 @@ export default function ReelHitos({ hitos, alFallar }) {
     const vista = new IntersectionObserver(([e]) => setEnPantalla(e.isIntersecting), { threshold: 0.01 });
     proximidad.observe(contenedor);
     vista.observe(panel);
+    // En la PC la escena se arma de antemano, en un momento libre después de la bienvenida: llegar
+    // a la sección (o teletransportarse) no la construye en ese instante. Una vez armada, queda.
+    const precargar = esEscritorio() && !esChico() ? cuandoInactivo(() => setCerca(true), 4500) : () => {};
     return () => {
       proximidad.disconnect();
       vista.disconnect();
+      precargar();
     };
   }, []);
 
@@ -560,7 +570,22 @@ export default function ReelHitos({ hitos, alFallar }) {
         // al medir de nuevo (carga con el scroll a mitad de la sección, cambio de tamaño) no se viaja
         onRefresh: (yo) => aplicar(yo, true),
       });
-      ScrollTrigger.create({ trigger: contenedor, start: 'top 62%', once: true, onEnter: () => setEntro(true) });
+      // La primera vez en la visita, la entrada la precede la intro de agentes: arranca más
+      // adentro, con el panel casi entero en pantalla, para que se vea el plano armarse.
+      // se decide una sola vez por montaje (si el efecto se rearma, no vuelve a preguntar)
+      if (refConIntro.current === null) refConIntro.current = introPendiente();
+      const conIntro = refConIntro.current;
+      ScrollTrigger.create({
+        trigger: contenedor,
+        start: conIntro ? 'top 30%' : 'top 62%',
+        once: true,
+        onEnter: () => {
+          // se pasó de largo (menú del header hacia más abajo): directo a lo real
+          const pasado = contenedor.getBoundingClientRect().bottom < window.innerHeight * 0.5;
+          if (conIntro && !pasado && !refEntro.current) setIntro('esperando');
+          else setEntro(true);
+        },
+      });
       // La cola: "Hoy" sigue fijo y la portada empieza a crecer desde su puerta, al ritmo del
       // scroll. Pasado un punto, el portal termina solo (ver pasarAProyectos).
       const enCola = (yo, alScrollear) => {
@@ -846,6 +871,98 @@ export default function ReelHitos({ hitos, alFallar }) {
       }),
     [medir, cortarAnimacion, N]
   );
+
+  // ---- intro de agentes: el plano de lo que va a entrar -------------------------------------
+  // Mide dónde va a quedar cada cosa (en px del panel) con la sección ya entrada: se pone el
+  // panel en su estado final sin transiciones, se mide y se vuelve, todo en el mismo cuadro (no
+  // llega a pintarse). Las portadas salen de la escena, con su forma curva en perspectiva.
+  const medirPlano = useCallback(() => {
+    const panel = refPanel.current;
+    if (!panel) return null;
+    const base = panel.getBoundingClientRect();
+    const esquinasDe = (el) => {
+      const r = el.getBoundingClientRect();
+      const x0 = r.left - base.left;
+      const y0 = r.top - base.top;
+      const x1 = r.right - base.left;
+      const y1 = r.bottom - base.top;
+      return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    };
+    const de = (selector) => panel.querySelector(`.${selector}`);
+    const capas = [];
+    const sumar = (nombre, el) => {
+      if (!el) return;
+      const q = esquinasDe(el);
+      if (q[2][0] - q[0][0] > 4 && q[2][1] - q[0][1] > 4) capas.push({ nombre, puntos: q });
+    };
+    panel.dataset.midiendo = 'true';
+    panel.dataset.entro = 'true';
+    panel.getBoundingClientRect();
+    refTitular.current?.querySelectorAll(`.${styles.renglon}`).forEach((el, i) => sumar(`Titular ${i + 1}`, el));
+    const escena = refEscena.current;
+    if (escena) {
+      const frente = Math.round(refObjetivo.current);
+      // de la del frente hacia los costados
+      const orden = hitos.map((_, i) => i).sort((a, b) => Math.abs(a - frente) - Math.abs(b - frente));
+      for (const i of orden) {
+        const q = escena.esquinasFinales(i, ENTERA);
+        if (q && q.some(([x, y]) => x > 0 && x < base.width && y > 0 && y < base.height)) capas.push({ nombre: `Portada ${hitos[i].anio}`, puntos: q });
+      }
+      const zona = (nombre, uv) => {
+        const q = escena.esquinasFinales(frente, uv);
+        if (q) capas.push({ nombre, puntos: q });
+      };
+      zona('Diorama', UV_FRANJAS.length ? { x0: UV_FRANJAS[0].x0, y0: UV_FRANJAS[0].y0, x1: UV_FRANJAS[UV_FRANJAS.length - 1].x1, y1: UV_FRANJAS[0].y1 } : ENTERA);
+      zona('Foto', FOTO_UV);
+    }
+    sumar('Ficha', de(styles.ficha));
+    sumar('Año', de(styles.fichaAnio));
+    sumar('Título', de(styles.fichaTitulo));
+    sumar('Texto', de(styles.fichaTexto));
+    sumar('Regla de años', de(styles.regla));
+    panel.dataset.entro = 'false';
+    panel.getBoundingClientRect();
+    delete panel.dataset.midiendo;
+    return { capas, ancho: base.width, alto: base.height };
+  }, [hitos]);
+
+  useEffect(() => {
+    if (intro !== 'esperando') return undefined;
+    // con la escena lista se mide ya; si tarda, no se la espera más de un segundo
+    const medirYa = () => setIntro(medirPlano() ?? null);
+    if (escenaLista) {
+      medirYa();
+      return undefined;
+    }
+    const espera = setTimeout(medirYa, 1000);
+    return () => clearTimeout(espera);
+  }, [intro, escenaLista, medirPlano]);
+  // si algo hizo entrar la sección por otro lado (la vuelta desde Proyectos), la intro sobra
+  useEffect(() => {
+    if (entro && intro === 'esperando') setIntro(null);
+  }, [entro, intro]);
+  // Mientras se arma el plano la página no se mueve (y la sección queda justo a pantalla
+  // completa): si no, la rueda seguiría de largo por los hitos y la intro se perdería.
+  const soltarIntro = useCallback(() => {
+    refTrabaIntro.current?.soltar();
+    refTrabaIntro.current = null;
+    delete document.documentElement.dataset.sinIman;
+  }, []);
+  const enCurso = intro !== null && intro !== 'esperando';
+  useEffect(() => {
+    const contenedor = refContenedor.current;
+    if (!enCurso || !contenedor) return undefined;
+    document.documentElement.dataset.sinIman = 'true';
+    const traba = trabarScroll();
+    traba.mover(Math.round(contenedor.getBoundingClientRect().top + window.scrollY));
+    refTrabaIntro.current = traba;
+    return soltarIntro;
+  }, [enCurso, soltarIntro]);
+  const alFundirIntro = useCallback(() => {
+    soltarIntro();
+    setEntro(true);
+  }, [soltarIntro]);
+  const alTerminarIntro = useCallback(() => setIntro(null), []);
 
   // Entrada, una sola vez: el titular sube por renglones y se lee entero; recién después asoman
   // las portadas, escalonadas, y lo tapan a medias.
@@ -1319,6 +1436,9 @@ export default function ReelHitos({ hitos, alFallar }) {
             </li>
           ))}
         </ol>
+        {intro && intro !== 'esperando' ? (
+          <IntroAgentes capas={intro.capas} ancho={intro.ancho} alto={intro.alto} alFundir={alFundirIntro} alTerminar={alTerminarIntro} />
+        ) : null}
       </div>
       {/* La luz (u oscuridad) del otro lado de la puerta: sale del vano y envuelve la pantalla al cruzar. */}
       <div ref={refResplandor} className={styles.resplandor} aria-hidden="true" />

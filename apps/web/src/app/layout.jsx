@@ -8,6 +8,8 @@ import PiePagina from '@/components/PiePagina/PiePagina.jsx';
 import BarraScroll from '@/components/BarraScroll/BarraScroll.jsx';
 import Teletransporte from '@/components/Teletransporte/Teletransporte.jsx';
 import UrlPorScroll from '@/components/UrlPorScroll/UrlPorScroll.jsx';
+import ScrollSuave from '@/components/ScrollSuave/ScrollSuave.jsx';
+import Precarga from '@/components/Precarga/Precarga.jsx';
 import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import '../styles/globals.css';
 
@@ -83,6 +85,8 @@ export default async function RootLayout({ children }) {
       <body>
         <ProveedorPortfolio>
           <Bienvenida locale={locale} />
+          <ScrollSuave />
+          <Precarga />
           <BarraScroll />
           <Teletransporte />
           <UrlPorScroll />

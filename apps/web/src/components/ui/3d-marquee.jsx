@@ -196,7 +196,7 @@ export const ThreeDMarquee = ({
     raf = requestAnimationFrame(cuadro);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("wheel", frenarRueda);
+      window.removeEventListener("wheel", frenarRueda, { capture: true });
       observador.disconnect();
       vigia.disconnect();
     };
@@ -235,7 +235,7 @@ export const ThreeDMarquee = ({
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {}
       e.currentTarget.dataset.arrastrando = "1";
-      window.addEventListener("wheel", frenarRueda, { passive: false });
+      window.addEventListener("wheel", frenarRueda, { passive: false, capture: true });
     }
     const dLocal = aLocal(e.clientX - pr.lx, e.clientY - pr.ly);
     l.pos -= dLocal;
@@ -251,7 +251,7 @@ export const ThreeDMarquee = ({
     const movio = l.pres.mov;
     l.pres = null;
     delete e.currentTarget.dataset.arrastrando;
-    window.removeEventListener("wheel", frenarRueda);
+    window.removeEventListener("wheel", frenarRueda, { capture: true });
     if (movio) {
       // el clic que sigue a un arrastre no tiene que abrir el proyecto
       l.sinClic = true;

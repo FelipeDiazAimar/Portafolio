@@ -1,10 +1,13 @@
-/* Dock de categorías con lupa. */
+/* Dock de categorías: sólo logos, con la lupa de macOS (ver DockCategorias.jsx). Cada ícono mide
+   40 px + 4 px de margen a cada lado (= BASE, 48) y crece desde abajo. */
 .dock {
+  position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 0.4rem;
   width: fit-content;
-  height: 84px;
+  /* aire arriba para el ícono agrandado y el nombre */
+  height: 64px;
+  padding: 0 0 12px;
 }
 
 .item {
@@ -12,128 +15,147 @@
   display: grid;
   flex: none;
   place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 4px;
   padding: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05) 60%);
-  color: #fff;
+  border: 0;
+  background: none;
+  color: var(--marca, var(--color-fg));
   cursor: pointer;
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
+  transform-origin: 50% 120%;
+  /* sin will-change: con él, el navegador rasteriza el ícono una vez al tamaño normal y después
+     estira esa imagen al agrandarlo con la lupa (se veía pixelado) */
+  -webkit-tap-highlight-color: transparent;
 }
 
-.item:hover,
 .item:focus-visible {
-  border-color: rgba(168, 232, 255, 0.9);
-  outline: none;
-}
-
-.item[aria-pressed='true'] {
-  border-color: #a8e8ff;
-  background: radial-gradient(circle at 30% 25%, #3da2ff, #1a00ff 75%);
-  box-shadow:
-    0 0 24px rgba(26, 60, 255, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
-}
-
-/* el elegido respira */
-.brillo {
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid rgba(168, 232, 255, 0.7);
-  animation: respirar 2s ease-out infinite;
-  pointer-events: none;
-}
-
-@keyframes respirar {
-  from {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(1.35);
-  }
+  outline: 2px solid var(--marca, var(--color-fg));
+  outline-offset: 4px;
+  border-radius: 10px;
 }
 
 .icono {
-  width: 52%;
-  height: 52%;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.25));
 }
 
-.texto {
-  font-size: 0.95rem;
-  font-weight: 800;
-}
-
-/* cartel que aparece arriba del ítem */
-.tip {
+/* Cada logo en relieve (ver DockCategorias): la imagen con su color tapa al logo plano, que queda
+   para medir y por si la imagen no está. Encima, cada 6 s, una banda de luz cruza la silueta. */
+.relieve {
   position: absolute;
-  bottom: calc(100% + 10px);
+  inset: 0;
+  background: center / contain no-repeat;
+  pointer-events: none;
+}
+
+.barrido {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: var(--mascara) center / contain no-repeat;
+  mask: var(--mascara) center / contain no-repeat;
+  background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.85) 50%, transparent 62%) no-repeat;
+  background-size: 300% 100%;
+  background-position: 150% 0;
+  animation: barrer 6s ease-in-out var(--retraso, 0s) infinite;
+}
+
+@keyframes barrer {
+  0% {
+    background-position: 150% 0;
+  }
+  32% {
+    background-position: -50% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+.dock[data-dioramas='true'] .icono {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barrido {
+    animation: none;
+    display: none;
+  }
+}
+
+/* el elegido: un punto abajo, como las apps abiertas del dock */
+.punto {
+  position: absolute;
   left: 50%;
+  bottom: -8px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity 0.25s ease,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.item[aria-pressed='true'] .punto {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* el nombre, arriba del ícono que está bajo el mouse (lo ubica DockCategorias) */
+.nombre {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
   display: grid;
   gap: 1px;
-  translate: -50% 0;
   padding: 0.35rem 0.7rem;
-  border-radius: 12px;
-  border: 1px solid rgba(143, 200, 255, 0.35);
-  background: rgba(6, 10, 30, 0.92);
-  color: #fff;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 12%, transparent),
+    0 8px 24px rgb(0 0 0 / 0.25);
+  color: var(--color-fg);
   font-size: 0.7rem;
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-.tip strong {
+.nombre[data-visible='true'] {
+  opacity: 1;
+}
+
+.nombre strong {
   font-size: 0.78rem;
 }
 
-.tip span {
-  color: #8fc8ff;
+.nombre span {
+  opacity: 0.65;
   font-size: 0.64rem;
 }
 
-/* tema claro: todos los íconos en el mismo azul; el elegido lo marca un aro, no el color */
-:global([data-theme='light']) .item {
-  border-color: rgba(10, 60, 200, 0.28);
-  background: radial-gradient(circle at 30% 25%, #fff, rgba(200, 215, 255, 0.6) 70%);
-  color: #1a3fa8;
-}
-
-:global([data-theme='light']) .item[aria-pressed='true'] {
-  border-color: #1a00ff;
-  background: radial-gradient(circle at 30% 25%, #fff, rgba(168, 190, 255, 0.85) 75%);
-  color: #1a3fa8;
-  box-shadow:
-    0 0 0 2px rgba(26, 0, 255, 0.55),
-    0 0 20px rgba(26, 60, 255, 0.45);
-}
-
-:global([data-theme='light']) .brillo {
-  border-color: rgba(26, 0, 255, 0.6);
-}
-
 @media (max-width: 900px) {
-  /* Carrusel: una fila que se desliza de lado con el dedo. La lupa (DockCategorias) ensancha el ícono
-     bajo el dedo y los vecinos se corren: no se superponen. Los bordes se desvanecen para indicar que
-     hay más. Alto fijo: el ícono agrandado no mueve nada. */
+  /* Carrusel: una fila que se desliza de lado con el dedo; la lupa sigue al dedo. Alto fijo para el
+     ícono agrandado; los bordes se desvanecen para indicar que hay más. */
   .dock {
     width: 100%;
     max-width: 100%;
-    /* 76 px del ícono con la lupa + el aro y el resplandor del elegido, sin recortarse */
-    height: 116px;
-    align-items: flex-end;
-    justify-content: flex-start;
-    gap: 0.4rem;
-    padding: 0.9rem 1rem 0.9rem;
+    height: 132px;
+    padding: 0 1rem 14px;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
     touch-action: pan-x;
-    -webkit-overflow-scrolling: touch;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
@@ -144,10 +166,9 @@
   .dock::-webkit-scrollbar {
     display: none;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .brillo {
-    animation: none;
+  /* en el carrusel el nombre quedaría recortado: no se muestra */
+  .nombre {
+    display: none;
   }
 }

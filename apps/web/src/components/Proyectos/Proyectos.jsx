@@ -16,6 +16,7 @@ import NavegacionMixta from './NavegacionMixta.jsx';
 import TarjetaMarca from './TarjetaMarca.jsx';
 import { marcaDe } from '@/data/marcas.js';
 import { hayWebGL } from '@/lib/soporteWebGL.js';
+import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
 import useEmbudo from '@/hooks/useEmbudo.js';
@@ -291,6 +292,17 @@ export default function Proyectos() {
   const refDestello = useRef(null);
   const refCifras = useRef(null);
   const refLienzoIntro = useRef(null);
+  // En la PC, los shaders de la entrada (piezas 3D) se compilan en un momento libre después de
+  // cargar (en un lienzo aparte que se descarta: el navegador guarda lo compilado). Si no, la
+  // primera llegada a la sección esperaba la compilación casi un segundo.
+  useEffect(() => {
+    if (!esEscritorio() || !hayWebGL()) return undefined;
+    return cuandoInactivo(() => {
+      import('./piezas/EscenaPiezas.js')
+        .then(({ precalentarPiezas }) => precalentarPiezas())
+        .catch(() => {});
+    }, 5000);
+  }, []);
   const refCajaIntro = useRef(null);
   const refIntro = useRef(null);
   const refIntroHecha = useRef(false);

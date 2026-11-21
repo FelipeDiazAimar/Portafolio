@@ -108,12 +108,39 @@ function maximoScroll() {
   return document.documentElement.scrollHeight - window.innerHeight;
 }
 
-function saltar(y, rapido) {
-  window.scrollTo({ top: y, behavior: 'instant' });
-  saltos += 1;
-  // `rapido`: salto de vista previa (velo corto); si no, el de un clic
-  document.documentElement.dataset.saltoRapido = rapido ? 'true' : 'false';
-  avisar();
+// La transición que tapa el corte (la lámina de vidrio, ver Teletransporte.jsx). Recibe el salto
+// y lo ejecuta cuando la pantalla está tapada; sin ella (o sin montar) el salto es inmediato.
+let transicion = null;
+export function ponerTransicion(f) {
+  transicion = f;
+  return () => {
+    if (transicion === f) transicion = null;
+  };
+}
+// Desde dónde nace la transición: el ítem del menú que se tocó (su caja en pantalla).
+let origen = null;
+function anotarOrigen(el) {
+  const caja = el?.getBoundingClientRect?.();
+  if (caja) origen = { x: caja.left + caja.width / 2, y: caja.top + caja.height / 2 };
+}
+
+// `despues`: lo que tiene que pasar recién con el salto hecho (p. ej. descongelar).
+let pendiente = false; // hay un salto esperando que la transición tape la pantalla
+function saltar(y, rapido, despues) {
+  const ejecutar = () => {
+    pendiente = false;
+    window.scrollTo({ top: y, behavior: 'instant' });
+    saltos += 1;
+    // `rapido`: salto de vista previa; si no, el de un clic
+    document.documentElement.dataset.saltoRapido = rapido ? 'true' : 'false';
+    avisar();
+    despues?.();
+  };
+  if (transicion) {
+    pendiente = true;
+    // `quieto`: el destino es donde ya se está (se anula un salto que no llegó a hacerse)
+    transicion({ rapido, origen, ejecutar, quieto: Math.abs(y - window.scrollY) < 2 });
+  } else ejecutar();
 }
 
 function congelar(valor) {
@@ -124,9 +151,10 @@ function congelar(valor) {
 }
 
 // Hover sobre un ítem del menú: salta a esa sección.
-export function vistaPrevia(id) {
+export function vistaPrevia(id, el) {
   clearTimeout(temporizadorSalida);
   if (mouseQuieto()) return;
+  anotarOrigen(el);
   const y = destinoDeScroll(id, window.scrollY, medirSeccion, maximoScroll());
   if (y === null) return;
   // ya estás ahí (por ejemplo, el logo estando en el hero): no hay nada que mirar
@@ -142,15 +170,17 @@ export function terminarVistaPrevia() {
   clearTimeout(temporizadorSalida);
   if (!maquina.activa) return;
   temporizadorSalida = setTimeout(() => {
-    const origen = maquina.volver();
-    if (origen !== null && Math.abs(origen - window.scrollY) >= 2) saltar(origen, true);
-    congelar(false);
+    const desde = maquina.volver();
+    // se descongela recién con la vuelta hecha (la transición la demora un instante)
+    if (desde !== null && (Math.abs(desde - window.scrollY) >= 2 || pendiente)) saltar(desde, true, () => congelar(false));
+    else congelar(false);
   }, DEMORA_SALIDA_MS);
 }
 
 // Clic: queda en la sección (o va, si no se estaba mirando), sin recorrer el scroll.
-export function irASeccion(id) {
+export function irASeccion(id, el) {
   clearTimeout(temporizadorSalida);
+  if (el) anotarOrigen(el);
   const y = destinoDeScroll(id, window.scrollY, medirSeccion, maximoScroll());
   if (y === null) return false;
   const yaEstaba = maquina.activa && maquina.viendo === id;

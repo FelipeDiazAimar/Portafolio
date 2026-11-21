@@ -126,11 +126,22 @@ export default function Credencial() {
       colores.costura = css.getPropertyValue('--contacto-costura').trim() || colores.costura;
       colores.sombra = css.getPropertyValue('--contacto-sombra').trim() || colores.sombra;
       colores.oscuro = temaActual() === 'dark';
+      firmaPintada = null; // otro tema: hay que volver a pintar aunque nada se mueva
     }
+    // Lo último que se pintó (posiciones de la cinta y la tarjeta). Con la credencial quieta no
+    // se repinta: el lienzo ocupa todo el ancho y lleva sombra difuminada, y repintarlo en cada
+    // cuadro se comía buena parte de la CPU aunque no cambiara nada.
+    let firmaPintada = null;
+    const firma = () => {
+      let s = fis.P.x * 3 + fis.P.y * 5 + fis.C.x * 7 + fis.C.y * 11 + fis.giro * 1000 + inclinacion * 100;
+      for (const q of fis.cuerda) s += q.x * 13 + q.y * 17;
+      return s;
+    };
     leerColores();
     const dejarDeObservarTema = observarTema(leerColores);
 
     function medir() {
+      firmaPintada = null; // cambiar el tamaño del lienzo lo borra
       const rect = zona.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       alto = Math.max(rect.height, 600);
@@ -259,7 +270,11 @@ export default function Credencial() {
           pasos += 1;
         }
         if (pasos === MAX_PASOS_POR_CUADRO) acumulado = 0; // equipo muy lento: no se acumula atraso
-        pintar();
+        const ahoraFirma = firma();
+        if (fis.agarre || firmaPintada === null || Math.abs(ahoraFirma - firmaPintada) > 0.05) {
+          pintar();
+          firmaPintada = ahoraFirma;
+        }
       } else {
         acumulado = 0;
       }

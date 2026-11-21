@@ -195,20 +195,68 @@ function poseDeTarjeta(objetivo, salida) {
 // `inversa`: la misma entrada, de atrás para adelante (al irse de Proyectos hacia "Sobre mí"): las
 // piezas nacen como tarjetas planas, cada una sobre la suya de la marquesina; se levantan y pasan
 // a flotar como tarjetas 3D (`desarmar`) y después se vuelven conectores (`desmutar`).
+function escenaBase(entorno) {
+  const escena = new THREE.Scene();
+  escena.environment = entorno.texture;
+  const sol = new THREE.DirectionalLight(0xffffff, 1.15);
+  sol.position.set(-0.45, 0.9, 1);
+  escena.add(sol);
+  return escena;
+}
+
+// Compila de antemano (en un momento libre) los materiales de las piezas: los mismos tipos y
+// opciones que usa la escena (tarjetas con su imagen, con y sin barniz; conectores brillantes y
+// mate). Se hace en un lienzo propio que se descarta enseguida: dejar vivo el contexto del lienzo
+// de la entrada trababa otras secciones, y el navegador igual guarda los programas compilados
+// (la compilación de verdad, al llegar, sale de ese caché).
+export async function precalentarPiezas() {
+  const lienzo = document.createElement('canvas');
+  lienzo.width = lienzo.height = 2;
+  const renderizador = new THREE.WebGLRenderer({ canvas: lienzo, alpha: true, antialias: true, powerPreference: 'high-performance' });
+  renderizador.outputColorSpace = THREE.SRGBColorSpace;
+  renderizador.toneMapping = THREE.NoToneMapping;
+  const pmrem = new THREE.PMREMGenerator(renderizador);
+  const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04);
+  const escena = escenaBase(entorno);
+  const caja = new THREE.BoxGeometry(1, 1, 1);
+  const imagen = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+  imagen.colorSpace = THREE.SRGBColorSpace;
+  imagen.needsUpdate = true;
+  const materiales = [];
+  for (const barniz of [{ clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0 }, { clearcoat: 0, envMapIntensity: 0 }]) {
+    materiales.push(new THREE.MeshPhysicalMaterial({ map: imagen, emissiveMap: imagen, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, ...barniz }));
+    materiales.push(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0x3366ff, roughness: 1, metalness: 0, ...barniz }));
+  }
+  for (const brillante of [true, false]) {
+    materiales.push(new THREE.MeshPhysicalMaterial({ color: 0x3366ff, roughness: brillante ? 0.1 : 0.6, metalness: 0, clearcoat: brillante ? 1 : 0, clearcoatRoughness: 0.06, envMapIntensity: brillante ? 0.75 : 0.18 }));
+  }
+  materiales.forEach((m) => escena.add(new THREE.Mesh(caja, m)));
+  const camara = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
+  camara.position.set(0, 0, 5);
+  try {
+    await renderizador.compileAsync(escena, camara);
+  } catch {
+    renderizador.compile(escena, camara);
+  }
+  renderizador.render(escena, camara);
+  caja.dispose();
+  imagen.dispose();
+  materiales.forEach((m) => m.dispose());
+  entorno.dispose();
+  pmrem.dispose();
+  renderizador.dispose();
+  renderizador.forceContextLoss();
+}
+
 export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = false, recuadro = null, alFallar = null, inversa = false }) {
   const renderizador = new THREE.WebGLRenderer({ canvas: lienzo, alpha: true, antialias: true, powerPreference: 'high-performance' });
   renderizador.setClearColor(0x000000, 0);
   renderizador.outputColorSpace = THREE.SRGBColorSpace;
   // sin mapeo de tonos: el azul queda azul y las caras de las tarjetas, del color de las de verdad
   renderizador.toneMapping = THREE.NoToneMapping;
-
-  const escena = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderizador);
   const entorno = pmrem.fromScene(new RoomEnvironment(), 0.04);
-  escena.environment = entorno.texture;
-  const sol = new THREE.DirectionalLight(0xffffff, 1.15);
-  sol.position.set(-0.45, 0.9, 1);
-  escena.add(sol);
+  const escena = escenaBase(entorno);
   const camara = new THREE.PerspectiveCamera(FOV, 1, 10, 20000);
 
   let W = Math.max(2, panel.clientWidth);

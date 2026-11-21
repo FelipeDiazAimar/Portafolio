@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import useTema from '@/hooks/useTema.js';
 import useUnionSeccion from '@/hooks/useUnionSeccion.js';
 import { esTactil, prefiereMovimientoReducido } from '@/lib/entrada.js';
@@ -13,8 +14,14 @@ const DESENFOQUE_MAX_PX = 16;
 // Fondo del hero: la escena del demo original, de costado (cuerpos y esqueletos en grilla), con el
 // mouse revelando los esqueletos y la cámara acompañándolo. Corre sólo con `activo`.
 // `entrada`: dónde estaba el cráneo de la foto (px de la ventana), para que tu esqueleto arranque ahí.
-export default function FondoRayosX({ activo, entrada }) {
+// Al estar listo, aparece con una onda de rayos X que nace en ese cráneo y barre la pantalla: los
+// esqueletos se revelan según su distancia, y el borde de la onda brilla. `alListo` avisa cuando
+// arranca (recién ahí la foto se funde: antes, mientras cargaban los modelos, quedaba un vacío).
+export default function FondoRayosX({ activo, entrada, alListo }) {
   const refLienzo = useRef(null);
+  const refOnda = useRef(null);
+  const refAlListo = useRef(alListo);
+  refAlListo.current = alListo;
   const refMotor = useRef(null);
   // el borde de abajo del fondo se funde con la página (y con Sobre mí) a medida que se hace scroll,
   // y además se desenfoca (ver más abajo): la unión no tiene que notarse
@@ -57,9 +64,60 @@ export default function FondoRayosX({ activo, entrada }) {
       observador.observe(lienzo);
       await motor.listo;
       if (cancelado) return;
-      setVisible(true);
       if (activo) motor.iniciar();
+      // un cuadro dibujado antes de mostrarlo: la onda revela la escena ya armada
+      await new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(resolver)));
+      if (cancelado) return;
+      revelar();
+      setVisible(true);
+      refAlListo.current?.();
     })();
+
+    // La onda: un círculo que crece desde el cráneo con el borde difuso (máscara del lienzo) y un
+    // anillo de luz encima. Con movimiento reducido, sólo el fundido.
+    let ola = null;
+    function revelar() {
+      const onda = refOnda.current;
+      if (prefiereMovimientoReducido() || !onda) return;
+      const caja = lienzo.getBoundingClientRect();
+      const ox = entrada?.alto ? entrada.x - caja.left : caja.width / 2;
+      const oy = entrada?.alto ? entrada.y - caja.top : caja.height * 0.45;
+      const radio = Math.hypot(Math.max(ox, caja.width - ox), Math.max(oy, caja.height - oy)) + 220;
+      onda.style.setProperty('--ola-x', `${ox.toFixed(0)}px`);
+      onda.style.setProperty('--ola-y', `${oy.toFixed(0)}px`);
+      onda.dataset.ola = 'true';
+      // el lienzo ya lleva en línea la máscara de la unión con Sobre mí (useUnionSeccion): durante
+      // la onda van las dos juntas (se intersectan) y al terminar queda sólo la de la unión
+      const union = lienzo.style.maskImage;
+      const estado = { r: 0 };
+      const pintar = () => {
+        const r = `${estado.r.toFixed(1)}px`;
+        onda.style.setProperty('--ola-r', r);
+        const circulo = `radial-gradient(circle at ${ox.toFixed(0)}px ${oy.toFixed(0)}px, #000 ${Math.max(0, estado.r - 180).toFixed(1)}px, transparent ${r})`;
+        const mascara = union ? `${circulo}, ${union}` : circulo;
+        lienzo.style.webkitMaskImage = mascara;
+        lienzo.style.maskImage = mascara;
+        lienzo.style.webkitMaskComposite = 'source-in';
+        lienzo.style.maskComposite = 'intersect';
+      };
+      const terminar = () => {
+        lienzo.style.webkitMaskImage = union;
+        lienzo.style.maskImage = union;
+        lienzo.style.webkitMaskComposite = '';
+        lienzo.style.maskComposite = '';
+      };
+      pintar();
+      ola = gsap
+        .timeline({
+          onComplete: () => {
+            terminar();
+            delete onda.dataset.ola;
+          },
+        })
+        // arranca despacio (tu esqueleto se asoma primero) y se acelera hacia los bordes
+        .to(estado, { r: radio, duration: 2.1, ease: 'power2.in', onUpdate: pintar }, 0)
+        .to(onda, { opacity: 0, duration: 0.5, ease: 'power1.out' }, 1.75);
+    }
 
     // desenfoque que crece con el scroll: en reposo es 0 (no se toca el canvas), y al irse el hero
     // los esqueletos se vuelven manchas que se funden con Sobre mí
@@ -78,6 +136,7 @@ export default function FondoRayosX({ activo, entrada }) {
     window.addEventListener('pointermove', alMover, { passive: true });
     return () => {
       cancelado = true;
+      ola?.kill();
       cancelAnimationFrame(cuadroBlur);
       window.removeEventListener('scroll', alScroll);
       window.removeEventListener('pointermove', alMover);
@@ -100,5 +159,10 @@ export default function FondoRayosX({ activo, entrada }) {
     refMotor.current?.aplicarTema(tema);
   }, [tema]);
 
-  return <canvas ref={refLienzo} className={estilos.fondo} data-visible={visible} data-rapido={Boolean(entrada)} aria-hidden="true" />;
+  return (
+    <>
+      <canvas ref={refLienzo} className={estilos.fondo} data-visible={visible} data-rapido={Boolean(entrada)} aria-hidden="true" />
+      <div ref={refOnda} className={estilos.onda} aria-hidden="true" />
+    </>
+  );
 }

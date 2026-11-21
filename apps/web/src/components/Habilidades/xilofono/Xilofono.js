@@ -20,7 +20,12 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
+  LinearMipmapLinearFilter,
+  DataTexture,
+  RGBAFormat,
+  LinearSRGBColorSpace,
 } from 'three';
+import { atlasDeRelieve } from '../diorama/relieve.js';
 import { acercarValores, amortiguar, avanzarFase, elegirResaltada, limitarZoom, progresoBarra, resalteContinuo, retardoArbol, suave } from '@/lib/xilofono.js';
 import { ARBOL, BARRA, disposicionArbol } from '@/lib/arbol.js';
 import { ArbolHabilidades } from './arbol3d.js';
@@ -94,7 +99,7 @@ export class Xilofono {
     this.barraDe = new Map(this.orden.map((tecnologia, barra) => [tecnologia, barra]));
 
     // vista libre: giro sobre el eje propio de la hélice, zoom y encuadre vertical
-    this.vista = { giro: 0, giroObjetivo: 0, inercia: 0, inerciaFase: 0, zoom: 1, zoomObjetivo: 1, y: 0, yObjetivo: 0, x: 0, xObjetivo: 0 };
+    this.vista = { giro: 0, giroObjetivo: 0, inercia: 0, inerciaFase: 0, zoom: XILOFONO.zoomInicial, zoomObjetivo: XILOFONO.zoomInicial, y: 0, yObjetivo: 0, x: 0, xObjetivo: 0 };
     this.giroFoco = 0;
     this.distanciaBase = 5;
     this.arrastre = null;
@@ -165,6 +170,8 @@ export class Xilofono {
     lienzo.addEventListener('webglcontextrestored', this.alRecuperar);
 
     this.listo = this.cargar();
+    // en desarrollo, a mano desde la consola (para revisar el atlas de dioramas, por ejemplo)
+    if (process.env.NODE_ENV !== 'production') window.__xilofono = this;
   }
 
   crearRenderer() {
@@ -208,6 +215,14 @@ export class Xilofono {
       u_iridA: { value: new Color() },
       u_iridB: { value: new Color() },
       u_tAtlas: { value: this.opciones.atlas },
+      // dioramas de los logos (ver hornearDioramas): hasta que estén, el atlas plano
+      u_tDioramas: { value: this.opciones.atlas },
+      u_hayDioramas: { value: 0 },
+      u_dioramaSkill: { value: -1 },
+      u_dioramaT: { value: 0 },
+      u_dioramaColor: { value: new Color(1, 1, 1) },
+      u_tColores: { value: null },
+      u_colorRama: { value: 0 },
       u_atlasCeldas: { value: CELDAS },
       u_colorLogo: { value: new Color() },
       u_colorResalte: { value: new Color() },
@@ -262,6 +277,13 @@ export class Xilofono {
     malla.layers.enable(CAPA_FONDO);
     this.fondo = malla;
     return malla;
+  }
+
+  // Cambia el fondo de la escena (el vidrio de las barras lo refracta igual).
+  ponerFondo(id) {
+    if (!this.fondo || id === this.fondoActual) return;
+    this.fondo.material = this.materialFondo(id);
+    this.fondoActual = id;
   }
 
   // Un material por fondo, creado la primera vez que se usa (todos comparten los uniforms).
@@ -427,7 +449,7 @@ export class Xilofono {
     this.modoArbol = valor;
     this.forzada = null;
     this.hubHover = -1;
-    Object.assign(this.vista, { zoomObjetivo: 1, xObjetivo: 0, yObjetivo: 0, inercia: 0 });
+    Object.assign(this.vista, { zoomObjetivo: this.zoomBase(), xObjetivo: 0, yObjetivo: 0, inercia: 0 });
     this.seleccionArbol = -1;
     this.busqueda = -1;
     this.lugarFoco = null;
@@ -711,11 +733,17 @@ export class Xilofono {
     this.vista.xObjetivo += nx * tan * aspecto * (antes - despues);
     this.vista.yObjetivo -= ny * tan * (antes - despues);
     this.vista.zoomObjetivo = nuevo;
-    if (nuevo <= 1.001) {
+    if (nuevo <= this.zoomBase() + 0.001) {
       this.vista.xObjetivo = 0;
       this.vista.yObjetivo = 0;
     }
     this.limitarEncuadre();
+  }
+
+  // el zoom de partida: la hélice arranca un poco más cerca; el árbol (un disco que entra justo
+  // en el alto), con el encuadre entero
+  zoomBase() {
+    return this.modoArbol ? 1 : XILOFONO.zoomInicial;
   }
 
   zoomRelativo(factor, x, y) {
@@ -728,7 +756,7 @@ export class Xilofono {
   }
 
   restablecerVista() {
-    Object.assign(this.vista, { giroObjetivo: Math.round(this.vista.giro / (Math.PI * 2)) * Math.PI * 2, inercia: 0, zoomObjetivo: 1, xObjetivo: 0, yObjetivo: 0 });
+    Object.assign(this.vista, { giroObjetivo: Math.round(this.vista.giro / (Math.PI * 2)) * Math.PI * 2, inercia: 0, zoomObjetivo: this.zoomBase(), xObjetivo: 0, yObjetivo: 0 });
   }
 
   actualizarVista(dt) {
@@ -873,6 +901,7 @@ export class Xilofono {
       this.grupo.updateMatrixWorld();
       this.actualizarHover();
       this.actualizarResalte(dt);
+      this.actualizarDioramas(dt);
     }
     this.compositor.render(dt);
   }
@@ -1007,8 +1036,110 @@ export class Xilofono {
     });
   }
 
+  // Compila todo de antemano (en un momento libre, con la sección todavía fuera de pantalla): los
+  // shaders se compilan recién la primera vez que se dibujan, y eso trababa la llegada a la
+  // sección casi un segundo.
+  async precalentar() {
+    if (this.liberado || this.precalentado || !this.instancias || !this.tamano.ancho) return;
+    this.precalentado = true;
+    try {
+      await this.renderer.compileAsync(this.escena, this.camara);
+    } catch {
+      /* sin compilación en paralelo: el cuadro de abajo compila igual */
+    }
+    if (this.liberado) return;
+    this.cuadro();
+  }
+
+  /* --------------------------- logos en diorama --------------------------- */
+  // Arma, una sola vez, el atlas de relieve: cada logo con un bisel suave (ver diorama/relieve.js),
+  // en la misma grilla que el atlas de logos y a partir de él (la forma es la del SVG tal cual).
+  // En la barra y en la esfera el logo conserva su color; el relieve sólo marca los bordes.
+  hornearDioramas() {
+    if (this.liberado || this.texturaRelieve) return;
+    const lienzo = this.opciones.atlas?.image;
+    if (!lienzo?.getContext) return;
+    const textura = new CanvasTexture(atlasDeRelieve(lienzo, { radio: 2, fuerza: 9 }));
+    textura.minFilter = LinearMipmapLinearFilter;
+    textura.magFilter = LinearFilter;
+    textura.anisotropy = 8;
+    this.texturaRelieve = textura;
+    this.rtDioramas = { texture: textura };
+    this.uniforms.u_tDioramas.value = textura;
+    this.uniforms.u_hayDioramas.value = 1;
+  }
+
+  // El color de marca con que se pinta el diorama elegido. Las marcas casi negras (Next.js,
+  // Vercel, GitHub…) se perderían sobre el azul del resaltado: van en blanco.
+  colorDeMarca(tecnologia, destino) {
+    const hex = this.opciones.tecnologias?.[tecnologia]?.color;
+    if (!hex) return destino.setRGB(1, 1, 1, LinearSRGBColorSpace);
+    // sRGB tal cual: estos shaders escriben el color sin convertirlo
+    destino.setHex(parseInt(hex.slice(1), 16), LinearSRGBColorSpace);
+    const luz = 0.2126 * destino.r + 0.7152 * destino.g + 0.0722 * destino.b;
+    return luz < 0.2 ? destino.setRGB(1, 1, 1, LinearSRGBColorSpace) : destino;
+  }
+
+  // Tabla con el color de marca de cada tecnología (una fila de 64 píxeles): la usa el árbol para
+  // pintar los logos de la rama elegida.
+  tablaDeColores() {
+    if (this.texturaColores) return this.texturaColores;
+    const n = CELDAS * CELDAS;
+    const datos = new Uint8Array(n * 4);
+    const c = new Color();
+    for (let i = 0; i < n; i++) {
+      this.colorDeMarca(i, c);
+      datos.set([Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255), 255], i * 4);
+    }
+    this.texturaColores = new DataTexture(datos, n, 1, RGBAFormat);
+    this.texturaColores.needsUpdate = true;
+    return this.texturaColores;
+  }
+
+  // Todos los logos son su diorama; la barra (o esfera) resaltada o elegida (hover, búsqueda,
+  // toque) además toma el color de su marca.
+  actualizarDioramas(dt) {
+    if (!this.rtDioramas) return;
+    let elegida = -1;
+    if (this.modoArbol) {
+      if (this.arbolP > 0.9) elegida = this.hover !== -1 ? this.hover : this.seleccionArbol;
+    } else {
+      const pedida = this.busqueda !== -1 ? this.busqueda : this.forzada && this.tiempo < this.forzada.hasta ? this.forzada.barra : -1;
+      elegida = this.hover !== -1 ? this.hover : pedida;
+    }
+    const tecnologia = elegida >= 0 ? this.orden[elegida] : -1;
+    const u = this.uniforms;
+    // al cambiar de barra el diorama vuelve a entrar (fundido corto desde el logo plano)
+    if (tecnologia !== this.dioramaVisto) {
+      this.dioramaVisto = tecnologia;
+      if (tecnologia >= 0) {
+        u.u_dioramaT.value = 0;
+        this.colorDeMarca(tecnologia, u.u_dioramaColor.value);
+      }
+    }
+    if (tecnologia >= 0) u.u_dioramaSkill.value = tecnologia;
+    u.u_dioramaT.value = amortiguar(u.u_dioramaT.value, tecnologia >= 0 ? 1 : 0, 10, dt);
+    // con una categoría elegida (en la hélice), sus barras muestran el logo en su color
+    u.u_tColores.value = this.tablaDeColores();
+    u.u_colorRama.value = amortiguar(u.u_colorRama.value, this.filtro && !this.modoArbol ? 1 : 0, 8, dt);
+    if (this.arbol) {
+      const ua = this.arbol.uniformesLogo;
+      ua.u_tDioramas.value = this.rtDioramas.texture;
+      ua.u_hayDioramas.value = 1;
+      ua.u_tiempo.value = this.tiempo;
+      ua.u_tColores.value = this.tablaDeColores();
+      // con una rama elegida (categoría), sus nodos muestran el logo en su color
+      ua.u_colorRama.value = amortiguar(ua.u_colorRama.value, this.filtro && this.modoArbol ? 1 : 0, 8, dt);
+      ua.u_dioramaSkill.value = u.u_dioramaSkill.value;
+      ua.u_dioramaT.value = u.u_dioramaT.value;
+      ua.u_dioramaColor.value.copy(u.u_dioramaColor.value);
+    }
+  }
+
   liberar() {
     this.liberado = true;
+    this.texturaRelieve?.dispose();
+    this.texturaColores?.dispose();
     this.pausar();
     this.lienzo.removeEventListener('webglcontextlost', this.alPerder);
     this.lienzo.removeEventListener('webglcontextrestored', this.alRecuperar);

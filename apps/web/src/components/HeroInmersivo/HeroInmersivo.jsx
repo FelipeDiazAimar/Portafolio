@@ -13,6 +13,13 @@ export default function HeroInmersivo() {
   // Tras 4 s con el cursor sobre la foto, el hero pasa al fondo de esqueletos (rayos X) y la foto se
   // funde. Queda así hasta tocar "Volver a la foto".
   const [rayosX, setRayosX] = useState(null); // null, o { x, y, alto }: dónde estaba tu cráneo
+  // El fondo de esqueletos ya cargó y arrancó su onda: recién ahí se apaga la foto (mientras cargan
+  // los modelos, la foto sigue; antes se apagaba enseguida y quedaba un vacío).
+  const [fondoListo, setFondoListo] = useState(false);
+  useEffect(() => {
+    if (!rayosX) setFondoListo(false);
+  }, [rayosX]);
+  const conFondo = Boolean(rayosX) && fondoListo;
   // ¿Se está viendo el hero? Por scroll. Al irse a otra sección, la cruz y el fondo animado se
   // apagan; al volver, reaparecen. Durante una vista previa del menú (teletransporte) no se
   // reevalúa: el salto de ida y vuelta no tiene que mover la cruz ni el toggle de tema.
@@ -32,7 +39,7 @@ export default function HeroInmersivo() {
       quitar();
     };
   }, []);
-  const conCruz = Boolean(rayosX) && enHero;
+  const conCruz = conFondo && enHero;
 
   // la cruz va a la derecha del toggle de tema: el toggle se corre para hacerle lugar
   useEffect(() => {
@@ -45,9 +52,9 @@ export default function HeroInmersivo() {
       <div className={styles.hero} aria-hidden="true">
         <div className={`${styles.capa} ${styles['capa-inicio']} ${styles.activa}`}>
           {/* en el celular el fondo se desmonta al irse del hero (libera su memoria de video) */}
-          {rayosX && (enHero || !esTactil()) && <FondoRayosX activo={enHero} entrada={rayosX} />}
+          {rayosX && (enHero || !esTactil()) && <FondoRayosX activo={enHero} entrada={rayosX} alListo={() => setFondoListo(true)} />}
           <NombreAscii />
-          <RetratoAscii rayosX={Boolean(rayosX)} alDispararRayosX={(info) => setRayosX(info ?? { x: 0, y: 0, alto: 0 })} />
+          <RetratoAscii rayosX={conFondo} alDispararRayosX={(info) => setRayosX(info ?? { x: 0, y: 0, alto: 0 })} />
         </div>
       </div>
       {conCruz && (

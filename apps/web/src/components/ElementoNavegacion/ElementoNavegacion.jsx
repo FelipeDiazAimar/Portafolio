@@ -32,11 +32,11 @@ export default function ElementoNavegacion({ enlace, icono, variante }) {
         href={enlace.href}
         className={styles.enlace}
         // Hover: el scroll salta a la sección real (y vuelve al salir). Clic: queda ahí.
-        onMouseEnter={() => vistaPrevia(enlace.seccion)}
+        onMouseEnter={(evento) => vistaPrevia(enlace.seccion, evento.currentTarget)}
         onMouseLeave={terminarVistaPrevia}
         onClick={(evento) => {
           evento.preventDefault();
-          irASeccion(enlace.seccion);
+          irASeccion(enlace.seccion, evento.currentTarget);
         }}
       >
         <span className={styles.icono}>{icono}</span>

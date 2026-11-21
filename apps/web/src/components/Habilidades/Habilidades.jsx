@@ -11,6 +11,7 @@ import useTema from '@/hooks/useTema.js';
 import useEmbudo from '@/hooks/useEmbudo.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import { hayWebGL } from '@/lib/soporteWebGL.js';
+import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import estilos from './Habilidades.module.css';
 
 // Habilidades: un xilófono de vidrio con una barra por tecnología (adaptado de
@@ -63,6 +64,8 @@ export default function Habilidades() {
     let observadorTamano = null;
     let observadorVista = null;
     let alRueda = null;
+    let cancelarPrecalentado = () => {};
+    let cancelarDioramas = () => {};
     const lienzo = refLienzo.current;
     const seccion = refSeccion.current;
 
@@ -114,11 +117,17 @@ export default function Habilidades() {
       lienzo.addEventListener('wheel', alRueda, { passive: false });
       const [cargado] = await Promise.all([motor.listo, atlas.listo]);
       if (!cancelado && cargado) setListo(true);
+      // en la PC, los shaders se compilan antes de llegar (si no, la llegada se traba)
+      if (!cancelado && cargado && esEscritorio()) cancelarPrecalentado = cuandoInactivo(() => motor?.precalentar(), 2500);
+      // los logos en relieve se arman en un momento libre, una vez
+      if (!cancelado && cargado) cancelarDioramas = cuandoInactivo(() => motor?.hornearDioramas(), 1500);
       if (!cancelado && !cargado) setConWebGL(false);
     })();
 
     return () => {
       cancelado = true;
+      cancelarPrecalentado();
+      cancelarDioramas();
       observadorTamano?.disconnect();
       observadorVista?.disconnect();
       if (alRueda) lienzo.removeEventListener('wheel', alRueda);
@@ -249,10 +258,6 @@ export default function Habilidades() {
           ))}
         </ul>
       </section>
-      {/* La nebulosa sigue un poco por encima y por debajo de la sección, y la espiral se desvanece
-          contra ella (ver .escenario): sin esto la escena se corta recta contra las secciones vecinas. */}
-      <div className={estilos.brumaArriba} aria-hidden="true" />
-      <div className={estilos.brumaAbajo} aria-hidden="true" />
     </div>
   );
 }
