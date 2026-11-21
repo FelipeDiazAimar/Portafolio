@@ -14,7 +14,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useReducedMotion } from 'framer-motion';
 import useConsulta from '@/hooks/useConsulta.js';
 import useTema from '@/hooks/useTema.js';
-import { alCambiarTeletransporte } from '@/lib/teletransporte.js';
+import { alCambiarTeletransporte, estaCongelado } from '@/lib/teletransporte.js';
 import { dividirResaltado } from '@/lib/resaltado.js';
 import { dentroDeCuadrilatero, faseDeProgreso, hitoCercano, hitoDestino, hitosDeArrastre, limitar, progresoDeHito } from '@/lib/reel/geometria.js';
 import { matrizCss } from '@/lib/reel/homografia.js';
@@ -467,7 +467,8 @@ export default function ReelHitos({ hitos, alFallar }) {
         const hito = hitos[i];
         const [diorama, foto] = await Promise.all([cargarImagen(rutaDiorama(hito.id, claro)), cargarImagen(hito.imagen)]);
         if (!vivo || !refEscena.current) return;
-        const { portada, fondoVivo } = componerPortada({ hito, indice: i, hitos, claro, ancho, fuentes, diorama, foto });
+        const { portada, fondoVivo, zonas } = componerPortada({ hito, indice: i, hitos, claro, ancho, fuentes, diorama, foto });
+        refZonas.current[i] = zonas;
         refEscena.current.ponerTextura(i, portada);
         const foco = (hito.foco ?? '50% 50%').split(' ').map((v) => parseFloat(v) / 100);
         refEscena.current.ponerMedio(i, { foto, foco, rect: FOTO_UV, radio: FOTO.r / BASE.ancho });
@@ -570,22 +571,34 @@ export default function ReelHitos({ hitos, alFallar }) {
         // al medir de nuevo (carga con el scroll a mitad de la sección, cambio de tamaño) no se viaja
         onRefresh: (yo) => aplicar(yo, true),
       });
-      // La primera vez en la visita, la entrada la precede la intro de agentes: arranca más
-      // adentro, con el panel casi entero en pantalla, para que se vea el plano armarse.
+      // La entrada la precede la intro de agentes, cada vez que se baja desde el hero: arranca
+      // más adentro, con el panel casi entero en pantalla, para que se vea el plano armarse. Y al
+      // volver a subir hacia el hero, el plano se desarma (ver desarmarIntro).
       // se decide una sola vez por montaje (si el efecto se rearma, no vuelve a preguntar)
       if (refConIntro.current === null) refConIntro.current = introPendiente();
       const conIntro = refConIntro.current;
       ScrollTrigger.create({
         trigger: contenedor,
         start: conIntro ? 'top 30%' : 'top 62%',
-        once: true,
+        once: !conIntro,
         onEnter: () => {
-          // se pasó de largo (menú del header hacia más abajo): directo a lo real
+          if (refEntro.current) return;
+          // se pasó de largo (menú del header hacia más abajo) o es la vista previa del menú:
+          // directo a lo real, sin intro (trabaría el salto de ida y vuelta)
           const pasado = contenedor.getBoundingClientRect().bottom < window.innerHeight * 0.5;
-          if (conIntro && !pasado && !refEntro.current) setIntro('esperando');
+          if (conIntro && !pasado && !estaCongelado() && !refTransicion.current) setIntro('esperando');
           else setEntro(true);
         },
       });
+      if (conIntro) {
+        ScrollTrigger.create({
+          trigger: contenedor,
+          // un poco más abajo del borde: la intro deja el scroll justo en el borde (progreso 0, que
+          // para ScrollTrigger es no haber entrado) y al subir no se disparaba la salida
+          start: 'top 5%',
+          onLeaveBack: () => refDesarmar.current?.(),
+        });
+      }
       // La cola: "Hoy" sigue fijo y la portada empieza a crecer desde su puerta, al ritmo del
       // scroll. Pasado un punto, el portal termina solo (ver pasarAProyectos).
       const enCola = (yo, alScrollear) => {
@@ -890,15 +903,17 @@ export default function ReelHitos({ hitos, alFallar }) {
     };
     const de = (selector) => panel.querySelector(`.${selector}`);
     const capas = [];
-    const sumar = (nombre, el) => {
+    // `revela`: qué cosa real aparece cuando su agente termina de dibujar la caja
+    const sumar = (nombre, el, revela = null) => {
       if (!el) return;
       const q = esquinasDe(el);
-      if (q[2][0] - q[0][0] > 4 && q[2][1] - q[0][1] > 4) capas.push({ nombre, puntos: q });
+      if (q[2][0] - q[0][0] > 4 && q[2][1] - q[0][1] > 4) capas.push({ nombre, puntos: q, revela });
     };
+    const entroAntes = panel.dataset.entro;
     panel.dataset.midiendo = 'true';
     panel.dataset.entro = 'true';
     panel.getBoundingClientRect();
-    refTitular.current?.querySelectorAll(`.${styles.renglon}`).forEach((el, i) => sumar(`Titular ${i + 1}`, el));
+    refTitular.current?.querySelectorAll(`.${styles.renglon}`).forEach((el, i) => sumar(`Titular ${i + 1}`, el, { tipo: 'renglon', i }));
     const escena = refEscena.current;
     if (escena) {
       const frente = Math.round(refObjetivo.current);
@@ -906,21 +921,23 @@ export default function ReelHitos({ hitos, alFallar }) {
       const orden = hitos.map((_, i) => i).sort((a, b) => Math.abs(a - frente) - Math.abs(b - frente));
       for (const i of orden) {
         const q = escena.esquinasFinales(i, ENTERA);
-        if (q && q.some(([x, y]) => x > 0 && x < base.width && y > 0 && y < base.height)) capas.push({ nombre: `Portada ${hitos[i].anio}`, puntos: q });
+        if (q && q.some(([x, y]) => x > 0 && x < base.width && y > 0 && y < base.height)) capas.push({ nombre: `Portada ${hitos[i].anio}`, puntos: q, revela: { tipo: 'portada', i } });
       }
-      const zona = (nombre, uv) => {
-        const q = escena.esquinasFinales(frente, uv);
-        if (q) capas.push({ nombre, puntos: q });
-      };
-      zona('Diorama', UV_FRANJAS.length ? { x0: UV_FRANJAS[0].x0, y0: UV_FRANJAS[0].y0, x1: UV_FRANJAS[UV_FRANJAS.length - 1].x1, y1: UV_FRANJAS[0].y1 } : ENTERA);
-      zona('Foto', FOTO_UV);
+      // cada parte de la portada del frente (navegación, título, foto, diorama…) la dibuja un
+      // agente: se ve dentro de su caja (ver uZonas en EscenaReel)
+      (refZonas.current[frente] ?? []).forEach((z, k) => {
+        if (k >= 10) return;
+        const q = escena.esquinasFinales(frente, z);
+        if (q) capas.push({ nombre: z.nombre, puntos: q, revela: { tipo: 'zona', portada: frente, k } });
+      });
     }
-    sumar('Ficha', de(styles.ficha));
-    sumar('Año', de(styles.fichaAnio));
-    sumar('Título', de(styles.fichaTitulo));
-    sumar('Texto', de(styles.fichaTexto));
-    sumar('Regla de años', de(styles.regla));
-    panel.dataset.entro = 'false';
+    sumar('Ficha', de(styles.ficha), { tipo: 'ficha' });
+    sumar('Año', de(styles.fichaAnio), { tipo: 'fila', clase: styles.fichaAnio });
+    sumar('Título', de(styles.fichaTitulo), { tipo: 'fila', clase: styles.fichaTitulo });
+    sumar('Texto', de(styles.fichaTexto), { tipo: 'fila', clase: styles.fichaTexto });
+    sumar('Regla de años', de(styles.regla), { tipo: 'regla' });
+    // vuelve a como estaba (al desarmar, la sección está entrada: dejarla en 'false' la escondía de golpe)
+    panel.dataset.entro = entroAntes;
     panel.getBoundingClientRect();
     delete panel.dataset.midiendo;
     return { capas, ancho: base.width, alto: base.height };
@@ -928,13 +945,19 @@ export default function ReelHitos({ hitos, alFallar }) {
 
   useEffect(() => {
     if (intro !== 'esperando') return undefined;
-    // con la escena lista se mide ya; si tarda, no se la espera más de un segundo
-    const medirYa = () => setIntro(medirPlano() ?? null);
+    // Las portadas salen de la escena 3D: se la pide ya (si todavía no estaba armada) y se mide en
+    // cuanto está. Si se midiera sin ella, ningún agente dibujaría las portadas y aparecerían
+    // recién al final. Si tarda demasiado, no se la espera más de 3 s.
+    setCerca(true);
+    const medirYa = () => {
+      const plano = medirPlano();
+      setIntro(plano ? { ...plano, sentido: 'armar' } : null);
+    };
     if (escenaLista) {
       medirYa();
       return undefined;
     }
-    const espera = setTimeout(medirYa, 1000);
+    const espera = setTimeout(medirYa, 3000);
     return () => clearTimeout(espera);
   }, [intro, escenaLista, medirPlano]);
   // si algo hizo entrar la sección por otro lado (la vuelta desde Proyectos), la intro sobra
@@ -962,7 +985,173 @@ export default function ReelHitos({ hitos, alFallar }) {
     soltarIntro();
     setEntro(true);
   }, [soltarIntro]);
-  const alTerminarIntro = useCallback(() => setIntro(null), []);
+
+  // Lo real se esconde (al desarmar, con el plano ya encima): el titular baja por renglones y las
+  // portadas se hunden; recién después la sección queda "sin entrar" (lista para armarse otra vez).
+  const ocultarEntrada = useCallback((animado = true) => {
+    refEntro.current = false;
+    const lineas = refTitular.current?.querySelectorAll('[data-linea]') ?? [];
+    const portadas = refEscena.current?.portadas ?? [];
+    portadas.forEach((p) => gsap.killTweensOf(p.entrada));
+    if (!animado) {
+      portadas.forEach((p) => (p.entrada.t = 0));
+      setEntro(false);
+      return;
+    }
+    gsap.to(lineas, { yPercent: 108, duration: 0.55, ease: 'power3.in', stagger: 0.06 });
+    portadas.forEach((p) => gsap.to(p.entrada, { t: 0, duration: 0.6, ease: 'power3.in' }));
+    gsap.delayedCall(0.62, () => setEntro(false));
+  }, []);
+  // Durante la intro, cada cosa real se ve DENTRO de su caja mientras el agente la dibuja: empieza
+  // en la esquina y se va descubriendo a medida que la caja crece (al desarmar, se tapa al revés).
+  // Lo de la página se recorta con clip-path; las portadas (WebGL) se recortan en el lienzo con la
+  // forma de cada caja, en perspectiva.
+  const refPrerevelado = useRef(false);
+  const refRecortes = useRef(new Map()); // portada → forma de su caja (px del panel)
+  const refZonas = useRef([]); // por portada: sus partes (título, foto, diorama…), en fracciones
+  const pintarRecorteLienzo = useCallback(() => {
+    const lienzo = refLienzo.current;
+    if (!lienzo) return;
+    const partes = [...refRecortes.current.values()].map((q) => `M${q.map(([px, py]) => `${px.toFixed(1)} ${py.toFixed(1)}`).join(' L')} Z`);
+    lienzo.style.clipPath = partes.length ? `path('${partes.join(' ')}')` : 'polygon(0 0, 0 0, 0 0)';
+  }, []);
+  const recortar = (el, t) => {
+    if (!el) return;
+    if (t >= 0.999) {
+      el.style.clipPath = '';
+      return;
+    }
+    const resto = ((1 - Math.max(0, t)) * 100).toFixed(2);
+    el.style.clipPath = `inset(0 ${resto}% ${resto}% 0)`;
+  };
+  const revelarCapa = useCallback(
+    (revela, t, puntos) => {
+      const panel = refPanel.current;
+      if (!revela || !panel) return;
+      refPrerevelado.current = true;
+      if (revela.tipo === 'renglon') {
+        const renglon = refTitular.current?.querySelectorAll(`.${styles.renglon}`)[revela.i];
+        // y: 0 también: GSAP lee el translateY(108%) del CSS como píxeles (y), no como yPercent
+        if (renglon) gsap.set(renglon.querySelector('[data-linea]'), { y: 0, yPercent: 0 });
+        recortar(renglon, t);
+      } else if (revela.tipo === 'portada') {
+        const p = refEscena.current?.portadas[revela.i];
+        if (!p) return;
+        gsap.killTweensOf(p.entrada);
+        p.entrada.t = t > 0.001 ? 1 : 0;
+        if (t > 0.001 && puntos) refRecortes.current.set(revela.i, puntos);
+        else refRecortes.current.delete(revela.i);
+        pintarRecorteLienzo();
+      } else if (revela.tipo === 'zona') {
+        const u = refEscena.current?.portadas[revela.portada]?.material.uniforms;
+        if (u) u.uZonasT.value[revela.k] = Math.max(0, Math.min(1, t));
+      } else if (revela.tipo === 'ficha') {
+        const ficha = panel.querySelector(`.${styles.ficha}`);
+        if (ficha) gsap.set(ficha, { opacity: 1, y: 0 });
+        recortar(ficha, t);
+      } else if (revela.tipo === 'fila') {
+        recortar(panel.querySelector(`.${revela.clase}`), t);
+      } else if (revela.tipo === 'regla') {
+        const regla = panel.querySelector(`.${styles.regla}`);
+        const pista = panel.querySelector(`.${styles.pista}`);
+        if (regla) gsap.set(regla, { opacity: 1, xPercent: -50, x: 0, y: 0 });
+        recortar(regla, t);
+        if (pista) gsap.set(pista, { opacity: t >= 0.999 ? 1 : 0, xPercent: -50, x: 0, y: 0 });
+      }
+    },
+    [pintarRecorteLienzo]
+  );
+  // al empezar: armando, lo que todavía no tiene caja va tapado; desarmando, todo está a la vista
+  const prepararRevelado = useCallback(
+    (sentido, capas) => {
+      const panel = refPanel.current;
+      if (!panel) return;
+      refRecortes.current.clear();
+      const enZonas = new Set(capas.filter((capa) => capa.revela?.tipo === 'zona').map((capa) => capa.revela.portada));
+      enZonas.forEach((i) => {
+        const u = refEscena.current?.portadas[i]?.material.uniforms;
+        if (!u) return;
+        (refZonas.current[i] ?? []).slice(0, 10).forEach((z, k) => {
+          u.uZonas.value[k].set(z.x0, z.y0, z.x1, z.y1);
+          u.uZonasT.value[k] = sentido === 'armar' ? 0 : 1;
+        });
+        u.uConZonas.value = 1;
+      });
+      if (sentido === 'armar') {
+        [styles.fichaAnio, styles.fichaTitulo, styles.fichaTexto].forEach((c) => recortar(panel.querySelector(`.${c}`), 0));
+        pintarRecorteLienzo();
+      } else {
+        capas.forEach((capa) => {
+          if (capa.revela?.tipo === 'portada') refRecortes.current.set(capa.revela.i, capa.puntos);
+        });
+      }
+    },
+    [pintarRecorteLienzo]
+  );
+  // terminada la intro, lo revelado a mano vuelve a quedar en manos del CSS (que ya coincide)
+  const limpiarRevelado = useCallback(() => {
+    const panel = refPanel.current;
+    if (!panel) return;
+    refRecortes.current.clear();
+    if (refLienzo.current) refLienzo.current.style.clipPath = '';
+    refEscena.current?.portadas.forEach((p) => (p.material.uniforms.uConZonas.value = 0));
+    panel.querySelectorAll(`.${styles.renglon}`).forEach((el) => (el.style.clipPath = ''));
+    // y la posición que se le puso a cada renglón para verlo en su caja: si quedaba, le ganaba al CSS
+    // que lo esconde y, al volver a bajar, el titular ya estaba a la vista antes de la intro
+    gsap.set(panel.querySelectorAll('[data-linea]'), { clearProps: 'transform' });
+    const cosas = [styles.ficha, styles.regla, styles.pista, styles.fichaAnio, styles.fichaTitulo, styles.fichaTexto].map((c) => panel.querySelector(`.${c}`)).filter(Boolean);
+    cosas.forEach((el) => (el.style.clipPath = ''));
+    gsap.set(cosas, { clearProps: 'opacity,transform' });
+  }, []);
+  // al desarmar, el plano ya cubre todo: desde acá cada cosa se esconde con su caja (revelarCapa)
+  const alOcultarIntro = useCallback(() => {
+    refEntro.current = false;
+  }, []);
+
+  // Al subir hacia el hero: el plano se desarma. Si se sale de golpe (el menú del header, o una
+  // vista previa), no hay animación: la sección sólo queda lista para armarse otra vez.
+  const refDesarmar = useRef(null);
+  refDesarmar.current = () => {
+    const contenedor = refContenedor.current;
+    if (!contenedor || !refEntro.current || intro !== null || refTransicion.current) return;
+    const arriba = contenedor.getBoundingClientRect().top + window.scrollY;
+    const deGolpe = estaCongelado() || window.scrollY < arriba - window.innerHeight * 0.5;
+    if (deGolpe || reducido) {
+      ocultarEntrada(false);
+      return;
+    }
+    const plano = medirPlano();
+    if (!plano) {
+      ocultarEntrada(false);
+      return;
+    }
+    setIntro({ ...plano, sentido: 'desarmar' });
+  };
+
+  useEffect(() => {
+    if (intro && intro !== 'esperando') prepararRevelado(intro.sentido, intro.capas);
+  }, [intro, prepararRevelado]);
+
+  const refSentidoIntro = useRef('armar');
+  refSentidoIntro.current = intro && intro !== 'esperando' ? intro.sentido : refSentidoIntro.current;
+  const alTerminarIntro = useCallback(() => {
+    const desarmada = refSentidoIntro.current === 'desarmar';
+    setIntro(null);
+    if (desarmada) {
+      // todo ya escondido capa por capa: la sección queda "sin entrar", lista para armarse
+      refEntro.current = false;
+      refEscena.current?.portadas.forEach((p) => {
+        gsap.killTweensOf(p.entrada);
+        p.entrada.t = 0;
+      });
+      setEntro(false);
+      limpiarRevelado();
+      refPrerevelado.current = false;
+      // desarmado el plano, se sigue subiendo hasta el hero
+      soltarIntro();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [soltarIntro, limpiarRevelado]);
 
   // Entrada, una sola vez: el titular sube por renglones y se lee entero; recién después asoman
   // las portadas, escalonadas, y lo tapan a medias.
@@ -976,11 +1165,20 @@ export default function ReelHitos({ hitos, alFallar }) {
       refEscena.current?.dibujar();
       return undefined;
     }
+    if (refPrerevelado.current) {
+      // La intro ya lo fue mostrando capa por capa: se limpia lo puesto a mano y queda el CSS (que
+      // con la sección entrada lo muestra). Fuera de un contexto de GSAP a propósito: al revertirlo
+      // (cuando la sección se desarma), restauraba los renglones a la vista y, al volver a bajar,
+      // el titular ya estaba puesto antes de la intro.
+      limpiarRevelado();
+      refPrerevelado.current = false;
+      return undefined;
+    }
     const contexto = gsap.context(() => {
-      gsap.fromTo(lineas, { yPercent: 108 }, { yPercent: 0, duration: 1.15, ease: 'expo.out', stagger: 0.09 });
+      gsap.fromTo(lineas, { yPercent: 125 }, { yPercent: 0, duration: 1.15, ease: 'expo.out', stagger: 0.09 });
     });
     return () => contexto.revert();
-  }, [entro, reducido]);
+  }, [entro, reducido, limpiarRevelado]);
   useEffect(() => {
     if (!entro || !escenaLista) return;
     const portadas = refEscena.current?.portadas ?? [];
@@ -1324,7 +1522,7 @@ export default function ReelHitos({ hitos, alFallar }) {
         <div className={styles.luz} aria-hidden="true" />
         <div className={styles.grano} aria-hidden="true" />
 
-        <h2 id="titulo-sobre-mi" ref={refTitular} className={styles.titular}>
+        <h2 id="titulo-sobre-mi" ref={refTitular} className={styles.titular} style={{ '--letras': Math.max(...TITULAR.map((renglon) => renglon.length)) }}>
           <span className={styles.soloLectores}>Sobre mí: </span>
           {TITULAR.map((renglon) => (
             <span key={renglon} className={styles.renglon}>
@@ -1437,7 +1635,17 @@ export default function ReelHitos({ hitos, alFallar }) {
           ))}
         </ol>
         {intro && intro !== 'esperando' ? (
-          <IntroAgentes capas={intro.capas} ancho={intro.ancho} alto={intro.alto} alFundir={alFundirIntro} alTerminar={alTerminarIntro} />
+          <IntroAgentes
+            key={intro.sentido}
+            capas={intro.capas}
+            ancho={intro.ancho}
+            alto={intro.alto}
+            sentido={intro.sentido}
+            alFundir={alFundirIntro}
+            alOcultar={alOcultarIntro}
+            alCapa={revelarCapa}
+            alTerminar={alTerminarIntro}
+          />
         ) : null}
       </div>
       {/* La luz (u oscuridad) del otro lado de la puerta: sale del vano y envuelve la pantalla al cruzar. */}

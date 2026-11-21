@@ -41,7 +41,7 @@
 
 .titular {
   margin: 0;
-  font-size: clamp(2.75rem, 9vw, 8rem);
+  font-size: clamp(2.5rem, min(9vw, calc(100vw / var(--letras, 11))), 8rem);
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: -0.058em;

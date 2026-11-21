@@ -173,6 +173,12 @@ export function componerPortada({ hito, indice, hitos, claro, ancho, fuentes, di
   ctx.fillStyle = tema.tinta;
   ctx.fillText(hito.resumen, X + 42, 262, anchoResumen - 58);
 
+  const zonas = [];
+  // dónde quedó cada parte (px de la portada): las dibuja un agente cada una en la intro
+  const zona = (nombre, x0, y0, x1, y1) => zonas.push({ nombre, x0: x0 / BASE.ancho, y0: y0 / BASE.alto, x1: Math.min(1, x1 / BASE.ancho), y1: Math.min(1, y1 / BASE.alto) });
+  zona('Navegación', X - 6, 40, BASE.ancho - X + 6, 102);
+  zona('Etiqueta', X - 6, 226, X + anchoResumen + 6, 284);
+
   // Título: serif grande y apretada; se achica hasta entrar en tres renglones.
   const anchoTitulo = 690;
   let cuerpo = 112;
@@ -190,6 +196,7 @@ export function componerPortada({ hito, indice, hitos, claro, ancho, fuentes, di
     y += cuerpo * 1.02;
   }
   y -= cuerpo * 1.02;
+  zona('Título', X - 10, 300, X + anchoTitulo + 4, y + cuerpo * 0.28);
 
   // Bajada: la descripción, sin marcas, hasta tres renglones.
   ctx.font = `400 25px ${sans}`;
@@ -199,10 +206,12 @@ export function componerPortada({ hito, indice, hitos, claro, ancho, fuentes, di
   const visibles = bajada.slice(0, 3);
   if (bajada.length > 3) visibles[2] = `${visibles[2].replace(/[\s,.;:]+\S*$/, '')}…`;
   y += 58;
+  const yBajada = y - 28;
   for (const renglon of visibles) {
     ctx.fillText(renglon, X, y);
     y += 38;
   }
+  zona('Bajada', X - 6, yBajada, X + 650, y - 38 + 12);
 
   // Detalle editorial: la foto real (si hay) y las palabras clave del hito.
   const yPie = FOTO.y;
@@ -244,9 +253,12 @@ export function componerPortada({ hito, indice, hitos, claro, ancho, fuentes, di
     ctx.stroke();
     xClaves = X + anchoFoto + 30;
   }
+  if (conRecuadro) zona(foto ? 'Foto' : 'Video', X - 4, yPie - 4, X + FOTO.w + 4, yPie + FOTO.h + 4);
   ctx.font = `500 21px ${sans}`;
   espaciado(ctx, '0px');
   let yClave = conRecuadro ? yPie + 6 : yPie + 56;
+  const yClaves = yClave;
+  let xMaxClaves = xClaves;
   let xClave = xClaves;
   for (const clave of clavesDe(hito, conRecuadro ? 3 : 4)) {
     const anchoClave = ctx.measureText(clave).width + 40;
@@ -259,9 +271,12 @@ export function componerPortada({ hito, indice, hitos, claro, ancho, fuentes, di
     ctx.fill();
     ctx.fillStyle = tema.tinta;
     ctx.fillText(clave, xClave + 20, yClave + 30);
+    xMaxClaves = Math.max(xMaxClaves, xClave + anchoClave);
     if (conRecuadro) yClave += 56;
     else xClave += anchoClave + 12;
   }
+  zona('Claves', xClaves - 6, yClaves - 6, xMaxClaves + 6, (conRecuadro ? yClave - 56 : yClave) + 50);
+  zona('Diorama', DIORAMA.x, DIORAMA.y, DIORAMA.x + DIORAMA.w, DIORAMA.y + DIORAMA.h);
 
   // Pie: número de hito y lo que sigue.
   ctx.fillStyle = tema.linea;
@@ -274,6 +289,7 @@ export function componerPortada({ hito, indice, hitos, claro, ancho, fuentes, di
   ctx.textAlign = 'right';
   ctx.fillText(cierre, BASE.ancho - X, 1022);
   ctx.textAlign = 'left';
+  zona('Pie', X - 6, 972, BASE.ancho - X + 6, 1034);
 
-  return { portada: lienzo, fondoVivo };
+  return { portada: lienzo, fondoVivo, zonas };
 }

@@ -89,11 +89,11 @@
   font-weight: 700;
 }
 
-/* la píldora de estado, arriba al centro (abajo está la regla de años) */
+/* la píldora de estado, al pie y al centro */
 .pildora {
   position: absolute;
   left: 50%;
-  top: clamp(4.75rem, 10svh, 5.75rem);
+  bottom: clamp(0.75rem, 3svh, 1.5rem);
   translate: -50% 0;
   display: flex;
   align-items: center;
@@ -119,6 +119,8 @@
   display: flex;
 }
 
+/* las pelotitas: una por agente, siempre a la vista (de ahí salen y ahí vuelven); la de un agente
+   que anda trabajando se apaga un poco */
 .avatares i {
   width: 16px;
   height: 16px;
@@ -126,16 +128,15 @@
   border-radius: 50%;
   background: var(--f);
   box-shadow: 0 0 0 1.5px #111;
-  transform: scale(0);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 0.3s ease;
 }
 
 :global([data-theme='dark']) .avatares i {
   box-shadow: 0 0 0 1.5px #f3f1ec;
 }
 
-.avatares i[data-unido='true'] {
-  transform: scale(1);
+.avatares i[data-fuera='true'] {
+  opacity: 0.3;
 }
 
 .cuenta {
@@ -177,14 +178,6 @@
 
 .pildora[data-listo='true'] .barra span {
   background: #3ecf8e;
-}
-
-@media (max-width: 768px) {
-  /* en celular el titular va arriba: la píldora baja al lugar de la pista, debajo de la regla */
-  .pildora {
-    top: auto;
-    bottom: 0.5rem;
-  }
 }
 
 @media (max-width: 640px) {

@@ -13,7 +13,7 @@ export default function SobreMiPlano({ hitos }) {
     <section id="sobre-mi" className={styles.plano} data-plano aria-labelledby="titulo-sobre-mi">
       <header className={styles.cabecera}>
         <p className={styles.etiqueta}>Sobre mí</p>
-        <h2 id="titulo-sobre-mi" className={styles.titular}>
+        <h2 id="titulo-sobre-mi" className={styles.titular} style={{ '--letras': Math.max(...TITULAR.map((renglon) => renglon.length)) }}>
           {TITULAR.map((renglon) => (
             <span key={renglon}>{renglon}</span>
           ))}

@@ -85,6 +85,12 @@ const FRAGMENTOS = /* glsl */ `
   uniform float uAspFoto;
   uniform float uAspVideo;
   uniform vec2 uFoco;
+  // Intro de agentes: las partes de la portada (zonas, en fracciones desde arriba a la izquierda)
+  // se ven sólo en lo que ya descubrió la caja de su agente (de 0 a 1, desde la esquina de arriba
+  // a la izquierda); lo que falta queda del color del papel.
+  uniform vec4 uZonas[10];
+  uniform float uZonasT[10];
+  uniform float uConZonas;
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vVista;
@@ -120,6 +126,21 @@ const FRAGMENTOS = /* glsl */ `
 
     vec2 uvPortada = p / PORTADA + 0.5;
     vec3 color = mix(uPapel, texture2D(uMapa, uvPortada).rgb, uConMapa);
+    if (uConZonas > 0.5) {
+      vec2 qz = vec2(uvPortada.x, 1.0 - uvPortada.y);
+      float enZona = 0.0;
+      float visto = 0.0;
+      for (int i = 0; i < 10; i++) {
+        vec4 z = uZonas[i];
+        if (z.z <= z.x) continue;
+        if (qz.x >= z.x && qz.y >= z.y && qz.x <= z.z && qz.y <= z.w) {
+          enZona = 1.0;
+          vec2 hasta = z.xy + (z.zw - z.xy) * uZonasT[i];
+          if (uZonasT[i] > 0.0 && qz.x <= hasta.x && qz.y <= hasta.y) visto = 1.0;
+        }
+      }
+      color = mix(color, uPapel, enZona * (1.0 - visto));
+    }
     if (uAbre > 0.001) {
       // el recuadro va de la foto (uAbre = 0) a la portada entera (uAbre = 1)
       vec2 q = vec2(uvPortada.x, 1.0 - uvPortada.y);
@@ -215,6 +236,9 @@ export function crearEscenaReel({ lienzo, total, reducido = false, alCuadro = nu
         uAspFoto: { value: 1.5 },
         uAspVideo: { value: 1.78 },
         uFoco: { value: new THREE.Vector2(0.5, 0.5) },
+        uZonas: { value: Array.from({ length: 10 }, () => new THREE.Vector4(0, 0, 0, 0)) },
+        uZonasT: { value: new Array(10).fill(0) },
+        uConZonas: { value: 0 },
       },
     });
     const malla = new THREE.Mesh(geometria, material);

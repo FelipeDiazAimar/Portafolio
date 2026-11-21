@@ -133,7 +133,8 @@
   margin: 0;
   /* más ancho que la cinta y un poco más arriba: asoma por encima y a los costados */
   padding-bottom: 27svh;
-  font-size: clamp(3.5rem, 14.4vw, 18rem);
+  /* según el renglón más largo (--letras): con renglones cortos, el tamaño de siempre */
+  font-size: clamp(3.5rem, min(14.4vw, calc(158vw / var(--letras, 11))), 18rem);
   font-weight: 800;
   line-height: 0.86;
   letter-spacing: -0.062em;
@@ -157,7 +158,8 @@
 }
 
 .panel[data-entro='false'] .renglon > span {
-  transform: translateY(108%);
+  /* bien abajo: con 108 %, las puntas de algunas letras asomaban por debajo del recorte */
+  transform: translateY(125%);
 }
 
 .lienzo {
