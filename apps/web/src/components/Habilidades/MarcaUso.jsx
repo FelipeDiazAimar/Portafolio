@@ -30,14 +30,12 @@ export default function MarcaUso({ refMarca, tecnologia }) {
     <div ref={refMarca} className={estilos.marca} data-visible="false" aria-hidden="true">
       {tecnologia && (
         <div key={tecnologia.id} className={estilos.contenido}>
-          <svg className={estilos.trazo} viewBox="-8 -8 140 16" width="140" height="16" focusable="false">
-            <path className={estilos.guia} d="M0 0 H120" pathLength="1" />
+          <svg className={estilos.trazo} viewBox="-8 -68 108 76" width="108" height="76" focusable="false">
+            <path className={estilos.guia} d="M0 0 L84 -58" pathLength="1" />
             <path className={estilos.cruz} d="M0 -4 V4 M-4 0 H4" />
-            <path className={estilos.cruz} d="M120 -4 V4 M116 0 H124" />
+            <path className={estilos.cruz} d="M84 -62 V-54 M80 -58 H88" />
           </svg>
-          <span className={estilos.numero}>{String(lista.length).padStart(2, '0')}</span>
           <div className={estilos.texto}>
-            <span className={estilos.rotulo}>{lista.length ? 'Usada en' : 'Sin proyecto'}</span>
             {visibles.map((nombre) => (
               <span key={nombre} className={estilos.proyecto}>
                 {nombre}

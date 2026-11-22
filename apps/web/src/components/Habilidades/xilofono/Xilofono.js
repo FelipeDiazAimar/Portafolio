@@ -1045,10 +1045,9 @@ export class Xilofono {
     const izquierdo = derecho === a ? b : a;
     const aPx = (p) => ({ x: (p.x * 0.5 + 0.5) * ancho, y: (-p.y * 0.5 + 0.5) * alto });
     const der = aPx(derecho);
-    const lado = der.x + 270 > ancho ? 'izq' : 'der';
-    const punto = lado === 'der' ? der : aPx(izquierdo);
-    const fuera = derecho.z > 1 || punto.x < 0 || punto.y < 0 || punto.x > ancho || punto.y > alto;
-    aviso(fuera ? null : { tecnologia: this.orden[barra], x: punto.x, y: punto.y, lado });
+    const izq = aPx(izquierdo);
+    const fuera = derecho.z > 1 || der.x < 0 || der.y < 0 || der.x > ancho || der.y > alto;
+    aviso(fuera ? null : { tecnologia: this.orden[barra], der, izq });
   }
 
   // En el árbol sólo se enciende lo que se apunta o se tocó: esa esfera y su hilo desde el núcleo.

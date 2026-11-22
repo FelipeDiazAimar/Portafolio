@@ -16,7 +16,7 @@
 }
 
 .marca[data-visible='true'] {
-  opacity: 0.72;
+  opacity: 0.55;
 }
 
 :global([data-theme='light']) .marca {
@@ -44,10 +44,18 @@
   transform: scale(-1.7, 1.7);
 }
 
+.marca[data-vert='aba'] .contenido {
+  transform: scale(1.7, -1.7);
+}
+
+.marca[data-lado='izq'][data-vert='aba'] .contenido {
+  transform: scale(-1.7, -1.7);
+}
+
 .trazo {
   position: absolute;
   left: -8px;
-  top: -8px;
+  top: -68px;
   overflow: visible;
   fill: none;
   stroke: currentColor;
@@ -67,40 +75,20 @@
   animation: aparecer 0.25s 0.4s ease forwards;
 }
 
-/* Cifra: cuántos proyectos. Al costado de la línea vertical. */
-.numero,
 .texto {
   position: absolute;
-  font: 600 10px/1.15 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  letter-spacing: 0.06em;
-  opacity: 0;
-  animation: aparecer 0.35s 0.45s ease forwards;
-  white-space: nowrap;
-}
-
-.numero {
-  left: 2px;
-  top: 7px;
-}
-
-.texto {
-  left: 14px;
-  bottom: 8px;
+  left: 92px;
+  bottom: 62px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--fondo);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  text-transform: uppercase;
-}
-
-.rotulo {
-  opacity: 0.6;
-  font-size: 8.5px;
-  letter-spacing: 0.16em;
+  align-items: flex-start;
+  gap: 1px;
+  font: 700 10px/1.2 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow: 0 1px 6px rgba(0, 20, 80, 0.8);
+  opacity: 0;
+  animation: aparecer 0.35s 0.45s ease forwards;
 }
 
 .proyecto {
@@ -109,10 +97,19 @@
   text-overflow: ellipsis;
 }
 
-/* Espejada: el texto no se espeja, vuelve a su lado. */
-.marca[data-lado='izq'] .numero,
+/* La marca elige hacia dónde sale según el lugar que tenga (ver Habilidades.jsx); el texto se contra-gira
+   para leerse siempre derecho. */
 .marca[data-lado='izq'] .texto {
-  transform: scaleX(-1);
+  transform: scale(-1, 1);
+  align-items: flex-end;
+}
+
+.marca[data-vert='aba'] .texto {
+  transform: scale(1, -1);
+}
+
+.marca[data-lado='izq'][data-vert='aba'] .texto {
+  transform: scale(-1, -1);
 }
 
 @keyframes trazar {
@@ -134,7 +131,6 @@
   }
 
   .cruz,
-  .numero,
   .texto {
     animation: none;
     opacity: 1;

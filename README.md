@@ -23,6 +23,11 @@ npm run dev:playground
 npm run dev:api
 ```
 
+Guías:
+
+- [`docs/DEV-LOCAL.md`](docs/DEV-LOCAL.md): cómo correr el proyecto en local (Windows).
+- [`docs/EXPERIENCIA-PASILLO.md`](docs/EXPERIENCIA-PASILLO.md): la sección Experiencia (pasillo 3D): archivos, cómo hacer cambios comunes y cómo verificarlos.
+
 ## Despliegue en Vercel
 
 El proyecto se despliega en Vercel a partir de `apps/web`. Al crear el proyecto en el dashboard de Vercel, configurar:

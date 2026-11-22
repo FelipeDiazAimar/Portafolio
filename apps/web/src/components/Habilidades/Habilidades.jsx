@@ -102,8 +102,22 @@ export default function Habilidades() {
               return;
             }
             marca.dataset.visible = 'true';
-            marca.dataset.lado = info.lado;
-            marca.style.transform = `translate3d(${info.x.toFixed(1)}px, ${info.y.toFixed(1)}px, 0)`;
+            // hacia dónde sale la marca: arriba-derecha desde el extremo derecho de la barra, o abajo-izquierda
+            // desde el izquierdo (así no cruza el modelo, que se inclina hacia arriba a la izquierda); si ahí
+            // no entra, se prueban las otras dos. Necesita ~440 px de ancho y ~175 de alto.
+            const W = lienzo.clientWidth;
+            const H = lienzo.clientHeight;
+            const opciones = [
+              { lado: 'der', vert: 'arr', p: info.der },
+              { lado: 'izq', vert: 'aba', p: info.izq },
+              { lado: 'izq', vert: 'arr', p: info.izq },
+              { lado: 'der', vert: 'aba', p: info.der },
+            ];
+            const cabe = (o) => (o.lado === 'der' ? o.p.x + 440 <= W : o.p.x - 440 >= 0) && (o.vert === 'arr' ? o.p.y - 175 >= 0 : o.p.y + 175 <= H);
+            const elegida = opciones.find(cabe) ?? opciones[0];
+            marca.dataset.lado = elegida.lado;
+            marca.dataset.vert = elegida.vert;
+            marca.style.transform = `translate3d(${elegida.p.x.toFixed(1)}px, ${elegida.p.y.toFixed(1)}px, 0)`;
           },
           tema: refTema.current,
           reducido,

@@ -1,45 +1,20 @@
-// Frase "Gracias por pasar." en 3D: letras extruidas con bisel, metal pulido que refleja un estudio
-// de tiras de luz, una luz que sigue al cursor y una "lente" que abre un hueco con borde ondulado
-// bajo el puntero. Es el mismo recurso que usa el pie de getlayers.ai (WordmarkScene), portado a
-// una clase sin React: la escena sólo sabe dibujar; quien la maneja le pasa el estado en cada
-// cuadro (reloj, inclinación, hover, puntero, aparición de cada letra).
+// Frase "Gracias por pasar." en 2D: letras planas gris oscuro con un contorno fino por el que corre
+// un brillo que va "rellenando" el borde como si lo recorriera, y una burbuja bajo el cursor que
+// abre un hueco en las caras con un aro luminoso en su borde. Se dibuja con three en una cámara
+// ortográfica; no hay luces ni extrusión. Quien la maneja le pasa el estado en cada cuadro.
 import * as THREE from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
-import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FRASE_GLIFOS, FRASE_UPM } from '@/data/fraseGlifos.js';
-import { densidadPixeles } from '@/lib/rendimiento.js';
-
-const GROSOR = 26;
-const EXTRUSION = {
-  depth: 150,
-  curveSegments: 10,
-  bevelEnabled: true,
-  bevelThickness: GROSOR,
-  bevelSize: 16,
-  bevelOffset: -16,
-  bevelSegments: 6,
-};
-const PROFUNDIDAD = EXTRUSION.depth;
-
-// Aspecto "platino" de getlayers: metal casi espejo, poca rugosidad, sin iridiscencia.
-const ASPECTO = {
-  tinte: '#e6e8ee',
-  factorApagado: 0.55,
-  rugosidad: [0.05, 0.1],
-  clearcoat: 0.2,
-  clearcoatRugosidad: 0.04,
-  entorno: [1.15, 1.5, 1.2, 1.4],
-  entornoHover: 0.2,
-  exposicion: 0.9,
-  puntero: { base: 0.25, hover: 1.1 },
-};
 
 export const CICLO_MS = 9000;
 
-// La lente: un hueco redondo (con borde que ondula) donde la cara frontal desaparece y se ve el
-// interior de la letra. Un halo claro marca el borde.
+const ANCHO_BORDE = 7; // media anchura del contorno, en unidades de 1000 por em
+const PERIODO_BRILLO = 5.5; // segundos que tarda el brillo en dar la vuelta a cada contorno
+const SEGMENTOS_CURVA = 14;
+
+// La burbuja: hueco redondo con borde que ondula, centrado en el cursor.
 const LENTE_GLSL = `
-uniform vec4 uLens;      // centro (px de dispositivo, origen GL), radio px, borde px
+uniform vec4 uLens;      // centro (px de dispositivo, origen GL), radio px, ancho del aro px
 uniform float uLensTime;
 float lensEdge(vec2 frag) {
   vec2 d = frag - uLens.xy;
@@ -49,218 +24,211 @@ float lensEdge(vec2 frag) {
           + 0.035 * sin(a * 8.0 + uLensTime * 3.1);
   return length(d) - uLens.z * (1.0 + w);
 }
+float lensHalo(float d) {
+  return uLens.z > 0.5 ? (1.0 - smoothstep(0.0, uLens.w, abs(d))) * 0.55 : 0.0;
+}
 `;
 
-const SALA_VERTICE = `
-  varying vec3 vDir;
+const CARA_VERTICE = `
+  varying float vY;
   void main() {
-    vDir = normalize(position);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 mundo = modelMatrix * vec4(position, 1.0);
+    vY = mundo.y;
+    gl_Position = projectionMatrix * viewMatrix * mundo;
   }
 `;
 
-// Estudio: tiras de luz cálida (izquierda) y fría (derecha) que las caras espejadas reflejan, más
-// cajas suaves arriba y a los lados que se reflejan en el bisel como una línea fina y brillante.
-const SALA_FRAGMENTO = `
-  uniform vec3 uVoid;
-  uniform vec3 uCream;
-  uniform vec3 uBlue;
-  varying vec3 vDir;
-  float box(float az, float el, float azC, float azW, float elC, float elW, float soft) {
-    float a = 1.0 - smoothstep(azW, azW + soft, abs(az - azC));
-    float e = 1.0 - smoothstep(elW, elW + soft, abs(el - elC));
-    return a * e;
-  }
+// Las caras: gris oscuro con degradé vertical (más claro arriba). Dentro de la burbuja se recortan.
+const CARA_FRAGMENTO = `
+  ${LENTE_GLSL}
+  uniform float uYArriba;
+  uniform float uYAbajo;
+  uniform float uTono;
+  varying float vY;
   void main() {
-    vec3 d = normalize(vDir);
-    float az = atan(d.x, d.z);
-    float el = asin(clamp(d.y, -1.0, 1.0));
-    vec3 white = vec3(1.0);
-    vec3 warm = mix(white, uCream, 0.35);
-    vec3 cool = mix(white, uBlue, 0.35);
-    vec3 c = uVoid * 0.12;
-    c += mix(warm, cool, smoothstep(-0.4, 0.4, az)) * (0.07 + 0.16 * smoothstep(-0.25, 0.3, el))
-      * box(az, el, 0.0, 0.42, 0.05, 0.4, 0.2);
-    c += warm * 1.7 * box(az, el, -1.45, 0.35, 0.15, 0.6, 0.12);
-    c += cool * 1.4 * box(az, el, 1.45, 0.3, 0.1, 0.55, 0.12);
-    c += white * 2.2 * box(az, el, 0.0, 1.6, 1.15, 0.12, 0.08);
-    c += mix(uCream, uBlue, 0.5) * 0.02 * exp(-pow(d.y * 5.0, 2.0));
+    float d = uLens.z > 0.5 ? lensEdge(gl_FragCoord.xy) : 1e6;
+    if (d < 0.0) discard;
+    float g = clamp((vY - uYAbajo) / max(1.0, uYArriba - uYAbajo), 0.0, 1.0);
+    vec3 c = mix(vec3(0.075, 0.078, 0.092), vec3(0.235, 0.245, 0.285), g) * uTono;
+    c += vec3(0.9, 0.92, 1.0) * lensHalo(d);
     gl_FragColor = vec4(c, 1.0);
   }
 `;
 
-function color(css) {
-  return new THREE.Color().setStyle(css.trim() || '#ffffff');
+const BORDE_VERTICE = `
+  attribute float aT;
+  varying float vT;
+  void main() {
+    vT = aT;
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+  }
+`;
+
+// El contorno: una línea clara y tenue siempre, y un brillo que avanza por el contorno dejando una
+// cola que se va apagando detrás: el borde parece irse llenando de luz a medida que lo recorre.
+const BORDE_FRAGMENTO = `
+  ${LENTE_GLSL}
+  uniform float uFase;
+  uniform float uTono;
+  varying float vT;
+  void main() {
+    float d = uLens.z > 0.5 ? lensEdge(gl_FragCoord.xy) : 1e6;
+    float atras = fract(uFase - vT);
+    float cola = exp(-atras * 5.5);
+    float cabeza = exp(-pow(atras * 38.0, 2.0));
+    vec3 cremaC = vec3(1.0, 0.93, 0.89);
+    vec3 azulC = vec3(0.75, 0.81, 0.95);
+    vec3 luz = mix(cremaC, azulC, 0.5 + 0.5 * sin(vT * 6.2831 + uFase * 6.2831));
+    vec3 base = vec3(0.31, 0.32, 0.35);
+    vec3 c = base + luz * (0.55 * cola + 0.9 * cabeza);
+    c += vec3(0.9, 0.92, 1.0) * lensHalo(d);
+    float a = clamp((0.55 + 0.45 * cola + cabeza) * (0.6 + 0.4 * uTono), 0.0, 1.0);
+    gl_FragColor = vec4(c, a);
+  }
+`;
+
+// Un glifo → formas con sus contornos (el exterior y los agujeros), con el parser SVG de siempre.
+function contornosDeGlifo(d) {
+  const formas = new SVGLoader()
+    .parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${d}"/></svg>`)
+    .paths.flatMap((p) => SVGLoader.createShapes(p));
+  return formas.map((forma) => {
+    const { shape, holes } = forma.extractPoints(SEGMENTOS_CURVA);
+    return { forma, anillos: [shape, ...holes] };
+  });
 }
 
-// Un glifo → lista de formas (el contorno y sus agujeros) usando el mismo parser SVG que getlayers.
-function formasDeGlifos() {
-  const cargador = new SVGLoader();
-  return FRASE_GLIFOS.map((g) =>
-    cargador
-      .parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${g.d}"/></svg>`)
-      .paths.flatMap((p) => SVGLoader.createShapes(p))
-  );
+// Cinta de ancho fijo a lo largo de un contorno cerrado; `aT` va de 0 a 1 por la longitud.
+function cintaDeContorno(puntos, cx, cy, mitad) {
+  const pts = puntos.map((p) => new THREE.Vector2(p.x - cx, p.y - cy));
+  if (pts.length > 1 && pts[0].distanceTo(pts[pts.length - 1]) < 1e-6) pts.pop();
+  const n = pts.length;
+  if (n < 3) return null;
+  const largo = [0];
+  for (let i = 1; i <= n; i += 1) largo.push(largo[i - 1] + pts[i % n].distanceTo(pts[i - 1]));
+  const total = largo[n] || 1;
+  const pos = [];
+  const t = [];
+  const idx = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = pts[(i + n - 1) % n];
+    const b = pts[i];
+    const c = pts[(i + 1) % n];
+    const n1 = new THREE.Vector2(b.y - a.y, a.x - b.x).normalize();
+    const n2 = new THREE.Vector2(c.y - b.y, b.x - c.x).normalize();
+    const m = n1.clone().add(n2);
+    let esc = mitad;
+    if (m.lengthSq() > 1e-8) {
+      m.normalize();
+      esc = Math.min(mitad / Math.max(0.35, m.dot(n1)), mitad * 2.5);
+    } else {
+      m.copy(n1);
+    }
+    m.multiplyScalar(esc);
+    pos.push(b.x + m.x, b.y + m.y, 0.05, b.x - m.x, b.y - m.y, 0.05);
+    t.push(largo[i] / total, largo[i] / total);
+  }
+  for (let i = 0; i < n; i += 1) {
+    const j = (i + 1) % n;
+    idx.push(2 * i, 2 * i + 1, 2 * j, 2 * i + 1, 2 * j + 1, 2 * j);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('aT', new THREE.Float32BufferAttribute(t, 1));
+  geo.setIndex(idx);
+  return geo;
 }
 
 export class EscenaFrase {
-  constructor(canvas, paleta) {
-    this.paleta = paleta;
+  constructor(canvas) {
     this.escena = new THREE.Scene();
-    this.camara = new THREE.PerspectiveCamera(15, 1, 1, 1e4);
+    this.camara = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
     this.palabra = new THREE.Group();
     this.letras = [];
     this.layout = null;
     this.pivote = new THREE.Vector2();
     this.anchoTinta = FRASE_UPM;
+    this.altoTinta = FRASE_UPM;
     this.lente = { uLens: { value: new THREE.Vector4() }, uLensTime: { value: 0 } };
+    this.degradado = { uYArriba: { value: 1 }, uYAbajo: { value: 0 } };
 
-    const r = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: 'high-performance',
-    });
+    const r = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
     this.renderer = r;
     r.setClearColor(0, 0);
-    r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = ASPECTO.exposicion;
-    r.setPixelRatio(densidadPixeles(1.5));
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    this.crema = color(paleta.crema);
-    this.azul = color(paleta.azul);
-    this.entorno = this.hornearEntorno();
-    this.escena.environment = this.entorno;
-
-    const metal = (c, rugosidad, entorno) =>
-      new THREE.MeshPhysicalMaterial({
-        color: c,
-        metalness: 1,
-        roughness: rugosidad,
-        envMapIntensity: entorno,
-        clearcoat: ASPECTO.clearcoat,
-        clearcoatRoughness: ASPECTO.clearcoatRugosidad,
-      });
-    const tinte = color(ASPECTO.tinte);
-    const [r0, r1] = ASPECTO.rugosidad;
-    // Mismo metal platino que getlayers. Las caras (material 0) reflejan sólo el fondo oscuro del
-    // estudio, que tiene un degradé (más claro arriba): por eso se ven grises oscuras y no espejo.
-    // El brillo fino queda en el bisel (material 1).
-    const ENTORNO_CARA = 0.35;
-    this.brillante = [metal(tinte, r0, ENTORNO_CARA), metal(tinte, r1, ASPECTO.entorno[1])];
-    const apagado = tinte.clone().multiplyScalar(ASPECTO.factorApagado);
-    this.apagado = [metal(apagado, r0 + 0.04, ENTORNO_CARA), metal(apagado, r1 + 0.04, ASPECTO.entorno[3])];
-    // En three reciente envMapIntensity sólo cuenta si el material tiene su propio envMap.
-    for (const m of [...this.brillante, ...this.apagado]) m.envMap = this.entorno;
-
-    // Materiales 0 = caras frontal/trasera: ahí se recorta la lente y se pinta el halo del borde.
-    for (const m of [this.brillante[0], this.apagado[0]]) {
-      m.onBeforeCompile = (sombreador) => {
-        sombreador.uniforms.uLens = this.lente.uLens;
-        sombreador.uniforms.uLensTime = this.lente.uLensTime;
-        sombreador.fragmentShader = sombreador.fragmentShader.replace(
-          'void main() {',
-          `${LENTE_GLSL}
-void main() {
-  if (uLens.z > 0.5 && lensEdge(gl_FragCoord.xy) < 0.0) discard;`
-        );
-      };
-      m.customProgramCacheKey = () => 'frase-lente';
-    }
-    // Materiales 1 = paredes laterales: se recortan sólo la mitad delantera, para que la lente
-    // deje ver el hueco por dentro en vez de atravesar la letra entera.
-    for (const m of [this.brillante[1], this.apagado[1]]) {
-      m.onBeforeCompile = (sombreador) => {
-        sombreador.uniforms.uLens = this.lente.uLens;
-        sombreador.uniforms.uLensTime = this.lente.uLensTime;
-        sombreador.vertexShader = sombreador.vertexShader
-          .replace('void main() {', 'varying float vLensZ;\nvoid main() {')
-          .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vLensZ = position.z;');
-        sombreador.fragmentShader = sombreador.fragmentShader.replace(
-          'void main() {',
-          `${LENTE_GLSL}
-varying float vLensZ;
-void main() {
-  if (uLens.z > 0.5 && vLensZ < ${(PROFUNDIDAD / 2).toFixed(1)} && lensEdge(gl_FragCoord.xy) < 0.0) discard;`
-        );
-      };
-      m.customProgramCacheKey = () => 'frase-lente-lado';
-    }
-
+    this.materiales = [];
+    this.geometrias = [];
     this.escena.add(this.palabra);
-
     this.construirLetras();
   }
 
-  salaEstudio() {
-    const p = this.paleta;
-    const material = new THREE.ShaderMaterial({
-      side: THREE.BackSide,
-      vertexShader: SALA_VERTICE,
-      fragmentShader: SALA_FRAGMENTO,
-      uniforms: {
-        uVoid: { value: color(p.vacio).multiplyScalar(1.4) },
-        uCream: { value: color(p.crema) },
-        uBlue: { value: color(p.azul) },
-      },
-    });
-    const esfera = new THREE.Mesh(new THREE.SphereGeometry(10, 48, 24), material);
-    return {
-      esfera,
-      liberar: () => {
-        esfera.geometry.dispose();
-        material.dispose();
-      },
-    };
-  }
-
-  hornearEntorno() {
-    const { esfera, liberar } = this.salaEstudio();
-    const escenaSala = new THREE.Scene();
-    escenaSala.add(esfera);
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    const textura = pmrem.fromScene(escenaSala, 0.004).texture;
-    pmrem.dispose();
-    liberar();
-    return textura;
+  material(tipo, tono) {
+    const comunes = { ...this.lente, uTono: { value: tono } };
+    const m =
+      tipo === 'cara'
+        ? new THREE.ShaderMaterial({
+            vertexShader: CARA_VERTICE,
+            fragmentShader: CARA_FRAGMENTO,
+            uniforms: { ...comunes, ...this.degradado },
+            side: THREE.DoubleSide,
+          })
+        : new THREE.ShaderMaterial({
+            vertexShader: BORDE_VERTICE,
+            fragmentShader: BORDE_FRAGMENTO,
+            uniforms: { ...comunes, uFase: { value: 0 } },
+            side: THREE.DoubleSide,
+            transparent: true,
+            depthWrite: false,
+          });
+    this.materiales.push(m);
+    return m;
   }
 
   construirLetras() {
     const caja = new THREE.Box3();
-    formasDeGlifos().forEach((formas, i) => {
-      const bruta = new THREE.ExtrudeGeometry(formas, EXTRUSION);
-      const geo = toCreasedNormals(bruta, Math.PI / 3);
-      if (geo !== bruta) bruta.dispose();
-      // Las tapas (grupo de material 0) llevan normal plana: así reflejan la tira de luz limpia.
-      const tapa = geo.groups.find((g) => g.materialIndex === 0);
-      const normal = geo.getAttribute('normal');
-      const pos = geo.getAttribute('position');
-      if (tapa) {
-        const fin = Math.min(tapa.start + tapa.count, normal.count);
-        for (let v = tapa.start; v < fin; v += 1) {
-          normal.setXYZ(v, 0, 0, pos.getZ(v) > PROFUNDIDAD / 2 ? 1 : -1);
-        }
-        normal.needsUpdate = true;
-      }
-      geo.computeBoundingBox();
-      const cb = geo.boundingBox ?? new THREE.Box3();
+    const previos = FRASE_GLIFOS.map((g) => {
+      const contornos = contornosDeGlifo(g.d);
+      const cb = new THREE.Box3();
+      contornos.forEach(({ anillos }) =>
+        anillos.forEach((a) => a.forEach((p) => cb.expandByPoint(new THREE.Vector3(p.x, p.y, 0))))
+      );
       caja.union(cb);
-      const centro = cb.getCenter(new THREE.Vector3());
-      geo.translate(-centro.x, -centro.y, -PROFUNDIDAD / 2);
-
-      const dim = FRASE_GLIFOS[i].linea === 1 && !FRASE_GLIFOS[i].punto;
-      const malla = new THREE.Mesh(geo, dim ? this.apagado : this.brillante);
-      malla.visible = false;
-      this.palabra.add(malla);
-      this.letras.push({ malla, casa: new THREE.Vector2(centro.x, centro.y) });
+      return { contornos, cb };
     });
+
+    previos.forEach(({ contornos, cb }, i) => {
+      const centro = cb.getCenter(new THREE.Vector3());
+      const g = FRASE_GLIFOS[i];
+      const tono = g.linea === 1 && !g.punto ? 0.8 : 1;
+      const grupo = new THREE.Group();
+      const mover = (p) => new THREE.Vector2(p.x - centro.x, p.y - centro.y);
+
+      contornos.forEach(({ forma, anillos }) => {
+        const exterior = new THREE.Shape(forma.getPoints(SEGMENTOS_CURVA).map(mover));
+        exterior.holes = forma.holes.map((h) => new THREE.Path(h.getPoints(SEGMENTOS_CURVA).map(mover)));
+        const geoCara = new THREE.ShapeGeometry(exterior, SEGMENTOS_CURVA);
+        this.geometrias.push(geoCara);
+        grupo.add(new THREE.Mesh(geoCara, this.material('cara', tono)));
+        anillos.forEach((anillo) => {
+          const geo = cintaDeContorno(anillo, centro.x, centro.y, ANCHO_BORDE);
+          if (!geo) return;
+          this.geometrias.push(geo);
+          grupo.add(new THREE.Mesh(geo, this.material('borde', tono)));
+        });
+      });
+
+      grupo.visible = false;
+      this.palabra.add(grupo);
+      this.letras.push({ grupo, casa: new THREE.Vector2(centro.x, centro.y), desfase: (i * 0.137) % 1 });
+    });
+
     this.pivote.set((caja.min.x + caja.max.x) / 2, (caja.min.y + caja.max.y) / 2);
     this.anchoTinta = caja.max.x - caja.min.x;
     this.altoTinta = caja.max.y - caja.min.y;
     this.letras.forEach((l) => l.casa.sub(this.pivote));
   }
 
-  // Tamaño en px de la tinta para una fuente de `fontPx`.
   medidaTinta(fontPx) {
     const e = fontPx / FRASE_UPM;
     return { ancho: this.anchoTinta * e, alto: this.altoTinta * e };
@@ -270,16 +238,11 @@ void main() {
     this.layout = layout;
     const { width, height, fontPx } = layout;
     this.renderer.setSize(width, height, true);
-    // Cámara lejana y de ángulo cerrado: las caras planas reflejan sólo el fondo oscuro del estudio
-    // (como en getlayers, donde la palabra ocupa todo el ancho y el ángulo ya es chico).
-    const dist = Math.max(1.7 * (this.anchoTinta * fontPx) / FRASE_UPM, 2.5 * height);
-    this.camara.fov = THREE.MathUtils.radToDeg(2 * Math.atan(height / 2 / dist));
-    this.camara.aspect = width / height;
-    this.camara.near = 0.2 * dist;
-    this.camara.far = 3 * dist;
-    this.camara.position.set(0, 0, dist);
-    this.camara.lookAt(0, 0, 0);
+    Object.assign(this.camara, { left: -width / 2, right: width / 2, top: height / 2, bottom: -height / 2 });
     this.camara.updateProjectionMatrix();
+    const mitad = (this.altoTinta * fontPx) / FRASE_UPM / 2;
+    this.degradado.uYArriba.value = mitad;
+    this.degradado.uYAbajo.value = -mitad;
   }
 
   render(estado) {
@@ -291,42 +254,30 @@ void main() {
     if (!L) return false;
     const { height, fontPx } = L;
     const k = fontPx / FRASE_UPM;
-    const t = e.reloj * Math.PI * 2;
-    const hover = e.hover;
     const dpr = this.renderer.getPixelRatio();
+    const hover = e.hover;
+    const segundos = performance.now() / 1000;
 
     const radio = e.mascaraX === undefined ? 0 : 0.46 * hover * fontPx * dpr;
-    this.lente.uLens.value.set(
-      (e.mascaraX ?? 0) * dpr,
-      (height - (e.mascaraY ?? 0)) * dpr,
-      radio,
-      0.06 * fontPx * dpr
-    );
-    this.lente.uLensTime.value = performance.now() / 1000;
-
-    const retroceso = (PROFUNDIDAD / 2 + GROSOR) * k;
-    this.palabra.position.set(0, 0.018 * Math.sin(t) * fontPx, -retroceso + 0.14 * hover * fontPx);
-    // La palabra no gira, ni sola ni hacia el cursor: al girar, las tiras de luz que reflejan las
-    // caras se deslizan por encima y se ve un barrido de brillo.
-    this.palabra.rotation.set(0, 0, 0);
-    this.palabra.scale.setScalar(1 + 0.012 * hover);
+    this.lente.uLens.value.set((e.mascaraX ?? 0) * dpr, (height - (e.mascaraY ?? 0)) * dpr, radio, 0.06 * fontPx * dpr);
+    this.lente.uLensTime.value = segundos;
 
     this.letras.forEach((l, i) => {
       const r = e.aparicion[i] ?? 1;
-      const s = Math.sin(2 * t - 0.55 * i);
-      l.malla.scale.setScalar(k);
-      l.malla.position.set(l.casa.x * k, l.casa.y * k + 0.012 * s * fontPx - (1 - r) * 0.575 * fontPx, 0);
-      l.malla.rotation.set((1 - r) * 0.8, 0, 0);
-      l.malla.visible = r > 0.001;
+      l.grupo.scale.setScalar(k);
+      l.grupo.position.set(l.casa.x * k, l.casa.y * k - (1 - r) * 0.575 * fontPx, 0);
+      l.grupo.visible = r > 0.001;
+      const fase = (segundos / PERIODO_BRILLO + l.desfase) % 1;
+      l.grupo.children.forEach((m) => {
+        if (m.material.uniforms.uFase) m.material.uniforms.uFase.value = fase;
+      });
     });
-
     return true;
   }
 
   dispose() {
-    this.letras.forEach(({ malla }) => malla.geometry.dispose());
-    [...this.brillante, ...this.apagado].forEach((m) => m.dispose());
-    this.entorno?.dispose();
+    this.geometrias.forEach((g) => g.dispose());
+    this.materiales.forEach((m) => m.dispose());
     this.renderer.dispose();
     this.renderer.forceContextLoss();
   }
