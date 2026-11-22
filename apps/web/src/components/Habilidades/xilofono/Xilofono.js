@@ -39,6 +39,7 @@ import { armarGeometria, crearBarra, crearGeometriaEsferas, escribirHelice } fro
 import { PasadaEscarcha } from './pasadas.js';
 import { barraBajoRayo, centroDeBarra, crearEspacio, frenteDeBarra } from './picking.js';
 import { barraFrag, barraVert, fondoAuroraFrag, fondoFrag, fondoVert } from './shaders.js';
+import { densidadPixeles } from '@/lib/rendimiento.js';
 
 // Motor del xilófono de vidrio (de main.ts + Xylophone.ts del original, MIT), dentro de un
 // canvas de la sección en vez de a pantalla completa. Diferencias: sin audio, la cinta avanza con
@@ -178,7 +179,7 @@ export class Xilofono {
     const renderer = new WebGLRenderer({ canvas: this.lienzo, alpha: false, antialias: false, powerPreference: 'high-performance' });
     renderer.outputColorSpace = SRGBColorSpace;
     renderer.toneMapping = NoToneMapping;
-    renderer.setPixelRatio(Math.min(this.calidad.maxDpr, window.devicePixelRatio || 1));
+    renderer.setPixelRatio(densidadPixeles(this.calidad.maxDpr));
     return renderer;
   }
 

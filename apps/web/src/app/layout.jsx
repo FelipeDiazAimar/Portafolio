@@ -37,6 +37,12 @@ const THEME_INIT_SCRIPT = `(function() {
       document.documentElement.setAttribute('data-theme', stored);
     }
   } catch (e) {}
+  // modo rendimiento (toggle arriba a la derecha), antes de que arranquen las escenas 3D
+  try {
+    if (window.localStorage.getItem('portafolio:rendimiento') === 'true') {
+      document.documentElement.setAttribute('data-rendimiento', 'true');
+    }
+  } catch (e) {}
   // Color de la barra de estado / del navegador = fondo de la página, y sigue al cambiar de tema.
   try {
     var el = document.documentElement;

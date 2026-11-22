@@ -107,6 +107,10 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
     : (aspectoFoto ?? tarjeta.aspecto);
   const [medida, setMedida] = useState(() => medidaFinal(aspecto));
   const [cerrando, setCerrando] = useState(false);
+  // lupa: al tocar la hoja (o la foto) se acerca en ese punto, sin marco; el punto sigue al
+  // puntero y otro toque la aleja
+  const [lupa, setLupa] = useState(false);
+  const refLupa = useRef(false);
   const refVelo = useRef(null);
   const refVuelo = useRef(null);
   const refInclina = useRef(null);
@@ -253,10 +257,21 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
     const paso = (ahora) => {
       const quieto = ahora - ultimoMovimiento > 2500;
       const t = (ahora - inicio) / 1000;
-      const tx = quieto ? Math.sin(t * 0.7) * 0.35 : objetivo.x;
-      const ty = quieto ? Math.sin(t * 0.9 + 1) * 0.2 : objetivo.y;
-      actual.x += (tx - actual.x) * 0.08;
-      actual.y += (ty - actual.y) * 0.08;
+      // con la lupa puesta la lámina queda derecha, para leer tranquilo
+      const tx = refLupa.current
+        ? 0
+        : quieto
+          ? Math.sin(t * 0.7) * 0.35
+          : objetivo.x;
+      const ty = refLupa.current
+        ? 0
+        : quieto
+          ? Math.sin(t * 0.9 + 1) * 0.2
+          : objetivo.y;
+      // con la lupa la lámina se endereza de una, así la burbuja apunta justo
+      const k = refLupa.current ? 1 : 0.08;
+      actual.x += (tx - actual.x) * k;
+      actual.y += (ty - actual.y) * k;
       const el = refInclina.current;
       if (el) {
         el.style.transform = `rotateX(${-actual.y * 9}deg) rotateY(${actual.x * 14}deg)`;
@@ -284,6 +299,7 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
   // la salida: el mismo camino al revés
   const cerrar = () => {
     if (cerrando) return;
+    if (refLupa.current) soltarLupa();
     setCerrando(true);
     const anims = animaciones.current;
     if (!anims.length || reducido()) {
@@ -297,11 +313,86 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
     Promise.all(anims.map((a) => a.finished.catch(() => {}))).then(alCerrar);
   };
 
+  // Lupa: una burbuja de vidrio sobre el puntero con una copia agrandada de la hoja (o la foto).
+  // La copia se arma una sola vez al tocar; después sólo se mueven dos transform por cuadro, así
+  // que no hay que volver a pintar la hoja.
+  const ZOOM = 2.4;
+  const refLente = useRef(null);
+  const refLenteCopia = useRef(null);
+  const refContenedor = useRef(null);
+  const refPunto = useRef({ x: 0, y: 0, cuadro: 0 });
+  const radioLente = () => (window.innerWidth < 700 ? 78 : 115);
+
+  const ubicarLente = () => {
+    const p = refPunto.current;
+    p.cuadro = 0;
+    const lente = refLente.current;
+    const copia = refLenteCopia.current;
+    const cont = refContenedor.current;
+    if (!lente || !copia || !cont) return;
+    const r = cont.getBoundingClientRect();
+    const R = radioLente();
+    // punto bajo el puntero, en px sin transformar de la hoja
+    const px = ((p.x - r.left) / r.width) * cont.offsetWidth;
+    const py = ((p.y - r.top) / r.height) * cont.offsetHeight;
+    lente.style.transform = `translate3d(${p.x - R}px, ${p.y - R}px, 0)`;
+    copia.style.transform = `translate3d(${R - px * ZOOM}px, ${R - py * ZOOM}px, 0) scale(${ZOOM})`;
+  };
+  const pedirLente = (x, y) => {
+    const p = refPunto.current;
+    p.x = x;
+    p.y = y;
+    if (!p.cuadro) p.cuadro = requestAnimationFrame(ubicarLente);
+  };
+
+  function soltarLupa() {
+    cancelAnimationFrame(refPunto.current.cuadro);
+    refPunto.current.cuadro = 0;
+    refLupa.current = false;
+    setLupa(false);
+  }
+  const alTocarLupa = (e) => {
+    e.stopPropagation();
+    if (cerrando) return;
+    if (refLupa.current) {
+      soltarLupa();
+      return;
+    }
+    const cont = e.currentTarget;
+    const copia = refLenteCopia.current;
+    if (!copia) return;
+    // la copia: la hoja tal como se ve, sin la cara de la tarjeta ni el reflejo
+    const clon = cont.cloneNode(true);
+    clon.querySelectorAll("[data-sin-lupa]").forEach((n) => n.remove());
+    clon.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+    clon.removeAttribute("id");
+    clon.style.transform = "none";
+    copia.replaceChildren(clon);
+    copia.style.width = `${cont.offsetWidth}px`;
+    copia.style.height = `${cont.offsetHeight}px`;
+    refContenedor.current = cont;
+    refLupa.current = true;
+    setLupa(true);
+    pedirLente(e.clientX, e.clientY);
+  };
+  const alMoverLupa = (e) => {
+    if (refLupa.current) pedirLente(e.clientX, e.clientY);
+  };
+  const propsLupa = {
+    onClick: alTocarLupa,
+    onPointerMove: alMoverLupa,
+    onPointerLeave: (e) => {
+      if (refLupa.current && e.pointerType === "mouse") soltarLupa();
+    },
+    "data-lupa": lupa ? "true" : "false",
+  };
+
   useEffect(() => {
     const alTecla = (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        cerrar();
+        if (refLupa.current) soltarLupa();
+        else cerrar();
       } else if (e.key === "Tab") {
         // el foco no sale de la capa
         const capa = refCerrar.current?.closest("[role=dialog]");
@@ -354,8 +445,13 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
               <article
                 className={styles.frente}
                 data-orientacion={vertical ? "vertical" : "horizontal"}
+                {...propsLupa}
               >
-                <span ref={refCaraTarjeta} className={styles.caraTarjeta} />
+                <span
+                  ref={refCaraTarjeta}
+                  className={styles.caraTarjeta}
+                  data-sin-lupa=""
+                />
                 <div ref={refContenido} className={styles.hoja}>
                   <span className={styles.marco} aria-hidden="true" />
                   {["ai", "ad", "bi", "bd"].map((p) => (
@@ -479,7 +575,11 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
                     )}
                   </footer>
                 </div>
-                <span className={styles.brillo} aria-hidden="true" />
+                <span
+                  className={styles.brillo}
+                  aria-hidden="true"
+                  data-sin-lupa=""
+                />
               </article>
             </div>
           </div>
@@ -492,6 +592,7 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
               height: medida.alto,
               background: tarjeta.fondo ?? "transparent",
             }}
+            {...propsLupa}
           >
             <img
               id={idTitulo}
@@ -507,8 +608,23 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
         )}
       </div>
 
+      <div
+        ref={refLente}
+        className={styles.lente}
+        data-activa={lupa ? "true" : "false"}
+        aria-hidden="true"
+      >
+        <div ref={refLenteCopia} className={styles.lenteCopia} />
+        <span className={styles.lenteBrillo} />
+      </div>
+
       <div ref={refPie} className={styles.leyenda}>
         <p className={styles.leyendaNombre}>{tarjeta.nombre}</p>
+        <p className={styles.pistaLupa}>
+          {lupa
+            ? "Mové para recorrer · tocá de nuevo para alejar"
+            : "Tocá para acercar"}
+        </p>
         <p className={styles.leyendaLugar}>
           {[tarjeta.lugar, tarjeta.anio].filter(Boolean).join(" · ")}
         </p>

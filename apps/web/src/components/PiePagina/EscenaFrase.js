@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FRASE_GLIFOS, FRASE_UPM } from '@/data/fraseGlifos.js';
+import { densidadPixeles } from '@/lib/rendimiento.js';
 
 const GROSOR = 26;
 const EXTRUSION = {
@@ -130,7 +131,7 @@ export class EscenaFrase {
     r.setClearColor(0, 0);
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = ASPECTO.exposicion;
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    r.setPixelRatio(densidadPixeles(1.5));
 
     this.crema = color(paleta.crema);
     this.azul = color(paleta.azul);
@@ -147,10 +148,20 @@ export class EscenaFrase {
         clearcoatRoughness: ASPECTO.clearcoatRugosidad,
       });
     const tinte = color(ASPECTO.tinte);
-    const [r0, r1] = ASPECTO.rugosidad;
-    this.brillante = [metal(tinte, r0, ASPECTO.entorno[0]), metal(tinte, r1, ASPECTO.entorno[1])];
+    const r1 = ASPECTO.rugosidad[1];
+    // Caras (material 0): mates y oscuras, sin reflejo ni luces que las barran. Todo el brillo
+    // metálico queda en los bordes (material 1: paredes y bisel).
+    const cara = (emisivo) =>
+      new THREE.MeshPhysicalMaterial({
+        color: 0x0c0d10,
+        emissive: emisivo,
+        metalness: 0,
+        roughness: 1,
+        envMapIntensity: 0,
+      });
+    this.brillante = [cara(0x3b3e46), metal(tinte, r1, ASPECTO.entorno[1])];
     const apagado = tinte.clone().multiplyScalar(ASPECTO.factorApagado);
-    this.apagado = [metal(apagado, r0 + 0.04, ASPECTO.entorno[2]), metal(apagado, r1 + 0.04, ASPECTO.entorno[3])];
+    this.apagado = [cara(0x24262b), metal(apagado, r1 + 0.04, ASPECTO.entorno[3])];
 
     // Materiales 0 = caras frontal/trasera: ahí se recorta la lente y se pinta el halo del borde.
     for (const m of [this.brillante[0], this.apagado[0]]) {
@@ -205,8 +216,7 @@ void main() {
       m.customProgramCacheKey = () => 'frase-lente-lado';
     }
 
-    this.luz = new THREE.PointLight(this.crema, ASPECTO.puntero.base, 0, 0);
-    this.escena.add(this.luz, this.palabra);
+    this.escena.add(this.palabra);
 
     this.construirLetras();
   }
@@ -308,7 +318,7 @@ void main() {
   posar(e) {
     const L = this.layout;
     if (!L) return false;
-    const { width, height, fontPx } = L;
+    const { height, fontPx } = L;
     const k = fontPx / FRASE_UPM;
     const t = e.reloj * Math.PI * 2;
     const hover = e.hover;
@@ -325,7 +335,8 @@ void main() {
 
     const retroceso = (PROFUNDIDAD / 2 + GROSOR) * k;
     this.palabra.position.set(0, 0.018 * Math.sin(t) * fontPx, -retroceso + 0.14 * hover * fontPx);
-    this.palabra.rotation.set(e.inclX + 0.03 * Math.sin(t + 0.6), e.inclY + 0.022 * Math.sin(2 * t + 1.3), 0);
+    // Sin balanceo en reposo: si la palabra se mece, las tiras de luz reflejadas barren las caras.
+    this.palabra.rotation.set(e.inclX, e.inclY, 0);
     this.palabra.scale.setScalar(1 + 0.012 * hover);
 
     this.letras.forEach((l, i) => {
@@ -333,17 +344,9 @@ void main() {
       const s = Math.sin(2 * t - 0.55 * i);
       l.malla.scale.setScalar(k);
       l.malla.position.set(l.casa.x * k, l.casa.y * k + 0.012 * s * fontPx - (1 - r) * 0.575 * fontPx, 0);
-      l.malla.rotation.set((1 - r) * 0.8 + 0.02 * s, 0.015 * s, 0);
+      l.malla.rotation.set((1 - r) * 0.8, 0, 0);
       l.malla.visible = r > 0.001;
     });
-
-    const lx = THREE.MathUtils.lerp(0.9 * Math.sin(t), e.punteroX, hover);
-    const ly = THREE.MathUtils.lerp(0.35, e.punteroY, hover);
-    this.luz.position.set((lx * width) / 2, (ly * height) / 2, 1.6 * fontPx);
-    this.luz.intensity = ASPECTO.puntero.base + hover * ASPECTO.puntero.hover;
-    this.luz.color.copy(this.crema).lerp(this.azul, (lx + 1) / 2);
-
-    this.brillante[0].envMapIntensity = ASPECTO.entorno[0] + hover * ASPECTO.entornoHover;
 
     // El destello va de un extremo al otro de la frase y sólo se ve en las paredes y el bisel.
     const b = ASPECTO.barrido;

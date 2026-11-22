@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { densidadPixeles } from '@/lib/rendimiento.js';
 
 // Carrusel vertical de vidrio líquido para "Títulos".
 //
@@ -306,7 +307,7 @@ export function crearEscenaCarrusel({
     alpha: false,
     powerPreference: "high-performance",
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(densidadPixeles(2));
   renderer.setClearColor(0x000000, 0);
 
   const escena = new THREE.Scene();

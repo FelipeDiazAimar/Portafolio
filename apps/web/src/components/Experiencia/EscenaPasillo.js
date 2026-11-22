@@ -25,7 +25,7 @@ import { crearRecursos } from './recursos.js';
 import { crearEfectos } from './efectosPasillo.js';
 import { crearConstruccion } from './construccion.js';
 import { crearFondo } from './fondos.js';
-import { modoRendimiento } from '@/hooks/useRendimiento.js';
+import { modoRendimiento } from '@/lib/rendimiento.js';
 
 const ALTURA_OJOS = 1.62;
 const MIRADA_ADELANTE = 2.6;
@@ -807,6 +807,8 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
   // ---- foco: la cámara gira y se acerca a un objeto ----------------------------------------
   let enfocado = -1;
   let sFoco = 0;
+  // hasta cuándo (performance.now) el scroll sólo acompaña al foco y no lo suelta
+  let acomodando = 0;
   let mezcla = 0; // 0 = caminando, 1 = mirando el objeto
   const posFoco = new THREE.Vector3();
   const miraFoco = new THREE.Vector3();
@@ -838,6 +840,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     const s = Math.min(recorrido.largo, Math.max(0, bases[a.pasillo] + recorrido.pasillos[a.pasillo].objetos[a.objeto].a));
     enfocado = i;
     sFoco = s;
+    acomodando = performance.now() + 1200;
     if (libre) {
       const [x, z] = puntoEn(recorrido, s);
       posLibre.set(x, ALTURA_OJOS, z);
@@ -948,6 +951,44 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
   // Sólo el pasillo actual y sus vecinos se dibujan (y se cargan); las luces van a sus lámparas.
   let ultimaZona = -1;
   const candidatas = [];
+  // Precompilado: los shaders del pasillo que viene se compilan de a uno (un material distinto
+  // por vez) en los momentos libres del navegador y sólo con la cámara casi quieta, mientras
+  // recorrés el actual; así al entrar no se traba y compilar tampoco traba el scroll. Se compila
+  // malla por malla (three compila lo visible desde el objeto que recibe, sin mirar al padre).
+  const precompilados = new Set();
+  const porCompilar = [];
+  let ociosa = 0;
+  function precompilar(i) {
+    const z = zonas[i];
+    if (!z || precompilados.has(i) || !renderer.compileAsync) return;
+    precompilados.add(i);
+    const vistos = new Set();
+    for (const g of z.grupos)
+      g.traverse((o) => {
+        if (!o.isMesh || !o.material || Array.isArray(o.material) || vistos.has(o.material.uuid)) return;
+        vistos.add(o.material.uuid);
+        porCompilar.push(o);
+      });
+    pedirOcio();
+  }
+  function pedirOcio() {
+    if (ociosa || !porCompilar.length || destruida) return;
+    const pedir = window.requestIdleCallback ?? ((f) => setTimeout(() => f({ timeRemaining: () => 8 }), 120));
+    ociosa = pedir(compilarEnOcio, { timeout: 2000 });
+  }
+  function compilarEnOcio(plazo) {
+    ociosa = 0;
+    if (destruida) return;
+    // con la cámara en movimiento se espera: compilar ahora podría costar un cuadro
+    if (velocidad < 0.6) {
+      while (porCompilar.length && plazo.timeRemaining() > 6) {
+        const malla = porCompilar.shift();
+        renderer.compileAsync(malla, camara, escena).catch(() => {});
+      }
+    }
+    pedirOcio();
+  }
+
   function actualizarZonas() {
     const k = tramoEn(recorrido, actual).pasillo;
     if (k !== ultimaZona) {
@@ -957,6 +998,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
         for (const g of z.grupos) g.visible = visible;
         if (Math.abs(z.indice - k) <= 1) cargarZona(z.indice);
       });
+      precompilar(k + 2);
       const luz = LUZ[zonas[k]?.trabajo.id] ?? LUZ.laboratorio;
       for (const l of luces) l.color.setHex(luz.color);
       foco.color.setHex(luz.color);
@@ -1221,7 +1263,11 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
       if (libre) return;
       objetivo = Math.min(recorrido.largo, Math.max(0, s));
       if (inmediato) actual = objetivo;
-      if (enfocado >= 0 && Math.abs(objetivo - sFoco) > SOLTAR_FOCO) soltar(true);
+      if (enfocado < 0) return;
+      // la página todavía se está acomodando al objeto que se acaba de tocar (scroll suave en curso,
+      // el ajuste de la sección): eso no es "seguir caminando", el foco se queda
+      if (performance.now() < acomodando) sFoco = objetivo;
+      else if (Math.abs(objetivo - sFoco) > SOLTAR_FOCO) soltar(true);
     },
     enfocar,
     soltar: () => soltar(false),

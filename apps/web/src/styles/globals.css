@@ -200,3 +200,12 @@ main {
     height: calc(env(safe-area-inset-bottom, 0px) + 140px);
   }
 }
+
+/* Modo rendimiento (toggle arriba a la derecha): sin desenfoques de fondo, que obligan al
+   navegador a recomponer todo lo que hay detrás de cada panel de vidrio en cada cuadro. */
+html[data-rendimiento='true'] *,
+html[data-rendimiento='true'] *::before,
+html[data-rendimiento='true'] *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

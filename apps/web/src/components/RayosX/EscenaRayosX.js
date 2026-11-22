@@ -30,6 +30,7 @@ import { amortiguar } from '@/lib/xilofono.js';
 import { encuadreRetrato, grillaHexagonal, suave } from '@/lib/rayosx.js';
 import { COLORES, FONDO, MATERIAL, MODELOS, RETRATO, TEMA_CLARO_RAYOSX } from './config.js';
 import { composicionFrag, cuadroVert, mascaraFrag, rayosFrag, rayosVert } from './shaders.js';
+import { densidadPixeles } from '@/lib/rendimiento.js';
 
 const MAX_DT = 1 / 20;
 
@@ -171,7 +172,7 @@ export class EscenaRayosX {
     this.miraCamara = new Vector3(...FONDO.mira);
 
     this.renderer = new WebGLRenderer({ canvas: lienzo, alpha: this.retrato, antialias: true, premultipliedAlpha: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+    this.renderer.setPixelRatio(densidadPixeles(1.5));
     this.renderer.setClearColor(0x000000, this.retrato ? 0 : 1);
     this.renderer.outputColorSpace = SRGBColorSpace;
 

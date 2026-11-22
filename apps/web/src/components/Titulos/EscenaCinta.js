@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { texturaTarjeta, cargarImagen, modulo } from "./EscenaCarrusel.js";
+import { densidadPixeles } from '@/lib/rendimiento.js';
 
 // Cinta ondulada de "Títulos" para PC: port a three.js del "Flex Ribbon 3D WebGL Carousel" de
 // Apexphase (https://apexphase.io/, licencia MIT), preset 'liquid' e intro 'rise'.
@@ -481,8 +482,7 @@ export function crearEscenaCinta({
     W = Math.max(1, ancho);
     H = Math.max(1, alto);
     dpr = Math.min(
-      window.devicePixelRatio || 1,
-      2,
+      densidadPixeles(2),
       Math.sqrt(PRESUPUESTO_PIXELES / (W * H)),
     );
     renderer.setPixelRatio(dpr);

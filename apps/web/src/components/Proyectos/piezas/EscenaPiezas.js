@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { densidadPixeles } from '@/lib/rendimiento.js';
 
 const FOV = 24;
 const GROSOR_TARJETA = 4;
@@ -264,7 +265,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   function redimensionar() {
     W = Math.max(2, panel.clientWidth);
     H = Math.max(2, panel.clientHeight);
-    renderizador.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderizador.setPixelRatio(densidadPixeles(2));
     renderizador.setSize(W, H, false);
     camara.aspect = W / H;
     // a esta distancia, el plano z = 0 mide exactamente lo que el panel en píxeles

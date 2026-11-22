@@ -6,6 +6,7 @@
 // las texturas de las portadas y el tema. Todo `three` vive en este chunk.
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import { densidadPixeles } from '@/lib/rendimiento.js';
 import {
   ALTO_PLANO,
   ANCHO_PLANO,
@@ -299,7 +300,7 @@ export function crearEscenaReel({ lienzo, total, reducido = false, alCuadro = nu
     const vista = vistaEn(medidas.profundidad - DESFASE_Z, ancho / alto);
     pxPorUnidad = ancho / vista.ancho;
     zoomDetalle = Math.max(1.1, Math.min((ancho * (esMovil ? 0.94 : 0.7)) / (ANCHO_PLANO * medidas.escala * pxPorUnidad), (alto * 0.74) / (ALTO_PLANO * medidas.escala * pxPorUnidad)));
-    renderizador.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderizador.setPixelRatio(densidadPixeles(2));
     renderizador.setSize(ancho, alto, false);
     camara.aspect = ancho / alto;
     camara.updateProjectionMatrix();

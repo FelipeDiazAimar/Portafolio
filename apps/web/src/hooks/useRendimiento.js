@@ -2,14 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-const CLAVE = 'portafolio:rendimiento';
-export const EVENTO_RENDIMIENTO = 'portafolio:rendimiento';
+import { EVENTO_RENDIMIENTO, modoRendimiento } from '@/lib/rendimiento.js';
 
-// ¿Está activo el modo rendimiento? Se puede leer fuera de React (escenas 3D).
-export function modoRendimiento() {
-  if (typeof document === 'undefined') return false;
-  return document.documentElement.getAttribute('data-rendimiento') === 'true';
-}
+export { EVENTO_RENDIMIENTO, modoRendimiento };
+
+const CLAVE = 'portafolio:rendimiento';
 
 // Modo rendimiento del sitio: menos efectos para equipos justos. Se guarda en este navegador, se
 // refleja en <html data-rendimiento> y avisa con el evento `portafolio:rendimiento` (detail: bool),
@@ -40,6 +37,8 @@ export default function useRendimiento() {
       /* sin almacenamiento */
     }
     window.dispatchEvent(new CustomEvent(EVENTO_RENDIMIENTO, { detail: nuevo }));
+    // los lienzos 3D recalculan su densidad de píxeles al redimensionarse
+    window.dispatchEvent(new Event('resize'));
   }, []);
 
   return { activo, alternar };
