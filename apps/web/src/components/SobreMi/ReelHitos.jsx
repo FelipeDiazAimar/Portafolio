@@ -20,7 +20,8 @@ import { dentroDeCuadrilatero, faseDeProgreso, hitoCercano, hitoDestino, hitosDe
 import { matrizCss } from '@/lib/reel/homografia.js';
 import puntosHitos from '@/data/puntosHitos.json';
 import { TITULAR } from './titular.js';
-import IntroAgentes, { introPendiente } from './IntroAgentes.jsx';
+import IntroAgentes, { AGENTES, introPendiente } from './IntroAgentes.jsx';
+import ObraScroll from './ObraScroll.jsx';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import styles from './ReelHitos.module.css';
 
@@ -355,7 +356,21 @@ export default function ReelHitos({ hitos, alFallar }) {
           for (const franja of vivo.children) franja.lastElementChild.shadowRoot?.querySelector('svg')?.style.setProperty('--anatomy-weight', trazo);
         }
       }
-      const visible = apoyado && refEntro.current && ahora - refQuietoDesde.current > QUIETO_MS;
+      if (conObras() && refEntro.current && !refIntroCorriendo.current && escena && !refTransicion.current) {
+        escena.portadas.forEach((p, i) => {
+          // la de la obra en curso la muestra su agente (dentro de su caja), no este fundido
+          if (refConstruidas.current.has(i) || refObra.current?.hito === i) return;
+          const objetivo = 0;
+          if (Math.abs(p.entrada.t - objetivo) < 0.002) return;
+          gsap.killTweensOf(p.entrada);
+          p.entrada.t += (objetivo - p.entrada.t) * 0.14;
+        });
+      }
+      if (conObras() && refEntro.current && !refIntroCorriendo.current && escena && !refTransicion.current) {
+        refConstruirEnCuadro.current?.(fase);
+      }
+      const construida = !conObras() || refConstruidas.current.has(cercano);
+      const visible = apoyado && construida && refEntro.current && ahora - refQuietoDesde.current > QUIETO_MS;
       if (vivo.dataset.visible !== String(visible)) vivo.dataset.visible = String(visible);
 
       // Foto o video abierto: el panel lo sabe (las marcas del zoom se apartan) y los controles
@@ -469,6 +484,7 @@ export default function ReelHitos({ hitos, alFallar }) {
         if (!vivo || !refEscena.current) return;
         const { portada, fondoVivo, zonas } = componerPortada({ hito, indice: i, hitos, claro, ancho, fuentes, diorama, foto });
         refZonas.current[i] = zonas;
+        ponerZonas(i);
         refEscena.current.ponerTextura(i, portada);
         const foco = (hito.foco ?? '50% 50%').split(' ').map((v) => parseFloat(v) / 100);
         refEscena.current.ponerMedio(i, { foto, foco, rect: FOTO_UV, radio: FOTO.r / BASE.ancho });
@@ -603,6 +619,13 @@ export default function ReelHitos({ hitos, alFallar }) {
       // scroll. Pasado un punto, el portal termina solo (ver pasarAProyectos).
       const enCola = (yo, alScrollear) => {
         if (refTransicion.current) return;
+        if (refPuertaCerrada.current()) {
+          // "Hoy" en obra: la portada no crece desde su puerta
+          refSalida.current = 0;
+          refEscena.current?.ponerSalida(0);
+          refPanel.current?.style.setProperty('--salida', '0');
+          return;
+        }
         refSalida.current = yo.progress;
         refEscena.current?.ponerSalida(yo.progress * SALIDA_AL_SCROLL);
         refPanel.current?.style.setProperty('--salida', yo.progress.toFixed(3));
@@ -734,7 +757,7 @@ export default function ReelHitos({ hitos, alFallar }) {
 
   const pasarAProyectos = useCallback(() => {
     const m = medir();
-    if (!m || refTransicion.current) return;
+    if (!m || refTransicion.current || refPuertaCerrada.current()) return;
     if (refReducido.current || !refEscena.current || !m.cola) {
       scrollA(m.fin);
       return;
@@ -917,12 +940,10 @@ export default function ReelHitos({ hitos, alFallar }) {
     const escena = refEscena.current;
     if (escena) {
       const frente = Math.round(refObjetivo.current);
-      // de la del frente hacia los costados
-      const orden = hitos.map((_, i) => i).sort((a, b) => Math.abs(a - frente) - Math.abs(b - frente));
-      for (const i of orden) {
-        const q = escena.esquinasFinales(i, ENTERA);
-        if (q && q.some(([x, y]) => x > 0 && x < base.width && y > 0 && y < base.height)) capas.push({ nombre: `Portada ${hitos[i].anio}`, puntos: q, revela: { tipo: 'portada', i } });
-      }
+      // sólo la del frente: las que siguen quedan ocultas hasta que se scrollee hacia ellas (y se
+      // construyen al llegar, ver "obras")
+      const q = escena.esquinasFinales(frente, ENTERA);
+      if (q) capas.push({ nombre: `Portada ${hitos[frente].anio}`, puntos: q, revela: { tipo: 'portada', i: frente } });
       // cada parte de la portada del frente (navegación, título, foto, diorama…) la dibuja un
       // agente: se ve dentro de su caja (ver uZonas en EscenaReel)
       (refZonas.current[frente] ?? []).forEach((z, k) => {
@@ -947,17 +968,23 @@ export default function ReelHitos({ hitos, alFallar }) {
     if (intro !== 'esperando') return undefined;
     // Las portadas salen de la escena 3D: se la pide ya (si todavía no estaba armada) y se mide en
     // cuanto está. Si se midiera sin ella, ningún agente dibujaría las portadas y aparecerían
-    // recién al final. Si tarda demasiado, no se la espera más de 3 s.
+    // recién al final. Si tarda demasiado, no se la espera más de 6 s.
     setCerca(true);
     const medirYa = () => {
       const plano = medirPlano();
       setIntro(plano ? { ...plano, sentido: 'armar' } : null);
     };
-    if (escenaLista) {
-      medirYa();
-      return undefined;
-    }
-    const espera = setTimeout(medirYa, 3000);
+    // y también sus partes (título, foto, diorama…), que se miden al componer su imagen: sin
+    // ellas los agentes dibujaban la card en blanco y las partes aparecían de golpe al final
+    const inicio = performance.now();
+    let espera = 0;
+    const intentar = () => {
+      const frente = Math.round(refObjetivo.current);
+      const listo = escenaLista && (refZonas.current[frente]?.length ?? 0) > 0;
+      if (listo || performance.now() - inicio > 6000) medirYa();
+      else espera = setTimeout(intentar, 100);
+    };
+    intentar();
     return () => clearTimeout(espera);
   }, [intro, escenaLista, medirPlano]);
   // si algo hizo entrar la sección por otro lado (la vuelta desde Proyectos), la intro sobra
@@ -983,6 +1010,15 @@ export default function ReelHitos({ hitos, alFallar }) {
   }, [enCurso, soltarIntro]);
   const alFundirIntro = useCallback(() => {
     soltarIntro();
+    // la del frente queda construida (también si sus partes no llegaron a medirse, porque la
+    // imagen se compuso después): si no, enseguida arrancaba una obra sobre ella y parecía que todo
+    // se volvía a armar
+    const frente = Math.round(refObjetivo.current);
+    refConstruidas.current.add(frente);
+    ponerZonas(frente);
+    (refIntroActual.current?.capas ?? []).forEach((capa) => {
+      if (capa.revela?.tipo === 'zona') refConstruidas.current.add(capa.revela.portada);
+    });
     setEntro(true);
   }, [soltarIntro]);
 
@@ -1009,6 +1045,32 @@ export default function ReelHitos({ hitos, alFallar }) {
   const refPrerevelado = useRef(false);
   const refRecortes = useRef(new Map()); // portada → forma de su caja (px del panel)
   const refZonas = useRef([]); // por portada: sus partes (título, foto, diorama…), en fracciones
+  // Portadas ya construidas por los agentes (en esta pasada por la sección): las demás se ven en
+  // blanco, sólo el papel, hasta que llegan al frente y los agentes las arman.
+  const refConstruidas = useRef(new Set());
+  const conObras = () => Boolean(refConIntro.current) && !refReducido.current;
+  // La puerta de "Hoy" no se abre hasta que los agentes terminan de construir esa portada.
+  const refPuertaCerrada = useRef(() => false);
+  refPuertaCerrada.current = () => conObras() && refEntro.current && !refConstruidas.current.has(N - 1);
+  const ponerZonas = (i) => {
+    const u = refEscena.current?.portadas[i]?.material.uniforms;
+    const zonas = refZonas.current[i];
+    if (!u || !zonas) return;
+    if (!conObras()) {
+      u.uConZonas.value = 0;
+      return;
+    }
+    // si la intro en curso no trae las partes de esta portada (se midieron tarde), no quedan
+    // tapadas: se ven dentro de la caja de la card
+    const sinAgente =
+      refIntroCorriendo.current && !(refIntroActual.current?.capas ?? []).some((c) => c.revela?.tipo === 'zona' && c.revela.portada === i);
+    const hecha = refConstruidas.current.has(i) || sinAgente;
+    zonas.slice(0, 10).forEach((z, k) => {
+      u.uZonas.value[k].set(z.x0, z.y0, z.x1, z.y1);
+      u.uZonasT.value[k] = hecha ? 1 : 0;
+    });
+    u.uConZonas.value = 1;
+  };
   const pintarRecorteLienzo = useCallback(() => {
     const lienzo = refLienzo.current;
     if (!lienzo) return;
@@ -1094,7 +1156,7 @@ export default function ReelHitos({ hitos, alFallar }) {
     if (!panel) return;
     refRecortes.current.clear();
     if (refLienzo.current) refLienzo.current.style.clipPath = '';
-    refEscena.current?.portadas.forEach((p) => (p.material.uniforms.uConZonas.value = 0));
+    refEscena.current?.portadas.forEach((_, i) => ponerZonas(i));
     panel.querySelectorAll(`.${styles.renglon}`).forEach((el) => (el.style.clipPath = ''));
     // y la posición que se le puso a cada renglón para verlo en su caja: si quedaba, le ganaba al CSS
     // que lo esconde y, al volver a bajar, el titular ya estaba a la vista antes de la intro
@@ -1132,6 +1194,237 @@ export default function ReelHitos({ hitos, alFallar }) {
     if (intro && intro !== 'esperando') prepararRevelado(intro.sentido, intro.capas);
   }, [intro, prepararRevelado]);
 
+  const refIntroCorriendo = useRef(false);
+  refIntroCorriendo.current = intro !== null;
+  const refIntroActual = useRef(null);
+  refIntroActual.current = intro && intro !== 'esperando' ? intro : refIntroActual.current;
+
+  // ---- obras: los agentes arman las portadas al avanzar y las desarman al volver -------------
+  // Construidas quedan las portadas de 0 hasta el "frente" (F). Al salir del hito F hacia
+  // adelante, los agentes arman la F+1: la card, sus partes y las líneas de su ficha. Al salir del
+  // hito F hacia atrás, desarman la F, en orden inverso. Es la misma obra (siempre sobre F+1, con
+  // avance q de 0 a 1) yendo para un lado o para el otro. El scroll sólo la dispara: trabajan a su
+  // ritmo (SEG_POR_UNIDAD), scrollear no los apura.
+  const refObraScroll = useRef(null);
+  const [obra, setObra] = useState(null); // { hito, capas, ancho, alto, clave }
+  const refObra = useRef(null);
+  refObra.current = obra;
+  const refMostrado = useRef(0);
+  refMostrado.current = mostrado;
+  const FILAS_FICHA = [
+    ['Año', styles.fichaAnio],
+    ['Título', styles.fichaTitulo],
+    ['Texto', styles.fichaTexto],
+  ];
+  // Las capas de la obra y su plan: cada una espera sólo a las anteriores que se le superponen
+  // (la card a nadie; cada parte, a la card y a las partes que pisa; las líneas de la ficha, a la
+  // card), así lo que no se pisa se dibuja en paralelo. `tramo`: [inicio, fin] en unidades (1 =
+  // lo que tarda un agente en dibujar su caja). Se escalonan un poco para que no salgan todos juntos.
+  const ESCALON = 0.2;
+  const capasDeObra = (i) => {
+    const zonas = (refZonas.current[i] ?? []).slice(0, 10);
+    const capas = [
+      { nombre: `Portada ${hitos[i].anio}`, revela: { tipo: 'carta' }, caja: { x0: 0, y0: 0, x1: 1, y1: 1 } },
+      ...zonas.map((z, k) => ({ nombre: z.nombre, revela: { tipo: 'zona', k, z }, caja: z })),
+      ...FILAS_FICHA.map(([nombre, clase]) => ({ nombre, revela: { tipo: 'fila', clase } })),
+    ];
+    const pisa = (a, b) => {
+      if (!a.caja || !b.caja) return a.revela.tipo === 'carta' || b.revela.tipo === 'carta';
+      return a.caja.x0 < b.caja.x1 - 1e-4 && b.caja.x0 < a.caja.x1 - 1e-4 && a.caja.y0 < b.caja.y1 - 1e-4 && b.caja.y0 < a.caja.y1 - 1e-4;
+    };
+    let anterior = -ESCALON;
+    capas.forEach((capa, j) => {
+      let inicio = anterior + ESCALON;
+      for (let k = 0; k < j; k++) if (pisa(capas[k], capa)) inicio = Math.max(inicio, capas[k].tramo[1]);
+      capa.tramo = [inicio, inicio + 1];
+      anterior = inicio;
+      // su agente: uno que no esté ocupado en ese tramo (incluida su vuelta a la pelotita)
+      const ocupado = (a) => capas.slice(0, j).some((c) => c.agente === a && c.tramo[1] + 0.7 > inicio);
+      capa.agente = j % AGENTES.length;
+      for (let a = 0; a < AGENTES.length; a++) {
+        const candidato = (j + a) % AGENTES.length;
+        if (!ocupado(candidato)) {
+          capa.agente = candidato;
+          break;
+        }
+      }
+    });
+    return capas;
+  };
+  // cuánto tarda la obra de una portada, en segundos
+  const duracionObra = (i) => {
+    const capas = refObra.current?.hito === i ? refObra.current.capas : capasDeObra(i);
+    return Math.max(SEG_MIN, Math.max(...capas.map((c) => c.tramo[1])) * SEG_POR_UNIDAD);
+  };
+  const soltarObra = (i, hecha) => {
+    const p = refEscena.current?.portadas[i];
+    if (p) {
+      p.material.uniforms.uCorte.value = 1;
+      if (!hecha) p.entrada.t = 0;
+    }
+    ponerZonas(i);
+    const panel = refPanel.current;
+    FILAS_FICHA.forEach(([, c]) => {
+      const el = panel?.querySelector(`.${c}`);
+      if (el) el.style.clipPath = '';
+    });
+  };
+  // la obra en curso: sobre qué portada (siempre F+1) y cuánto va (0..1, por tiempo)
+  const refAvance = useRef(null); // { hito, q, ultimo }
+  // sentido del último movimiento del scroll (1 adelante, -1 atrás) y la fase del cuadro anterior
+  const refSentido = useRef({ fase: null, sentido: 1 });
+  const refFrente = useRef(null); // F: construidas de 0 a F (null = todavía no se sabe)
+  const SEG_POR_UNIDAD = 0.85;
+  const SEG_MIN = 2.5;
+  // fija el frente: construidas 0..F. Las que se suman de golpe aparecen con un fundido; las que
+  // se sacan de golpe se apagan solas (ver el fundido de alCuadro).
+  const ponerFrente = (F) => {
+    const escena = refEscena.current;
+    refFrente.current = F;
+    const hechas = refConstruidas.current;
+    for (let i = 0; i < N; i++) {
+      const debe = i <= F;
+      if (debe === hechas.has(i)) continue;
+      if (debe) {
+        hechas.add(i);
+        const p = escena?.portadas[i];
+        if (p && p.entrada.t < 1) gsap.to(p.entrada, { t: 1, duration: 0.8, ease: 'expo.out', overwrite: true });
+      } else hechas.delete(i);
+      ponerZonas(i);
+    }
+  };
+  const construirEnCuadro = (fase) => {
+    const escena = refEscena.current;
+    const panel = refPanel.current;
+    if (!escena || !panel) return;
+    const ahora = performance.now();
+    if (refFrente.current === null) {
+      const hechas = [...refConstruidas.current];
+      ponerFrente(hechas.length ? Math.max(...hechas) : Math.round(fase));
+    }
+    let F = refFrente.current;
+    let av = refAvance.current;
+    const mov = refSentido.current;
+    if (mov.fase !== null && fase - mov.fase > 1e-4) mov.sentido = 1;
+    else if (mov.fase !== null && fase - mov.fase < -1e-4) mov.sentido = -1;
+    mov.fase = fase;
+    // hasta dónde tendría que estar construido: saliendo del hito F hacia adelante, F+1; hacia
+    // atrás, F-1 (con un margen, para que parado en el hito no se dispare nada)
+    const deseado = fase > F + 0.002 ? Math.ceil(fase - 0.002) : fase < F - 0.002 ? Math.floor(fase + 0.002) : F;
+    if (av) {
+      // si se fue lejos de la obra (ya pasó la portada, o volvió más de un hito), se resuelve de
+      // golpe para que la que queda a la vista sea la que se arma
+      if (fase > av.hito + 0.5) {
+        ponerFrente(av.hito);
+        soltarObra(av.hito, true);
+        av = null;
+      } else if (fase < av.hito - 1.5) {
+        soltarObra(av.hito, false);
+        av = null;
+      }
+      F = refFrente.current;
+    }
+    // una obra nueva arranca sólo si el scroll va para ese lado (o ya se llegó al otro hito): si
+    // no, parado a mitad de camino después de desarmar, volvería a armar enseguida
+    const llego = Math.abs(fase - deseado) < 0.002;
+    if (!av && deseado > F && (mov.sentido > 0 || llego)) {
+      if (deseado - F > 1) ponerFrente(deseado - 1);
+      av = { hito: refFrente.current + 1, q: 0, ultimo: ahora };
+    } else if (!av && deseado < F && (mov.sentido < 0 || llego)) {
+      if (F - deseado > 1) ponerFrente(deseado + 1);
+      // la del frente pasa a ser obra: completa, y los agentes la desarman
+      const h = refFrente.current;
+      ponerFrente(h - 1);
+      av = { hito: h, q: 1, ultimo: ahora };
+    }
+    let enCurso = null;
+    if (av) {
+      const dt = Math.min(0.1, Math.max(0, (ahora - av.ultimo) / 1000));
+      av.ultimo = ahora;
+      // hacia dónde: lo dice el sentido del scroll (yendo hacia la portada, la arman; volviendo,
+      // la desarman); quieto, siguen con lo que estaban. En los hitos de los extremos, sin dudas.
+      let meta = mov.sentido > 0 ? 1 : 0;
+      if (fase >= av.hito - 0.002) meta = 1;
+      else if (fase <= av.hito - 1 + 0.002) meta = 0;
+      const paso = dt / duracionObra(av.hito);
+      av.q = meta > av.q ? Math.min(1, av.q + paso) : Math.max(0, av.q - paso);
+      if (av.q >= 1 && meta === 1) {
+        ponerFrente(av.hito);
+        soltarObra(av.hito, true);
+        av = null;
+      } else if (av.q <= 0 && meta === 0) {
+        soltarObra(av.hito, false);
+        av = null;
+      } else {
+        enCurso = { i: av.hito, p: av.q };
+      }
+    }
+    refAvance.current = av;
+    // a la vista de las pruebas (sólo en desarrollo)
+    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, frente: refFrente.current, deseado, hito: av?.hito ?? null, q: av?.q ?? null };
+    const antes = refObra.current;
+    if (antes && antes.hito !== enCurso?.i && !refConstruidas.current.has(antes.hito)) soltarObra(antes.hito, false);
+    if (!enCurso) {
+      if (antes) {
+        refObra.current = null;
+        setObra(null);
+      }
+      return;
+    }
+    const { i, p } = enCurso;
+    const zonasN = Math.min(10, refZonas.current[i]?.length ?? 0);
+    const clave = `${i}-${zonasN}`;
+    if (antes?.clave !== clave) {
+      const base = panel.getBoundingClientRect();
+      ponerZonas(i);
+      refObra.current = { hito: i, capas: capasDeObra(i), ancho: base.width, alto: base.height, clave };
+      setObra(refObra.current);
+    }
+    const portada = escena.portadas[i];
+    gsap.killTweensOf(portada.entrada);
+    portada.entrada.t = 1;
+    const u = portada.material.uniforms;
+    const obraActual = refObraScroll.current;
+    if (!obraActual || obraActual.capas !== refObra.current.capas) {
+      // recién montada: este cuadro todavía no tiene dónde dibujar. Armando, la card espera
+      // tapada; desarmando, sigue entera hasta que los agentes empiezan
+      const entera = p >= 0.999;
+      u.uCorte.value = entera ? 1 : 0;
+      if (entera) u.uZonasT.value.fill(1);
+      return;
+    }
+    const base = panel.getBoundingClientRect();
+    const capas = refObra.current.capas;
+    const quads = capas.map(({ revela }) => {
+      if (revela.tipo === 'carta') return (t) => escena.esquinas(i, { x0: 0, y0: 0, x1: t, y1: t });
+      if (revela.tipo === 'zona') {
+        const { z } = revela;
+        return (t) => escena.esquinas(i, { x0: z.x0, y0: z.y0, x1: z.x0 + (z.x1 - z.x0) * t, y1: z.y0 + (z.y1 - z.y0) * t });
+      }
+      // las líneas de la ficha: sólo cuando la ficha ya muestra este hito
+      if (refMostrado.current !== i) return null;
+      const r = panel.querySelector(`.${revela.clase}`)?.getBoundingClientRect();
+      if (!r || r.width < 4) return null;
+      const x0 = r.left - base.left;
+      const y0 = r.top - base.top;
+      const x1 = r.right - base.left;
+      const y1 = r.bottom - base.top;
+      return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    });
+    obraActual.actualizar(p, quads, (j, t) => {
+      const { revela } = capas[j];
+      if (revela.tipo === 'carta') u.uCorte.value = Math.max(0, Math.min(1, t));
+      else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = Math.max(0, Math.min(1, t));
+      else if (revela.tipo === 'fila') {
+        const el = panel.querySelector(`.${revela.clase}`);
+        if (refMostrado.current === i) recortar(el, t);
+        else if (el) el.style.clipPath = '';
+      }
+    });
+  };
+  const refConstruirEnCuadro = useRef(construirEnCuadro);
+  refConstruirEnCuadro.current = construirEnCuadro;
+
   const refSentidoIntro = useRef('armar');
   refSentidoIntro.current = intro && intro !== 'esperando' ? intro.sentido : refSentidoIntro.current;
   const alTerminarIntro = useCallback(() => {
@@ -1145,6 +1438,10 @@ export default function ReelHitos({ hitos, alFallar }) {
         p.entrada.t = 0;
       });
       setEntro(false);
+      refConstruidas.current.clear();
+      refAvance.current = null;
+      refFrente.current = null;
+      refSentido.current = { fase: null, sentido: 1 };
       limpiarRevelado();
       refPrerevelado.current = false;
       // desarmado el plano, se sigue subiendo hasta el hero
@@ -1191,6 +1488,8 @@ export default function ReelHitos({ hitos, alFallar }) {
     const centro = Math.round(refObjetivo.current);
     portadas.forEach((p, i) => {
       if (p.entrada.t >= 1) return;
+      // sin construir, queda oculta hasta que se scrollee hacia ella (ver alCuadro)
+      if (conObras() && !refConstruidas.current.has(i)) return;
       gsap.to(p.entrada, { t: 1, duration: 1.25, ease: 'expo.out', delay: 0.75 + Math.abs(i - centro) * 0.1, overwrite: true });
     });
   }, [entro, escenaN, escenaLista, reducido]);
@@ -1226,7 +1525,8 @@ export default function ReelHitos({ hitos, alFallar }) {
       // a Proyectos; si no, se vuelve a "Hoy". Quedarse a mitad dejaba la regla de años tapada.
       const enCola = -m.caja.top - m.largo;
       if (m.cola > 0 && enCola > 2) {
-        if (sentido > 0 && enCola > Math.min(m.cola * 0.4, alto * 0.12)) pasarAProyectos();
+        if (refPuertaCerrada.current()) irA(N - 1);
+        else if (sentido > 0 && enCola > Math.min(m.cola * 0.4, alto * 0.12)) pasarAProyectos();
         else irA(N - 1);
         return;
       }
@@ -1235,6 +1535,14 @@ export default function ReelHitos({ hitos, alFallar }) {
       irA(hitoDestino(faseDeProgreso(-m.caja.top / m.largo, N), refAsentado.current, N));
     };
     const programar = () => {
+      // con la puerta cerrada el scroll no pasa de "Hoy" (ni con un envión largo)
+      if (refPuertaCerrada.current() && !refTransicion.current && !estaCongelado()) {
+        const m = medir();
+        const tope = m ? m.arriba + m.largo : null;
+        if (tope !== null && window.scrollY > tope + 1 && window.scrollY < m.fin + window.innerHeight) {
+          window.scrollTo({ top: tope, behavior: 'instant' });
+        }
+      }
       const y = window.scrollY;
       const previo = ultimoY;
       if (y !== ultimoY) sentido = y > ultimoY ? 1 : -1;
@@ -1252,6 +1560,13 @@ export default function ReelHitos({ hitos, alFallar }) {
       if (dedos) cortarAnimacion();
       else programar();
     };
+    // en "Hoy" con la puerta cerrada, la rueda hacia abajo no hace nada (Lenis no toma el gesto)
+    const frenarEnPuerta = (evento) => {
+      if (evento.deltaY <= 0 || !refPuertaCerrada.current() || refTransicion.current) return;
+      const m = medir();
+      if (m && window.scrollY >= m.arriba + m.largo - 2 && window.scrollY < m.fin) evento.preventDefault();
+    };
+    window.addEventListener('wheel', frenarEnPuerta, { passive: false, capture: true });
     window.addEventListener('scroll', programar, { passive: true });
     window.addEventListener('wheel', alGirar, { passive: true });
     window.addEventListener('touchstart', alTocar, { passive: true });
@@ -1260,6 +1575,7 @@ export default function ReelHitos({ hitos, alFallar }) {
     return () => {
       clearTimeout(espera);
       cortarAnimacion();
+      window.removeEventListener('wheel', frenarEnPuerta, { capture: true });
       window.removeEventListener('scroll', programar);
       window.removeEventListener('wheel', alGirar);
       window.removeEventListener('touchstart', alTocar);
@@ -1634,6 +1950,7 @@ export default function ReelHitos({ hitos, alFallar }) {
             </li>
           ))}
         </ol>
+        {obra && !intro ? <ObraScroll key={obra.clave} ref={refObraScroll} capas={obra.capas} ancho={obra.ancho} alto={obra.alto} /> : null}
         {intro && intro !== 'esperando' ? (
           <IntroAgentes
             key={intro.sentido}

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 450" role="img" aria-label="Escudo del Instituto San Francisco de Asís (ISFA)">
+  <!-- Escudo del ISFA redibujado a partir del original: borde negro, banda roja, campo blanco,
+       San Francisco con aureola y el brazo hacia la cruz con rayos, aves, el lobo y "Paz y Bien". -->
+  <defs>
+    <path id="escudo" d="M14 66 C70 62 140 44 180 8 C220 44 290 62 346 66 L346 250 C346 352 272 410 180 444 C88 410 14 352 14 250 Z"/>
+  </defs>
+  <use href="#escudo" fill="#151515"/>
+  <use href="#escudo" fill="#d4161c" transform="translate(180 228) scale(0.955) translate(-180 -228)"/>
+  <use href="#escudo" fill="#ffffff" transform="translate(180 232) scale(0.885) translate(-180 -232)"/>
+
+  <!-- ISFA -->
+  <text x="68" y="138" font-family="'Arial Narrow', 'Roboto Condensed', Arial, sans-serif" font-weight="400" font-size="56" textLength="118" lengthAdjust="spacingAndGlyphs" fill="#151515">ISFA</text>
+
+  <!-- cruz con rayos -->
+  <g fill="#151515">
+    <rect x="257" y="88" width="13" height="76"/>
+    <rect x="236" y="111" width="55" height="12"/>
+  </g>
+  <path d="M263.5 164 L260 300 L263.5 318 L267 300 Z" fill="#151515"/>
+  <g stroke="#151515" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <path d="M252 150 L216 206"/>
+    <path d="M254 160 L226 246"/>
+    <path d="M256 170 L240 286"/>
+    <path d="M275 150 L314 204"/>
+    <path d="M273 160 L306 244"/>
+    <path d="M271 170 L292 284"/>
+  </g>
+
+  <!-- San Francisco -->
+  <circle cx="121" cy="180" r="30" fill="none" stroke="#151515" stroke-width="2"/>
+  <circle cx="120" cy="182" r="15" fill="#151515"/>
+  <path fill="#151515" d="M102 196 C112 190 130 191 140 199 L186 172 L184 160 L189 152 L193 156 L192 164 L198 154 L202 158 L197 168 L203 166 L205 171 L196 180 L154 214 C160 262 162 320 156 372 L132 372 L128 358 L118 372 L80 372 C78 340 84 296 90 260 C93 232 94 210 102 196 Z"/>
+  <!-- pliegues del hábito -->
+  <g stroke="#ffffff" stroke-width="1.6" fill="none" opacity="0.55" stroke-linecap="round">
+    <path d="M118 230 C116 280 112 320 108 362"/>
+    <path d="M136 236 C138 280 138 320 140 360"/>
+  </g>
+  <!-- el lobo, sentado a sus pies -->
+  <path fill="#151515" d="M150 372 C150 352 156 336 166 328 C164 318 160 312 156 310 L152 304 L160 304 L163 298 L168 302 L172 296 L174 306 C180 314 182 326 182 338 C186 348 186 362 182 372 Z"/>
+  <!-- aves -->
+  <g fill="none" stroke="#151515" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M62 178 q7 -7 13 0 q7 -8 14 -1"/>
+    <path d="M50 214 q6 -6 12 0 q6 -7 13 -1"/>
+    <path d="M46 276 q7 -7 13 0 q7 -8 14 -1"/>
+    <path d="M60 310 q6 -6 11 0 q6 -6 12 -1"/>
+  </g>
+
+  <!-- Paz y Bien -->
+  <g fill="#d4161c" font-family="'Arial Narrow', 'Roboto Condensed', Arial, sans-serif" font-weight="400" font-size="28" text-anchor="middle">
+    <text x="226" y="318" textLength="46" lengthAdjust="spacingAndGlyphs">PAZ</text>
+    <text x="226" y="346">Y</text>
+    <text x="226" y="374" textLength="54" lengthAdjust="spacingAndGlyphs">BIEN</text>
+  </g>
+</svg>

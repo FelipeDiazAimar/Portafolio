@@ -1,0 +1,186 @@
+// Experiencia laboral, en orden: cada trabajo es un pasillo del recorrido 3D (ver
+// components/Experiencia). `objetos` son las cosas con tooltip de cada pasillo: cada una cuenta un
+// hecho real (de los hitos de "Sobre mí" y de data/proyectos.json), con el stack y el proyecto
+// cuando lo hay (el stack de un objeto con `proyecto` sale del proyecto; `stack` son ids de
+// data/tecnologias.js; `proyectos` son los de toda la etapa; `paleta`, los dos colores de los
+// objetos del pasillo, que si no van en negro y blanco). `modelo` elige la pieza 3D (objetosTooltip.js / modelos.js) y `lado` la pared.
+export const TRABAJOS = [
+  {
+    id: 'laboratorio',
+    periodo: '2024',
+    puesto: 'Ayudante de laboratorio',
+    lugar: 'UTN · Facultad Regional San Francisco',
+    resumen: 'Mi primer trabajo en el área: reparación, instalación y desarme de equipos.',
+    acento: '#2fb574',
+    paleta: ['#2fb574', '#00d5c0'],
+    objetos: [
+      {
+        modelo: 'placa',
+        lado: 'izq',
+        titulo: 'Desarme de equipos',
+        texto: 'Como ayudante del laboratorio de la UTN participé en el desarme de los equipos, pieza por pieza: placas, memorias, fuentes y discos.',
+      },
+      {
+        modelo: 'banco',
+        lado: 'der',
+        titulo: 'Reparación',
+        texto: 'Reparación de las computadoras del laboratorio. Fue mi primer contacto con el hardware por dentro, antes de pasar al software.',
+      },
+      {
+        modelo: 'gabinete',
+        lado: 'izq',
+        titulo: 'Instalación de equipos',
+        texto: 'Instalación y puesta en marcha de los puestos del laboratorio que usan los alumnos de la facultad.',
+      },
+    ],
+  },
+  {
+    id: 'docencia',
+    periodo: '2024 – 2025',
+    puesto: 'Profesor de ingreso',
+    lugar: 'UTN · Programación',
+    resumen: 'Dos años dando el curso de ingreso de Programación.',
+    acento: '#8fd14f',
+    paleta: ['#8fd14f', '#ffd500'],
+    objetos: [
+      {
+        modelo: 'pizarron',
+        lado: 'izq',
+        titulo: 'Python y C',
+        texto: 'Di el curso de ingreso de Programación de la UTN: los primeros programas de cada alumno, en Python y en C.',
+        stack: ['python'],
+      },
+      {
+        modelo: 'diagrama',
+        lado: 'der',
+        titulo: 'Diagramas de flujo y lógica',
+        texto: 'Antes del código, la lógica: diagramas de flujo y lógica de procesos para resolver un problema paso a paso.',
+      },
+      {
+        modelo: 'pupitres',
+        lado: 'izq',
+        titulo: 'Más de 90 alumnos',
+        texto: 'Di el ingreso en 2024 y volví en 2025, esta vez con más de 90 alumnos.',
+        puntos: ['2024 · primer año dando el ingreso', '2025 · más de 90 alumnos a cargo'],
+      },
+    ],
+  },
+  {
+    id: 'freelance',
+    periodo: '2024 – hoy',
+    puesto: 'Desarrollador freelance',
+    lugar: 'Clientes propios',
+    resumen: 'Tiendas, catálogos y sistemas a medida para comercios de la zona.',
+    acento: '#f2a23c',
+    paleta: ['#f2a23c', '#1524ff'],
+    proyectos: ['justphones', 'algobonito', 'calida-escencia', 'asistente', 'neifert'],
+    objetos: [
+      {
+        modelo: 'celular',
+        lado: 'izq',
+        titulo: 'JustPhones',
+        texto: 'Tienda de fundas para iPhone: catálogo por modelo, carrito que cierra el pedido por WhatsApp y un panel con finanzas y cierres de período.',
+        proyecto: 'justphones',
+      },
+      {
+        modelo: 'pago',
+        lado: 'der',
+        titulo: 'Algo Bonito SV y Calida Escencia',
+        texto: 'Dos tiendas online con cobro por Mercado Pago (Calida Escencia también cierra por WhatsApp) y paneles de productos, pedidos y finanzas.',
+        proyecto: 'algobonito',
+      },
+      {
+        modelo: 'robot',
+        lado: 'izq',
+        titulo: 'Asistente con IA · Atención Primaria',
+        texto: 'Proyecto propio: un asistente que responde usando el apunte como contexto, con biblioteca de recursos, autoevaluaciones y panel de administración.',
+        proyecto: 'asistente',
+      },
+      {
+        modelo: 'auto',
+        lado: 'der',
+        titulo: 'Neifert Automotores',
+        texto: 'Catálogo web de la concesionaria con un CRM interno de leads, una bandeja de WhatsApp compartida y estadísticas comerciales.',
+        proyecto: 'neifert',
+      },
+    ],
+  },
+  {
+    id: 'tecnico',
+    periodo: '2025',
+    puesto: 'Técnico informático',
+    lugar: 'Darío Martínez Computación',
+    resumen: 'Reparación de hardware y software, y el sitio del negocio.',
+    acento: '#8f73f5',
+    paleta: ['#8f73f5', '#ff3ea5'],
+    proyectos: ['dario-martinez'],
+    objetos: [
+      {
+        modelo: 'notebook',
+        lado: 'izq',
+        titulo: 'PCs y notebooks',
+        texto: 'Técnico en Darío Martínez Computación: reparé PCs y notebooks, tanto de hardware como de software.',
+      },
+      {
+        modelo: 'impresora',
+        lado: 'der',
+        titulo: 'Impresoras y teléfonos',
+        texto: 'También impresoras y teléfonos: diagnóstico y reparación para los clientes del negocio.',
+      },
+      {
+        modelo: 'monitor',
+        lado: 'izq',
+        titulo: 'El sitio del negocio',
+        texto: 'Les hice el sitio comercial y un panel privado para gestionar artículos, precios, ventas y stock en tiempo real, que antes vivían en papel y planillas.',
+        proyecto: 'dario-martinez',
+      },
+    ],
+  },
+  {
+    id: 'mbrf',
+    periodo: '2026 – hoy',
+    puesto: 'Desarrollador fullstack',
+    lugar: 'MBRF · San Jorge',
+    resumen: 'Trazabilidad industrial para las plantas del frigorífico y los centros de distribución.',
+    acento: '#3b7bff',
+    paleta: ['#3b7bff', '#ff1020'],
+    proyectos: ['mbrf-captura', 'mbrf-control', 'gestor-proyectos-sap', 'control-salidas-rrhh'],
+    objetos: [
+      {
+        modelo: 'balanza',
+        lado: 'izq',
+        titulo: 'Captura en estación',
+        texto: 'Data collector para faena y elaborados: balanzas, escaneo, etiquetas y unidades de manipulación que llegan a SAP en tiempo real, conviviendo con el sistema legacy.',
+        proyecto: 'mbrf-captura',
+      },
+      {
+        modelo: 'cajas',
+        lado: 'der',
+        titulo: 'Cada caja, trazada',
+        texto: 'El dato de cada media, caja y pallet se cargaba a mano o en terminales de los 90; ahora sale con peso y etiqueta automáticos y SAP al día.',
+        proyecto: 'mbrf-captura',
+      },
+      {
+        modelo: 'tablero',
+        lado: 'izq',
+        titulo: 'Planeamiento de 4 plantas',
+        texto: 'Tableros de planeamiento, calidad y stock multiplanta sincronizados contra SAP HANA, con un monitor de los servidores de cada planta.',
+        proyecto: 'mbrf-control',
+      },
+      {
+        modelo: 'rack',
+        lado: 'der',
+        titulo: 'Kubernetes y Docker',
+        texto: 'En MBRF aprendí Kubernetes; los sistemas que desarrollo corren en contenedores Docker.',
+        stack: ['kubernetes', 'docker'],
+      },
+      {
+        modelo: 'equipo',
+        lado: 'izq',
+        titulo: 'Coordinar equipos',
+        texto: 'Aprendí a coordinar equipos. Hice el gestor de proyectos del equipo SAP: hitos, tareas con avance automático y tickets de incidencias.',
+        proyecto: 'gestor-proyectos-sap',
+      },
+    ],
+  },
+];

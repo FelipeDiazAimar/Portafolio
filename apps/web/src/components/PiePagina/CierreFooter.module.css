@@ -6,6 +6,27 @@
   padding: 1rem clamp(1.25rem, 8vw, 6rem) 1rem;
 }
 
+/* Envoltorio de la frase: en modo 3D el texto se oculta (sigue dando el tamaño) y el lienzo WebGL
+   lo cubre con un margen para que quepan la inclinación y el bisel. */
+.vidrio {
+  position: relative;
+}
+
+.lienzo {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+}
+
+.vidrio[data-modo='3d'] .lienzo {
+  opacity: 1;
+}
+
+.vidrio[data-modo='3d'] .frase {
+  visibility: hidden;
+}
+
 .frase {
   margin: 0;
   font-size: clamp(3.2rem, 9.4vw, 8.6rem);

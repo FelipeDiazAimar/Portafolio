@@ -1,0 +1,275 @@
+/* Títulos: carrusel vertical de vidrio a pantalla completa, con el número a la izquierda y el
+   nombre a la derecha. La sección es alta (su alto lo pone el componente) y el escenario queda fijo
+   mientras se scrollea: el scroll hace avanzar el carrusel. El lienzo dibuja el fondo con el mismo
+   color que la sección. */
+.seccion {
+  position: relative;
+  /* sale del ancho máximo de <main>, como Experiencia y Habilidades */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  /* clip y no hidden: hidden rompe el sticky del escenario */
+  overflow: clip;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  scroll-margin-top: 0;
+  isolation: isolate;
+}
+
+.escenario {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.lienzo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.lienzo:active {
+  cursor: grabbing;
+}
+
+.izquierda,
+.derecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.izquierda {
+  left: 48px;
+}
+
+.derecha {
+  right: 48px;
+  max-width: min(30vw, 340px);
+  text-align: right;
+}
+
+.rotulo {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.contador {
+  margin: 0;
+  display: flex;
+  gap: 0.4em;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.barra {
+  color: var(--color-muted);
+}
+
+.nombre {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.lugar,
+.estado {
+  margin: 0.3rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-muted);
+  text-wrap: balance;
+}
+
+.estado {
+  margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.credito {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.68rem;
+  color: var(--color-muted);
+  pointer-events: auto;
+}
+
+.pista {
+  margin: 0.9rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  opacity: 0.8;
+}
+
+.seccion:focus {
+  outline: none;
+}
+
+/* el texto nuevo entra subiendo apenas */
+.cambia {
+  display: inline-block;
+  animation: entrar 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(0.5em);
+    filter: blur(3px);
+  }
+}
+
+/* botones de vidrio */
+.boton {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  margin-left: -22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgb(255 255 255 / 0.75);
+  background: rgb(255 255 255 / 0.28);
+  backdrop-filter: blur(6px) saturate(1.5);
+  -webkit-backdrop-filter: blur(6px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    inset 0 -6px 12px rgb(0 0 0 / 0.08),
+    0 4px 14px rgb(0 0 0 / 0.12);
+  color: #2563eb;
+  cursor: pointer;
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    opacity 200ms ease;
+}
+
+/* como en la referencia: al pasar el mouse el botón crece y se aclara */
+@media (hover: hover) {
+  .boton:hover:not(:disabled) {
+    transform: scale(1.12);
+    background: rgb(255 255 255 / 0.5);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.8),
+      inset 0 -6px 12px rgb(0 0 0 / 0.06),
+      0 8px 22px rgb(0 0 0 / 0.18);
+  }
+}
+
+.boton:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.boton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.boton:focus-visible {
+  outline: 2px solid var(--color-accent, #3b82f6);
+  outline-offset: 3px;
+}
+
+.boton svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.arriba {
+  top: calc(4.5rem + 10px);
+}
+
+.abajo {
+  bottom: 34px;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* angosto: el número arriba y el nombre abajo, sobre una lámina para que se lea sobre la foto */
+@media (max-width: 760px) {
+  .izquierda {
+    top: calc(4.5rem + 18px);
+    left: 16px;
+    transform: none;
+  }
+
+  /* en el celular las tarjetas de texto ya dicen el título: el panel queda sólo para lectores */
+  .derecha {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cambia {
+    animation: none;
+  }
+}
+
+/* PC: la cinta horizontal ocupa abajo a la izquierda y arriba a la derecha; el número va arriba a la
+   izquierda y el nombre abajo a la derecha. Sin flechas: se avanza con el scroll o arrastrando. */
+.escenario[data-modo='horizontal'] .izquierda {
+  top: calc(4.5rem + 48px);
+  transform: none;
+}
+
+.escenario[data-modo='horizontal'] .derecha {
+  top: auto;
+  bottom: 56px;
+  transform: none;
+}
+
+.escenario[data-modo='horizontal'] .boton {
+  display: none;
+}
+
+.escenario[data-modo='horizontal'] .lienzo:active {
+  cursor: grabbing;
+}

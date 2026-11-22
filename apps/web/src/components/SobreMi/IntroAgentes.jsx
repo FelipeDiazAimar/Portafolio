@@ -124,7 +124,7 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
     };
     const tl = gsap.timeline({ paused: desarmar, onComplete: desarmar ? undefined : terminar, onReverseComplete: desarmar ? terminar : undefined });
     tl.fromTo(raiz, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power1.out' }, 0);
-    tl.fromTo(`.${styles.grilla}`, { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.out' }, 0);
+    tl.fromTo(refRaiz.current.querySelector(`.${styles.grilla}`), { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.out' }, 0);
     tl.fromTo(`.${styles.pildora}`, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out' }, 0.15);
 
     // Los agentes salen de su pelotita de color en la píldora de abajo, recién cuando les toca su

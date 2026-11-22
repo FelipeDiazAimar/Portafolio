@@ -1,0 +1,1647 @@
+{
+ "modelos": {
+  "circuit_board": {
+   "nombre": "Circuit Board",
+   "medidas": [
+    0.404,
+    0.078,
+    0.397
+   ],
+   "kb": 307
+  },
+  "retro_multimeter": {
+   "nombre": "Retro Multimeter",
+   "medidas": [
+    0.216,
+    0.279,
+    0.203
+   ],
+   "kb": 131
+  },
+  "magnifying_glass_01": {
+   "nombre": "Magnifying Glass 01",
+   "medidas": [
+    0.132,
+    0.272,
+    0.027
+   ],
+   "kb": 76
+  },
+  "vintage_spacecraft_instrument": {
+   "nombre": "Vintage Spacecraft Instrument",
+   "medidas": [
+    0.41,
+    0.269,
+    0.204
+   ],
+   "kb": 229
+  },
+  "industrial_microscope": {
+   "nombre": "Industrial Microscope",
+   "medidas": [
+    0.215,
+    0.462,
+    0.498
+   ],
+   "kb": 263
+  },
+  "vintage_microscope": {
+   "nombre": "Vintage Microscope",
+   "medidas": [
+    0.107,
+    0.4,
+    0.182
+   ],
+   "kb": 270
+  },
+  "chemistry_set": {
+   "nombre": "Chemistry Set",
+   "medidas": [
+    1.078,
+    0.429,
+    0.354
+   ],
+   "kb": 343
+  },
+  "bunsen_burner": {
+   "nombre": "Bunsen Burner",
+   "medidas": [
+    0.139,
+    0.173,
+    0.139
+   ],
+   "kb": 143
+  },
+  "screwdriver": {
+   "nombre": "Screwdriver",
+   "medidas": [
+    0.027,
+    0.209,
+    0.027
+   ],
+   "kb": 84
+  },
+  "flathead_screwdriver": {
+   "nombre": "Flathead Screwdriver",
+   "medidas": [
+    0.03,
+    0.261,
+    0.03
+   ],
+   "kb": 91
+  },
+  "pliers": {
+   "nombre": "Pliers",
+   "medidas": [
+    0.055,
+    0.18,
+    0.018
+   ],
+   "kb": 125
+  },
+  "measuring_tape_01": {
+   "nombre": "Measuring Tape 01",
+   "medidas": [
+    0.041,
+    0.073,
+    0.169
+   ],
+   "kb": 83
+  },
+  "lightbulb_01": {
+   "nombre": "Lightbulb 01",
+   "medidas": [
+    0.06,
+    0.1,
+    0.06
+   ],
+   "kb": 74
+  },
+  "small_plastic_torch": {
+   "nombre": "Small Plastic Torch",
+   "medidas": [
+    0.1,
+    0.055,
+    0.227
+   ],
+   "kb": 175
+  },
+  "medical_tape": {
+   "nombre": "Medical Tape",
+   "medidas": [
+    0.045,
+    0.025,
+    0.045
+   ],
+   "kb": 40
+  },
+  "power_box_01": {
+   "nombre": "Power Box 01",
+   "medidas": [
+    0.377,
+    0.503,
+    0.418
+   ],
+   "kb": 256
+  },
+  "desk_lamp_arm_01": {
+   "nombre": "Desk Lamp Arm 01",
+   "medidas": [
+    0.617,
+    0.879,
+    0.408
+   ],
+   "kb": 288
+  },
+  "combination_wrench": {
+   "nombre": "Combination Wrench",
+   "medidas": [
+    0.057,
+    0.022,
+    0.337
+   ],
+   "kb": 65
+  },
+  "drill_press_01": {
+   "nombre": "Drill Press 01",
+   "medidas": [
+    0.366,
+    0.902,
+    0.599
+   ],
+   "kb": 343
+  },
+  "industrial_pastic_container": {
+   "nombre": "Industrial Plastic Container",
+   "medidas": [
+    0.476,
+    0.423,
+    0.631
+   ],
+   "kb": 154
+  },
+  "steel_frame_shelves_01": {
+   "nombre": "Steel Frame Shelves 01",
+   "medidas": [
+    1.097,
+    2.141,
+    0.502
+   ],
+   "kb": 179
+  },
+  "metal_office_desk": {
+   "nombre": "Metal Office Desk",
+   "medidas": [
+    2,
+    0.788,
+    0.947
+   ],
+   "kb": 189
+  },
+  "mounted_fluorescent_lights": {
+   "nombre": "Mounted Fluorescent Lights",
+   "medidas": [
+    0.912,
+    0.035,
+    0.645
+   ],
+   "kb": 192
+  },
+  "book_encyclopedia_set_01": {
+   "nombre": "Book Encyclopedia Set 01",
+   "medidas": [
+    0.551,
+    0.237,
+    0.163
+   ],
+   "kb": 500
+  },
+  "binder_notebook": {
+   "nombre": "Binder Notebook",
+   "medidas": [
+    0.584,
+    0.025,
+    0.2
+   ],
+   "kb": 183
+  },
+  "clipboard": {
+   "nombre": "Clipboard",
+   "medidas": [
+    0.229,
+    0.042,
+    0.337
+   ],
+   "kb": 93
+  },
+  "stationery_supplies": {
+   "nombre": "Stationery Supplies",
+   "medidas": [
+    0.302,
+    0.164,
+    0.084
+   ],
+   "kb": 116
+  },
+  "vintage_stapler": {
+   "nombre": "Vintage Stapler",
+   "medidas": [
+    0.208,
+    0.095,
+    0.047
+   ],
+   "kb": 136
+  },
+  "round_spectacles": {
+   "nombre": "Round Spectacles",
+   "medidas": [
+    0.158,
+    0.046,
+    0.149
+   ],
+   "kb": 163
+  },
+  "chess_set": {
+   "nombre": "Chess Set",
+   "medidas": [
+    0.553,
+    0.112,
+    0.553
+   ],
+   "kb": 488
+  },
+  "alarm_clock_01": {
+   "nombre": "Alarm Clock 01",
+   "medidas": [
+    0.228,
+    0.174,
+    0.168
+   ],
+   "kb": 147
+  },
+  "marble_bust_01": {
+   "nombre": "Marble Bust 01",
+   "medidas": [
+    0.272,
+    0.515,
+    0.3
+   ],
+   "kb": 195
+  },
+  "mantel_clock_01": {
+   "nombre": "Mantel Clock 01",
+   "medidas": [
+    0.484,
+    0.161,
+    0.251
+   ],
+   "kb": 234
+  },
+  "filmstrip_projector_8mm": {
+   "nombre": "Filmstrip Projector 8mm",
+   "medidas": [
+    0.254,
+    0.345,
+    0.603
+   ],
+   "kb": 410
+  },
+  "antique_ceramic_vase_01": {
+   "nombre": "Antique Ceramic Vase 01",
+   "medidas": [
+    0.255,
+    0.44,
+    0.255
+   ],
+   "kb": 101
+  },
+  "SchoolDesk_01": {
+   "nombre": "School Desk 01",
+   "medidas": [
+    0.712,
+    0.883,
+    0.546
+   ],
+   "kb": 72
+  },
+  "SchoolChair_01": {
+   "nombre": "School Chair 01",
+   "medidas": [
+    0.566,
+    1.006,
+    0.675
+   ],
+   "kb": 88
+  },
+  "projector_screen": {
+   "nombre": "Projector Screen",
+   "medidas": [
+    1.094,
+    1.799,
+    0.916
+   ],
+   "kb": 303
+  },
+  "wooden_bookshelf_worn": {
+   "nombre": "Wooden Bookshelf Worn",
+   "medidas": [
+    1.374,
+    2.063,
+    0.581
+   ],
+   "kb": 571
+  },
+  "vintage_cabinet_01": {
+   "nombre": "Vintage Cabinet 01",
+   "medidas": [
+    2.022,
+    2.235,
+    0.67
+   ],
+   "kb": 518
+  },
+  "painted_wooden_shelves": {
+   "nombre": "Painted Wooden Shelves",
+   "medidas": [
+    0.511,
+    1.125,
+    0.367
+   ],
+   "kb": 74
+  },
+  "vintage_grandfather_clock_01": {
+   "nombre": "Vintage Grandfather Clock 01",
+   "medidas": [
+    0.997,
+    2.191,
+    0.795
+   ],
+   "kb": 362
+  },
+  "fancy_picture_frame_01": {
+   "nombre": "Fancy Picture Frame 01",
+   "medidas": [
+    0.603,
+    0.464,
+    0.02
+   ],
+   "kb": 101
+  },
+  "hanging_picture_frame_02": {
+   "nombre": "Hanging Picture Frame 02",
+   "medidas": [
+    0.752,
+    0.5,
+    0.033
+   ],
+   "kb": 92
+  },
+  "wall_clock": {
+   "nombre": "Wall Clock",
+   "medidas": [
+    0.32,
+    0.32,
+    0.047
+   ],
+   "kb": 99
+  },
+  "lantern_chandelier_01": {
+   "nombre": "Lantern Chandelier 01",
+   "medidas": [
+    0.579,
+    0.878,
+    0.575
+   ],
+   "kb": 316
+  },
+  "classic_laptop": {
+   "nombre": "Classic Laptop",
+   "medidas": [
+    0.652,
+    0.543,
+    0.486
+   ],
+   "kb": 224
+  },
+  "gaming_console": {
+   "nombre": "Gaming Console",
+   "medidas": [
+    0.325,
+    0.1,
+    0.319
+   ],
+   "kb": 352
+  },
+  "gamepad": {
+   "nombre": "Gamepad",
+   "medidas": [
+    0.404,
+    0.019,
+    0.435
+   ],
+   "kb": 100
+  },
+  "Camera_01": {
+   "nombre": "Camera 01",
+   "medidas": [
+    0.214,
+    0.078,
+    0.263
+   ],
+   "kb": 435
+  },
+  "digital_wrist_watch": {
+   "nombre": "Digital Wrist Watch",
+   "medidas": [
+    0.036,
+    0.008,
+    0.217
+   ],
+   "kb": 204
+  },
+  "potted_plant_04": {
+   "nombre": "Potted Plant 04",
+   "medidas": [
+    0.17,
+    0.268,
+    0.186
+   ],
+   "kb": 183
+  },
+  "ceramic_vase_01": {
+   "nombre": "Ceramic Vase 01",
+   "medidas": [
+    0.205,
+    0.401,
+    0.206
+   ],
+   "kb": 81
+  },
+  "ceramic_vase_02": {
+   "nombre": "Ceramic Vase 02",
+   "medidas": [
+    0.22,
+    0.309,
+    0.221
+   ],
+   "kb": 127
+  },
+  "ceramic_vase_03": {
+   "nombre": "Ceramic Vase 03",
+   "medidas": [
+    0.112,
+    0.414,
+    0.112
+   ],
+   "kb": 133
+  },
+  "ceramic_vase_04": {
+   "nombre": "Ceramic Vase 04",
+   "medidas": [
+    0.183,
+    0.342,
+    0.182
+   ],
+   "kb": 100
+  },
+  "wooden_candlestick": {
+   "nombre": "Wooden Candlestick",
+   "medidas": [
+    0.098,
+    0.22,
+    0.1
+   ],
+   "kb": 1095
+  },
+  "tea_set_01": {
+   "nombre": "Tea Set 01",
+   "medidas": [
+    0.918,
+    0.165,
+    0.484
+   ],
+   "kb": 165
+  },
+  "croissant": {
+   "nombre": "Croissant",
+   "medidas": [
+    0.2,
+    0.062,
+    0.076
+   ],
+   "kb": 120
+  },
+  "carrot_cake": {
+   "nombre": "Carrot Cake",
+   "medidas": [
+    0.225,
+    0.098,
+    0.225
+   ],
+   "kb": 298
+  },
+  "wicker_basket_01": {
+   "nombre": "Wicker Basket 01",
+   "medidas": [
+    0.383,
+    0.117,
+    0.295
+   ],
+   "kb": 275
+  },
+  "wicker_basket_02": {
+   "nombre": "Wicker Basket 02",
+   "medidas": [
+    0.375,
+    0.218,
+    0.271
+   ],
+   "kb": 272
+  },
+  "rubber_duck_toy": {
+   "nombre": "Rubber Duck Toy",
+   "medidas": [
+    0.214,
+    0.286,
+    0.3
+   ],
+   "kb": 55
+  },
+  "standing_picture_frame_01": {
+   "nombre": "Standing Picture Frame 01",
+   "medidas": [
+    0.201,
+    0.25,
+    0.1
+   ],
+   "kb": 57
+  },
+  "standing_picture_frame_02": {
+   "nombre": "Standing Picture Frame 02",
+   "medidas": [
+    0.217,
+    0.266,
+    0.102
+   ],
+   "kb": 81
+  },
+  "boombox": {
+   "nombre": "Boombox",
+   "medidas": [
+    0.724,
+    0.47,
+    0.186
+   ],
+   "kb": 240
+  },
+  "modern_arm_chair_01": {
+   "nombre": "Modern Arm Chair 01",
+   "medidas": [
+    0.82,
+    1.023,
+    0.987
+   ],
+   "kb": 147
+  },
+  "potted_plant_01": {
+   "nombre": "Potted Plant 01",
+   "medidas": [
+    0.589,
+    1.351,
+    0.637
+   ],
+   "kb": 1125
+  },
+  "potted_plant_02": {
+   "nombre": "Potted Plant 02",
+   "medidas": [
+    0.701,
+    0.841,
+    0.657
+   ],
+   "kb": 455
+  },
+  "planter_box_01": {
+   "nombre": "Planter Box 01",
+   "medidas": [
+    0.913,
+    0.425,
+    0.414
+   ],
+   "kb": 156
+  },
+  "ceramic_pot": {
+   "nombre": "Ceramic Pot",
+   "medidas": [
+    0.656,
+    0.372,
+    0.502
+   ],
+   "kb": 93
+  },
+  "Sofa_01": {
+   "nombre": "Sofa 01",
+   "medidas": [
+    1.571,
+    0.797,
+    0.658
+   ],
+   "kb": 203
+  },
+  "modern_wooden_cabinet": {
+   "nombre": "Modern Wooden Cabinet",
+   "medidas": [
+    2.44,
+    0.68,
+    0.52
+   ],
+   "kb": 450
+  },
+  "wooden_display_shelves_01": {
+   "nombre": "Wooden Display Shelves 01",
+   "medidas": [
+    1.078,
+    1.556,
+    0.372
+   ],
+   "kb": 165
+  },
+  "side_table_01": {
+   "nombre": "Side Table 01",
+   "medidas": [
+    0.55,
+    0.551,
+    0.45
+   ],
+   "kb": 83
+  },
+  "hanging_picture_frame_01": {
+   "nombre": "Hanging Picture Frame 01",
+   "medidas": [
+    0.594,
+    0.841,
+    0.016
+   ],
+   "kb": 53
+  },
+  "modern_ceiling_lamp_01": {
+   "nombre": "Modern Ceiling Lamp 01",
+   "medidas": [
+    0.432,
+    0.952,
+    0.432
+   ],
+   "kb": 82
+  },
+  "television_02": {
+   "nombre": "Television 02",
+   "medidas": [
+    0.4,
+    0.411,
+    0.35
+   ],
+   "kb": 70
+  },
+  "vintage_radio_transceiver": {
+   "nombre": "Vintage Radio Transceiver",
+   "medidas": [
+    0.618,
+    0.434,
+    0.418
+   ],
+   "kb": 537
+  },
+  "cassette_player": {
+   "nombre": "Cassette Player",
+   "medidas": [
+    0.129,
+    0.237,
+    0.049
+   ],
+   "kb": 162
+  },
+  "portable_cassette_player": {
+   "nombre": "Portable Cassette Player",
+   "medidas": [
+    0.172,
+    0.13,
+    0.04
+   ],
+   "kb": 225
+  },
+  "vintage_video_camera": {
+   "nombre": "Vintage Video Camera",
+   "medidas": [
+    0.071,
+    0.145,
+    0.133
+   ],
+   "kb": 273
+  },
+  "ratchet_wrench": {
+   "nombre": "Ratchet Wrench",
+   "medidas": [
+    0.044,
+    0.246,
+    0.043
+   ],
+   "kb": 118
+  },
+  "tongue_groove_pliers": {
+   "nombre": "Tongue & Groove Pliers",
+   "medidas": [
+    0.063,
+    0.014,
+    0.244
+   ],
+   "kb": 96
+  },
+  "lubricant_spray": {
+   "nombre": "Lubricant Spray",
+   "medidas": [
+    0.067,
+    0.165,
+    0.065
+   ],
+   "kb": 116
+  },
+  "spray_paint_bottles": {
+   "nombre": "Spray Paint Bottles",
+   "medidas": [
+    0.158,
+    0.229,
+    0.066
+   ],
+   "kb": 107
+  },
+  "security_camera_01": {
+   "nombre": "Security Camera 01",
+   "medidas": [
+    0.17,
+    0.286,
+    0.554
+   ],
+   "kb": 152
+  },
+  "lightbulb_led": {
+   "nombre": "Lightbulb Led",
+   "medidas": [
+    0.061,
+    0.1,
+    0.061
+   ],
+   "kb": 90
+  },
+  "signal_flashlight": {
+   "nombre": "Signal Flashlight",
+   "medidas": [
+    0.071,
+    0.15,
+    0.045
+   ],
+   "kb": 157
+  },
+  "Drill_01": {
+   "nombre": "Drill 01",
+   "medidas": [
+    0.183,
+    0.185,
+    0.052
+   ],
+   "kb": 96
+  },
+  "vintage_hand_drill": {
+   "nombre": "Vintage Hand Drill",
+   "medidas": [
+    0.124,
+    0.486,
+    0.139
+   ],
+   "kb": 245
+  },
+  "vintage_electric_kettle": {
+   "nombre": "Vintage Electric Kettle",
+   "medidas": [
+    0.321,
+    0.305,
+    0.249
+   ],
+   "kb": 209
+  },
+  "pastic_torch_6v": {
+   "nombre": "Plastic Torch 6V",
+   "medidas": [
+    0.137,
+    0.142,
+    0.224
+   ],
+   "kb": 106
+  },
+  "vintage_flashlight": {
+   "nombre": "Vintage Flashlight",
+   "medidas": [
+    0.096,
+    0.144,
+    0.305
+   ],
+   "kb": 153
+  },
+  "bench_vice_01": {
+   "nombre": "Bench Vice 01",
+   "medidas": [
+    0.2,
+    0.272,
+    0.396
+   ],
+   "kb": 139
+  },
+  "metal_toolbox": {
+   "nombre": "Metal Toolbox",
+   "medidas": [
+    0.4,
+    0.347,
+    0.292
+   ],
+   "kb": 208
+  },
+  "CashRegister_01": {
+   "nombre": "Cash Register 01",
+   "medidas": [
+    0.6,
+    0.621,
+    0.624
+   ],
+   "kb": 218
+  },
+  "old_drill_press": {
+   "nombre": "Old Drill Press",
+   "medidas": [
+    0.527,
+    1.05,
+    0.61
+   ],
+   "kb": 242
+  },
+  "drawer_cabinet": {
+   "nombre": "Drawer Cabinet",
+   "medidas": [
+    1.141,
+    1.881,
+    0.488
+   ],
+   "kb": 317
+  },
+  "worn_metal_rack": {
+   "nombre": "Worn Metal Rack",
+   "medidas": [
+    0.915,
+    1.9,
+    0.6
+   ],
+   "kb": 260
+  },
+  "steel_frame_shelves_02": {
+   "nombre": "Steel Frame Shelves 02",
+   "medidas": [
+    0.593,
+    2.142,
+    0.502
+   ],
+   "kb": 188
+  },
+  "steel_frame_shelves_03": {
+   "nombre": "Steel Frame Shelves 03",
+   "medidas": [
+    2.351,
+    2.312,
+    0.721
+   ],
+   "kb": 401
+  },
+  "tool_cart": {
+   "nombre": "Tool Cart",
+   "medidas": [
+    1.273,
+    0.965,
+    0.754
+   ],
+   "kb": 533
+  },
+  "metal_tool_chest": {
+   "nombre": "Metal Tool Chest",
+   "medidas": [
+    0.685,
+    0.652,
+    0.407
+   ],
+   "kb": 189
+  },
+  "vintage_telephone_wall_clock": {
+   "nombre": "Vintage Telephone Wall Clock",
+   "medidas": [
+    0.343,
+    0.501,
+    0.193
+   ],
+   "kb": 221
+  },
+  "industrial_wall_lamp": {
+   "nombre": "Industrial Wall Lamp",
+   "medidas": [
+    0.273,
+    0.43,
+    0.14
+   ],
+   "kb": 168
+  },
+  "industrial_pipe_lamp": {
+   "nombre": "Industrial Pipe Lamp",
+   "medidas": [
+    0.183,
+    0.364,
+    0.262
+   ],
+   "kb": 149
+  },
+  "multi_cleaner_bottle": {
+   "nombre": "Multi Cleaner Bottle",
+   "medidas": [
+    0.088,
+    0.229,
+    0.09
+   ],
+   "kb": 86
+  },
+  "bleach_bottle": {
+   "nombre": "Bleach Bottle",
+   "medidas": [
+    0.088,
+    0.294,
+    0.061
+   ],
+   "kb": 64
+  },
+  "all_purpose_cleaner": {
+   "nombre": "All Purpose Cleaner",
+   "medidas": [
+    0.157,
+    0.32,
+    0.117
+   ],
+   "kb": 70
+  },
+  "long_life_food": {
+   "nombre": "Long Life Food",
+   "medidas": [
+    0.524,
+    0.238,
+    0.114
+   ],
+   "kb": 135
+  },
+  "russian_food_cans_01": {
+   "nombre": "Russian Food Cans 01",
+   "medidas": [
+    0.142,
+    0.085,
+    0.046
+   ],
+   "kb": 76
+  },
+  "security_camera_02": {
+   "nombre": "Security Camera 02",
+   "medidas": [
+    0.141,
+    0.209,
+    0.394
+   ],
+   "kb": 153
+  },
+  "plastic_bottle_gallon": {
+   "nombre": "Plastic Bottle Gallon",
+   "medidas": [
+    0.166,
+    0.274,
+    0.126
+   ],
+   "kb": 109
+  },
+  "cardboard_box_01": {
+   "nombre": "Cardboard Box 01",
+   "medidas": [
+    0.387,
+    0.342,
+    0.516
+   ],
+   "kb": 171
+  },
+  "plastic_crate_02": {
+   "nombre": "Plastic Crate 02",
+   "medidas": [
+    0.506,
+    0.254,
+    0.406
+   ],
+   "kb": 125
+  },
+  "plastic_crate_03": {
+   "nombre": "Plastic Crate 03",
+   "medidas": [
+    0.481,
+    0.266,
+    0.265
+   ],
+   "kb": 355
+  },
+  "hand_truck": {
+   "nombre": "Hand Truck",
+   "medidas": [
+    0.593,
+    1.403,
+    0.693
+   ],
+   "kb": 605
+  },
+  "Barrel_01": {
+   "nombre": "Barrel_01",
+   "medidas": [
+    0.563,
+    0.88,
+    0.563
+   ],
+   "kb": 124
+  },
+  "barrel_03": {
+   "nombre": "Barrel 03",
+   "medidas": [
+    0.634,
+    0.93,
+    0.639
+   ],
+   "kb": 91
+  },
+  "propane_tank": {
+   "nombre": "Propane Tank",
+   "medidas": [
+    0.337,
+    0.554,
+    0.337
+   ],
+   "kb": 118
+  },
+  "small_lpg_tank": {
+   "nombre": "Small Lpg Tank",
+   "medidas": [
+    0.41,
+    0.642,
+    0.409
+   ],
+   "kb": 217
+  },
+  "plastic_jerrycan": {
+   "nombre": "Plastic Jerrycan",
+   "medidas": [
+    0.268,
+    0.318,
+    0.341
+   ],
+   "kb": 167
+  },
+  "metal_jerrycan": {
+   "nombre": "Metal Jerrycan",
+   "medidas": [
+    0.35,
+    0.455,
+    0.172
+   ],
+   "kb": 233
+  },
+  "rubber_boots": {
+   "nombre": "Rubber Boots",
+   "medidas": [
+    0.891,
+    0.373,
+    0.269
+   ],
+   "kb": 219
+  },
+  "ladder_sectioned_01": {
+   "nombre": "Ladder Sectioned 01",
+   "medidas": [
+    0.662,
+    2.135,
+    0.178
+   ],
+   "kb": 405
+  },
+  "WetFloorSign_01": {
+   "nombre": "Wet Floor Sign 01",
+   "medidas": [
+    0.3,
+    0.63,
+    0.359
+   ],
+   "kb": 46
+  },
+  "portable_generator": {
+   "nombre": "Portable Generator",
+   "medidas": [
+    0.818,
+    0.577,
+    0.564
+   ],
+   "kb": 385
+  },
+  "multi_cleaner_5_litre": {
+   "nombre": "Multi Cleaner 5 Litre",
+   "medidas": [
+    0.219,
+    0.3,
+    0.106
+   ],
+   "kb": 75
+  },
+  "korean_fire_extinguisher_01": {
+   "nombre": "Korean Fire Extinguisher 01",
+   "medidas": [
+    0.28,
+    0.659,
+    0.367
+   ],
+   "kb": 240
+  },
+  "utility_box_01": {
+   "nombre": "Utility Box 01",
+   "medidas": [
+    0.52,
+    1.12,
+    0.432
+   ],
+   "kb": 99
+  },
+  "utility_box_02": {
+   "nombre": "Utility Box 02",
+   "medidas": [
+    0.92,
+    1.12,
+    0.432
+   ],
+   "kb": 115
+  },
+  "exterior_aircon_unit": {
+   "nombre": "Exterior Aircon Unit",
+   "medidas": [
+    1.8,
+    0.928,
+    0.374
+   ],
+   "kb": 1249
+  },
+  "modular_industrial_pipes_01": {
+   "nombre": "Modular Industrial Pipes 01",
+   "medidas": [
+    1.403,
+    1.955,
+    0.308
+   ],
+   "kb": 705
+  },
+  "fire_alarm": {
+   "nombre": "Fire Alarm",
+   "medidas": [
+    0.099,
+    0.144,
+    0.026
+   ],
+   "kb": 108
+  },
+  "security_light": {
+   "nombre": "Security Light",
+   "medidas": [
+    0.323,
+    0.531,
+    0.417
+   ],
+   "kb": 153
+  },
+  "industrial_caged_sconce": {
+   "nombre": "Industrial Caged Sconce",
+   "medidas": [
+    1.21,
+    0.913,
+    0.389
+   ],
+   "kb": 573
+  },
+  "hanging_industrial_lamp": {
+   "nombre": "Hanging Industrial Lamp",
+   "medidas": [
+    0.55,
+    1.355,
+    0.55
+   ],
+   "kb": 493
+  },
+  "caged_hanging_light": {
+   "nombre": "Caged Hanging Light",
+   "medidas": [
+    1.162,
+    0.75,
+    0.315
+   ],
+   "kb": 291
+  },
+  "screwdrivers_02": {
+   "nombre": "Screwdrivers 02",
+   "medidas": [
+    0.1,
+    0.027,
+    0.27
+   ],
+   "kb": 122
+  },
+  "adjustable_wrench": {
+   "nombre": "Adjustable Wrench",
+   "medidas": [
+    0.068,
+    0.254,
+    0.031
+   ],
+   "kb": 174
+  },
+  "brass_blowtorch": {
+   "nombre": "Brass Blowtorch",
+   "medidas": [
+    0.129,
+    0.211,
+    0.259
+   ],
+   "kb": 174
+  },
+  "propane_torch": {
+   "nombre": "Propane Torch",
+   "medidas": [
+    0.068,
+    0.328,
+    0.058
+   ],
+   "kb": 118
+  },
+  "small_oil_can_01": {
+   "nombre": "Small Oil Can 01",
+   "medidas": [
+    0.266,
+    0.237,
+    0.104
+   ],
+   "kb": 216
+  },
+  "medical_box": {
+   "nombre": "Medical Box",
+   "medidas": [
+    0.525,
+    0.098,
+    0.35
+   ],
+   "kb": 122
+  },
+  "cross_pein_hammer": {
+   "nombre": "Cross Pein Hammer",
+   "medidas": [
+    0.099,
+    0.3,
+    0.024
+   ],
+   "kb": 80
+  },
+  "office_notepads": {
+   "nombre": "Office Notepads",
+   "medidas": [
+    1.103,
+    0.022,
+    0.66
+   ],
+   "kb": 35
+  },
+  "postcard_set_01": {
+   "nombre": "Postcard Set 01",
+   "medidas": [
+    0.677,
+    0.545,
+    0
+   ],
+   "kb": 87
+  },
+  "pocket_watch": {
+   "nombre": "Pocket Watch",
+   "medidas": [
+    0.058,
+    0.076,
+    0.016
+   ],
+   "kb": 176
+  },
+  "seadogs_compass": {
+   "nombre": "Seadogs Compass",
+   "medidas": [
+    0.081,
+    0.087,
+    0.15
+   ],
+   "kb": 227
+  },
+  "vintage_binocular": {
+   "nombre": "Vintage Binoculars",
+   "medidas": [
+    0.194,
+    0.068,
+    0.199
+   ],
+   "kb": 274
+  },
+  "standing_chalkboard_01": {
+   "nombre": "Standing Chalkboard 01",
+   "medidas": [
+    0.92,
+    1.509,
+    0.759
+   ],
+   "kb": 248
+  },
+  "Ukulele_01": {
+   "nombre": "Ukulele 01",
+   "medidas": [
+    0.178,
+    0.527,
+    0.051
+   ],
+   "kb": 160
+  },
+  "vintage_suitcase": {
+   "nombre": "Vintage Suitcase",
+   "medidas": [
+    1.608,
+    0.568,
+    0.239
+   ],
+   "kb": 498
+  },
+  "brass_vase_01": {
+   "nombre": "Brass Vase 01",
+   "medidas": [
+    0.227,
+    0.692,
+    0.227
+   ],
+   "kb": 152
+  },
+  "wooden_bowl_01": {
+   "nombre": "Wooden Bowl 01",
+   "medidas": [
+    0.313,
+    0.094,
+    0.309
+   ],
+   "kb": 144
+  },
+  "carved_wooden_elephant": {
+   "nombre": "Carved Wooden Elephant",
+   "medidas": [
+    0.109,
+    0.096,
+    0.058
+   ],
+   "kb": 106
+  },
+  "concrete_cat_statue": {
+   "nombre": "Concrete Cat Statue",
+   "medidas": [
+    0.153,
+    0.283,
+    0.25
+   ],
+   "kb": 238
+  },
+  "brass_candleholders": {
+   "nombre": "Brass Candleholders",
+   "medidas": [
+    1.053,
+    0.835,
+    0.365
+   ],
+   "kb": 630
+  },
+  "Megaphone_01": {
+   "nombre": "Megaphone 01",
+   "medidas": [
+    0.371,
+    0.3,
+    0.228
+   ],
+   "kb": 183
+  },
+  "metal_detector": {
+   "nombre": "Metal Detector",
+   "medidas": [
+    0.289,
+    1.122,
+    1.19
+   ],
+   "kb": 194
+  },
+  "portable_searchlight": {
+   "nombre": "Portable Searchlight",
+   "medidas": [
+    0.165,
+    0.185,
+    0.253
+   ],
+   "kb": 184
+  },
+  "cleaner_tin_01": {
+   "nombre": "Cleaner Tin 01",
+   "medidas": [
+    0.088,
+    0.13,
+    0.088
+   ],
+   "kb": 100
+  },
+  "vintage_lighter": {
+   "nombre": "Vintage Lighter",
+   "medidas": [
+    0.082,
+    0.066,
+    0.014
+   ],
+   "kb": 111
+  },
+  "pipe_wrench": {
+   "nombre": "Pipe Wrench",
+   "medidas": [
+    0.084,
+    0.405,
+    0.034
+   ],
+   "kb": 225
+  },
+  "oil_tin": {
+   "nombre": "Oil Tin",
+   "medidas": [
+    0.115,
+    0.205,
+    0.154
+   ],
+   "kb": 104
+  },
+  "plastic_container": {
+   "nombre": "Plastic Container",
+   "medidas": [
+    0.895,
+    0.43,
+    0.626
+   ],
+   "kb": 88
+  },
+  "plastic_thermos": {
+   "nombre": "Plastic Thermos",
+   "medidas": [
+    0.141,
+    0.32,
+    0.109
+   ],
+   "kb": 83
+  },
+  "modified_thermos": {
+   "nombre": "Modified Thermos",
+   "medidas": [
+    0.143,
+    0.306,
+    0.101
+   ],
+   "kb": 179
+  },
+  "old_gas_mask": {
+   "nombre": "Old Gas Mask",
+   "medidas": [
+    0.211,
+    1.126,
+    0.309
+   ],
+   "kb": 202
+  },
+  "plastic_crate_01": {
+   "nombre": "Plastic Crate 01",
+   "medidas": [
+    0.298,
+    0.264,
+    0.408
+   ],
+   "kb": 326
+  },
+  "industrial_storage_cart": {
+   "nombre": "Industrial Storage Cart",
+   "medidas": [
+    1.603,
+    1.377,
+    1.103
+   ],
+   "kb": 386
+  },
+  "metal_trash_can": {
+   "nombre": "Metal Trash Can",
+   "medidas": [
+    1.847,
+    0.906,
+    0.556
+   ],
+   "kb": 848
+  },
+  "metal_jerrycan_green": {
+   "nombre": "Metal Jerrycan Green",
+   "medidas": [
+    0.374,
+    0.501,
+    0.171
+   ],
+   "kb": 199
+  },
+  "brass_diya_lantern": {
+   "nombre": "Brass Diya Lantern",
+   "medidas": [
+    0.123,
+    0.381,
+    0.123
+   ],
+   "kb": 177
+  },
+  "vintage_oil_lamp": {
+   "nombre": "Vintage Oil Lamp",
+   "medidas": [
+    0.22,
+    0.802,
+    0.22
+   ],
+   "kb": 142
+  },
+  "old_tyre": {
+   "nombre": "Old Tyre",
+   "medidas": [
+    0.6,
+    0.6,
+    0.165
+   ],
+   "kb": 117
+  }
+ },
+ "texturas": {
+  "painted_plaster_wall": {
+   "kb": 452
+  },
+  "herringbone_parquet": {
+   "kb": 231
+  },
+  "beige_wall_001": {
+   "kb": 163
+  },
+  "wood_table_worn": {
+   "kb": 428
+  },
+  "laminate_floor_02": {
+   "kb": 290
+  },
+  "painted_brick": {
+   "kb": 623
+  },
+  "plywood": {
+   "kb": 622
+  },
+  "garage_floor": {
+   "kb": 279
+  },
+  "concrete_block_wall": {
+   "kb": 681
+  },
+  "blue_metal_plate": {
+   "kb": 74
+  },
+  "anti_skid_tiles": {
+   "kb": 268
+  },
+  "long_white_tiles": {
+   "kb": 260
+  },
+  "metal_plate_02": {
+   "kb": 444
+  },
+  "white_plaster_02": {
+   "kb": 594
+  },
+  "old_linoleum_flooring_01": {
+   "kb": 141
+  },
+  "fine_grained_wood": {
+   "kb": 336
+  }
+ }
+}

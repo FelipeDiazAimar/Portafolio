@@ -1,6 +1,7 @@
 import SobreMi from '@/components/SobreMi/SobreMi.jsx';
 import Proyectos from '@/components/Proyectos/Proyectos.jsx';
 import Habilidades from '@/components/Habilidades/Habilidades.jsx';
+import Experiencia from '@/components/Experiencia/Experiencia.jsx';
 import Titulos from '@/components/Titulos/Titulos.jsx';
 import Contacto from '@/components/Contacto/Contacto.jsx';
 import styles from './page.module.css';
@@ -23,6 +24,8 @@ export default function HomePage() {
           <SobreMi key={seccion.id} />
         ) : seccion.id === 'proyectos' ? (
           <Proyectos key={seccion.id} />
+        ) : seccion.id === 'experiencia' ? (
+          <Experiencia key={seccion.id} />
         ) : seccion.id === 'titulos' ? (
           <Titulos key={seccion.id} />
         ) : seccion.id === 'habilidades' ? (

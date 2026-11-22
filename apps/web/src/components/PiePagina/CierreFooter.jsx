@@ -4,13 +4,18 @@
 // de dónde estoy. Sin texto que contar: es el último momento del scroll.
 import { useEffect, useRef, useState } from 'react';
 import MapaUbicacion from './MapaUbicacion.jsx';
+import FraseVidrio from './FraseVidrio.jsx';
 import styles from './CierreFooter.module.css';
 
 const LINEAS = [['Gracias'], ['por', 'pasar']];
 
 export default function CierreFooter() {
   const refCierre = useRef(null);
+  const refVidrio = useRef(null);
+  const refFrase = useRef(null);
   const [visible, setVisible] = useState(false);
+  // 'css' = texto de siempre; '3d' = metal pulido en WebGL (sólo con mouse, pantalla ancha y fondo oscuro).
+  const [modo, setModo] = useState('css');
 
   useEffect(() => {
     const nodo = refCierre.current;
@@ -35,7 +40,8 @@ export default function CierreFooter() {
   let indice = 0;
   return (
     <div ref={refCierre} className={`${styles.cierre} ${visible ? styles.visible : ''}`}>
-      <p className={styles.frase} aria-label="Gracias por pasar.">
+      <div ref={refVidrio} className={styles.vidrio} data-modo={modo}>
+      <p ref={refFrase} className={styles.frase} aria-label="Gracias por pasar.">
         {LINEAS.map((palabras, l) => (
           <span key={l} className={`${styles.linea} ${l === 1 ? styles.segunda : ''}`} aria-hidden="true">
             {palabras.map((palabra, p) => (
@@ -55,6 +61,8 @@ export default function CierreFooter() {
           </span>
         ))}
       </p>
+      <FraseVidrio hostRef={refVidrio} fraseRef={refFrase} onEstado={setModo} />
+      </div>
       <MapaUbicacion />
     </div>
   );

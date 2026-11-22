@@ -89,12 +89,11 @@
   font-weight: 700;
 }
 
-/* la píldora de estado, al pie y al centro */
+/* la píldora de estado, abajo a la izquierda */
 .pildora {
   position: absolute;
-  left: 50%;
+  left: clamp(1rem, 3vw, 2.5rem);
   bottom: clamp(0.75rem, 3svh, 1.5rem);
-  translate: -50% 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;

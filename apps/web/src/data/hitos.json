@@ -11,10 +11,10 @@
   {
     "id": 1,
     "anio": "2022",
-    "titulo": "Abanderado e ingeniería",
+    "titulo": "Escolta e ingeniería",
     "resumen": "Del ISFA a la UTN.",
     "acento": "#4fa8f0",
-    "descripcion": "Me recibí de **abanderado** en el Instituto San Francisco de Asís (**ISFA**), en San Francisco, Córdoba. Ese mismo año empecé **Ingeniería en Sistemas de Información** en la **UTN San Francisco**.",
+    "descripcion": "Terminé el secundario como **escolta de la bandera** en el Instituto San Francisco de Asís (**ISFA**), en San Francisco, Córdoba. Ese mismo año empecé **Ingeniería en Sistemas de Información** en la **UTN San Francisco**.",
     "imagen": "/hito2.jpeg",
     "foco": "75% 50%"
   },
@@ -24,7 +24,7 @@
     "titulo": "Inglés y adelanto de materias",
     "resumen": "Más libertad para empezar todo lo demás.",
     "acento": "#e0566b",
-    "descripcion": "A mediados de 2023 terminé de cursar inglés en el **EPI** y obtuve la certificación **First de Cambridge**. También **adelanté materias**, lo que me dejó **más libre** para empezar todas las cosas que quería hacer.",
+    "descripcion": "A mediados de 2023, después de cursar inglés en el **EPI**, obtuve la certificación **First de Cambridge**, que rendí en la **Academia Argüello** de Córdoba. También **adelanté materias**, lo que me dejó **más libre** para empezar todas las cosas que quería hacer.",
     "imagen": "/hito3.jpeg"
   },
   {

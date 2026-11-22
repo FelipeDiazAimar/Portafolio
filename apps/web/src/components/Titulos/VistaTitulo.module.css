@@ -1,0 +1,870 @@
+/* La tarjeta abierta: velo esmerilado sobre la página y, al centro, la foto o la hoja del título
+   como una lámina de vidrio con canto. */
+.capa {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  --tinta: rgb(22 28 44 / 0.88);
+  --tinta-suave: rgb(22 28 44 / 0.62);
+}
+
+.velo {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-bg) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  cursor: zoom-out;
+}
+
+.escena {
+  position: relative;
+  display: grid;
+  place-items: center;
+  perspective: 1600px;
+  pointer-events: none;
+}
+
+.escena > * {
+  pointer-events: auto;
+}
+
+/* ---------- foto ---------- */
+.foto {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.5);
+  will-change: transform, width, height;
+}
+
+.foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* ---------- lámina de vidrio ---------- */
+.vuelo {
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.inclina {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  --gx: 50%;
+  --gy: 30%;
+}
+
+/* el canto y el dorso no se esconden de espaldas: a través del vidrio se ve el canto de atrás */
+.frente,
+.dorso,
+.canto {
+  position: absolute;
+}
+
+.frente,
+.dorso {
+  inset: 0;
+  border-radius: 8px;
+}
+
+.frente {
+  transform: translateZ(calc(var(--grosor) / 2));
+  overflow: hidden;
+  container-type: size;
+  /* vidrio esmerilado: lechoso, con un tinte del color del título en los bordes */
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgb(255 255 255 / 0.5), transparent 60%),
+    linear-gradient(
+      155deg,
+      rgb(255 255 255 / 0.74),
+      rgb(255 255 255 / 0.56) 55%,
+      color-mix(in srgb, var(--acento) 22%, rgb(255 255 255 / 0.5))
+    );
+  border: 1px solid rgb(255 255 255 / 0.85);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.25),
+    inset 0 -18px 40px color-mix(in srgb, var(--acento) 16%, transparent),
+    0 40px 90px -30px rgb(0 0 0 / 0.55);
+}
+
+/* grano del esmerilado */
+.frente::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dorso {
+  transform: translateZ(calc(var(--grosor) / -2)) rotateY(180deg);
+  background: linear-gradient(155deg, rgb(255 255 255 / 0.4), rgb(255 255 255 / 0.25));
+}
+
+/* el canto: cuatro tiras perpendiculares a la hoja, más claras, como el borde de un vidrio grueso */
+.canto {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--acento) 30%, rgb(255 255 255 / 0.8)),
+    rgb(255 255 255 / 0.95) 50%,
+    color-mix(in srgb, var(--acento) 30%, rgb(255 255 255 / 0.8))
+  );
+}
+
+.cantoArriba,
+.cantoAbajo {
+  left: 6px;
+  right: 6px;
+  height: var(--grosor);
+}
+
+.cantoArriba {
+  top: 0;
+  transform: translateY(-50%) rotateX(90deg);
+}
+
+.cantoAbajo {
+  bottom: 0;
+  transform: translateY(50%) rotateX(-90deg);
+}
+
+.cantoIzq,
+.cantoDer {
+  top: 6px;
+  bottom: 6px;
+  width: var(--grosor);
+}
+
+.cantoIzq {
+  left: 0;
+  transform: translateX(-50%) rotateY(-90deg);
+}
+
+.cantoDer {
+  right: 0;
+  transform: translateX(50%) rotateY(90deg);
+}
+
+/* la cara de la tarjeta del carrusel: se ve al despegar y se funde en el vidrio */
+.caraTarjeta {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(160deg, var(--acento), var(--acento-fin));
+  pointer-events: none;
+}
+
+/* reflejo que sigue al puntero */
+.brillo {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  background:
+    radial-gradient(60% 50% at var(--gx) var(--gy), rgb(255 255 255 / 0.9), transparent 70%),
+    linear-gradient(
+      115deg,
+      transparent 30%,
+      rgb(255 255 255 / 0.35) 45%,
+      transparent 52%
+    );
+}
+
+/* ---------- la hoja ---------- */
+.hoja {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.3cqh;
+  padding: 7.5cqh 9cqw 7cqh;
+  text-align: center;
+  color: var(--tinta);
+  font-family: var(--font-serif), Georgia, serif;
+  /* grabado: luz abajo, sombra arriba */
+  text-shadow:
+    0 1px 0 rgb(255 255 255 / 0.7),
+    0 -1px 0 rgb(0 0 0 / 0.06);
+}
+
+.marco {
+  position: absolute;
+  inset: 3.2cqmin;
+  border: 0.35cqmin solid color-mix(in srgb, var(--acento) 55%, var(--tinta));
+  border-radius: 3px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.marco::after {
+  content: '';
+  position: absolute;
+  inset: 1.1cqmin;
+  border: 0.12cqmin solid color-mix(in srgb, var(--acento) 55%, var(--tinta));
+  border-radius: 2px;
+}
+
+/* esquinas del marco */
+.esquina {
+  position: absolute;
+  width: 5cqmin;
+  height: 5cqmin;
+  border: 0.35cqmin solid color-mix(in srgb, var(--acento) 60%, var(--tinta));
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.esquina[data-pos='ai'] {
+  top: 5.2cqmin;
+  left: 5.2cqmin;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.esquina[data-pos='ad'] {
+  top: 5.2cqmin;
+  right: 5.2cqmin;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.esquina[data-pos='bi'] {
+  bottom: 5.2cqmin;
+  left: 5.2cqmin;
+  border-right: 0;
+  border-top: 0;
+}
+
+.esquina[data-pos='bd'] {
+  bottom: 5.2cqmin;
+  right: 5.2cqmin;
+  border-left: 0;
+  border-top: 0;
+}
+
+.hoja p,
+.hoja h3,
+.hoja dl,
+.hoja dd {
+  margin: 0;
+}
+
+.encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4cqw;
+}
+
+.logo {
+  flex: none;
+  width: auto;
+  height: 11cqh;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.7));
+}
+
+.sello {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 10.5cqh;
+  height: 10.5cqh;
+  border-radius: 50%;
+  border: 0.3cqmin solid color-mix(in srgb, var(--acento) 70%, var(--tinta));
+  box-shadow: inset 0 0 0 0.8cqmin rgb(255 255 255 / 0.35);
+  color: color-mix(in srgb, var(--acento) 75%, var(--tinta));
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 2.8cqh;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.membrete {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5cqh;
+  text-align: left;
+}
+
+.institucion {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: max(9px, 2.3cqh);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+
+.dependencia {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: max(8px, 1.7cqh);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+
+.documento {
+  margin-top: 0.6cqh !important;
+  font-size: 6.2cqh;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.otorga {
+  font-size: max(9px, 2.3cqh);
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+.persona {
+  font-size: 5.6cqh;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.1;
+  padding: 0 5cqw 0.6cqh;
+  border-bottom: 0.15cqmin solid color-mix(in srgb, var(--acento) 50%, var(--tinta-suave));
+}
+
+.destacado {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 3.1cqh;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--acento) 80%, var(--tinta));
+  text-wrap: balance;
+}
+
+.motivo {
+  max-width: 68cqw;
+  font-size: max(9px, 2.2cqh);
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+/* la grilla de datos: etiqueta chica arriba, valor abajo; lo que falta, un renglón en blanco */
+.datos {
+  display: grid;
+  grid-template-columns: repeat(var(--columnas, 3), minmax(0, 1fr));
+  gap: 1cqh 2.4cqw;
+  width: 74cqw;
+  margin-top: 0.4cqh !important;
+  padding: 1.2cqh 2cqw;
+  border-top: 0.12cqmin solid color-mix(in srgb, var(--acento) 35%, var(--tinta-suave));
+  border-bottom: 0.12cqmin solid color-mix(in srgb, var(--acento) 35%, var(--tinta-suave));
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3cqh;
+  min-width: 0;
+}
+
+.dato dt {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: max(7px, 1.35cqh);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+
+.dato dd {
+  font-size: max(9px, 2cqh);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.vacio {
+  display: block;
+  width: 70%;
+  height: 1.8cqh;
+  margin: 0 auto;
+  border-bottom: 0.15cqmin dotted var(--tinta-suave);
+}
+
+.pie {
+  width: 100%;
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 3cqw;
+}
+
+.emision {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6cqh;
+  text-align: left;
+  font-size: max(8px, 1.8cqh);
+  color: var(--tinta-suave);
+}
+
+.emision strong {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: max(7px, 1.3cqh);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-right: 0.6em;
+}
+
+.firmas {
+  display: flex;
+  gap: 5cqw;
+}
+
+.firma {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 22cqw;
+  font-size: max(8px, 1.65cqh);
+}
+
+.trazo {
+  display: block;
+  width: 100%;
+  height: 7cqh;
+  overflow: visible;
+}
+
+.trazo path {
+  fill: none;
+  stroke: color-mix(in srgb, #1d3a8a 70%, var(--tinta));
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: escribir 1.3s 0.95s cubic-bezier(0.45, 0.05, 0.35, 1) forwards;
+}
+
+.manuscrita {
+  display: block;
+  width: 100%;
+  height: 7cqh;
+  line-height: 7cqh;
+  font-size: 5.4cqh;
+  color: color-mix(in srgb, #1d3a8a 70%, var(--tinta));
+  text-shadow: none;
+  white-space: nowrap;
+  clip-path: inset(0 100% 0 0);
+  animation: revelar 1.4s 1.5s cubic-bezier(0.45, 0.05, 0.35, 1) forwards;
+}
+
+@keyframes escribir {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes revelar {
+  to {
+    clip-path: inset(0 -10% 0 0);
+  }
+}
+
+.linea {
+  width: 100%;
+  height: 0;
+  margin-bottom: 0.7cqh;
+  border-top: 0.15cqmin solid var(--tinta-suave);
+}
+
+.firmaNombre {
+  font-weight: 600;
+}
+
+.firmaCargo {
+  color: var(--tinta-suave);
+  text-wrap: balance;
+}
+
+/* sello en relieve: sin tinta, sólo luz y sombra */
+.selloRelieve {
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  width: 11cqh;
+  height: 11cqh;
+  border-radius: 50%;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 2.2cqh;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgb(255 255 255 / 0.5);
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.12) 70%);
+  box-shadow:
+    inset 0 2px 3px rgb(255 255 255 / 0.9),
+    inset 0 -3px 5px rgb(0 0 0 / 0.12),
+    0 0 0 0.3cqmin color-mix(in srgb, var(--acento) 30%, rgb(255 255 255 / 0.5));
+  text-shadow:
+    0 -1px 0 rgb(0 0 0 / 0.18),
+    0 1px 0 rgb(255 255 255 / 0.8);
+}
+
+/* hoja vertical (Cambridge): más alta que ancha, todo en columna */
+.frente[data-orientacion='vertical'] .hoja {
+  gap: 1.5cqh;
+  padding: 6.5cqh 9cqw 5.5cqh;
+}
+
+.frente[data-orientacion='vertical'] .encabezado {
+  flex-direction: column;
+  gap: 1cqh;
+}
+
+.frente[data-orientacion='vertical'] .membrete {
+  align-items: center;
+  text-align: center;
+}
+
+.frente[data-orientacion='vertical'] .logo {
+  height: 9cqh;
+}
+
+.frente[data-orientacion='vertical'] .institucion {
+  font-size: 1.9cqh;
+}
+
+.frente[data-orientacion='vertical'] .dependencia {
+  font-size: 1.4cqh;
+}
+
+.frente[data-orientacion='vertical'] .documento {
+  font-size: 4.4cqh;
+}
+
+.frente[data-orientacion='vertical'] .otorga,
+.frente[data-orientacion='vertical'] .motivo {
+  font-size: 1.9cqh;
+}
+
+.frente[data-orientacion='vertical'] .persona {
+  font-size: 4cqh;
+}
+
+.frente[data-orientacion='vertical'] .destacado {
+  font-size: 2.3cqh;
+}
+
+.frente[data-orientacion='vertical'] .datos {
+  grid-template-columns: 1fr 1fr;
+  width: 80cqw;
+  gap: 1.5cqh 5cqw;
+  padding: 2cqh 2cqw;
+}
+
+.frente[data-orientacion='vertical'] .dato {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2cqw;
+  text-align: left;
+}
+
+.frente[data-orientacion='vertical'] .dato dt {
+  font-size: max(7px, 1.25cqh);
+}
+
+.frente[data-orientacion='vertical'] .dato dd {
+  font-size: max(9px, 1.8cqh);
+  text-align: right;
+}
+
+.frente[data-orientacion='vertical'] .vacio {
+  width: 9cqw;
+  height: 1.3cqh;
+  margin: 0;
+}
+
+.frente[data-orientacion='vertical'] .pie {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 1.6cqh;
+}
+
+.frente[data-orientacion='vertical'] .emision {
+  align-items: center;
+  text-align: center;
+  font-size: 1.6cqh;
+}
+
+.frente[data-orientacion='vertical'] .firma {
+  width: 32cqw;
+  font-size: 1.45cqh;
+}
+
+.frente[data-orientacion='vertical'] .trazo,
+.frente[data-orientacion='vertical'] .manuscrita {
+  height: 5.6cqh;
+  line-height: 5.6cqh;
+}
+
+.frente[data-orientacion='vertical'] .manuscrita {
+  font-size: 4cqh;
+}
+
+.frente[data-orientacion='vertical'] .selloRelieve {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trazo path,
+  .manuscrita {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+
+/* ---------- pie y cerrar ---------- */
+.leyenda {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+  color: var(--color-fg);
+  pointer-events: none;
+}
+
+.leyenda p {
+  margin: 0;
+}
+
+.leyendaNombre {
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.credito {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  pointer-events: auto;
+}
+
+.leyendaLugar {
+  margin-top: 0.25rem !important;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.cerrar {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: 20px;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgb(255 255 255 / 0.75);
+  background: rgb(255 255 255 / 0.28);
+  backdrop-filter: blur(6px) saturate(1.5);
+  -webkit-backdrop-filter: blur(6px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    0 4px 14px rgb(0 0 0 / 0.14);
+  color: var(--color-fg);
+  cursor: pointer;
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 200ms ease;
+}
+
+.capa[data-cerrando='true'] .cerrar {
+  opacity: 0;
+}
+
+@media (hover: hover) {
+  .cerrar:hover {
+    transform: scale(1.1);
+  }
+}
+
+.cerrar:active {
+  transform: scale(0.94);
+}
+
+.cerrar:focus-visible {
+  outline: 2px solid var(--color-accent, #3b82f6);
+  outline-offset: 3px;
+}
+
+.cerrar svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.documento[data-largo='true'] {
+  font-size: 4.6cqh;
+  letter-spacing: 0.12em;
+}
+
+
+/* marca de agua en arco (como la de la UTN sobre el certificado) */
+.marcaAgua {
+  position: absolute;
+  z-index: -1;
+  text-shadow: none;
+  left: 8cqw;
+  right: 8cqw;
+  top: 12cqh;
+  width: 84cqw;
+  height: auto;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.marcaAgua text {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 62px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  fill: rgb(22 28 44 / 0.07);
+  stroke: rgb(22 28 44 / 0.1);
+  stroke-width: 1.2;
+}
+
+.nota {
+  max-width: 78cqw;
+  font-size: max(7px, 1.25cqh);
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+.logoPie {
+  justify-self: end;
+  width: auto;
+  height: 10cqh;
+  opacity: 0.85;
+}
+
+.firmas[data-cantidad='3'] {
+  gap: 2.4cqw;
+}
+
+.firmas[data-cantidad='3'] .firma {
+  width: 15.5cqw;
+}
+
+.firmas[data-cantidad='3'] .manuscrita {
+  font-size: 4.2cqh;
+}
+
+/* con tres firmas el pie se reparte: lo que emite a la izquierda, firmas y logo */
+.pie:has(.firmas[data-cantidad='3']) {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.frente[data-orientacion='vertical'] .nota {
+  font-size: max(7px, 1.1cqh);
+}
+
+.frente[data-orientacion='vertical'] .firmas[data-cantidad='3'] .firma {
+  width: 24cqw;
+}
+
+/* Cambridge trae muchos datos: la hoja vertical se compacta para que entren las firmas */
+.frente[data-orientacion='vertical'] .hoja {
+  gap: 1cqh;
+  padding: 5cqh 8cqw 4cqh;
+}
+
+.frente[data-orientacion='vertical'] .logo {
+  height: 6.5cqh;
+}
+
+.frente[data-orientacion='vertical'] .documento {
+  font-size: 3.4cqh;
+}
+
+.frente[data-orientacion='vertical'] .persona {
+  font-size: 3.3cqh;
+}
+
+.frente[data-orientacion='vertical'] .otorga,
+.frente[data-orientacion='vertical'] .motivo {
+  font-size: 1.6cqh;
+}
+
+.frente[data-orientacion='vertical'] .datos {
+  width: 84cqw;
+  gap: 0.55cqh 5cqw;
+  padding: 1.1cqh 1cqw;
+}
+
+.frente[data-orientacion='vertical'] .dato dt {
+  white-space: nowrap;
+  font-size: max(6px, 0.95cqh);
+  letter-spacing: 0.08em;
+}
+
+.frente[data-orientacion='vertical'] .dato dd {
+  white-space: nowrap;
+  font-size: max(8px, 1.5cqh);
+}
+
+.frente[data-orientacion='vertical'] .pie {
+  gap: 1cqh;
+}
+
+.frente[data-orientacion='vertical'] .emision {
+  flex-direction: row;
+  gap: 3cqw;
+  font-size: 1.35cqh;
+}
+
+.frente[data-orientacion='vertical'] .trazo,
+.frente[data-orientacion='vertical'] .manuscrita {
+  height: 4.2cqh;
+  line-height: 4.2cqh;
+}
+
+.frente[data-orientacion='vertical'] .manuscrita {
+  font-size: 3.2cqh;
+}
+
+.frente[data-orientacion='vertical'] .firma {
+  font-size: 1.2cqh;
+}

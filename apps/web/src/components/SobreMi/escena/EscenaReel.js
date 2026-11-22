@@ -91,6 +91,9 @@ const FRAGMENTOS = /* glsl */ `
   uniform vec4 uZonas[10];
   uniform float uZonasT[10];
   uniform float uConZonas;
+  // Obra guiada por el scroll: la portada entera se ve sólo hasta esta fracción (desde la esquina
+  // de arriba a la izquierda), lo que ya descubrió la caja de su agente. 1 = entera.
+  uniform float uCorte;
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vVista;
@@ -125,6 +128,10 @@ const FRAGMENTOS = /* glsl */ `
     sombra *= sombra;
 
     vec2 uvPortada = p / PORTADA + 0.5;
+    if (uCorte < 0.999) {
+      vec2 qc = vec2(uvPortada.x, 1.0 - uvPortada.y);
+      if (qc.x < 0.0 || qc.y < 0.0 || qc.x > uCorte || qc.y > uCorte) discard;
+    }
     vec3 color = mix(uPapel, texture2D(uMapa, uvPortada).rgb, uConMapa);
     if (uConZonas > 0.5) {
       vec2 qz = vec2(uvPortada.x, 1.0 - uvPortada.y);
@@ -239,6 +246,7 @@ export function crearEscenaReel({ lienzo, total, reducido = false, alCuadro = nu
         uZonas: { value: Array.from({ length: 10 }, () => new THREE.Vector4(0, 0, 0, 0)) },
         uZonasT: { value: new Array(10).fill(0) },
         uConZonas: { value: 0 },
+        uCorte: { value: 1 },
       },
     });
     const malla = new THREE.Mesh(geometria, material);

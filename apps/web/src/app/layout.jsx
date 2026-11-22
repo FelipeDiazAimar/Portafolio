@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import Bienvenida from '@/components/Bienvenida/Bienvenida.jsx';
 import Header from '@/components/Header/Header.jsx';
 import ThemeToggle from '@/components/ThemeToggle/ThemeToggle.jsx';
+import RendimientoToggle from '@/components/RendimientoToggle/RendimientoToggle.jsx';
 import HeroInmersivo from '@/components/HeroInmersivo/HeroInmersivo.jsx';
 import PiePagina from '@/components/PiePagina/PiePagina.jsx';
 import BarraScroll from '@/components/BarraScroll/BarraScroll.jsx';
@@ -90,6 +91,7 @@ export default async function RootLayout({ children }) {
           <BarraScroll />
           <Teletransporte />
           <UrlPorScroll />
+          <RendimientoToggle />
           <ThemeToggle />
           <Header />
           <HeroInmersivo />

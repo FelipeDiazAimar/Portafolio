@@ -1,0 +1,78 @@
+/* Experiencia sin 3D: una línea de tiempo vertical de tarjetas. */
+.seccion {
+  padding: 6rem 1.25rem;
+  scroll-margin-top: 5rem;
+}
+
+.contenido {
+  width: min(100%, 880px);
+  margin: 0 auto;
+  display: grid;
+  gap: 2.5rem;
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: clamp(2rem, 6vw, 4rem);
+  color: var(--color-fg);
+  text-align: center;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.trabajo {
+  padding: 1.5rem 1.5rem 1.5rem 1.75rem;
+  border: 1px solid color-mix(in oklab, var(--color-fg) 14%, transparent);
+  border-left: 4px solid var(--acento);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--color-fg) 4%, transparent);
+}
+
+.periodo {
+  margin: 0;
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--acento);
+}
+
+.numero {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.puesto {
+  margin: 0.4rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-fg);
+}
+
+.lugar {
+  margin: 0.2rem 0 0;
+  color: var(--color-muted);
+}
+
+.objetos {
+  margin: 1rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.45rem;
+  color: var(--color-fg);
+  line-height: 1.5;
+}
+
+.objetos strong {
+  font-weight: 700;
+}
