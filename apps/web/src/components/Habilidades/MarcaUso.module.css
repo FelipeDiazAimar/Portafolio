@@ -79,10 +79,6 @@
   position: absolute;
   left: 92px;
   bottom: 62px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
   font: 700 10px/1.2 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -91,17 +87,10 @@
   animation: aparecer 0.35s 0.45s ease forwards;
 }
 
-.proyecto {
-  max-width: 170px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* La marca elige hacia dónde sale según el lugar que tenga (ver Habilidades.jsx); el texto se contra-gira
    para leerse siempre derecho. */
 .marca[data-lado='izq'] .texto {
   transform: scale(-1, 1);
-  align-items: flex-end;
 }
 
 .marca[data-vert='aba'] .texto {

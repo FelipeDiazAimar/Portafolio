@@ -9,14 +9,14 @@ function proyectosDe(id) {
     for (const proyecto of listarProyectos()) {
       for (const tec of proyecto.stack ?? []) {
         if (!usos.has(tec)) usos.set(tec, []);
-        usos.get(tec).push(proyecto.titulo.split(' · ')[0]);
+        usos.get(tec).push(proyecto.titulo);
       }
     }
   }
   return usos.get(id) ?? [];
 }
 
-const MAX = 3;
+const MAX = 4;
 
 // Marca de puntería sobre la barra resaltada de la hélice: una línea guía en L que sale de la barra,
 // termina en una cruz y lleva escritos los proyectos donde se usó esa tecnología. La posición la
@@ -35,13 +35,9 @@ export default function MarcaUso({ refMarca, tecnologia }) {
             <path className={estilos.cruz} d="M0 -4 V4 M-4 0 H4" />
             <path className={estilos.cruz} d="M84 -62 V-54 M80 -58 H88" />
           </svg>
-          <div className={estilos.texto}>
-            {visibles.map((nombre) => (
-              <span key={nombre} className={estilos.proyecto}>
-                {nombre}
-              </span>
-            ))}
-            {resto > 0 && <span className={estilos.proyecto}>+{resto} más</span>}
+          <div className={estilos.texto} data-texto>
+            {visibles.join(' · ')}
+            {resto > 0 ? ` · +${resto} más` : ''}
           </div>
         </div>
       )}

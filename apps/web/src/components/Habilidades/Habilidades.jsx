@@ -104,7 +104,7 @@ export default function Habilidades() {
             marca.dataset.visible = 'true';
             // hacia dónde sale la marca: arriba-derecha desde el extremo derecho de la barra, o abajo-izquierda
             // desde el izquierdo (así no cruza el modelo, que se inclina hacia arriba a la izquierda); si ahí
-            // no entra, se prueban las otras dos. Necesita ~440 px de ancho y ~175 de alto.
+            // no entra, se prueban las otras dos. El ancho se mide del texto real (una sola línea) más la diagonal.
             const W = lienzo.clientWidth;
             const H = lienzo.clientHeight;
             const opciones = [
@@ -113,7 +113,8 @@ export default function Habilidades() {
               { lado: 'izq', vert: 'arr', p: info.izq },
               { lado: 'der', vert: 'aba', p: info.der },
             ];
-            const cabe = (o) => (o.lado === 'der' ? o.p.x + 440 <= W : o.p.x - 440 >= 0) && (o.vert === 'arr' ? o.p.y - 175 >= 0 : o.p.y + 175 <= H);
+            const necesito = 160 + (marca.querySelector('[data-texto]')?.offsetWidth ?? 260) * 1.7;
+            const cabe = (o) => (o.lado === 'der' ? o.p.x + necesito <= W : o.p.x - necesito >= 0) && (o.vert === 'arr' ? o.p.y - 175 >= 0 : o.p.y + 175 <= H);
             const elegida = opciones.find(cabe) ?? opciones[0];
             marca.dataset.lado = elegida.lado;
             marca.dataset.vert = elegida.vert;
