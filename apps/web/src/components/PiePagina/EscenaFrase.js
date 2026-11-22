@@ -6,7 +6,6 @@
 import * as THREE from 'three';
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import { FRASE_GLIFOS, FRASE_UPM } from '@/data/fraseGlifos.js';
 
 const GROSOR = 26;
@@ -32,7 +31,8 @@ const ASPECTO = {
   entornoHover: 0.2,
   exposicion: 0.9,
   puntero: { base: 0.25, hover: 1.1 },
-  barrido: { intensidad: 9, ancho: 0.06, alto: 2.6 },
+  // Destello que recorre sólo los bordes (paredes y bisel): ancho en em y fuerza.
+  barrido: { ancho: 0.22, fuerza: 1.1 },
 };
 
 export const CICLO_MS = 9000;
@@ -93,8 +93,6 @@ const SALA_FRAGMENTO = `
   }
 `;
 
-let areaLuzLista = false;
-
 function color(css) {
   return new THREE.Color().setStyle(css.trim() || '#ffffff');
 }
@@ -120,6 +118,7 @@ export class EscenaFrase {
     this.pivote = new THREE.Vector2();
     this.anchoTinta = FRASE_UPM;
     this.lente = { uLens: { value: new THREE.Vector4() }, uLensTime: { value: 0 } };
+    this.destello = { uGlint: { value: new THREE.Vector2(0, 1) }, uGlintColor: { value: new THREE.Color() } };
 
     const r = new THREE.WebGLRenderer({
       canvas,
@@ -179,29 +178,35 @@ void main() {
       m.onBeforeCompile = (sombreador) => {
         sombreador.uniforms.uLens = this.lente.uLens;
         sombreador.uniforms.uLensTime = this.lente.uLensTime;
+        sombreador.uniforms.uGlint = this.destello.uGlint;
+        sombreador.uniforms.uGlintColor = this.destello.uGlintColor;
         sombreador.vertexShader = sombreador.vertexShader
-          .replace('void main() {', 'varying float vLensZ;\nvoid main() {')
-          .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vLensZ = position.z;');
-        sombreador.fragmentShader = sombreador.fragmentShader.replace(
-          'void main() {',
-          `${LENTE_GLSL}
+          .replace('void main() {', 'varying float vLensZ;\nvarying float vGlintX;\nvoid main() {')
+          .replace(
+            '#include <begin_vertex>',
+            '#include <begin_vertex>\n  vLensZ = position.z;\n  vGlintX = (modelMatrix * vec4(transformed, 1.0)).x;'
+          );
+        sombreador.fragmentShader = sombreador.fragmentShader
+          .replace(
+            'void main() {',
+            `${LENTE_GLSL}
+uniform vec2 uGlint;      // x del destello (px, mundo) y su ancho
+uniform vec3 uGlintColor;
 varying float vLensZ;
+varying float vGlintX;
 void main() {
   if (uLens.z > 0.5 && vLensZ < ${(PROFUNDIDAD / 2).toFixed(1)} && lensEdge(gl_FragCoord.xy) < 0.0) discard;`
-        );
+          )
+          .replace(
+            '#include <dithering_fragment>',
+            '#include <dithering_fragment>\n  { float g = (vGlintX - uGlint.x) / uGlint.y; gl_FragColor.rgb += uGlintColor * exp(-g * g); }'
+          );
       };
       m.customProgramCacheKey = () => 'frase-lente-lado';
     }
 
     this.luz = new THREE.PointLight(this.crema, ASPECTO.puntero.base, 0, 0);
     this.escena.add(this.luz, this.palabra);
-
-    if (!areaLuzLista) {
-      RectAreaLightUniformsLib.init();
-      areaLuzLista = true;
-    }
-    this.barrido = new THREE.RectAreaLight(0xffffff, ASPECTO.barrido.intensidad, 1, 1);
-    this.escena.add(this.barrido);
 
     this.construirLetras();
   }
@@ -340,14 +345,14 @@ void main() {
 
     this.brillante[0].envMapIntensity = ASPECTO.entorno[0] + hover * ASPECTO.entornoHover;
 
+    // El destello va de un extremo al otro de la frase y sólo se ve en las paredes y el bisel.
     const b = ASPECTO.barrido;
-    const bx = Math.sin(t + 0.4) * ((this.anchoTinta * k) / 2) * 1.15;
-    this.barrido.width = b.ancho * fontPx;
-    this.barrido.height = b.alto * fontPx;
-    this.barrido.position.set(bx, 0, 1.2 * fontPx);
-    this.barrido.lookAt(0.6 * bx, 0, 0);
-    this.barrido.intensity = b.intensidad;
-    this.barrido.color.copy(this.crema).lerp(this.azul, 0.5 + 0.5 * Math.sin(t));
+    const mitad = (this.anchoTinta * k) / 2;
+    this.destello.uGlint.value.set(Math.sin(t + 0.4) * mitad * 1.15, b.ancho * fontPx);
+    this.destello.uGlintColor.value
+      .copy(this.crema)
+      .lerp(this.azul, 0.5 + 0.5 * Math.sin(t))
+      .multiplyScalar(b.fuerza);
     return true;
   }
 
