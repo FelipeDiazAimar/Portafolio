@@ -33,6 +33,7 @@ export default function Habilidades() {
   const refMotor = useRef(null);
   const refMarca = useRef(null);
   const refSenalada = useRef(null);
+  const refOpcion = useRef(null); // salida elegida de la marca (se mantiene mientras entre)
   // tecnología resaltada en la hélice (la marca de puntería dice dónde se usó)
   const [senalada, setSenalada] = useState(null);
   const [conWebGL, setConWebGL] = useState(true);
@@ -102,23 +103,37 @@ export default function Habilidades() {
               return;
             }
             marca.dataset.visible = 'true';
-            // hacia dónde sale la marca: arriba-derecha desde el extremo derecho de la barra, o abajo-izquierda
-            // desde el izquierdo (así no cruza el modelo, que se inclina hacia arriba a la izquierda); si ahí
-            // no entra, se prueban las otras dos. El ancho se mide del texto real (una sola línea) más la diagonal.
+            // Hacia dónde sale la marca. Se elige al cambiar de tecnología y después NO cambia mientras siga
+            // entrando en pantalla (con un margen de tolerancia): así, al girar el modelo, la línea acompaña a
+            // su extremo de la barra sin saltar de lado. Preferencia: arriba-derecha desde el extremo que está
+            // a la derecha, o abajo-izquierda desde el otro (no cruzan el modelo, que se inclina hacia arriba a
+            // la izquierda); si no entran, las otras dos. El ancho se mide del texto real (una sola línea).
             const W = lienzo.clientWidth;
             const H = lienzo.clientHeight;
-            const opciones = [
-              { lado: 'der', vert: 'arr', p: info.der },
-              { lado: 'izq', vert: 'aba', p: info.izq },
-              { lado: 'izq', vert: 'arr', p: info.izq },
-              { lado: 'der', vert: 'aba', p: info.der },
-            ];
             const necesito = 160 + (marca.querySelector('[data-texto]')?.offsetWidth ?? 260) * 1.7;
-            const cabe = (o) => (o.lado === 'der' ? o.p.x + necesito <= W : o.p.x - necesito >= 0) && (o.vert === 'arr' ? o.p.y - 175 >= 0 : o.p.y + 175 <= H);
-            const elegida = opciones.find(cabe) ?? opciones[0];
+            const cabe = (o, holgura = 0) => {
+              const p = info[o.extremo];
+              const ancho = o.lado === 'der' ? p.x + necesito <= W + holgura : p.x - necesito >= -holgura;
+              const alto = o.vert === 'arr' ? p.y - 175 >= -holgura : p.y + 120 <= H - 130 + holgura;
+              return ancho && alto;
+            };
+            let elegida = refOpcion.current;
+            if (!elegida || elegida.id !== id || !cabe(elegida, 90)) {
+              const der = info.a.x >= info.b.x ? 'a' : 'b';
+              const izq = der === 'a' ? 'b' : 'a';
+              const opciones = [
+                { lado: 'der', vert: 'arr', extremo: der },
+                { lado: 'izq', vert: 'aba', extremo: izq },
+                { lado: 'izq', vert: 'arr', extremo: izq },
+                { lado: 'der', vert: 'aba', extremo: der },
+              ];
+              elegida = { id, ...(opciones.find((o) => cabe(o)) ?? opciones[0]) };
+              refOpcion.current = elegida;
+            }
+            const p = info[elegida.extremo];
             marca.dataset.lado = elegida.lado;
             marca.dataset.vert = elegida.vert;
-            marca.style.transform = `translate3d(${elegida.p.x.toFixed(1)}px, ${elegida.p.y.toFixed(1)}px, 0)`;
+            marca.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0)`;
           },
           tema: refTema.current,
           reducido,

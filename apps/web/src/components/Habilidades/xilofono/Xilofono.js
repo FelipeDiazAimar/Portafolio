@@ -1041,13 +1041,13 @@ export class Xilofono {
     const eje = this.ejeBarra.set(0, 0, 1).applyQuaternion(e.rotacion).transformDirection(matriz).multiplyScalar(medioLargo);
     const a = this.extremoA.copy(centro).add(eje).project(this.camara);
     const b = this.extremoB.copy(centro).sub(eje).project(this.camara);
-    const derecho = a.x >= b.x ? a : b;
-    const izquierdo = derecho === a ? b : a;
+    // a y b son los dos extremos FÍSICOS de la barra (no "el derecho" y "el izquierdo"): al girar el modelo se
+    // intercambian de lado en pantalla, y si la marca siguiera al derecho saltaría de un extremo al otro.
     const aPx = (p) => ({ x: (p.x * 0.5 + 0.5) * ancho, y: (-p.y * 0.5 + 0.5) * alto });
-    const der = aPx(derecho);
-    const izq = aPx(izquierdo);
-    const fuera = derecho.z > 1 || der.x < 0 || der.y < 0 || der.x > ancho || der.y > alto;
-    aviso(fuera ? null : { tecnologia: this.orden[barra], der, izq });
+    const pa = aPx(a);
+    const pb = aPx(b);
+    const fuera = a.z > 1 || b.z > 1 || [pa, pb].some((p) => p.x < 0 || p.y < 0 || p.x > ancho || p.y > alto);
+    aviso(fuera ? null : { tecnologia: this.orden[barra], a: pa, b: pb });
   }
 
   // En el árbol sólo se enciende lo que se apunta o se tocó: esa esfera y su hilo desde el núcleo.
