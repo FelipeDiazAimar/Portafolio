@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react';
 import styles from './BarraScroll.module.css';
 
-const ALTURA_MINIMA_THUMB_PX = 40;
+// Pista corta y centrada: el thumb tiene altura fija y recorre la pista.
+const ALTURA_PISTA_PX = 180;
+const ALTURA_THUMB_PX = 36;
 const ID_CONTENIDO_MENU = 'menu-movil-contenido';
 
 // Con el menú móvil abierto la barra pasa al lado izquierdo. Si el contenido del
@@ -29,6 +31,45 @@ function medir() {
 
 export default function BarraScroll() {
   const refThumb = useRef(null);
+  const refPista = useRef(null);
+  const arrastre = useRef(null); // { desfase } mientras el thumb está agarrado
+
+  // Posición de scroll de la página a la que corresponde un punto de la pista.
+  // `desfase` es dónde, dentro del thumb, se lo agarró (centro si se toca la pista).
+  function destinoDesdePuntero(clientY, desfase) {
+    const caja = refPista.current.getBoundingClientRect();
+    const recorrido = ALTURA_PISTA_PX - ALTURA_THUMB_PX;
+    const progreso = Math.min(1, Math.max(0, (clientY - caja.top - desfase) / recorrido));
+    const { alturaDocumento, alturaVentana } = medir();
+    return progreso * (alturaDocumento - alturaVentana);
+  }
+
+  function alPresionar(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    const caja = refThumb.current.getBoundingClientRect();
+    const sobreThumb = e.clientY >= caja.top && e.clientY <= caja.bottom;
+    refPista.current.setPointerCapture(e.pointerId);
+    if (sobreThumb) {
+      arrastre.current = { desfase: e.clientY - caja.top };
+      refPista.current.dataset.agarrada = 'true';
+    } else {
+      // tocar la pista lleva hasta ahí con el mismo scroll suave del sitio
+      window.scrollTo({
+        top: destinoDesdePuntero(e.clientY, ALTURA_THUMB_PX / 2),
+        behavior: 'smooth',
+      });
+    }
+  }
+
+  function alMover(e) {
+    if (!arrastre.current) return;
+    window.scrollTo(0, destinoDesdePuntero(e.clientY, arrastre.current.desfase));
+  }
+
+  function alSoltar() {
+    arrastre.current = null;
+    delete refPista.current.dataset.agarrada;
+  }
 
   useEffect(() => {
     let ticking = false;
@@ -41,13 +82,9 @@ export default function BarraScroll() {
 
       if (thumb) {
         if (maxScroll > 0) {
-          const alturaThumb = Math.max(
-            (alturaVentana / alturaDocumento) * alturaVentana,
-            ALTURA_MINIMA_THUMB_PX
-          );
           const progreso = scroll / maxScroll;
-          const posicionThumb = progreso * (alturaVentana - alturaThumb);
-          thumb.style.height = `${alturaThumb}px`;
+          const posicionThumb = progreso * (ALTURA_PISTA_PX - ALTURA_THUMB_PX);
+          thumb.style.height = `${ALTURA_THUMB_PX}px`;
           thumb.style.transform = `translateY(${posicionThumb}px)`;
           thumb.style.opacity = '';
         }
@@ -92,7 +129,15 @@ export default function BarraScroll() {
   }, []);
 
   return (
-    <div className={styles.pista} aria-hidden="true">
+    <div
+      ref={refPista}
+      className={styles.pista}
+      aria-hidden="true"
+      onPointerDown={alPresionar}
+      onPointerMove={alMover}
+      onPointerUp={alSoltar}
+      onPointerCancel={alSoltar}
+    >
       <div ref={refThumb} className={styles.thumb} />
     </div>
   );

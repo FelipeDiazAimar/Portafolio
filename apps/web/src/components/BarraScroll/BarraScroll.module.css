@@ -1,24 +1,52 @@
 .pista {
   position: fixed;
-  top: 0;
-  right: 0;
-  width: 6px;
-  height: 100vh;
-  height: 100svh;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 18px;
+  width: 8px;
+  height: 180px;
+  background: color-mix(in srgb, var(--color-fg) 12%, transparent);
+  border-radius: 100px;
   z-index: 950;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  transition: opacity 0.3s ease, width 0.25s ease, right 0.25s ease, background-color 0.25s ease;
+}
+
+/* Zona de toque más ancha que la pista visible */
+.pista::before {
+  content: '';
+  position: absolute;
+  inset: -8px -12px;
+}
+
+.pista:hover,
+.pista[data-agarrada='true'] {
+  width: 12px;
+  right: 16px;
+  background: color-mix(in srgb, var(--color-fg) 20%, transparent);
+}
+
+.pista[data-agarrada='true'] {
+  cursor: grabbing;
 }
 
 /* Con el menú móvil abierto no hay scroll en ningún lado, así que no hay barra. */
 :global(html[data-menu-abierto='true']) .pista {
   opacity: 0;
+  pointer-events: none;
 }
 
 .thumb {
   width: 100%;
   background: var(--color-fg);
-  opacity: 0.5;
+  opacity: 0.9;
   border-radius: 100px;
-  transition: opacity 0.2s ease, transform 0.05s linear;
+  transition: opacity 0.2s ease;
+}
+
+.pista:hover .thumb,
+.pista[data-agarrada='true'] .thumb {
+  opacity: 1;
 }
