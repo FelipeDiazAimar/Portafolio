@@ -17,6 +17,7 @@ export const MARCAS = {
   bibliotech: { nombre: 'BiblioTech', bajada: 'Biblioteca inteligente' },
   movii: { logo: '/proyectos/movii/marca.webp', fondo: '#10131c', nombre: 'Movii', bajada: 'Última milla' },
   'crm-inmobiliaria': { nombre: 'CRM', bajada: 'Inmobiliaria' },
+  portafolio: { nombre: 'Portafolio', bajada: 'Este sitio' },
 };
 
 export function marcaDe(slug) {

@@ -22,16 +22,16 @@ const TIPOS_VALIDOS = ['laboral', 'cliente', 'personal', 'academico'];
 const ESTADOS_VALIDOS = ['produccion', 'demo'];
 const KEBAB_CASE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-// (1) 13 proyectos, slug único en kebab-case y orden 1–13 sin huecos.
-test('proyectos: 13 proyectos con slug único kebab-case y orden 1-13 sin huecos', () => {
-  assert.equal(proyectos.length, 13);
+// (1) 14 proyectos, slug único en kebab-case y orden 1–14 sin huecos.
+test('proyectos: 14 proyectos con slug único kebab-case y orden 1-14 sin huecos', () => {
+  assert.equal(proyectos.length, 14);
   const slugs = proyectos.map((proyecto) => proyecto.slug);
   assert.equal(new Set(slugs).size, slugs.length);
   for (const slug of slugs) {
     assert.match(slug, KEBAB_CASE, `slug no kebab-case: ${slug}`);
   }
   const ordenes = proyectos.map((proyecto) => proyecto.orden).sort((a, b) => a - b);
-  assert.deepEqual(ordenes, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+  assert.deepEqual(ordenes, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
 });
 
 // (2) tipo y estado dentro de los valores permitidos.
@@ -61,7 +61,7 @@ test('proyectos: problema, features y stack válidos', () => {
 });
 
 // (4) Portada en /proyectos/<slug>/portada.webp y archivo real en public.
-// Activado tras T8: las 13 portadas ya existen en apps/web/public.
+// Activado tras T8: las 14 portadas ya existen en apps/web/public.
 test('proyectos: cada portada existe en apps/web/public', () => {
   for (const proyecto of proyectos) {
     assert.equal(proyecto.imagenes.portada, `/proyectos/${proyecto.slug}/portada.webp`);
@@ -106,18 +106,18 @@ test('tecnologias: ids únicos e iconos importados', () => {
   }
 });
 
-// (8) resumenCifras() da { total: 13, clientes: 5, laborales: 4 }.
-test('resumenCifras: da { total: 13, clientes: 5, laborales: 4 }', () => {
-  assert.deepEqual(resumenCifras(), { total: 13, clientes: 5, laborales: 4 });
+// (8) resumenCifras() da { total: 14, clientes: 5, laborales: 4 }.
+test('resumenCifras: da { total: 14, clientes: 5, laborales: 4 }', () => {
+  assert.deepEqual(resumenCifras(), { total: 14, clientes: 5, laborales: 4 });
 });
 
 // La librería expone el catálogo ordenado por `orden`.
 test('listarProyectos: ordenados por orden y con acceso por slug', () => {
   const lista = listarProyectos();
-  assert.equal(lista.length, 13);
+  assert.equal(lista.length, 14);
   assert.deepEqual(
     lista.map((proyecto) => proyecto.orden),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
   );
   assert.equal(obtenerProyecto('neifert').titulo, 'Neifert Automotores');
   assert.equal(obtenerProyecto('no-existe'), null);
@@ -152,4 +152,13 @@ test('normalizarProyectoRemoto: mapea los campos remotos a los locales', () => {
   assert.equal(normalizado.titulo, 'Demo');
   assert.equal(normalizado.resumen, 'Resumen demo');
   assert.deepEqual(normalizado.stack, ['react', 'node']);
+});
+
+// Cada tecnología del catálogo figura en el stack de al menos un proyecto (no hay habilidades "huérfanas").
+// Excepciones a propósito: herramientas y tecnologías que uso pero que no figuran en el stack de un proyecto.
+const SIN_PROYECTO = new Set(['claude', 'mcp', 'kubernetes', 'godot']);
+test('catálogo: toda tecnología se usó en algún proyecto (salvo las excepciones)', () => {
+  const usadas = new Set(listarProyectos().flatMap((proyecto) => proyecto.stack));
+  const huerfanas = TECNOLOGIAS.filter((t) => !usadas.has(t.id) && !SIN_PROYECTO.has(t.id)).map((t) => t.id);
+  assert.deepEqual(huerfanas, []);
 });

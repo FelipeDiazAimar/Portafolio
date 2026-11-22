@@ -14,7 +14,7 @@ export default function CierreFooter() {
   const refVidrio = useRef(null);
   const refFrase = useRef(null);
   const [visible, setVisible] = useState(false);
-  // 'css' = texto de siempre; '3d' = metal pulido en WebGL (sólo con mouse, pantalla ancha y fondo oscuro).
+  // 'css' = texto de siempre; '3d' = metal pulido en WebGL (sólo con mouse y pantalla ancha).
   const [modo, setModo] = useState('css');
 
   useEffect(() => {

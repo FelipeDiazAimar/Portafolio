@@ -2,6 +2,8 @@
 // Sujen Phea (https://github.com/Sujenphea/xylophone, MIT). El solver de fluido viene de
 // WebGL-Fluid-Simulation de Pavel Dobryakov (MIT).
 
+import { TECNOLOGIAS } from '../../../data/tecnologias.js';
+
 // Celular o táctil: menos resolución.
 export function calidad() {
   const tactil = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
@@ -18,8 +20,8 @@ export const CAPA_VIDRIO = 1;
 export const CAPA_FONDO = 2;
 
 export const XILOFONO = {
-  // Una barra por habilidad: el catálogo tiene 64 (ver data/tecnologias.js).
-  cantidad: 64,
+  // Una barra por habilidad: las del catálogo (data/tecnologias.js); el atlas admite hasta 64.
+  cantidad: TECNOLOGIAS.length,
   radio: 1,
   caidaInclinacion: 2,
   pasoTheta: 0.175,

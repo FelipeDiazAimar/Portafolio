@@ -24,7 +24,18 @@
       "539 medias pesadas en un día",
       "Reglas de 3.900+ líneas de C/4GL reescritas en JavaScript"
     ],
-    "stack": ["react", "vite", "node", "express", "postgresql", "socketio", "sap", "mui", "tailwind", "docker"],
+    "stack": [
+      "react",
+      "vite",
+      "node",
+      "express",
+      "postgresql",
+      "socketio",
+      "sap",
+      "mui",
+      "tailwind",
+      "docker"
+    ],
     "enlaces": {
       "sitio": null,
       "repo": null,
@@ -70,7 +81,18 @@
       "288 envíos a SAP por día",
       "178.406 materiales SAP sincronizados"
     ],
-    "stack": ["react", "vite", "node", "express", "postgresql", "sqlserver", "sap", "tailwind", "shadcn", "docker"],
+    "stack": [
+      "react",
+      "vite",
+      "node",
+      "express",
+      "postgresql",
+      "sqlserver",
+      "sap",
+      "tailwind",
+      "shadcn",
+      "docker"
+    ],
     "enlaces": {
       "sitio": null,
       "repo": null,
@@ -112,7 +134,30 @@
       "Estadísticas comerciales"
     ],
     "metricas": [],
-    "stack": ["react", "vite", "tailwind", "shadcn", "framer", "zustand", "tanstack", "supabase", "cloudflare", "whatsapp", "electron", "vercel"],
+    "stack": [
+      "react",
+      "vite",
+      "tailwind",
+      "shadcn",
+      "framer",
+      "zustand",
+      "tanstack",
+      "supabase",
+      "cloudflare",
+      "whatsapp",
+      "electron",
+      "vercel",
+      "reactrouter",
+      "reacthookform",
+      "zod",
+      "recharts",
+      "awss3",
+      "lenis",
+      "vitest",
+      "testinglibrary",
+      "prettier",
+      "eslint"
+    ],
     "enlaces": {
       "sitio": "https://neifertautomotores.com",
       "repo": "https://github.com/FelipeDiazAimar/NeifertAutomotores",
@@ -154,7 +199,21 @@
       "Formulario de contacto que llega al panel"
     ],
     "metricas": [],
-    "stack": ["nextjs", "react", "tailwind", "shadcn", "supabase", "postgresql", "firebase", "vercel"],
+    "stack": [
+      "nextjs",
+      "react",
+      "tailwind",
+      "shadcn",
+      "supabase",
+      "postgresql",
+      "firebase",
+      "vercel",
+      "radix",
+      "reacthookform",
+      "zod",
+      "recharts",
+      "genkit"
+    ],
     "enlaces": {
       "sitio": "https://dariomartinezcomputacion.com",
       "repo": "https://github.com/FelipeDiazAimar/DarioMartinez",
@@ -196,7 +255,19 @@
       "Panel de productos, pedidos, modelos y carrusel"
     ],
     "metricas": [],
-    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "framer", "supabase", "cloudflare", "vercel"],
+    "stack": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwind",
+      "shadcn",
+      "framer",
+      "supabase",
+      "cloudflare",
+      "vercel",
+      "reactrouter",
+      "eslint"
+    ],
     "enlaces": {
       "sitio": "https://justphones-fv.vercel.app",
       "repo": "https://github.com/FelipeDiazAimar/justphones",
@@ -238,7 +309,24 @@
       "Contenido editable: carrusel, anuncios, testimonios y preguntas frecuentes"
     ],
     "metricas": [],
-    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "supabase", "mercadopago", "cloudflare", "firebase"],
+    "stack": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwind",
+      "shadcn",
+      "supabase",
+      "mercadopago",
+      "cloudflare",
+      "firebase",
+      "radix",
+      "reacthookform",
+      "zod",
+      "recharts",
+      "genkit",
+      "awss3",
+      "eslint"
+    ],
     "enlaces": {
       "sitio": "https://algobonito-sv.vercel.app",
       "repo": "https://github.com/FelipeDiazAimar/AlgoBonitoSV",
@@ -279,7 +367,23 @@
       "Panel de productos, atributos, pedidos y finanzas"
     ],
     "metricas": [],
-    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "supabase", "mercadopago", "cloudflare"],
+    "stack": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwind",
+      "shadcn",
+      "supabase",
+      "mercadopago",
+      "cloudflare",
+      "radix",
+      "reacthookform",
+      "zod",
+      "recharts",
+      "genkit",
+      "awss3",
+      "eslint"
+    ],
     "enlaces": {
       "sitio": "https://calida-escencia.vercel.app",
       "repo": "https://github.com/FelipeDiazAimar/CalidaEscencia",
@@ -320,7 +424,25 @@
       "Panel de administración con login JWT"
     ],
     "metricas": [],
-    "stack": ["nextjs", "react", "typescript", "tailwind", "shadcn", "gemini", "openrouter", "postgresql", "supabase", "vercel"],
+    "stack": [
+      "nextjs",
+      "react",
+      "typescript",
+      "tailwind",
+      "shadcn",
+      "gemini",
+      "openrouter",
+      "postgresql",
+      "supabase",
+      "vercel",
+      "radix",
+      "reacthookform",
+      "zod",
+      "recharts",
+      "genkit",
+      "axios",
+      "jwt"
+    ],
     "enlaces": {
       "sitio": "https://asistente-inteligente.vercel.app",
       "repo": "https://github.com/FelipeDiazAimar/AsistenteInteligente",
@@ -362,7 +484,17 @@
       "Ranking y estadísticas"
     ],
     "metricas": [],
-    "stack": ["react", "vite", "mui", "express", "socketio", "postgresql", "sqlserver", "activedirectory", "docker"],
+    "stack": [
+      "react",
+      "vite",
+      "mui",
+      "express",
+      "socketio",
+      "postgresql",
+      "sqlserver",
+      "activedirectory",
+      "docker"
+    ],
     "enlaces": {
       "sitio": null,
       "repo": null,
@@ -403,7 +535,13 @@
       "Login con Active Directory y 4 roles"
     ],
     "metricas": [],
-    "stack": ["python", "flask", "sqlite", "activedirectory", "docker"],
+    "stack": [
+      "python",
+      "flask",
+      "sqlite",
+      "activedirectory",
+      "docker"
+    ],
     "enlaces": {
       "sitio": null,
       "repo": null,
@@ -444,7 +582,19 @@
       "API documentada con Swagger y panel de administración"
     ],
     "metricas": [],
-    "stack": ["react", "vite", "mui", "express", "sequelize", "postgresql", "openrouter", "render", "vercel"],
+    "stack": [
+      "react",
+      "vite",
+      "mui",
+      "express",
+      "sequelize",
+      "postgresql",
+      "openrouter",
+      "render",
+      "vercel",
+      "reactrouter",
+      "eslint"
+    ],
     "enlaces": {
       "sitio": "https://repositoriofrontendbibliotech.vercel.app",
       "repo": "https://github.com/FelipeDiazAimar/BibliotecaInteligente",
@@ -485,7 +635,17 @@
       "Seguimiento público por código de guía"
     ],
     "metricas": [],
-    "stack": ["go", "react", "typescript", "vite", "tailwind", "tanstack", "expo", "postgresql", "docker"],
+    "stack": [
+      "go",
+      "react",
+      "typescript",
+      "vite",
+      "tailwind",
+      "tanstack",
+      "expo",
+      "postgresql",
+      "docker"
+    ],
     "enlaces": {
       "sitio": null,
       "repo": "https://github.com/FelipeDiazAimar/Movii",
@@ -526,7 +686,12 @@
       "Modo demo sin base de datos"
     ],
     "metricas": [],
-    "stack": ["php", "mysql", "docker", "render"],
+    "stack": [
+      "php",
+      "mysql",
+      "docker",
+      "render"
+    ],
     "enlaces": {
       "sitio": null,
       "repo": "https://github.com/FelipeDiazAimar/CRM-Inmobiliaria",
@@ -536,6 +701,62 @@
     "imagenes": {
       "portada": "/proyectos/crm-inmobiliaria/portada.webp",
       "logo": "/proyectos/crm-inmobiliaria/logo.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "portafolio",
+    "orden": 14,
+    "titulo": "Este portafolio",
+    "cliente": "Proyecto propio",
+    "tipo": "personal",
+    "periodo": "2026",
+    "estado": "produccion",
+    "destacado": false,
+    "privado": false,
+    "color": "#a78bfa",
+    "problema": "Un CV en PDF no muestra cómo pienso ni cómo construyo: quería un lugar donde el trabajo se pudiera recorrer, no solo leer.",
+    "resumen": "Este mismo sitio: escenas 3D en tiempo real, un pasillo que se construye mientras lo recorrés, un xilófono de tecnologías y una marquesina de proyectos.",
+    "contexto": null,
+    "features": [
+      "Experiencia como pasillo 3D que se construye en tiempo real",
+      "Xilófono 3D con una barra por tecnología, filtrable por categoría",
+      "Marquesina de proyectos con vista de detalle y casos",
+      "Carrusel de vidrio de títulos y scroll suave con barra propia",
+      "Modo rendimiento para equipos modestos y respeto de reduced-motion"
+    ],
+    "metricas": [],
+    "stack": [
+      "nextjs",
+      "react",
+      "javascript",
+      "css",
+      "tailwind",
+      "framer",
+      "gsap",
+      "threejs",
+      "webgl",
+      "lenis",
+      "vercel",
+      "git",
+      "github"
+    ],
+    "enlaces": {
+      "sitio": null,
+      "repo": "https://github.com/FelipeDiazAimar/Portafolio",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/portafolio/portada.webp",
+      "logo": "/proyectos/portafolio/logo.webp",
       "movil": null,
       "completa": null
     },

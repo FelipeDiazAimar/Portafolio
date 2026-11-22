@@ -7,6 +7,7 @@ import { CATEGORIAS } from '@/data/categoriasTecnologias.js';
 import { ordenDeBarras } from '@/lib/xilofono.js';
 import PanelHabilidades from './PanelHabilidades.jsx';
 import DockCategorias from './DockCategorias.jsx';
+import MarcaUso from './MarcaUso.jsx';
 import useTema from '@/hooks/useTema.js';
 import useEmbudo from '@/hooks/useEmbudo.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
@@ -30,6 +31,10 @@ export default function Habilidades() {
   const refLienzo = useRef(null);
   const refLogos = useRef(null);
   const refMotor = useRef(null);
+  const refMarca = useRef(null);
+  const refSenalada = useRef(null);
+  // tecnología resaltada en la hélice (la marca de puntería dice dónde se usó)
+  const [senalada, setSenalada] = useState(null);
   const [conWebGL, setConWebGL] = useState(true);
   const [listo, setListo] = useState(false);
   const [categoria, setCategoria] = useState(null);
@@ -83,6 +88,23 @@ export default function Habilidades() {
           tecnologias: TECNOLOGIAS,
           // tocar una categoría del árbol la elige (o la quita si ya estaba)
           alCategoria: (id) => setCategoria(id),
+          // la barra resaltada: la marca se mueve con ella directo en el DOM, sin pasar por React
+          alSenalar: (info) => {
+            const marca = refMarca.current;
+            const id = info ? TECNOLOGIAS[info.tecnologia]?.id ?? null : null;
+            if (id !== refSenalada.current && id) {
+              refSenalada.current = id;
+              setSenalada(TECNOLOGIAS[info.tecnologia]);
+            }
+            if (!marca) return;
+            if (!info || !id) {
+              marca.dataset.visible = 'false';
+              return;
+            }
+            marca.dataset.visible = 'true';
+            marca.dataset.lado = info.lado;
+            marca.style.transform = `translate3d(${info.x.toFixed(1)}px, ${info.y.toFixed(1)}px, 0)`;
+          },
           tema: refTema.current,
           reducido,
           // cursor de agarre sólo sobre las barras (el modelo se agarra desde ahí)
@@ -226,6 +248,7 @@ export default function Habilidades() {
               onPointerLeave={alSalir}
               onDoubleClick={() => refMotor.current?.restablecerVista()}
             />
+            {listo && <MarcaUso refMarca={refMarca} tecnologia={senalada} />}
             {listo && (
               <div className={estilos.controles} role="group" aria-label="Vista del modelo">
                 <button type="button" className={estilos.control} aria-label="Alejar" onClick={() => refMotor.current?.zoomRelativo(1 / 1.5)}>

@@ -1,5 +1,5 @@
 // Catálogo único de tecnologías. `color`: el de la marca (de simple-icons). `icono` es el nombre del componente de react-icons/si
-// (o null: se muestra `sigla`). Los proyectos referencian estas `id`.
+// (o null: se muestra `sigla`). Los proyectos referencian estas `id`. Casi todas aparecen en el stack de algún proyecto (lo verifica un test); las pocas excepciones están en proyectos.test.js.
 export const TECNOLOGIAS = [
   { id: 'nextjs', color: '#000000', nombre: 'Next.js', icono: 'SiNextdotjs', sigla: 'Nx', href: 'https://nextjs.org' },
   { id: 'react', color: '#61DAFB', nombre: 'React', icono: 'SiReact', sigla: 'Re', href: 'https://react.dev' },
@@ -32,21 +32,18 @@ export const TECNOLOGIAS = [
   { id: 'openrouter', color: '#6467F2', nombre: 'OpenRouter', icono: null, sigla: 'OR', href: 'https://openrouter.ai' },
   { id: 'mercadopago', color: '#00B1EA', nombre: 'Mercado Pago', icono: 'SiMercadopago', sigla: 'MP', href: 'https://www.mercadopago.com.ar/developers' },
   { id: 'cloudflare', color: '#F38020', nombre: 'Cloudflare R2', icono: 'SiCloudflare', sigla: 'R2', href: 'https://developers.cloudflare.com/r2' },
-  { id: 'whatsapp', color: '#25D366', nombre: 'WhatsApp', icono: 'SiWhatsapp', sigla: 'WA', href: 'https://www.whatsapp.com' },
+  { id: 'whatsapp', color: '#25D366', nombre: 'WhatsApp API', icono: 'SiWhatsapp', sigla: 'WA', href: 'https://www.whatsapp.com' },
   { id: 'electron', color: '#47848F', nombre: 'Electron', icono: 'SiElectron', sigla: 'El', href: 'https://www.electronjs.org' },
   { id: 'expo', color: '#1C2024', nombre: 'Expo / React Native', icono: 'SiExpo', sigla: 'Xp', href: 'https://expo.dev' },
   { id: 'docker', color: '#2496ED', nombre: 'Docker', icono: 'SiDocker', sigla: 'Dk', href: 'https://docker.com' },
-  { id: 'kubernetes', color: '#326CE5', nombre: 'Kubernetes', icono: 'SiKubernetes', sigla: 'K8s', href: 'https://kubernetes.io' },
   { id: 'vercel', color: '#000000', nombre: 'Vercel', icono: 'SiVercel', sigla: 'Vc', href: 'https://vercel.com' },
   { id: 'render', color: '#000000', nombre: 'Render', icono: 'SiRender', sigla: 'Rn', href: 'https://render.com' },
   { id: 'activedirectory', color: '#0078D4', nombre: 'Active Directory (LDAPS)', icono: null, sigla: 'AD', href: 'https://learn.microsoft.com/windows-server/identity/ad-ds' },
-  // --- Usadas en los repositorios de github.com/FelipeDiazAimar (dependencias reales de cada
-  // proyecto): completan las 64 barras del xilófono de Habilidades sin repetir ninguna.
+  // --- Dependencias reales de los repositorios de github.com/FelipeDiazAimar (verificadas en cada package.json).
   { id: 'radix', color: '#161618', nombre: 'Radix UI', icono: 'SiRadixui', sigla: 'Rx', href: 'https://www.radix-ui.com' },
   { id: 'reacthookform', color: '#EC5990', nombre: 'React Hook Form', icono: 'SiReacthookform', sigla: 'RHF', href: 'https://react-hook-form.com' },
   { id: 'zod', color: '#408AFF', nombre: 'Zod', icono: 'SiZod', sigla: 'Zd', href: 'https://zod.dev' },
   { id: 'reactrouter', color: '#CA4245', nombre: 'React Router', icono: 'SiReactrouter', sigla: 'RR', href: 'https://reactrouter.com' },
-  { id: 'leaflet', color: '#199900', nombre: 'Leaflet', icono: 'SiLeaflet', sigla: 'Lf', href: 'https://leafletjs.com' },
   { id: 'vitest', color: '#00FF74', nombre: 'Vitest', icono: 'SiVitest', sigla: 'Vt', href: 'https://vitest.dev' },
   { id: 'testinglibrary', color: '#E33332', nombre: 'Testing Library', icono: 'SiTestinglibrary', sigla: 'TL', href: 'https://testing-library.com' },
   { id: 'prettier', color: '#F7B93E', nombre: 'Prettier', icono: 'SiPrettier', sigla: 'Pr', href: 'https://prettier.io' },
@@ -56,18 +53,17 @@ export const TECNOLOGIAS = [
   { id: 'threejs', color: '#000000', nombre: 'Three.js', icono: 'SiThreedotjs', sigla: '3js', href: 'https://threejs.org' },
   { id: 'webgl', color: '#990000', nombre: 'WebGL', icono: 'SiWebgl', sigla: 'GL', href: 'https://www.khronos.org/webgl' },
   { id: 'gsap', color: '#88CE02', nombre: 'GSAP', icono: 'SiGreensock', sigla: 'GS', href: 'https://gsap.com' },
-  { id: 'godot', color: '#478CBF', nombre: 'Godot', icono: 'SiGodotengine', sigla: 'Gd', href: 'https://godotengine.org' },
-  { id: 'html', color: '#E34F26', nombre: 'HTML', icono: 'SiHtml5', sigla: 'HTML', href: 'https://developer.mozilla.org/docs/Web/HTML' },
   { id: 'css', color: '#663399', nombre: 'CSS', icono: 'SiCss', sigla: 'CSS', href: 'https://developer.mozilla.org/docs/Web/CSS' },
-  { id: 'bootstrap', color: '#7952B3', nombre: 'Bootstrap', icono: 'SiBootstrap', sigla: 'Bs', href: 'https://getbootstrap.com' },
   { id: 'git', color: '#F03C2E', nombre: 'Git', icono: 'SiGit', sigla: 'Git', href: 'https://git-scm.com' },
   { id: 'github', color: '#181717', nombre: 'GitHub', icono: 'SiGithub', sigla: 'GH', href: 'https://github.com' },
   { id: 'awss3', color: '#569A31', nombre: 'Amazon S3', icono: null, sigla: 'S3', href: 'https://aws.amazon.com/s3' },
   { id: 'genkit', color: '#DD2C00', nombre: 'Genkit', icono: null, sigla: 'Gk', href: 'https://genkit.dev' },
   { id: 'recharts', color: '#22B5BF', nombre: 'Recharts', icono: null, sigla: 'Rc', href: 'https://recharts.org' },
+  { id: 'lenis', color: '#FF98A2', nombre: 'Lenis', icono: null, sigla: 'Ln', href: 'https://lenis.darkroom.engineering' },
+  { id: 'kubernetes', color: '#326CE5', nombre: 'Kubernetes', icono: 'SiKubernetes', sigla: 'K8s', href: 'https://kubernetes.io' },
+  { id: 'godot', color: '#478CBF', nombre: 'Godot', icono: 'SiGodotengine', sigla: 'Gd', href: 'https://godotengine.org' },
   { id: 'mcp', color: '#000000', nombre: 'MCP', icono: null, sigla: 'MCP', href: 'https://modelcontextprotocol.io' },
   { id: 'claude', color: '#D97757', nombre: 'Claude', icono: 'SiClaude', sigla: 'Cl', href: 'https://claude.com' },
-  { id: 'lenis', color: '#FF98A2', nombre: 'Lenis', icono: null, sigla: 'Ln', href: 'https://lenis.darkroom.engineering' },
 ];
 
 

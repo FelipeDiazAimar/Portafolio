@@ -24,16 +24,14 @@ const PROFUNDIDAD = EXTRUSION.depth;
 // Aspecto "platino" de getlayers: metal casi espejo, poca rugosidad, sin iridiscencia.
 const ASPECTO = {
   tinte: '#e6e8ee',
-  factorApagado: 0.24,
+  factorApagado: 0.55,
   rugosidad: [0.05, 0.1],
   clearcoat: 0.2,
   clearcoatRugosidad: 0.04,
-  entorno: [1.15, 1, 1, 0.9],
+  entorno: [1.15, 1.5, 1.2, 1.4],
   entornoHover: 0.2,
   exposicion: 0.9,
   puntero: { base: 0.25, hover: 1.1 },
-  // Destello que recorre sólo los bordes (paredes y bisel): ancho en em y fuerza.
-  barrido: { ancho: 0.22, fuerza: 1.1 },
 };
 
 export const CICLO_MS = 9000;
@@ -83,9 +81,6 @@ const SALA_FRAGMENTO = `
     vec3 c = uVoid * 0.12;
     c += mix(warm, cool, smoothstep(-0.4, 0.4, az)) * (0.07 + 0.16 * smoothstep(-0.25, 0.3, el))
       * box(az, el, 0.0, 0.42, 0.05, 0.4, 0.2);
-    c += warm * 8.0 * box(az, el, -0.17, 0.014, 0.0, 0.8, 0.004);
-    c += cool * 5.5 * box(az, el, 0.2, 0.009, 0.0, 0.8, 0.003);
-    c += white * 2.5 * box(az, el, 0.04, 0.004, 0.0, 0.8, 0.002);
     c += warm * 1.7 * box(az, el, -1.45, 0.35, 0.15, 0.6, 0.12);
     c += cool * 1.4 * box(az, el, 1.45, 0.3, 0.1, 0.55, 0.12);
     c += white * 2.2 * box(az, el, 0.0, 1.6, 1.15, 0.12, 0.08);
@@ -119,7 +114,6 @@ export class EscenaFrase {
     this.pivote = new THREE.Vector2();
     this.anchoTinta = FRASE_UPM;
     this.lente = { uLens: { value: new THREE.Vector4() }, uLensTime: { value: 0 } };
-    this.destello = { uGlint: { value: new THREE.Vector2(0, 1) }, uGlintColor: { value: new THREE.Color() } };
 
     const r = new THREE.WebGLRenderer({
       canvas,
@@ -148,38 +142,28 @@ export class EscenaFrase {
         clearcoatRoughness: ASPECTO.clearcoatRugosidad,
       });
     const tinte = color(ASPECTO.tinte);
-    const r1 = ASPECTO.rugosidad[1];
-    // Caras (material 0): mates y oscuras, sin reflejo ni luces que las barran. Todo el brillo
-    // metálico queda en los bordes (material 1: paredes y bisel).
-    const cara = (emisivo) =>
-      new THREE.MeshPhysicalMaterial({
-        color: 0x0c0d10,
-        emissive: emisivo,
-        metalness: 0,
-        roughness: 1,
-        envMapIntensity: 0,
-      });
-    this.brillante = [cara(0x3b3e46), metal(tinte, r1, ASPECTO.entorno[1])];
+    const [r0, r1] = ASPECTO.rugosidad;
+    // Mismo metal platino que getlayers. Las caras (material 0) reflejan sólo el fondo oscuro del
+    // estudio, que tiene un degradé (más claro arriba): por eso se ven grises oscuras y no espejo.
+    // El brillo fino queda en el bisel (material 1).
+    const ENTORNO_CARA = 0.35;
+    this.brillante = [metal(tinte, r0, ENTORNO_CARA), metal(tinte, r1, ASPECTO.entorno[1])];
     const apagado = tinte.clone().multiplyScalar(ASPECTO.factorApagado);
-    this.apagado = [cara(0x24262b), metal(apagado, r1 + 0.04, ASPECTO.entorno[3])];
+    this.apagado = [metal(apagado, r0 + 0.04, ENTORNO_CARA), metal(apagado, r1 + 0.04, ASPECTO.entorno[3])];
+    // En three reciente envMapIntensity sólo cuenta si el material tiene su propio envMap.
+    for (const m of [...this.brillante, ...this.apagado]) m.envMap = this.entorno;
 
     // Materiales 0 = caras frontal/trasera: ahí se recorta la lente y se pinta el halo del borde.
     for (const m of [this.brillante[0], this.apagado[0]]) {
       m.onBeforeCompile = (sombreador) => {
         sombreador.uniforms.uLens = this.lente.uLens;
         sombreador.uniforms.uLensTime = this.lente.uLensTime;
-        sombreador.fragmentShader = sombreador.fragmentShader
-          .replace(
-            'void main() {',
-            `${LENTE_GLSL}
+        sombreador.fragmentShader = sombreador.fragmentShader.replace(
+          'void main() {',
+          `${LENTE_GLSL}
 void main() {
-  float lensD = uLens.z > 0.5 ? lensEdge(gl_FragCoord.xy) : 1e6;
-  if (lensD < 0.0) discard;`
-          )
-          .replace(
-            '#include <dithering_fragment>',
-            '#include <dithering_fragment>\n  if (uLens.z > 0.5) gl_FragColor.rgb += vec3(0.9, 0.92, 1.0) * (1.0 - smoothstep(0.0, uLens.w, lensD)) * 0.55;'
-          );
+  if (uLens.z > 0.5 && lensEdge(gl_FragCoord.xy) < 0.0) discard;`
+        );
       };
       m.customProgramCacheKey = () => 'frase-lente';
     }
@@ -189,29 +173,16 @@ void main() {
       m.onBeforeCompile = (sombreador) => {
         sombreador.uniforms.uLens = this.lente.uLens;
         sombreador.uniforms.uLensTime = this.lente.uLensTime;
-        sombreador.uniforms.uGlint = this.destello.uGlint;
-        sombreador.uniforms.uGlintColor = this.destello.uGlintColor;
         sombreador.vertexShader = sombreador.vertexShader
-          .replace('void main() {', 'varying float vLensZ;\nvarying float vGlintX;\nvoid main() {')
-          .replace(
-            '#include <begin_vertex>',
-            '#include <begin_vertex>\n  vLensZ = position.z;\n  vGlintX = (modelMatrix * vec4(transformed, 1.0)).x;'
-          );
-        sombreador.fragmentShader = sombreador.fragmentShader
-          .replace(
-            'void main() {',
-            `${LENTE_GLSL}
-uniform vec2 uGlint;      // x del destello (px, mundo) y su ancho
-uniform vec3 uGlintColor;
+          .replace('void main() {', 'varying float vLensZ;\nvoid main() {')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vLensZ = position.z;');
+        sombreador.fragmentShader = sombreador.fragmentShader.replace(
+          'void main() {',
+          `${LENTE_GLSL}
 varying float vLensZ;
-varying float vGlintX;
 void main() {
   if (uLens.z > 0.5 && vLensZ < ${(PROFUNDIDAD / 2).toFixed(1)} && lensEdge(gl_FragCoord.xy) < 0.0) discard;`
-          )
-          .replace(
-            '#include <dithering_fragment>',
-            '#include <dithering_fragment>\n  { float g = (vGlintX - uGlint.x) / uGlint.y; gl_FragColor.rgb += uGlintColor * exp(-g * g); }'
-          );
+        );
       };
       m.customProgramCacheKey = () => 'frase-lente-lado';
     }
@@ -301,7 +272,7 @@ void main() {
     this.renderer.setSize(width, height, true);
     // Cámara lejana y de ángulo cerrado: las caras planas reflejan sólo el fondo oscuro del estudio
     // (como en getlayers, donde la palabra ocupa todo el ancho y el ángulo ya es chico).
-    const dist = Math.max(3.4 * (this.anchoTinta * fontPx) / FRASE_UPM, 2.5 * height);
+    const dist = Math.max(1.7 * (this.anchoTinta * fontPx) / FRASE_UPM, 2.5 * height);
     this.camara.fov = THREE.MathUtils.radToDeg(2 * Math.atan(height / 2 / dist));
     this.camara.aspect = width / height;
     this.camara.near = 0.2 * dist;
@@ -335,8 +306,9 @@ void main() {
 
     const retroceso = (PROFUNDIDAD / 2 + GROSOR) * k;
     this.palabra.position.set(0, 0.018 * Math.sin(t) * fontPx, -retroceso + 0.14 * hover * fontPx);
-    // Sin balanceo en reposo: si la palabra se mece, las tiras de luz reflejadas barren las caras.
-    this.palabra.rotation.set(e.inclX, e.inclY, 0);
+    // La palabra no gira, ni sola ni hacia el cursor: al girar, las tiras de luz que reflejan las
+    // caras se deslizan por encima y se ve un barrido de brillo.
+    this.palabra.rotation.set(0, 0, 0);
     this.palabra.scale.setScalar(1 + 0.012 * hover);
 
     this.letras.forEach((l, i) => {
@@ -348,14 +320,6 @@ void main() {
       l.malla.visible = r > 0.001;
     });
 
-    // El destello va de un extremo al otro de la frase y sólo se ve en las paredes y el bisel.
-    const b = ASPECTO.barrido;
-    const mitad = (this.anchoTinta * k) / 2;
-    this.destello.uGlint.value.set(Math.sin(t + 0.4) * mitad * 1.15, b.ancho * fontPx);
-    this.destello.uGlintColor.value
-      .copy(this.crema)
-      .lerp(this.azul, 0.5 + 0.5 * Math.sin(t))
-      .multiplyScalar(b.fuerza);
     return true;
   }
 

@@ -111,6 +111,9 @@ export class Xilofono {
     this.direccion = new Vector3();
     this.raycaster = new Raycaster();
     this.espacio = crearEspacio();
+    this.ejeBarra = new Vector3();
+    this.extremoA = new Vector3();
+    this.extremoB = new Vector3();
 
     // vista de árbol: progreso 0 (hélice) .. 1 (árbol), con la transición a ~1,8 s
     this.modoArbol = false;
@@ -1001,6 +1004,7 @@ export class Xilofono {
       golpes.needsUpdate = true;
     }
     this.enFoco = enFoco;
+    this.senalarResaltada(enFoco, mejor);
     if (acercarValores(resaltes.array, this.objetivos, dt, 10)) resaltes.needsUpdate = true;
     if (acercarValores(activas.array, this.activasEfectivas, dt, 6)) activas.needsUpdate = true;
     this.uniforms.u_filtro.value = amortiguar(this.uniforms.u_filtro.value, this.filtro ? 1 : 0, 6, dt);
@@ -1010,9 +1014,47 @@ export class Xilofono {
     }
   }
 
+  // Marca de puntería sobre la barra resaltada (la apuntada, la buscada o la que pasa por el foco):
+  // se avisa su tecnología y su lugar en pantalla (px del lienzo) para que la página dibuje encima la
+  // línea guía con los proyectos donde se usó. Sin barra resaltada (o fuera de vista), se avisa null.
+  senalarResaltada(enFoco, resalteFoco) {
+    const aviso = this.opciones.alSenalar;
+    if (!aviso) return;
+    const pedida = this.busqueda !== -1 ? this.busqueda : this.forzada && this.tiempo < this.forzada.hasta ? this.forzada.barra : -1;
+    const barra = this.hover !== -1 ? this.hover : pedida !== -1 ? pedida : resalteFoco > 0.55 && this.objetivosActivas[enFoco] > 0 ? enFoco : -1;
+    const { ancho, alto } = this.tamano;
+    if (barra === -1 || !ancho) {
+      aviso(null);
+      return;
+    }
+    // la marca sale de un costado de la barra (no de encima): se buscan sus dos extremos (el eje largo es z
+    // local, de medio largo 1,25) y se toma el de la derecha, o el de la izquierda si no queda lugar
+    const { posiciones, rotaciones } = this.instancias;
+    const e = this.espacio;
+    const medio = this.tiempo * this.uniforms.u_spinSpeed.value * 0.5;
+    e.giro.set(0, Math.sin(medio), 0, Math.cos(medio));
+    e.rotacionInstancia.set(rotaciones[barra * 4], rotaciones[barra * 4 + 1], rotaciones[barra * 4 + 2], rotaciones[barra * 4 + 3]);
+    e.rotacion.multiplyQuaternions(e.giro, e.rotacionInstancia);
+    const matriz = this.eje.matrixWorld;
+    const centro = centroDeBarra(barra, posiciones, matriz, this.vector);
+    const medioLargo = 1.25 * matriz.getMaxScaleOnAxis();
+    const eje = this.ejeBarra.set(0, 0, 1).applyQuaternion(e.rotacion).transformDirection(matriz).multiplyScalar(medioLargo);
+    const a = this.extremoA.copy(centro).add(eje).project(this.camara);
+    const b = this.extremoB.copy(centro).sub(eje).project(this.camara);
+    const derecho = a.x >= b.x ? a : b;
+    const izquierdo = derecho === a ? b : a;
+    const aPx = (p) => ({ x: (p.x * 0.5 + 0.5) * ancho, y: (-p.y * 0.5 + 0.5) * alto });
+    const der = aPx(derecho);
+    const lado = der.x + 270 > ancho ? 'izq' : 'der';
+    const punto = lado === 'der' ? der : aPx(izquierdo);
+    const fuera = derecho.z > 1 || punto.x < 0 || punto.y < 0 || punto.x > ancho || punto.y > alto;
+    aviso(fuera ? null : { tecnologia: this.orden[barra], x: punto.x, y: punto.y, lado });
+  }
+
   // En el árbol sólo se enciende lo que se apunta o se tocó: esa esfera y su hilo desde el núcleo.
   // Nada se recorre solo.
   actualizarResalteArbol(dt) {
+    this.opciones.alSenalar?.(null);
     const { resaltes, activas } = this.instancias;
     const n = XILOFONO.cantidad;
     const listo = this.arbolP > 0.9;

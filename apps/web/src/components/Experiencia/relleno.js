@@ -557,6 +557,77 @@ const FREE = {
     for (let i = 0; i < 2 + Math.floor(r() * 4) && 0.018 * (i + 1) < hmax; i++) S.caja(u + 0.1, y + i * 0.017, p, 0.15, 0.016, 0.21, r.de(['#e9c46a', '#2a9d8f', '#e76f51', '#264653', '#f4a261']), { mat: 'papel', redondeo: 0.003, ry: r.entre(-0.2, 0.2) });
     return 0.22;
   },
+  // Neifert: autos a escala de la concesionaria
+  autitos(S, u, y, p, hmax, { r }) {
+    if (hmax < 0.07) return 0;
+    let x = 0;
+    for (let i = 0; i < 2 + Math.floor(r() * 2); i++) {
+      const c = r.de(['#c62828', '#f4f4f4', '#1d1f24', '#9aa0a8', '#1e4fa3']);
+      const cu = u + x + 0.075;
+      const pp = p + r.entre(-0.03, 0.03);
+      S.caja(cu, y + 0.012, pp, 0.14, 0.026, 0.06, c, { redondeo: 0.008 });
+      S.caja(cu - 0.008, y + 0.036, pp, 0.075, 0.022, 0.052, c, { redondeo: 0.008 });
+      S.caja(cu - 0.008, y + 0.04, pp + 0.0265, 0.065, 0.014, 0.002, '#2a3440', { mat: 'espejo' });
+      for (const du of [-0.045, 0.045]) for (const dp of [-0.031, 0.031]) S.cil(cu + du, y + 0.013, pp + dp, 0.013, 0.008, '#121316', { rx: Math.PI / 2, lados: 12 });
+      x += 0.16;
+    }
+    return x + 0.02;
+  },
+  // Neifert: llaves de los autos en una bandeja, con su llavero
+  llaves(S, u, y, p, hmax, { r }) {
+    S.caja(u + 0.09, y, p, 0.16, 0.012, 0.1, '#1d1f24', { redondeo: 0.004 });
+    for (let i = 0; i < 4; i++) {
+      const ku = u + 0.035 + i * 0.037;
+      S.caja(ku, y + 0.012, p + r.entre(-0.02, 0.02), 0.024, 0.01, 0.045, '#22252b', { redondeo: 0.005, ry: r.entre(-0.4, 0.4) });
+      S.toro(ku, y + 0.02, p + 0.03, 0.009, 0.0018, '#c9ced6', { mat: 'metal' });
+    }
+    return 0.19;
+  },
+  // CRM de Neifert: tarjetero con tarjetas y fichas de clientes
+  tarjetero(S, u, y, p, hmax, { r }) {
+    S.caja(u + 0.06, y, p, 0.1, 0.02, 0.07, '#2a2d33', { redondeo: 0.003 });
+    for (let i = 0; i < 6; i++) S.caja(u + 0.06, y + 0.02 + i * 0.0025, p, 0.09, 0.0024, 0.055, i % 2 ? '#f4f4f4' : '#e8e8e8', { mat: 'papel', ry: r.entre(-0.05, 0.05) });
+    S.caja(u + 0.19, y, p, 0.12, 0.05, 0.16, '#b8bec8', { mat: 'plastico', redondeo: 0.004 });
+    for (let i = 0; i < 5; i++) S.caja(u + 0.19, y + 0.05, p - 0.06 + i * 0.03, 0.11, 0.06, 0.002, r.de(['#f2f2f2', '#e2e6ec', '#f7e9c8']), { mat: 'papel' });
+    return 0.27;
+  },
+  // CRM de Neifert: el teléfono de la mesa de ventas
+  telefono(S, u, y, p, hmax) {
+    if (hmax < 0.1) return 0;
+    S.caja(u + 0.1, y, p, 0.18, 0.05, 0.16, '#1c1e22', { redondeo: 0.012 });
+    S.caja(u + 0.1, y + 0.05, p - 0.035, 0.17, 0.035, 0.05, '#25282e', { redondeo: 0.015 });
+    S.caja(u + 0.12, y + 0.051, p + 0.04, 0.08, 0.002, 0.05, '#3a3e45');
+    S.caja(u + 0.06, y + 0.051, p + 0.045, 0.04, 0.003, 0.03, '#8fd0ff', { mat: 'brillo' });
+    return 0.22;
+  },
+  // JustPhones: fundas de iPhone paradas en su exhibidor
+  fundas(S, u, y, p, hmax, { r }) {
+    if (hmax < 0.17) return 0;
+    S.caja(u + 0.13, y, p, 0.24, 0.02, 0.08, '#e9e9ea', { mat: 'plastico', redondeo: 0.004 });
+    for (let i = 0; i < 4; i++) {
+      const fu = u + 0.04 + i * 0.06;
+      const c = r.de(['#f7c8d8', '#1d1f24', '#c9e4f7', '#f4e3b5', '#d9f2d0', '#e3d4f7']);
+      S.caja(fu, y + 0.02, p, 0.05, 0.14, 0.008, c, { mat: 'plastico', redondeo: 0.009, rx: -0.12 });
+      S.caja(fu - 0.01, y + 0.13, p + 0.01, 0.022, 0.022, 0.004, '#2a2d33', { redondeo: 0.006, rx: -0.12 });
+    }
+    return 0.27;
+  },
+  // Algo Bonito: joyas en su estuche abierto
+  joyas(S, u, y, p, hmax, { r }) {
+    if (hmax < 0.08) return 0;
+    S.caja(u + 0.08, y, p, 0.14, 0.035, 0.1, '#e8e1d6', { redondeo: 0.006 });
+    S.caja(u + 0.08, y + 0.035, p - 0.045, 0.14, 0.09, 0.008, '#e8e1d6', { redondeo: 0.006, rx: 0.3 });
+    for (let i = 0; i < 3; i++) S.toro(u + 0.04 + i * 0.04, y + 0.045, p + 0.015, 0.011, 0.0025, r.de(['#d8b46a', '#c9ced6', '#e7c9a9']), { mat: 'metal' });
+    S.esfera(u + 0.08, y + 0.06, p + 0.015, 0.006, '#7ad1e6', { mat: 'vidrio' });
+    return 0.17;
+  },
+  // asistente de Atención Primaria: apuntes impresos resaltados y el resaltador
+  apuntes(S, u, y, p, hmax, { r }) {
+    for (let i = 0; i < 3 + Math.floor(r() * 3) && 0.006 * (i + 1) < hmax; i++) S.caja(u + 0.11, y + i * 0.005, p, 0.21, 0.004, 0.297, '#f4f4f2', { mat: 'papel', ry: r.entre(-0.08, 0.08) });
+    S.caja(u + 0.02, y + 0.03, p - 0.13, 0.03, 0.06, 0.004, '#c9ced6', { mat: 'metal' });
+    S.cil(u + 0.18, y + 0.03, p + 0.06, 0.008, 0.12, r.de(['#f9e04b', '#7ee081', '#ff8ad4']), { rz: Math.PI / 2, lados: 10 });
+    return 0.24;
+  },
 };
 
 // ---- técnico: taller y mostrador -------------------------------------------------------------
@@ -736,7 +807,53 @@ const MAXIMO = new Map([
   [MB.film, 2],
   [MB.bidon, 6],
   [MB.cajon, 6],
+  [FREE.autitos, 4],
+  [FREE.llaves, 2],
+  [FREE.tarjetero, 2],
+  [FREE.telefono, 1],
+  [FREE.fundas, 4],
+  [FREE.joyas, 3],
+  [FREE.apuntes, 3],
 ]);
+
+// ---- relación con los objetos interactivos ------------------------------------------------------
+// Cerca de cada objeto con tooltip (en su pared, ~1,9 m a cada lado, o enfrente) los estantes y el
+// piso llevan cosas de ESE objeto; en el resto del pasillo, cosas de la temática del trabajo.
+// `reales`: modelos de Poly Haven (también tienen que estar en pasilloAssets, para bajarlos);
+// `items`: objetos generados; `piso`: modelos reales de piso.
+const RELACION = {
+  laboratorio: {
+    placa: { reales: ['screwdriver', 'flathead_screwdriver', 'pliers', 'screwdrivers_02'], items: [LAB.pilaPlacas, LAB.discos, LAB.ventiladores, LAB.fuente, LAB.bolsas] },
+    banco: { reales: ['combination_wrench', 'adjustable_wrench', 'industrial_microscope'], items: [LAB.osciloscopio, LAB.soldadora, LAB.gaveta, LAB.organizador] },
+    gabinete: { reales: [], items: [LAB.rolloCable, LAB.fuente, LAB.discos, LAB.ventiladores] },
+  },
+  docencia: {
+    pizarron: { reales: ['binder_notebook', 'office_notepads', 'stationery_supplies'], items: [DOC.libros, DOC.hojas, DOC.lapicero, DOC.tizas] },
+    diagrama: { reales: ['clipboard', 'vintage_stapler'], items: [DOC.escuadras, DOC.hojas, DOC.carpetas, DOC.lapicero] },
+    pupitres: { reales: ['alarm_clock_01', 'round_spectacles'], items: [DOC.calculadoras, DOC.carpetas, DOC.cajaArchivo, DOC.libros] },
+  },
+  freelance: {
+    celular: { reales: ['digital_wrist_watch', 'Camera_01'], items: [FREE.fundas, FREE.cajaEnvio, FREE.bolsa] },
+    pago: {
+      reales: ['ceramic_vase_01', 'ceramic_vase_02', 'ceramic_vase_03', 'ceramic_vase_04', 'wooden_candlestick', 'brass_candleholders', 'brass_diya_lantern', 'vintage_oil_lamp', 'brass_vase_01', 'wicker_basket_01', 'wicker_basket_02'],
+      items: [FREE.joyas, FREE.velas, FREE.perfumes, FREE.difusor],
+    },
+    robot: { reales: ['medical_box', 'classic_laptop'], items: [FREE.apuntes, FREE.libretas] },
+    auto: { reales: [], items: [FREE.autitos, FREE.llaves, FREE.tarjetero, FREE.telefono], piso: ['old_tyre'] },
+  },
+  tecnico: {
+    notebook: { reales: ['lightbulb_led'], items: [TEC.notebooks, TEC.cargadores, TEC.teclado, TEC.bolsaCables] },
+    impresora: { reales: ['vintage_radio_transceiver', 'cassette_player', 'portable_cassette_player'], items: [TEC.celularesReparacion, TEC.cajaProducto, TEC.cargadores] },
+    monitor: { reales: ['CashRegister_01'], items: [TEC.monitor, TEC.teclado, TEC.router] },
+  },
+  mbrf: {
+    balanza: { reales: ['plastic_container', 'long_life_food'], items: [MB.envasados, MB.cajaEtiquetada, MB.film] },
+    cajas: { reales: ['russian_food_cans_01'], items: [MB.cajaEtiquetada, MB.cajon, MB.film] },
+    tablero: { reales: ['security_camera_02'], items: [DOC.carpetas, DOC.hojas, MB.cajaEtiquetada] },
+    rack: { reales: [], items: [TEC.router, TEC.bolsaCables, LAB.discos] },
+    equipo: { reales: ['plastic_thermos', 'modified_thermos'], items: [DOC.carpetas, FREE.libretas, MB.envasados] },
+  },
+};
 
 // ---- temas: estructura, objetos, piso, paneles y techo propios ------------------------------
 const TEMAS = {
@@ -759,7 +876,7 @@ const TEMAS = {
     fondo: '#efe6d6',
     prof: 0.36,
     mueble: 'cajones',
-    items: Object.values(FREE),
+    items: [FREE.suculentas, FREE.libretas, FREE.cajaEnvio, FREE.bolsa, FREE.velas],
   },
   tecnico: {
     estructura: '#ffffff',
@@ -783,12 +900,20 @@ const TEMAS = {
 function crearPlan(id, r, excluidos) {
   const a = AMBIENTES[id]?.modelos ?? {};
   const disponibles = (lista) => r.mezclar((lista ?? []).filter((m) => medida(m) && !excluidos.has(m)));
+  const relacion = RELACION[id] ?? {};
+  const deObjetos = new Set(Object.values(relacion).flatMap((x) => [...(x.reales ?? []), ...(x.piso ?? [])]));
+  const estantePor = new Map(Object.entries(relacion).map(([modelo, x]) => [modelo, disponibles((x.reales ?? []).filter((m) => (a.estante ?? []).includes(m)))]));
+  const pisoPor = new Map(Object.entries(relacion).map(([modelo, x]) => [modelo, disponibles((x.piso ?? []).filter((m) => (a.piso ?? []).includes(m)))]));
   return {
     colocaciones: [], // { id, x, y, z, giro, poblar? }
     usos: new Map(), // objeto generado -> veces usado en el pasillo
     luces: [], // posiciones de las lámparas (para las luces de verdad)
-    estante: disponibles(a.estante),
-    piso: disponibles(a.piso),
+    // los de un objeto interactivo van junto a él; el resto, en cualquier lado
+    estante: disponibles((a.estante ?? []).filter((m) => !deObjetos.has(m))),
+    piso: disponibles((a.piso ?? []).filter((m) => !deObjetos.has(m))),
+    estantePor,
+    pisoPor,
+    objetos: [], // [{ a, lado, modelo }] los interactivos del pasillo
     mueble: disponibles(a.mueble),
     pared: disponibles(a.pared),
     techo: (a.techo ?? []).filter((m) => medida(m)),
@@ -840,8 +965,11 @@ function llenarTabla(S, u0, u1, y, p, prof, hmax, ctx, colocar, probReal = 0.45)
   let u = u0 + 0.02;
   let vueltas = 0;
   while (u < u1 - 0.08 && vueltas++ < 40) {
-    if (ctx.plan.estante.length && ctx.r.si(probReal)) {
-      const real = tomarQueEntre(ctx.plan.estante, { anchoMax: u1 - u - 0.02, altoMax: hmax - 0.015, fondoMax: prof + 0.08 });
+    const foco = ctx.focoEn(S, u);
+    const reales = foco ? (ctx.plan.estantePor.get(foco) ?? []) : ctx.plan.estante;
+    const items = (foco && RELACION[ctx.id]?.[foco]?.items) || ctx.t.items;
+    if (reales.length && ctx.r.si(foco ? 0.55 : probReal)) {
+      const real = tomarQueEntre(reales, { anchoMax: u1 - u - 0.02, altoMax: hmax - 0.015, fondoMax: prof + 0.08 });
       if (real) {
         colocar(real, u + real.ancho / 2, p);
         u += real.ancho + 0.035;
@@ -851,8 +979,8 @@ function llenarTabla(S, u0, u1, y, p, prof, hmax, ctx, colocar, probReal = 0.45)
     // el objeto menos usado (en proporción a su tope), con un poco de azar para que no sea un patrón
     let item = null;
     let mejor = Infinity;
-    for (const candidato of new Set(ctx.t.items)) {
-      const peso = ctx.t.items.filter((x) => x === candidato).length;
+    for (const candidato of new Set(items)) {
+      const peso = items.filter((x) => x === candidato).length;
       const uso = (ctx.plan.usos.get(candidato) ?? 0) / ((MAXIMO.get(candidato) ?? 12) * peso);
       const puntaje = uso + ctx.r() * 0.35;
       if (puntaje < mejor) {
@@ -1104,13 +1232,15 @@ const ANCHO_PISO = { laboratorio: 0.46, docencia: 0.2, freelance: 0.42, tecnico:
 function cosaDePiso(S, u, ctx, id, cabe) {
   const { r, plan, t } = ctx;
   const base = Math.max(t.prof, 0.5) + 0.04;
-  const real = plan.piso.length && r.si(0.6) ? tomarQueEntre(plan.piso, { anchoMax: 1.2, altoMax: 2.3, fondoMax: SALIENTE_PISO - base, girar: false }) : null;
+  const foco = ctx.focoEn(S, u);
+  const listaPiso = foco ? (plan.pisoPor.get(foco) ?? []) : plan.piso;
+  const real = listaPiso.length && r.si(0.6) ? tomarQueEntre(listaPiso, { anchoMax: 1.2, altoMax: 2.3, fondoMax: SALIENTE_PISO - base, girar: false }) : null;
   if (real) {
     if (cabe(u - real.ancho / 2, u + real.ancho / 2)) {
       ctx.colocarEnPared(S, real, u, 0, base + real.fondo / 2);
       return u + real.ancho / 2;
     }
-    plan.piso.push(real.id);
+    listaPiso.push(real.id);
   }
   const mitad = (ANCHO_PISO[id] ?? 0.5) / 2;
   if (!cabe(u - mitad, u + mitad)) return null;
@@ -1202,7 +1332,9 @@ function lamparas(plan, z0, largo, xs, r) {
 
 function contexto(id, r, plan) {
   const t = TEMAS[id] ?? TEMAS.laboratorio;
-  const ctx = { r, t, plan, celda: contadorCeldas(r) };
+  const ctx = { id, r, t, plan, celda: contadorCeldas(r) };
+  // objeto interactivo al que "pertenece" el punto u de la pared del pintor S (o null)
+  ctx.focoEn = (S, u) => focoDe(plan, u, S.lado);
   plan.reservas ??= new Map();
   ctx.reservar = (S, u0, u1) => {
     if (!plan.reservas.has(S)) plan.reservas.set(S, []);
@@ -1217,6 +1349,31 @@ function contexto(id, r, plan) {
   return ctx;
 }
 
+// El objeto interactivo más cercano a (u, lado): en la misma pared hasta 1,9 m del borde de su
+// hueco, o enfrente hasta 1 m.
+function focoDe(plan, u, lado) {
+  if (lado === undefined || lado === null) return plan.focoFijo ?? null;
+  let mejor = null;
+  let dist = Infinity;
+  for (const o of plan.objetos) {
+    const medio = (o.ancho ?? (HUECOS[o.modelo]?.[0] ?? 1.2)) / 2;
+    const d = Math.max(0, Math.abs(u - o.a) - medio);
+    const limite = o.lado === lado ? 1.9 : 1.0;
+    if (d <= limite && d < dist) {
+      dist = d;
+      mejor = o.modelo;
+    }
+  }
+  return mejor;
+}
+
+// Hueco de un objeto interactivo en la pared: [ancho, desde, hasta]. Si el objeto medido es más
+// grande que lo previsto, manda la medida (así nada de encima lo atraviesa).
+function huecoDe(o) {
+  const [ancho, yMin, yMax] = HUECOS[o.modelo] ?? [1.2, 0, 2];
+  return [Math.max(ancho, (o.ancho ?? 0) + 0.12), yMin, Math.max(yMax, (o.alto ?? 0) + 0.08)];
+}
+
 // ===== públicos =================================================================================
 
 // Relleno de un pasillo (en el marco del grupo del pasillo). `objetos`: [{ a, lado, modelo }].
@@ -1225,19 +1382,22 @@ function contexto(id, r, plan) {
 export function rellenarPasillo({ id, largo, vestibulo = 0, objetos, semilla, ultimo, materiales, excluidos = new Set() }) {
   const r = azar(semilla);
   const plan = crearPlan(id, r, excluidos);
+  plan.objetos = objetos;
   const ctx = contexto(id, r, plan);
   const lote = new Lote();
   for (const lado of [-1, 1]) {
     // pared izquierda: x = -W2, normal +x; derecha: x = +W2, normal -x; u crece hacia -z
     const S = pintor(lote, lado * W2, 0, 0, -1, -lado, 0);
+    S.lado = lado;
     const huecos = objetos
       .filter((o) => o.lado === lado)
       .map((o) => {
-        const [ancho, yMin, yMax] = HUECOS[o.modelo] ?? [1.2, 0, 2];
+        const [ancho, yMin, yMax] = huecoDe(o);
         return { u0: o.a - ancho / 2 - 0.12, u1: o.a + ancho / 2 + 0.12, yMin, yMax };
       })
       .sort((a, b) => a.u0 - b.u0);
-    // el vestíbulo (después del giro) queda despejado
+    // el vestíbulo (después del giro): sólo un mueble bajo con cosas, debajo del póster
+    if (vestibulo > 1) muebleBajo(S, 0.3, vestibulo - 0.1, 0.78, ctx, true);
     let u = vestibulo + 0.18;
     const fin = ultimo ? largo - ANTESALA : largo - 0.02;
     for (const h of huecos) {
@@ -1361,9 +1521,12 @@ export function superficies(modelo) {
 
 // Llena las superficies de un mueble real con objetos reales que queden y objetos generados.
 // Devuelve { grupo, colocaciones } en el espacio local del mueble.
-export function poblarMueble({ id, modelo, plan, materiales, semilla, alturaMundo = 0 }) {
+export function poblarMueble({ id, modelo, plan, materiales, semilla, alturaMundo = 0, u = null, lado = null }) {
   const r = azar(semilla);
   const ctx = contexto(id, r, plan);
+  // los estantes de un mueble son todos del objeto interactivo que tenga al lado (o de la temática)
+  const foco = u === null ? null : focoDe(plan, u, lado);
+  ctx.focoEn = () => foco;
   const lote = new Lote();
   const colocaciones = [];
   ctx.colocarEnPared = (S, real, u, y, p) => {

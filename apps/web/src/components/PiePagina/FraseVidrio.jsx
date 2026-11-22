@@ -1,7 +1,7 @@
 'use client';
 
 // Pone "Gracias por pasar." en 3D de metal pulido (ver EscenaFrase.js). Sólo se activa donde rinde y
-// luce: mouse o trackpad, pantalla ancha, sin reducir movimiento y sobre fondo oscuro. En cualquier
+// luce: mouse o trackpad, pantalla ancha, sin reducir movimiento (tema claro u oscuro). En cualquier
 // otro caso no hace nada y queda el texto CSS de siempre. Three se baja recién cuando la frase
 // está cerca de entrar en pantalla.
 import { useEffect, useRef } from 'react';
@@ -33,14 +33,6 @@ class Resorte {
   }
 }
 
-function esOscuro(css) {
-  const m = css.trim().match(/^#([0-9a-f]{6})$/i);
-  if (!m) return true;
-  const n = parseInt(m[1], 16);
-  const luz = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
-  return luz < 0.5;
-}
-
 export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
   const lienzoRef = useRef(null);
 
@@ -51,8 +43,6 @@ export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
     if (!host || !frase || !contenedor) return undefined;
     if (prefiereMovimientoReducido() || !tieneHoverFino()) return undefined;
     if (!window.matchMedia('(min-width: 1024px)').matches) return undefined;
-    const fondo = getComputedStyle(document.documentElement).getPropertyValue('--contacto-fondo');
-    if (!esOscuro(fondo)) return undefined;
 
     let vivo = true;
     let escena = null;
@@ -78,7 +68,7 @@ export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
         escena = new modulo.EscenaFrase(canvas, {
           crema: '#feeae1',
           azul: '#c0cef2',
-          vacio: fondo.trim() || '#0b0d12',
+          vacio: '#0d0d0d', // el estudio de reflejos es siempre oscuro, sea cual sea el tema de la página
         });
       } catch {
         canvas.remove();

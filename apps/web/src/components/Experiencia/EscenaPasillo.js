@@ -116,7 +116,7 @@ function calidadAlta() {
 // color del pasillo detrás del objeto (más fuerte abajo), dos columnas de luz a los costados y una
 // línea encendida en el piso, delante. Coordenadas del grupo del pasillo.
 let texturaVitrina = null;
-function vitrina(g, o, modelo, acento) {
+function vitrina(g, o, modelo, acento, medida = {}) {
   if (!texturaVitrina) {
     const l = document.createElement('canvas');
     l.width = 16;
@@ -131,7 +131,9 @@ function vitrina(g, o, modelo, acento) {
     texturaVitrina = new THREE.CanvasTexture(l);
     texturaVitrina.colorSpace = THREE.SRGBColorSpace;
   }
-  const [ancho, , alto] = HUECOS[modelo] ?? [1.2, 0, 1.6];
+  const [anchoPrevisto, , altoPrevisto] = HUECOS[modelo] ?? [1.2, 0, 1.6];
+  const ancho = Math.max(anchoPrevisto, (medida.ancho ?? 0) + 0.12);
+  const alto = Math.max(altoPrevisto, (medida.alto ?? 0) + 0.08);
   const color = new THREE.Color(acento);
   const grupo = new THREE.Group();
   grupo.position.set(o.lado * (ANCHO / 2), 0, -o.a);
@@ -163,6 +165,254 @@ function vitrina(g, o, modelo, acento) {
 
   g.add(grupo);
   return grupo;
+}
+
+// Pósters en las paredes que quedan libres: el vestíbulo de cada pasillo (después del giro) y, en
+// el primero, la pared de atrás. Son de la etapa: las portadas de sus proyectos o láminas propias
+// del trabajo (las piezas de una PC, Python, diagramas de flujo, el servicio técnico).
+const POSTERS = {
+  laboratorio: [
+    { titulo: 'Partes de una PC', lamina: 'pc' },
+    { titulo: 'Desarme seguro', lamina: 'pasos', pasos: ['Desconectar y descargar', 'Pulsera antiestática', 'Tornillos por bandeja', 'Etiquetar cada cable'] },
+  ],
+  docencia: [
+    { titulo: 'Python', lamina: 'codigo', codigo: ['nombre = input("Nombre: ")', 'for i in range(3):', '    print(f"Hola, {nombre}")'] },
+    { titulo: 'Diagramas de flujo', lamina: 'flujo' },
+  ],
+  freelance: [
+    { titulo: 'JustPhones', imagen: '/proyectos/justphones/portada.webp', url: 'justphones-fv.vercel.app' },
+    { titulo: 'Neifert Automotores', imagen: '/proyectos/neifert/portada.webp', url: 'neifertautomotores.com' },
+  ],
+  tecnico: [
+    { titulo: 'Darío Martínez Computación', imagen: '/proyectos/dario-martinez/portada.webp', url: 'dariomartinezcomputacion.com' },
+    { titulo: 'Servicio técnico', lamina: 'pasos', pasos: ['PCs y notebooks', 'Impresoras', 'Teléfonos', 'Hardware y software'] },
+  ],
+  mbrf: [
+    { titulo: 'Trazabilidad en planta', imagen: '/proyectos/mbrf-captura/portada.webp', url: 'sistema interno · MBRF' },
+    { titulo: 'Planeamiento de producción', imagen: '/proyectos/mbrf-control/portada.webp', url: 'sistema interno · MBRF' },
+  ],
+};
+
+// Póster de un proyecto, apaisado como su captura (16:10): la página entera adentro de una ventana
+// de navegador, sin recortes, y el nombre abajo.
+const CAPTURA = { ancho: 1024, alto: 760, barra: 52, pie: 68 };
+function texturaCaptura(dato, acento) {
+  const l = document.createElement('canvas');
+  l.width = CAPTURA.ancho;
+  l.height = CAPTURA.alto;
+  const ctx = l.getContext('2d');
+  const textura = new THREE.CanvasTexture(l);
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.anisotropy = 4;
+  const { ancho, alto, barra, pie } = CAPTURA;
+  const pintar = (imagen) => {
+    ctx.fillStyle = '#16181d';
+    ctx.fillRect(0, 0, ancho, alto);
+    // barra del navegador: tres puntos y la dirección
+    ['#ff5f57', '#febc2e', '#28c840'].forEach((c, k) => {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(30 + k * 26, barra / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = '#23262d';
+    ctx.beginPath();
+    ctx.roundRect?.(130, 12, ancho - 260, barra - 24, 14);
+    ctx.fill();
+    ctx.fillStyle = '#9aa0a8';
+    ctx.font = `600 18px ${FUENTE_POSTER}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(dato.url ?? dato.titulo.toLowerCase().replaceAll(' ', ''), ancho / 2, barra / 2 + 6);
+    ctx.textAlign = 'left';
+    // la captura entera (16:10 = 1024 × 640)
+    const zona = alto - barra - pie;
+    if (imagen) ctx.drawImage(imagen, 0, barra, ancho, zona);
+    // pie con el nombre
+    ctx.fillStyle = '#101216';
+    ctx.fillRect(0, alto - pie, ancho, pie);
+    ctx.fillStyle = acento;
+    ctx.fillRect(28, alto - pie / 2 - 4, 40, 8);
+    ctx.fillStyle = '#f4f5f7';
+    ctx.font = `800 34px ${FUENTE_POSTER}`;
+    ctx.fillText(dato.titulo, 84, alto - pie / 2 + 12);
+    textura.needsUpdate = true;
+  };
+  pintar(null);
+  const imagen = new Image();
+  imagen.onload = () => pintar(imagen);
+  imagen.src = dato.imagen;
+  return textura;
+}
+
+function texturaPoster(dato, acento) {
+  const l = document.createElement('canvas');
+  l.width = 512;
+  l.height = 704;
+  const ctx = l.getContext('2d');
+  const textura = new THREE.CanvasTexture(l);
+  textura.colorSpace = THREE.SRGBColorSpace;
+  textura.anisotropy = 4;
+  const pintar = (imagen) => {
+    ctx.fillStyle = '#101216';
+    ctx.fillRect(0, 0, 512, 704);
+    if (imagen) {
+      // la portada cubre toda la hoja (recortada al centro); el título va abajo, sobre un degradé
+      const escala = Math.max(512 / imagen.width, 704 / imagen.height);
+      const w = imagen.width * escala;
+      const h = imagen.height * escala;
+      ctx.drawImage(imagen, (512 - w) / 2, (704 - h) / 2, w, h);
+      const sombra = ctx.createLinearGradient(0, 420, 0, 704);
+      sombra.addColorStop(0, 'rgba(10,11,14,0)');
+      sombra.addColorStop(1, 'rgba(10,11,14,0.92)');
+      ctx.fillStyle = sombra;
+      ctx.fillRect(0, 420, 512, 284);
+      ctx.fillStyle = acento;
+      ctx.fillRect(36, 590, 60, 8);
+      ctx.fillStyle = '#f4f5f7';
+      ctx.font = `800 44px ${FUENTE_POSTER}`;
+      const lineas = partirTexto(ctx, dato.titulo, 440);
+      lineas.forEach((t, k) => ctx.fillText(t, 36, 648 - (lineas.length - 1 - k) * 48));
+      textura.needsUpdate = true;
+      return;
+    }
+    ctx.fillStyle = acento;
+    ctx.fillRect(0, 0, 512, 12);
+    ctx.fillStyle = '#f4f5f7';
+    ctx.font = `800 52px ${FUENTE_POSTER}`;
+    const lineas = partirTexto(ctx, dato.titulo, 440);
+    lineas.forEach((t, k) => ctx.fillText(t, 36, 86 + k * 56));
+    const y0 = 130 + (lineas.length - 1) * 56;
+    const alto = 704 - y0 - 36;
+    if (dato.lamina === 'pasos') {
+      const paso = alto / dato.pasos.length;
+      dato.pasos.forEach((t, k) => {
+        const y = y0 + k * paso + paso / 2;
+        ctx.fillStyle = acento;
+        ctx.beginPath();
+        ctx.arc(76, y, 38, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#101216';
+        ctx.font = `800 40px ${FUENTE_POSTER}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(String(k + 1), 76, y + 14);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#e6e8ec';
+        ctx.font = `700 34px ${FUENTE_POSTER}`;
+        const ls = partirTexto(ctx, t, 330);
+        ls.forEach((linea, n) => ctx.fillText(linea, 136, y + 12 - (ls.length - 1) * 19 + n * 38));
+      });
+    } else if (dato.lamina === 'codigo') {
+      ctx.fillStyle = '#1a1d23';
+      ctx.fillRect(28, y0, 456, 330);
+      ctx.font = `600 25px ui-monospace, Consolas, monospace`;
+      dato.codigo.forEach((t, k) => {
+        ctx.fillStyle = k === 1 ? acento : '#e6e8ec';
+        ctx.fillText(t, 46, y0 + 60 + k * 48);
+      });
+      ctx.fillStyle = '#9aa0a8';
+      ['> Hola, Ana', '> Hola, Ana', '> Hola, Ana'].forEach((t, k) => ctx.fillText(t, 46, y0 + 220 + k * 34));
+      ctx.fillStyle = '#e6e8ec';
+      ctx.font = `700 32px ${FUENTE_POSTER}`;
+      ['Variables', 'Bucles', 'Funciones'].forEach((t, k) => {
+        ctx.fillStyle = acento;
+        ctx.fillRect(36, y0 + 380 + k * 50, 14, 14);
+        ctx.fillStyle = '#e6e8ec';
+        ctx.fillText(t, 66, y0 + 396 + k * 50);
+      });
+    } else if (dato.lamina === 'flujo') {
+      ctx.lineWidth = 5;
+      ctx.font = `700 28px ${FUENTE_POSTER}`;
+      const cx = 256;
+      const forma = (y, tipo, texto) => {
+        ctx.beginPath();
+        if (tipo === 'ovalo') ctx.ellipse(cx, y, 130, 40, 0, 0, Math.PI * 2);
+        else if (tipo === 'rombo') {
+          ctx.moveTo(cx, y - 62);
+          ctx.lineTo(cx + 150, y);
+          ctx.lineTo(cx, y + 62);
+          ctx.lineTo(cx - 150, y);
+          ctx.closePath();
+        } else ctx.rect(cx - 140, y - 38, 280, 76);
+        ctx.strokeStyle = tipo === 'rombo' ? acento : '#e6e8ec';
+        ctx.stroke();
+        ctx.fillStyle = '#e6e8ec';
+        ctx.fillText(texto, cx - ctx.measureText(texto).width / 2, y + 10);
+      };
+      const ys = [y0 + 50, y0 + 50 + alto * 0.28, y0 + 50 + alto * 0.55, alto + y0 - 50];
+      for (let k = 0; k < 3; k++) {
+        ctx.beginPath();
+        ctx.moveTo(cx, ys[k] + (k === 2 ? 62 : 40));
+        ctx.lineTo(cx, ys[k + 1] - (k === 1 ? 62 : 40));
+        ctx.strokeStyle = '#9aa0a8';
+        ctx.stroke();
+      }
+      forma(ys[0], 'ovalo', 'Inicio');
+      forma(ys[1], 'rect', 'Leer nota');
+      forma(ys[2], 'rombo', '¿nota >= 6?');
+      forma(ys[3], 'ovalo', 'Fin');
+    } else if (dato.lamina === 'pc') {
+      const f = alto / 500;
+      const piezas = [['CPU', 28, 0, 216, 170], ['RAM', 268, 0, 216, 78], ['GPU', 268, 92, 216, 78], ['Fuente', 28, 190, 216, 140], ['SSD', 268, 190, 216, 140], ['Placa madre', 28, 350, 456, 150]];
+      ctx.font = `800 34px ${FUENTE_POSTER}`;
+      piezas.forEach(([t, x, y, w, h], k) => {
+        ctx.fillStyle = k === 0 ? acento : 'rgba(230,232,236,0.08)';
+        ctx.fillRect(x, y0 + y * f, w, h * f);
+        ctx.strokeStyle = k === 0 ? acento : 'rgba(230,232,236,0.7)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x, y0 + y * f, w, h * f);
+        ctx.fillStyle = k === 0 ? '#101216' : '#e6e8ec';
+        ctx.fillText(t, x + 18, y0 + y * f + 46);
+      });
+    }
+    textura.needsUpdate = true;
+  };
+  pintar(null);
+  if (dato.imagen) {
+    const imagen = new Image();
+    imagen.onload = () => pintar(imagen);
+    imagen.src = dato.imagen;
+  }
+  return textura;
+}
+
+const FUENTE_POSTER = 'Inter, system-ui, sans-serif';
+function partirTexto(ctx, texto, ancho) {
+  const palabras = texto.split(' ');
+  const lineas = [''];
+  for (const w of palabras) {
+    const prueba = lineas[lineas.length - 1] ? `${lineas[lineas.length - 1]} ${w}` : w;
+    if (ctx.measureText(prueba).width > ancho && lineas[lineas.length - 1]) lineas.push(w);
+    else lineas[lineas.length - 1] = prueba;
+  }
+  return lineas;
+}
+
+function posters(g, p, trabajo, indice) {
+  const datos = POSTERS[trabajo.id];
+  if (!datos) return;
+  const lugares = [];
+  if (p.vestibulo > 0) {
+    // en el vestíbulo, uno en cada pared
+    for (const lado of [-1, 1]) lugares.push({ x: lado * (ANCHO / 2 - 0.03), z: -p.vestibulo / 2, giro: lado < 0 ? Math.PI / 2 : -Math.PI / 2 });
+  } else if (indice === 0) {
+    // en la pared de atrás del primer pasillo
+    for (const lado of [-1, 1]) lugares.push({ x: lado * 1.15, z: -0.03, giro: Math.PI });
+  }
+  const marco = new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.5, metalness: 0.3 });
+  lugares.forEach((lugar, k) => {
+    const dato = datos[k % datos.length];
+    const grupo = new THREE.Group();
+    grupo.position.set(lugar.x, 1.58, lugar.z);
+    grupo.rotation.y = lugar.giro;
+    // las capturas de proyectos, apaisadas; las láminas, verticales
+    const [w, h] = dato.imagen ? [1.5, (1.5 * CAPTURA.alto) / CAPTURA.ancho] : [0.9, 1.24];
+    grupo.add(new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.025), marco));
+    const textura = dato.imagen ? texturaCaptura(dato, trabajo.acento) : texturaPoster(dato, trabajo.acento);
+    const lamina = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: textura, roughness: 0.65 }));
+    lamina.position.z = 0.0135;
+    grupo.add(lamina);
+    g.add(grupo);
+  });
 }
 
 export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark', alCuadro, alPerder, alSoltar, alIrA }) {
@@ -445,6 +695,9 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
         const angulo = e * 1.45;
         for (const { bisagra, lado } of hojas) bisagra.rotation.y = lado * -angulo;
         rendija.visible = f < 0.02;
+        // la luz del otro lado sólo existe con la puerta abriéndose (si no, se vería a lo lejos
+        // mientras la pared todavía no está construida)
+        cuarto.visible = f > 0.001;
         charco.material.opacity = 0.35 + e * 0.6;
         charco.scale.setScalar(1 + e * 1.4);
         haces.forEach((haz, k) => {
@@ -495,12 +748,14 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     for (let z = 1.5; z < L; z += 3) plano(g, 1.2, 0.3, matLuzTecho, [0, ALTO - 0.005, -z], [Math.PI / 2, 0, 0]);
     if (i === 0) plano(g, ANCHO, ALTO, matPared, [0, ALTO / 2, 0], [0, Math.PI, 0], [ANCHO / TEXEL.pared, ALTO / TEXEL.pared]);
     portal(g, trabajo.acento);
+    posters(g, p, trabajo, i);
     cartelEntrada(g, trabajo, i + 1);
 
     // objetos con tooltip (los que usan modelos reales los reservan: no se repiten en el relleno)
     const excluidos = new Set();
     const realesTooltip = [];
     const luzVitrinas = [];
+    const medidas = new Map();
     p.objetos.forEach((o) => {
       const dato = trabajo.objetos[o.indice];
       const modelo = construirModelo(dato.modelo, trabajo.acento);
@@ -512,9 +767,13 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
           m.receiveShadow = true;
         }
       });
+      // lo que ocupa de verdad (a lo largo de la pared y de alto): nada de encima lo atraviesa
+      modelo.grupo.updateMatrixWorld(true);
+      const caja = new THREE.Box3().setFromObject(modelo.grupo);
+      medidas.set(o.indice, { ancho: caja.max.z - caja.min.z, alto: caja.max.y });
       g.add(modelo.grupo);
       if (modelo.animar) animables.push(modelo.animar);
-      vitrina(g, o, dato.modelo, trabajo.acento);
+      vitrina(g, o, dato.modelo, trabajo.acento, medidas.get(o.indice));
       luzVitrinas.push(new THREE.Vector3(o.lado * (ANCHO / 2 - 0.9), ALTO - 0.3, -o.a));
       const indice = anclas.length;
       modelo.grupo.traverse((m) => (m.userData.ancla = indice));
@@ -539,7 +798,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
       id: trabajo.id,
       largo: L,
       vestibulo: p.vestibulo,
-      objetos: p.objetos.map((o) => ({ a: o.a, lado: o.lado, modelo: trabajo.objetos[o.indice].modelo })),
+      objetos: p.objetos.map((o) => ({ a: o.a, lado: o.lado, modelo: trabajo.objetos[o.indice].modelo, ...medidas.get(o.indice) })),
       semilla: 1000 + i * 97,
       ultimo: !p.cruce,
       materiales,
@@ -674,6 +933,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
         materiales: zona.materiales,
         semilla: 77 + zona.indice * 13 + Math.round(colocacion.x * 100),
         alturaMundo: colocacion.y,
+        ...(padre === zona.g ? { u: -colocacion.z, lado: Math.sign(colocacion.x) } : {}),
       });
     };
     poblar.etiqueta = `poblar ${colocacion.id}`;
@@ -826,9 +1086,12 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     // en pantallas verticales entra menos a lo ancho: la cámara se aleja un poco más
     const vertical = camara.aspect < 1 ? 1.35 : 1;
     const distancia = Math.min(2.9, Math.max(1.15, (Math.max(horizontal, a.tamano.y) * 0.85 + 0.45) * vertical));
-    miraFoco.copy(a.centro);
+    // se mira lo de arriba del objeto (lo que hay sobre una mesa o un mostrador), desde la altura
+    // de los ojos o un poco más arriba: nunca desde abajo
+    const arriba = a.centro.y + a.tamano.y / 2;
+    miraFoco.copy(a.centro).setY(Math.max(a.centro.y, arriba - Math.min(0.35, a.tamano.y * 0.3)));
     posFoco.copy(a.centro).addScaledVector(a.normal, distancia);
-    posFoco.y = Math.min(2.1, Math.max(0.95, a.centro.y + 0.18));
+    posFoco.y = Math.min(2.1, Math.max(1.35, miraFoco.y + 0.4))
   }
 
   // Al mirar un objeto, la cámara se para en el centro del pasillo frente a él: así se arma (y se

@@ -15,6 +15,7 @@ export const FRASES_CLAVE = {
   bibliotech: ['encuentren libros', 'reserven salas de estudio'],
   movii: ['planificar rutas', 'el cliente siga su envío'],
   'crm-inmobiliaria': ['registros separados', 'vista común'],
+  portafolio: ['CV en PDF', 'recorrer'],
 };
 
 // Rangos [inicio, fin) de las frases clave dentro de `texto`, ordenados y sin solaparse.

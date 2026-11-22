@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { abrirSesion, cerrarChrome, nuevaPestana } from './cdp-ayuda.mjs';
 
-const PUERTO = 9457;
+const PUERTO = Number(process.env.PUERTO ?? 9457 + Math.floor(Math.random() * 400));
 const BASE_URL = process.env.BASE_URL ?? 'http://127.0.0.1:3000';
 const RUTA_CHROME = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const SALIDA = path.join(path.dirname(fileURLToPath(import.meta.url)), '.regresion', 'frase');
@@ -42,7 +42,7 @@ try {
   await s.enviar('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await s.enviar('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await s.enviar('Page.addScriptToEvaluateOnNewDocument', {
-    source: `try{localStorage.setItem('theme','dark');sessionStorage.setItem('portafolio:sin-intro','1');sessionStorage.setItem('portafolio:intro-agentes','1')}catch(e){};window.__errores=[];const ce=console.error;console.error=(...a)=>{window.__errores.push(a.map(String).join(' ').slice(0,300));ce(...a)};window.addEventListener('error',e=>window.__errores.push('EXC '+e.message))`,
+    source: `try{localStorage.setItem('theme','${process.env.TEMA ?? 'dark'}');sessionStorage.setItem('portafolio:sin-intro','1');sessionStorage.setItem('portafolio:intro-agentes','1')}catch(e){};window.__errores=[];const ce=console.error;console.error=(...a)=>{window.__errores.push(a.map(String).join(' ').slice(0,300));ce(...a)};window.addEventListener('error',e=>window.__errores.push('EXC '+e.message))`,
   });
   await s.enviar('Page.navigate', { url: `${BASE_URL}/` });
   const evaluar = async (expresion) => {

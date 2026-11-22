@@ -37,6 +37,7 @@ const MAPA = {
   bibliotech: { sigla: 'BT', brand: 'BiblioTech' },
   movii: { sigla: 'M', brand: 'Movii' },
   'crm-inmobiliaria': { sigla: 'CRM', brand: 'CRM' },
+  portafolio: { sigla: 'FD', brand: 'Portafolio' },
 };
 
 const dormir = (ms) => new Promise((res) => setTimeout(res, ms));

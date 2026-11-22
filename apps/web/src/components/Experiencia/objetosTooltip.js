@@ -371,52 +371,111 @@ export function celularReal() {
 }
 
 // Freelance · tiendas con Mercado Pago: mostrador con posnet, tarjeta, ticket y velas.
-export function pagoReal() {
+export function pagoReal(acento = '#f2a23c') {
   const g = new THREE.Group();
   const alto = 0.95;
+  // mostrador con tapa de madera
   caja(g, [1.2, alto - 0.03, 0.5], [0, (alto - 0.03) / 2, 0.27], M.laca('#ece6dc'), { radio: 0.01 });
   caja(g, [1.24, 0.03, 0.56], [0, alto - 0.015, 0.29], M.madera('#d2b48c'), { radio: 0.006 });
-  // posnet (7,5 × 17 cm) inclinado, con la pantalla de pago aprobado
-  const pos = new THREE.Group();
-  pos.position.set(0.08, alto + 0.02, 0.38);
-  pos.rotation.set(-0.35, -0.25, 0);
-  g.add(pos);
-  caja(pos, [0.078, 0.035, 0.17], [0, 0, 0], M.plastico('#202226'), { radio: 0.008 });
+  // detrás, el cartel de las dos tiendas (iluminado), con un estante corrido
+  caja(g, [1.2, 0.72, 0.03], [0, alto + 0.36, 0.035], M.laca('#f4f1ea'), { radio: 0.006 });
   pantalla(
-    pos,
-    [0.062, 0.052],
-    [0, 0.0177, -0.04],
+    g,
+    [1.12, 0.3],
+    [0, alto + 0.52, 0.052],
     (ctx, w, h) => {
-      ctx.fillStyle = '#00a3e0';
+      ctx.fillStyle = '#14161b';
       ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = acento;
+      ctx.fillRect(w / 2 - 2, h * 0.18, 4, h * 0.64);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f4f1ea';
+      ctx.font = fuente(Math.round(h * 0.2), 800);
+      ctx.fillText('Algo Bonito SV', w * 0.25, h * 0.5);
+      ctx.fillText('Calida Escencia', w * 0.75, h * 0.5);
+      ctx.fillStyle = '#b9bcc4';
+      ctx.font = fuente(Math.round(h * 0.13), 600);
+      ctx.fillText('joyería artesanal', w * 0.25, h * 0.75);
+      ctx.fillText('aromas y deco', w * 0.75, h * 0.75);
+    },
+    { brillo: 1.1, resolucion: 384, vidrio: false },
+  );
+  caja(g, [1.16, 0.02, 0.14], [0, alto + 0.2, 0.11], M.madera('#d2b48c'), { radio: 0.004 });
+
+  // Algo Bonito (izquierda): bandeja de terciopelo con anillos, dos bustos con collares y aros
+  caja(g, [0.34, 0.025, 0.2], [-0.36, alto + 0.0125, 0.36], M.pintura('#1d1f26'), { radio: 0.006 });
+  for (let i = 0; i < 4; i++) {
+    for (let k = 0; k < 2; k++) {
+      const anillo = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0035, 12, 32), i % 2 ? M.oro() : M.aluminio());
+      anillo.position.set(-0.49 + i * 0.085, alto + 0.04, 0.31 + k * 0.09);
+      g.add(anillo);
+    }
+  }
+  [-0.46, -0.26].forEach((x, i) => {
+    cilindro(g, 0.045, 0.02, [x, alto + 0.2 + 0.01, 0.1], M.pintura('#1d1f26'), { lados: 24 });
+    cilindro(g, 0.022, 0.16, [x, alto + 0.2 + 0.1, 0.1], M.pintura('#1d1f26'), { lados: 24, arriba: 0.035 });
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.0025, 10, 48, Math.PI * 1.2), i ? M.oro() : M.aluminio());
+    collar.position.set(x, alto + 0.2 + 0.15, 0.12);
+    collar.rotation.set(0.35, 0, Math.PI + Math.PI * 0.4);
+    g.add(collar);
+    const dije = new THREE.Mesh(new THREE.IcosahedronGeometry(0.009, 0), M.vidrio());
+    dije.position.set(x, alto + 0.2 + 0.11, 0.145);
+    g.add(dije);
+  });
+  // Calida Escencia (derecha): velas en frasco, difusor de varillas y jabones
+  const ceras = ['#f3d9c9', '#e9e1f4', '#dcefe2', '#fbf0d0'];
+  ceras.forEach((c, i) => {
+    const x = 0.2 + i * 0.1;
+    cilindro(g, 0.038, 0.09, [x, alto + 0.045, 0.38], M.vidrio(), { lados: 32 });
+    cilindro(g, 0.035, 0.07, [x, alto + 0.036, 0.38], M.cera(c), { lados: 32 });
+    cilindro(g, 0.0012, 0.012, [x, alto + 0.077, 0.38], M.plastico('#222'), { lados: 6 });
+  });
+  cilindro(g, 0.04, 0.1, [0.32, alto + 0.2 + 0.05, 0.1], M.vidrio(), { lados: 32, arriba: 0.02 });
+  for (let i = 0; i < 7; i++) {
+    const varilla = new THREE.Mesh(new THREE.CylinderGeometry(0.0018, 0.0018, 0.26, 4), M.madera('#7a5c3c'));
+    varilla.position.set(0.32 + (i - 3) * 0.008, alto + 0.2 + 0.2, 0.1);
+    varilla.rotation.set(((i * 37) % 7 - 3) * 0.05, 0, (i - 3) * 0.07);
+    g.add(varilla);
+  }
+  ['#efe3f7', '#e3f1ea'].forEach((c, i) => caja(g, [0.08, 0.03, 0.05], [0.46, alto + 0.2 + 0.015 + i * 0.032, 0.1], M.cera(c), { radio: 0.008 }));
+  // en el medio, la tienda abierta en un teléfono parado: el pago con Mercado Pago
+  const tel = new THREE.Group();
+  tel.position.set(-0.04, alto + 0.01, 0.36);
+  tel.rotation.set(-0.3, 0.12, 0);
+  g.add(tel);
+  caja(tel, [0.075, 0.155, 0.008], [0, 0.0775, 0], M.grafito(), { radio: 0.009 });
+  pantalla(
+    tel,
+    [0.068, 0.146],
+    [0, 0.0775, 0.0045],
+    (ctx, w, h) => {
+      ctx.fillStyle = '#f6f6f6';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#14161b';
+      ctx.fillRect(0, 0, w, h * 0.1);
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
-      ctx.font = fuente(Math.round(h * 0.42), 800);
-      ctx.fillText('✓', w / 2, h * 0.5);
-      ctx.font = fuente(Math.round(h * 0.13), 700);
-      ctx.fillText('Pago aprobado', w / 2, h * 0.75);
-      ctx.font = fuente(Math.round(h * 0.1), 500);
-      ctx.fillText('$ 18.500', w / 2, h * 0.9);
+      ctx.font = fuente(Math.round(w * 0.075), 700);
+      ctx.fillText('Algo Bonito SV', w / 2, h * 0.065);
+      ctx.fillStyle = '#e8ded0';
+      ctx.fillRect(w * 0.1, h * 0.15, w * 0.8, h * 0.32);
+      ctx.fillStyle = '#14161b';
+      ctx.font = fuente(Math.round(w * 0.07), 700);
+      ctx.fillText('Aros de plata', w / 2, h * 0.55);
+      ctx.fillText('$ 18.500', w / 2, h * 0.61);
+      ctx.fillStyle = '#00a3e0';
+      rr(ctx, w * 0.1, h * 0.7, w * 0.8, h * 0.09, 10);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = fuente(Math.round(w * 0.065), 800);
+      ctx.fillText('Pagar con Mercado Pago', w / 2, h * 0.755);
     },
-    { rot: [-Math.PI / 2, 0, 0], resolucion: 256 },
+    { rot: [0, 0, 0], resolucion: 256, vidrio: false },
   );
-  for (let f = 0; f < 4; f++) for (let c = 0; c < 3; c++) caja(pos, [0.016, 0.004, 0.012], [-0.02 + c * 0.02, 0.019, 0.02 + f * 0.016], M.plastico('#3a3d42'), { radio: 0.002 });
-  // ticket saliendo
-  caja(g, [0.055, 0.0008, 0.12], [0.08, alto + 0.002, 0.2], M.papel(), { rot: [0, -0.25, 0], radio: 0 });
-  // tarjeta (8,56 × 5,4 cm)
-  caja(g, [0.0856, 0.0008, 0.054], [-0.08, alto + 0.0005, 0.42], M.pintura('#1f3c88'), { rot: [0, 0.4, 0], radio: 0.0004 });
-  caja(g, [0.012, 0.0004, 0.01], [-0.09, alto + 0.0012, 0.425], M.oro(), { rot: [0, 0.4, 0], radio: 0 });
-  // velas aromáticas en frascos de vidrio
-  const ceras = ['#f3d9c9', '#e9e1f4', '#dcefe2'];
-  ceras.forEach((c, i) => {
-    const x = -0.42 + i * 0.1;
-    cilindro(g, 0.038, 0.09, [x, alto + 0.045, 0.3], M.vidrio(), { lados: 32 });
-    cilindro(g, 0.035, 0.07, [x, alto + 0.036, 0.3], M.cera(c), { lados: 32 });
-    cilindro(g, 0.0012, 0.012, [x, alto + 0.077, 0.3], M.plastico('#222'), { lados: 6 });
-  });
+  caja(g, [0.05, 0.012, 0.05], [-0.04, alto + 0.006, 0.4], M.plastico('#2a2d33'), { radio: 0.004 });
   // bolsa de regalo
-  caja(g, [0.18, 0.22, 0.08], [0.45, alto + 0.11, 0.25], M.papel(), { radio: 0.002 });
-  return { grupo: g, ancla: new THREE.Vector3(0, 1.45, 0.3) };
+  caja(g, [0.18, 0.22, 0.08], [0.5, alto + 0.11, 0.3], M.papel(), { radio: 0.002 });
+  return { grupo: g, ancla: new THREE.Vector3(0, 1.55, 0.3) };
 }
 
 // Freelance · "Asistente con IA": escritorio con la notebook mostrando el chat del asistente.

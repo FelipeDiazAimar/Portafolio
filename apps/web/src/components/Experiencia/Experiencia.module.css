@@ -802,13 +802,47 @@ button.avisoMira {
   cursor: pointer;
 }
 
-/* con teclado: sólo la tecla, como un chip chico bajo la mira */
+/* con teclado: sólo la tecla E, como una tecla de verdad bajo la mira, con un anillo del color del
+   pasillo que late */
 .avisoMira[data-tecla='true'] {
-  padding: 0.25rem;
+  top: calc(50% + 1.9rem);
+  padding: 0;
+  border: 0;
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 11px;
+  animation: anilloE 1.6s ease-out infinite;
 }
 
 .avisoMira[data-tecla='true'] kbd {
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  min-width: 0;
   margin: 0;
+  padding: 0 0 0.12rem;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2b2f37 0%, #17191e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 0 0 3px color-mix(in oklab, var(--acento) 55%, transparent),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+  color: #f4f5f7;
+  font: 800 0.95rem/1 var(--font-sans);
+  text-shadow: 0 0 10px color-mix(in oklab, var(--acento) 70%, transparent);
+}
+
+@keyframes anilloE {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--acento) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 12px color-mix(in oklab, var(--acento) 0%, transparent);
+  }
 }
 
 .avisoMira kbd,
@@ -907,7 +941,7 @@ button.avisoMira {
 .ayudaLibre {
   position: absolute;
   left: 50%;
-  bottom: calc(7.2rem + env(safe-area-inset-bottom));
+  bottom: calc(1.3rem + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   margin: 0;
   padding: 0.5rem 0.95rem;
