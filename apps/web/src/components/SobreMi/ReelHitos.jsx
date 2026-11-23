@@ -297,6 +297,8 @@ export default function ReelHitos({ hitos, alFallar }) {
   // Lo que la escena avisa en cada cuadro: hito más cercano (estado) y fase (variable CSS).
   const refFaseEscrita = useRef(-1);
   const refLineaReel = useRef(null);
+  // progreso del scroll por los hitos (lo último que marcó ScrollTrigger)
+  const refProgresoReel = useRef(0);
   const refLineaHero = useRef(null);
   const alCuadro = useCallback(
     (fase, velocidad = 0) => {
@@ -561,6 +563,10 @@ export default function ReelHitos({ hitos, alFallar }) {
     gsap.registerPlugin(ScrollTrigger);
     const contexto = gsap.context(() => {
       const aplicar = (yo, salto) => {
+        refProgresoReel.current = yo.progress;
+        // mientras los agentes arman la intro, el reel se queda en su primer hito (el plano que dibujan
+        // tiene que calzar con lo real); al terminar, gira hasta donde esté el scroll
+        if (refIntroCorriendo.current) return;
         refObjetivo.current = faseDeProgreso(yo.progress, N);
         // sin escena todavía (se carga al acercarse): la ficha y la regla siguen al scroll igual
         if (!refEscena.current) alCuadro(refObjetivo.current);
@@ -764,35 +770,12 @@ export default function ReelHitos({ hitos, alFallar }) {
     delete document.documentElement.dataset.sinIman;
   }, []);
   const enCurso = intro !== null && intro !== 'esperando';
-  // (glow-up) La intro ya no traba la página: se puede seguir scrolleando y los agentes siguen
-  // armando (el plano va dentro del panel y sube con él). Recién cuando el reel empieza a girar (o
-  // se vuelve hacia el hero) la intro termina en el acto: lo real queda armado y el reel sigue al
-  // scroll.
+  // (glow-up) La intro ya no traba la página: se puede seguir scrolleando y los agentes terminan su
+  // animación igual, completa. Mientras tanto el reel queda en su primer hito (ver aplicar).
   useEffect(() => {
-    const contenedor = refContenedor.current;
-    if (!enCurso || !contenedor) return undefined;
+    if (!enCurso) return undefined;
     document.documentElement.dataset.sinIman = 'true';
-    let cortada = false;
-    const alScroll = () => {
-      const arriba = contenedor.getBoundingClientRect().top;
-      if (cortada || (arriba > -40 && arriba < window.innerHeight * 0.85)) return;
-      cortada = true;
-      if (refSentidoIntro.current === 'desarmar') alTerminarIntro();
-      else {
-        alFundirIntro();
-        setIntro(null);
-        // cortada a mitad: todas las portadas quedan construidas (ni en blanco ni frenando el scroll)
-        for (let i = 0; i < N; i += 1) {
-          refConstruidas.current.add(i);
-          ponerZonas(i);
-        }
-      }
-    };
-    window.addEventListener('scroll', alScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', alScroll);
-      soltarIntro();
-    };
+    return soltarIntro;
   }, [enCurso, soltarIntro]);
   const alFundirIntro = useCallback(() => {
     soltarIntro();
@@ -982,6 +965,22 @@ export default function ReelHitos({ hitos, alFallar }) {
 
   const refIntroCorriendo = useRef(false);
   refIntroCorriendo.current = intro !== null;
+  // Terminada la intro: el reel gira (suave) hasta donde quedó el scroll. Si se siguió bajando, las
+  // portadas que los agentes no llegaron a armar quedan construidas (ni en blanco ni frenando).
+  useEffect(() => {
+    if (intro !== null) return;
+    const destino = faseDeProgreso(refProgresoReel.current, N);
+    if (Math.abs(destino - refObjetivo.current) < 0.001) return;
+    refObjetivo.current = destino;
+    if (destino > 0.5) {
+      for (let i = 0; i < N; i += 1) {
+        refConstruidas.current.add(i);
+        ponerZonas(i);
+      }
+    }
+    if (refEscena.current) refEscena.current.ponerObjetivo(destino);
+    else alCuadro(destino);
+  }, [intro, N, alCuadro]);
   const refIntroActual = useRef(null);
   refIntroActual.current = intro && intro !== 'esperando' ? intro : refIntroActual.current;
 
