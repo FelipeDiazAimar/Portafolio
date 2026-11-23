@@ -30,7 +30,7 @@ html::-webkit-scrollbar {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--color-bg);
+  background: var(--fondo-hondo, var(--color-bg));
   color: var(--color-fg);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -62,7 +62,9 @@ html.onda-tema *::after {
    claro = blanco, oscuro = casi negro; el acento es azul eléctrico / celeste en ambos. */
 :root {
   /* oscuro (por defecto, igual que los tokens) */
-  --contacto-fondo: #0b0d12;
+  /* negro hondo, el mismo de Habilidades: fondo de la página (hero, Títulos, Contacto y footer) */
+  --fondo-hondo: #010101;
+  --contacto-fondo: #010101;
   --contacto-texto: #f4f5f7;
   --contacto-tenue: rgba(244, 245, 247, 0.55);
   --contacto-fantasma: rgba(244, 245, 247, 0.2);
@@ -89,6 +91,7 @@ html.onda-tema *::after {
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
+    --fondo-hondo: var(--color-bg);
     --contacto-fondo: #f7f8fa;
     --contacto-texto: #0f1218;
     --contacto-tenue: rgba(15, 18, 24, 0.52);
@@ -115,6 +118,7 @@ html.onda-tema *::after {
 }
 
 :root[data-theme='light'] {
+  --fondo-hondo: var(--color-bg);
   --contacto-fondo: #f7f8fa;
   --contacto-texto: #0f1218;
   --contacto-tenue: rgba(15, 18, 24, 0.52);
@@ -140,7 +144,8 @@ html.onda-tema *::after {
 }
 
 :root[data-theme='dark'] {
-  --contacto-fondo: #0b0d12;
+  --fondo-hondo: #010101;
+  --contacto-fondo: #010101;
   --contacto-texto: #f4f5f7;
   --contacto-tenue: rgba(244, 245, 247, 0.55);
   --contacto-fantasma: rgba(244, 245, 247, 0.2);
@@ -210,3 +215,42 @@ html[data-rendimiento='true'] *::after {
   -webkit-backdrop-filter: none !important;
 }
 
+
+/* ---- Glow-up: apariciones atadas al scroll (ver components/Revelar) ---------------------- */
+/* Texto partido: cada unidad en su máscara; la palabra no se corta entre renglones. */
+.rv-p {
+  display: inline-block;
+  white-space: nowrap;
+}
+.rv-u {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* margen para los descendentes (g, p, y) sin correr la línea */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.rv-i {
+  display: inline-block;
+  will-change: transform;
+  transform-origin: 0% 100%;
+}
+/* Entrada, salida y parallax (Revelador): variables que se componen en las propiedades sueltas
+   translate y scale, así no pisan el transform propio del elemento (centrados, hover, etc.). */
+.rv {
+  translate: 0 calc(var(--rv-y, 0px) + var(--rv-p, 0%) + var(--rv-s, 0) * -80px);
+  scale: calc(var(--rv-e, 1) * var(--rv-sx, 1) * (1 - var(--rv-s, 0) * 0.05)) calc(var(--rv-e, 1) * (1 - var(--rv-s, 0) * 0.05));
+}
+[data-revelar='linea'].rv {
+  transform-origin: 0 50%;
+}
+/* "Wave" de Lusion: con un scroll rápido la imagen se inclina y estira apenas (--ola: −1..1) */
+[data-ola] {
+  transform: skewY(calc(var(--ola, 0) * 2.2deg)) scaleY(calc(1 + abs(var(--ola, 0)) * 0.04));
+  transform-origin: 50% 50%;
+}
+@supports not (scale: calc(1 + abs(1) * 1)) {
+  [data-ola] {
+    transform: skewY(calc(var(--ola, 0) * 2.2deg));
+  }
+}

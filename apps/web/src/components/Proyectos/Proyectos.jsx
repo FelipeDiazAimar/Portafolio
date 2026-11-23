@@ -6,7 +6,7 @@
 // izquierda (hover tabs), con la que se cambia de proyecto: la anterior vuelve a su lugar
 // mientras la nueva sale de la suya. Sin nada elegido, se ve solo la marquesina.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useReducedMotion } from 'framer-motion';
 import { ThreeDMarquee } from '@/components/ui/3d-marquee.jsx';
 import TextoDescifrado from '../TextoDescifrado/TextoDescifrado.jsx';
 import TextoTrazo from '../TextoTrazo/TextoTrazo.jsx';
@@ -20,7 +20,7 @@ import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
 import useEmbudo from '@/hooks/useEmbudo.js';
-import { gsap } from 'gsap';
+import { alCuadro } from '@/lib/movimiento.js';
 
 // Marquesina: la grilla inclinada deja huecos en las esquinas si sólo están los 13 proyectos,
 // así que se repiten los necesarios (más cuanto más grande la pantalla) hasta cubrirla, sin
@@ -67,11 +67,6 @@ export function configurarMarquesina(ancho, alto, total, tactilBajo = false) {
 }
 // Cuánto se ve el título antes de irse y dejar solo la marquesina.
 const TITULO_VISIBLE_MS = 4000;
-// Entrada con piezas 3D: cuánto flotan antes de volverse tarjetas, y cuánto queda después el título.
-const PIEZAS_FLOTAN_MS = 2600;
-// ... y cuánto flotan ya como tarjetas 3D antes de ir cada una a su lugar.
-const TARJETAS_FLOTAN_MS = 1500;
-const TITULO_TRAS_PIEZAS_MS = 1300;
 // Cómo se ve en pantalla un lado de la grilla inclinada (rotateX 55° · rotateZ −45°).
 const INCLINA_X = 0.7071;
 const INCLINA_Y = 0.4056;
@@ -93,6 +88,18 @@ export default function Proyectos() {
   const proyectos = useMemo(() => listarProyectos(), []);
   const reducido = Boolean(useReducedMotion());
   const cifras = resumenCifras();
+  const refSeccion = useRef(null);
+  const refNulo = useRef(null);
+  // null hasta saberlo en el cliente: el alto del puente ya lo da el CSS desde el servidor (así un
+  // ancla o la restauración del scroll caen en su lugar), y sólo se quita si resulta que no va
+  const [puenteOn, setPuenteOn] = useState(null);
+  useEffect(() => {
+    const mq = window.matchMedia(CONSULTA_MOVIL);
+    const evaluar = () => setPuenteOn(!reducido && !mq.matches && hayWebGL());
+    evaluar();
+    mq.addEventListener('change', evaluar);
+    return () => mq.removeEventListener('change', evaluar);
+  }, [reducido]);
   const textoCifras = `${cifras.total} proyectos · ${cifras.clientes} clientes · ${cifras.laborales} sistemas en planta`;
 
   const refPanel = useRef(null);
@@ -194,9 +201,6 @@ export default function Proyectos() {
   }, [visible]);
   // El título terminó de viajar al header y ahí queda como texto con hover.
   const [enHeader, setEnHeader] = useState(false);
-  // entrada con piezas 3D en curso (ver más abajo)
-  const [introActiva, setIntroActiva] = useState(false);
-  const refTrasIntro = useRef(false);
   // La franja de arriba de la lista es blanca lisa; sólo con la lista scrolleada se le suma el blur.
   const [listaScrolleada, setListaScrolleada] = useState(false);
   // Adónde viaja el título: la esquina de arriba a la derecha, centrado en la fila del header.
@@ -214,7 +218,7 @@ export default function Proyectos() {
   }, []);
   const escalaTitulo = movil ? ESCALA_TITULO_MOVIL : ESCALA_TITULO;
   useLayoutEffect(() => {
-    if (!tituloVisto || !refTitulo.current || !tamano.ancho) return undefined;
+    if ((!tituloVisto && !puenteOn) || !refTitulo.current || !tamano.ancho) return undefined;
     const titulo = refTitulo.current.querySelector('h2');
     const ancho = (titulo?.offsetWidth ?? refTitulo.current.offsetWidth) * escalaTitulo;
     const calcular = () => {
@@ -245,7 +249,7 @@ export default function Proyectos() {
       window.removeEventListener('scroll', calcular);
       window.removeEventListener('resize', calcular);
     };
-  }, [tituloVisto, tamano.ancho, tamano.alto, movil, escalaTitulo]);
+  }, [tituloVisto, puenteOn, tamano.ancho, tamano.alto, movil, escalaTitulo]);
   // Mientras la sección está a la vista, el header (en celular) no muestra tu nombre.
   useEffect(() => {
     document.documentElement.toggleAttribute('data-en-proyectos', visible);
@@ -257,13 +261,11 @@ export default function Proyectos() {
       setEnHeader(false);
       return undefined;
     }
-    // con las piezas 3D en pantalla el título se queda; después, un rato corto y se va
-    if (introActiva) return undefined;
-    const espera = refTrasIntro.current ? TITULO_TRAS_PIEZAS_MS : TITULO_VISIBLE_MS;
-    refTrasIntro.current = false;
-    const id = setTimeout(() => setTituloVisto(true), espera);
+    // con el puente, el título viaja con el scroll (ver más abajo); sin él, tras un rato
+    if (puenteOn) return undefined;
+    const id = setTimeout(() => setTituloVisto(true), TITULO_VISIBLE_MS);
     return () => clearTimeout(id);
-  }, [visible, introActiva]);
+  }, [visible, puenteOn]);
   // Sin animaciones (reduced-motion) el título no viaja: pasa directo al header, sin onAnimationComplete.
   useEffect(() => {
     if (tituloVisto && reducido) setEnHeader(true);
@@ -280,7 +282,7 @@ export default function Proyectos() {
   }, [elegir]);
 
   // Embudo: al pasar por la sección, si el scroll se detiene cerca, la centra sola en pantalla.
-  useEmbudo(refPanel);
+  useEmbudo(puenteOn ? refNulo : refPanel);
 
   // Entrada de la sección: del otro lado de la puerta de "Sobre mí" (o la primera vez que la
   // sección entra en pantalla por otro camino) no están las tarjetas sino un montón de conectores
@@ -304,8 +306,8 @@ export default function Proyectos() {
     }, 5000);
   }, []);
   const refCajaIntro = useRef(null);
+  const refVeloPuente = useRef(null);
   const refIntro = useRef(null);
-  const refIntroHecha = useRef(false);
   const refVisible = useRef(false);
   refVisible.current = visible;
   // Dónde está cada tarjeta a la vista, en px del panel (sin la escala que le pone el pasaje por
@@ -338,16 +340,7 @@ export default function Proyectos() {
     refIntro.current = null;
     intro.cancelada = true;
     intro.escena?.destruir();
-    gsap.killTweensOf([refFondo.current, refLienzoIntro.current, refCajaIntro.current]);
-    if (refCajaIntro.current) refCajaIntro.current.style.opacity = '';
-    if (refLienzoIntro.current) refLienzoIntro.current.style.clipPath = '';
-    if (refFondo.current) {
-      refFondo.current.style.opacity = '';
-      refFondo.current.style.pointerEvents = '';
-    }
-    if (refLienzoIntro.current) refLienzoIntro.current.style.opacity = '0';
-    refTrasIntro.current = true;
-    setIntroActiva(false);
+    delete document.documentElement.dataset.puente;
   }, []);
   // Lo que necesita la escena de las piezas: dónde dibuja, dónde está cada tarjeta y qué lleva.
   const opcionesEscena = useCallback(() => {
@@ -356,172 +349,176 @@ export default function Proyectos() {
     const info = new Map(
       proyectos.map((p) => {
         const marca = marcaDe(p.slug);
-        return [p.slug, { color: p.color, tarjeta: marca.fondo ?? mezclar(p.color, '#07090f', 0.3), logo: marca.logo ?? null, nombre: marca.nombre ?? (marca.logo ? null : p.titulo), bajada: marca.bajada ?? null, claro: Boolean(marca.claro) }];
+        return [p.slug, { color: p.color, tarjeta: marca.fondo ?? mezclar(p.color, '#07090f', 0.22), logo: marca.logo ?? null, nombre: marca.nombre ?? (marca.logo ? null : p.titulo), bajada: marca.bajada ?? null, claro: Boolean(marca.claro) }];
       })
     );
     return {
       lienzo: refLienzoIntro.current,
-      panel: refPanel.current,
+      // el lienzo del puente es fijo y ocupa la ventana: ese es su "panel" (con la sección ya
+      // pegada arriba coincide con el panel de verdad, que es donde se miden las tarjetas)
+      panel: refLienzoIntro.current,
       objetivos,
       infoDe: (clave) => info.get(clave),
       claro: document.documentElement.dataset.theme === 'light',
-      // el recuadro donde viven los conectores, en px del panel
+      // el recuadro donde viven los conectores: el del panel ya pegado arriba
       recuadro: () => ({ x: caja.offsetLeft, y: caja.offsetTop, w: caja.offsetWidth, h: caja.offsetHeight }),
       alFallar: terminarIntro,
     };
   }, [proyectos, objetivos, terminarIntro]);
-  const empezarIntro = useCallback(() => {
+
+  // ---- Puente desde "Sobre mí", atado al scroll (glow-up) -------------------------------------
+  // Nada corre por tiempo. El tramo va desde la cola de "Sobre mí" (con "Hoy" fijo) hasta el final
+  // del alto extra de esta sección (el panel queda pegado arriba mientras tanto):
+  //   cola de Sobre mí   las portadas del reel se rompen en conectores 3D
+  //   llegada del panel  los conectores flotan y chocan (el cursor los empuja)
+  //   10 → 42 %          cada conector se vuelve la tarjeta 3D de su proyecto
+  //   48 → 88 %          cada tarjeta vuela a su lugar de la marquesina y se aplana
+  //   86 → 96 %          la escena se funde con la marquesina de verdad
+  //   50 → 80 %          el título se desvanece
+  // Subiendo, todo se desarma igual. En celular, sin WebGL o con movimiento reducido no hay
+  // puente: la sección es la de siempre.
+  const mvO = useMotionValue(1);
+  const mvS = useMotionValue(1);
+  const refDestino = useRef({ x: 0, y: 0 });
+  refDestino.current = destinoTitulo;
+  const refEscalaTitulo = useRef(escalaTitulo);
+  refEscalaTitulo.current = escalaTitulo;
+  useEffect(() => {
+    if (!puenteOn) return undefined;
+    const seccion = refSeccion.current;
     const panel = refPanel.current;
     const lienzo = refLienzoIntro.current;
-    const caja = refCajaIntro.current;
     const fondo = refFondo.current;
-    if (!panel || !lienzo || !caja || !fondo || refIntro.current || refActivo.current) return;
-    if (reducido || window.matchMedia(CONSULTA_MOVIL).matches || !hayWebGL()) return;
-    refIntroHecha.current = true;
-    const intro = { escena: null, cancelada: false };
-    refIntro.current = intro;
-    setIntroActiva(true);
-    // las tarjetas esperan escondidas (y sin recibir el mouse) hasta que las piezas lleguen
-    fondo.style.opacity = '0';
-    fondo.style.pointerEvents = 'none';
-    lienzo.style.opacity = '1';
-    caja.style.opacity = '1';
-    import('./piezas/EscenaPiezas.js')
-      .then(({ crearEscenaPiezas }) => {
-        if (intro.cancelada) return;
-        intro.escena = crearEscenaPiezas(opcionesEscena());
-      })
-      .catch(terminarIntro);
-  }, [reducido, opcionesEscena, terminarIntro]);
-  // La salida hacia "Sobre mí" es la entrada al revés: las tarjetas de la marquesina se levantan
-  // y flotan en 3D, se vuelven conectores dentro del recuadro, y recién ahí se sale por la puerta
-  // (ReelHitos espera el aviso `listo`). Los conectores quedan flotando mientras uno se aleja.
-  const salirIntro = useCallback(
-    (evento) => {
-      const pedido = evento.detail;
-      const panel = refPanel.current;
-      const lienzo = refLienzoIntro.current;
-      const caja = refCajaIntro.current;
-      const fondo = refFondo.current;
-      if (!pedido || !panel || !lienzo || !caja || !fondo || refIntro.current || refActivo.current) return;
-      if (reducido || window.matchMedia(CONSULTA_MOVIL).matches || !hayWebGL()) return;
-      pedido.tomado = true;
-      const intro = { escena: null, cancelada: false, inversa: true };
+    const caja = refCajaIntro.current;
+    const velo = refVeloPuente.current;
+    if (!seccion || !panel || !lienzo || !fondo || !caja || !velo) return undefined;
+    const raiz = document.documentElement;
+    const medir = () => {
+      const y = window.scrollY;
+      const vh = window.innerHeight;
+      const cola = document.querySelector('#sobre-mi [data-cola]');
+      const llegada = seccion.getBoundingClientRect().top + y;
+      const L = Math.max(1, seccion.offsetHeight - panel.offsetHeight);
+      const C = cola ? Math.max(1, cola.offsetHeight) : vh * 0.5;
+      const inicio = cola ? cola.getBoundingClientRect().top + y - vh : llegada - vh - C;
+      return { vh, inicio, C, llegada, L };
+    };
+    let m = medir();
+    const remedir = () => {
+      m = medir();
+    };
+    const ro = new ResizeObserver(remedir);
+    ro.observe(document.body);
+    window.addEventListener('resize', remedir);
+
+    let creando = false;
+    const crear = (conPortadas) => {
+      if (creando || refIntro.current) return;
+      creando = true;
+      const intro = { escena: null, cancelada: false };
       refIntro.current = intro;
-      setIntroActiva(true);
-      // el título vuelve del header al centro
-      setTituloVisto(false);
-      setEnHeader(false);
-      const espera = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
-      const completo = 'inset(0px 0px 0px 0px round 0px)';
-      lienzo.style.clipPath = completo;
+      // (las piezas ya no salen de las portadas: caen desde arriba al recuadro)
+      const portadas = [];
       import('./piezas/EscenaPiezas.js')
-        .then(async ({ crearEscenaPiezas }) => {
+        .then(({ crearEscenaPiezas }) => {
+          creando = false;
           if (intro.cancelada) return;
-          intro.escena = crearEscenaPiezas({ ...opcionesEscena(), inversa: true });
-          // dos cuadros: la escena ya dibujó sus tarjetas calcadas sobre las de verdad
-          await new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(resolver)));
-          if (intro.cancelada) return;
-          lienzo.style.opacity = '1';
-          fondo.style.opacity = '0';
-          fondo.style.pointerEvents = 'none';
-          // el recuadro vuelve a cerrarse alrededor de las piezas
-          const radio = getComputedStyle(caja).borderTopLeftRadius;
-          const recorte = `inset(${caja.offsetTop}px ${panel.offsetWidth - caja.offsetLeft - caja.offsetWidth}px ${panel.offsetHeight - caja.offsetTop - caja.offsetHeight}px ${caja.offsetLeft}px round ${radio})`;
-          gsap.fromTo(lienzo, { clipPath: completo }, { clipPath: recorte, duration: 0.8, ease: 'power3.inOut', delay: 0.7 });
-          gsap.to(caja, { opacity: 1, duration: 0.7, ease: 'power2.out', delay: 0.7 });
-          await intro.escena.desarmar();
-          await espera(450);
-          if (intro.cancelada) return;
-          await intro.escena.desmutar();
-          await espera(650);
+          intro.escena = crearEscenaPiezas({ ...opcionesEscena(), puente: { portadas } });
+          // recién con las portadas calcadas encima se esconden las del reel
+          if (portadas.length) raiz.dataset.puente = 'on';
         })
-        .catch(() => terminarIntro())
-        .finally(() => pedido.listo());
-    },
-    [reducido, opcionesEscena, terminarIntro]
-  );
-  useEffect(() => {
-    window.addEventListener('portafolio:salida-proyectos', salirIntro);
-    return () => window.removeEventListener('portafolio:salida-proyectos', salirIntro);
-  }, [salirIntro]);
-  // Los tres tiempos: conectores → tarjetas 3D → tarjetas planas. Corren con la sección ya en
-  // pantalla (y el pasaje por la puerta terminado); cada uno dura un rato, o lo adelanta el primer
-  // gesto. Si la sección se va de pantalla, se termina sin más.
-  useEffect(() => {
-    if (!introActiva) return undefined;
-    let raf = 0;
-    let desde = 0; // cuándo empezó a contar el tiempo de la etapa en curso
-    let fuera = 0;
-    // (la salida al revés la lleva salirIntro: acá sólo se la termina cuando ya se está afuera)
-    const lista = () => Boolean(refIntro.current?.escena) && !refIntro.current.inversa && refVisible.current && !document.documentElement.dataset.portal;
-    const avanzar = (ahora) => {
-      const intro = refIntro.current;
-      const escena = intro?.escena;
-      if (!escena) return;
-      const etapa = escena.etapa();
-      if (etapa === 'conectores') {
-        desde = 0;
-        escena.mutar().then(() => {
-          desde = performance.now();
+        .catch(() => {
+          creando = false;
+          terminarIntro();
         });
-      } else if (etapa === 'tarjetas') {
-        desde = ahora;
-        // el recuadro se abre a toda la sección: las tarjetas salen de él hacia su lugar
-        const lienzo = refLienzoIntro.current;
-        const caja = refCajaIntro.current;
-        const panel = refPanel.current;
-        if (lienzo && caja && panel) {
-          const radio = getComputedStyle(caja).borderTopLeftRadius;
-          const recorte = `inset(${caja.offsetTop}px ${panel.offsetWidth - caja.offsetLeft - caja.offsetWidth}px ${panel.offsetHeight - caja.offsetTop - caja.offsetHeight}px ${caja.offsetLeft}px round ${radio})`;
-          gsap.fromTo(lienzo, { clipPath: recorte }, { clipPath: 'inset(0px 0px 0px 0px round 0px)', duration: 0.7, ease: 'power3.inOut' });
-          gsap.to(caja, { opacity: 0, duration: 0.6, ease: 'power2.out' });
-        }
-        escena.convertir().then(() => {
-          if (intro.cancelada) return;
-          // cada tarjeta quedó sobre la suya: aparecen las de verdad y la escena se funde
-          gsap.to(refFondo.current, { opacity: 1, duration: 0.45, ease: 'power2.out' });
-          gsap.to(refLienzoIntro.current, { opacity: 0, duration: 0.45, ease: 'power2.inOut', onComplete: terminarIntro });
-        });
+    };
+
+    let ultimoVisto = null;
+    let ultimoHeader = null;
+    let ultimoIntro = '';
+    const fijar = (el, prop, valor) => {
+      if (el.style[prop] !== valor) el.style[prop] = valor;
+    };
+    const aplicar = (y) => {
+      const { vh, inicio, C, llegada, L } = m;
+      const fin = llegada + L;
+      // lejos (arriba o abajo): sin escena, la marquesina como siempre
+      if (y < inicio - vh * 0.25 || y > fin + vh * 1.5) {
+        if (refIntro.current) terminarIntro();
+      }
+      const a0 = inicio + C;
+      const b0 = llegada + L * 0.1;
+      const b1 = llegada + L * 0.42;
+      const c0 = llegada + L * 0.48;
+      const c1 = llegada + L * 0.88;
+      let etapa = 'portadas';
+      let t = 0;
+      if (y < a0) t = (y - inicio) / C;
+      else if (y < b0) etapa = 'flotar';
+      else if (y < c0) {
+        etapa = 'mutar';
+        t = (y - b0) / (b1 - b0);
+      } else {
+        etapa = 'convertir';
+        t = (y - c0) / (c1 - c0);
+      }
+      const dentro = y > inicio + 0.5 && y < fin - 0.5;
+      if (dentro && !refIntro.current) crear(false);
+      const escena = refIntro.current?.escena;
+      // la marquesina de verdad aparece al final, mientras la escena se funde
+      const real = dentro ? limitar((y - (llegada + L * 0.86)) / (L * 0.1), 0, 1) : y >= fin - 0.5 ? 1 : 0;
+      fijar(fondo, 'opacity', real.toFixed(3));
+      fijar(fondo, 'pointerEvents', real >= 1 ? '' : 'none');
+      fijar(lienzo, 'opacity', dentro && escena ? (1 - real).toFixed(3) : '0');
+      if (escena) {
+        escena.activar(dentro && real < 1);
+        if (dentro) escena.ponerProgreso(etapa, t);
+      }
+      // Con la cola de Sobre mí todo se oscurece; el recuadro aparece en la oscuridad y las piezas
+      // caen adentro. Mientras las tarjetas salen hacia la marquesina, el recuadro se abre a toda la
+      // pantalla y la oscuridad se va.
+      const suaveP = (x) => x * x * (3 - 2 * x);
+      const tCola = limitar((y - inicio) / C, 0, 1);
+      const abre = etapa === 'convertir' ? suaveP(limitar(t / 0.35, 0, 1)) : 0;
+      const sale = 1 - limitar((y - c0) / (L * 0.32), 0, 1);
+      const oscuro = dentro ? suaveP(limitar(tCola / 0.55, 0, 1)) * suaveP(sale) : 0;
+      fijar(velo, 'opacity', (oscuro * 0.94).toFixed(3));
+      const recuadro = dentro ? suaveP(limitar((tCola - 0.15) / 0.4, 0, 1)) * suaveP(sale) : 0;
+      fijar(caja, 'opacity', recuadro.toFixed(3));
+      lienzo.style.setProperty('--abre-k', (1 - abre).toFixed(3));
+      const intro = recuadro > 0.35 ? 'true' : 'false';
+      if (intro !== ultimoIntro) {
+        ultimoIntro = intro;
+        panel.dataset.intro = intro;
+      }
+      // el título se desvanece con el scroll (y vuelve al subir); ya no viaja al header
+      const q = limitar((y - (llegada + L * 0.5)) / (L * 0.3), 0, 1);
+      const e = q * q * (3 - 2 * q);
+      mvO.set(1 - e);
+      mvS.set(1 - e * 0.04);
+      const visto = q > 0.02;
+      if (visto !== ultimoVisto) {
+        ultimoVisto = visto;
+        setTituloVisto(visto);
       }
     };
-    const vigilar = (ahora) => {
-      raf = requestAnimationFrame(vigilar);
-      if (lista()) {
-        fuera = 0;
-        desde ||= ahora;
-        const etapa = refIntro.current.escena.etapa();
-        if ((etapa === 'conectores' && ahora - desde > PIEZAS_FLOTAN_MS) || (etapa === 'tarjetas' && ahora - desde > TARJETAS_FLOTAN_MS)) avanzar(ahora);
-      } else if (!refVisible.current && !document.documentElement.dataset.portal) {
-        // se fue de la sección: no queda una escena corriendo fuera de pantalla
-        fuera ||= ahora;
-        if (ahora - fuera > 700) terminarIntro();
-      }
-    };
-    raf = requestAnimationFrame(vigilar);
-    const alGesto = (evento) => {
-      if (evento.type === 'keydown' && !['Enter', ' ', 'ArrowDown', 'ArrowUp', 'PageDown', 'PageUp'].includes(evento.key)) return;
-      const ahora = performance.now();
-      if (lista() && desde && ahora - desde > 450) avanzar(ahora);
-    };
-    window.addEventListener('wheel', alGesto, { passive: true });
-    window.addEventListener('keydown', alGesto);
+    aplicar(window.scrollY);
+    const quitar = alCuadro((_dt, s) => aplicar(s.y));
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('wheel', alGesto);
-      window.removeEventListener('keydown', alGesto);
+      quitar();
+      ro.disconnect();
+      window.removeEventListener('resize', remedir);
+      terminarIntro();
+      fondo.style.opacity = '';
+      fondo.style.pointerEvents = '';
+      lienzo.style.opacity = '';
+      caja.style.opacity = '';
+      velo.style.opacity = '';
+      lienzo.style.removeProperty('--abre-k');
+      delete panel.dataset.intro;
     };
-  }, [introActiva, terminarIntro]);
+  }, [puenteOn, opcionesEscena, terminarIntro, mvO, mvS]);
   useEffect(() => terminarIntro, [terminarIntro]);
-  // Por la puerta de "Sobre mí": las piezas ya están flotando cuando la hoja se abre.
-  useEffect(() => {
-    window.addEventListener('portafolio:entrada-proyectos', empezarIntro);
-    return () => window.removeEventListener('portafolio:entrada-proyectos', empezarIntro);
-  }, [empezarIntro]);
-  // Por cualquier otro camino, la primera vez que la sección entra en pantalla.
-  useEffect(() => {
-    if (visible && !refIntroHecha.current && !document.documentElement.dataset.portal) empezarIntro();
-  }, [visible, empezarIntro]);
 
   // Teclado con la sección a la vista: flechas recorren, Escape vuelve a la marquesina.
   useEffect(() => {
@@ -630,9 +627,9 @@ export default function Proyectos() {
   const ocultas = useMemo(() => [activo, ...saliendo].filter(Boolean), [activo, saliendo]);
 
   return (
-    <section id="proyectos" className={styles.contenedor} aria-labelledby="titulo-proyectos">
-      <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'} data-intro={introActiva ? 'true' : 'false'}>
-        <div ref={refFondo} className={styles.fondo}>
+    <section ref={refSeccion} id="proyectos" className={styles.contenedor} data-puente={puenteOn === null ? undefined : String(puenteOn)} data-salto-al-final={puenteOn === false ? 'false' : 'true'} aria-labelledby="titulo-proyectos">
+      <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'}>
+        <div ref={refFondo} className={styles.fondo} data-ola>
           {marquesinaCerca ? (
           <ThreeDMarquee
             images={tarjetas}
@@ -649,7 +646,8 @@ export default function Proyectos() {
           <div className={styles.velo} aria-hidden="true" />
         </div>
         <div ref={refDestello} className={styles.destello} aria-hidden="true" />
-        {/* Entrada: las piezas 3D que se vuelven tarjetas (ver empezarIntro) */}
+        {/* Entrada: las piezas 3D que se vuelven tarjetas (ver el puente) */}
+        <div ref={refVeloPuente} className={styles.veloPuente} aria-hidden="true" />
         <div ref={refCajaIntro} className={styles.introCaja} aria-hidden="true" />
         <canvas ref={refLienzoIntro} className={styles.intro} aria-hidden="true" />
 
@@ -675,19 +673,19 @@ export default function Proyectos() {
           <motion.div
             ref={refTitulo}
             className={styles.tituloBloque}
-            animate={tituloVisto && !reducido ? { x: destinoTitulo.x, y: destinoTitulo.y, scale: escalaTitulo } : { x: 0, y: 0, scale: 1 }}
+            animate={puenteOn ? undefined : tituloVisto && !reducido ? { x: destinoTitulo.x, y: destinoTitulo.y, scale: escalaTitulo } : { x: 0, y: 0, scale: 1 }}
             transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
             onAnimationComplete={() => {
               if (tituloVisto && !reducido) setEnHeader(true);
             }}
-            style={{ visibility: enHeader ? 'hidden' : 'visible' }}
+            style={puenteOn ? { opacity: mvO, scale: mvS } : { visibility: enHeader ? 'hidden' : 'visible' }}
           >
             <h2 id="titulo-proyectos" className={styles.titulo}>
               {movil ? (
                 // celular: texto común (el trazo SVG medía mal la fuente y dejaba las letras pegadas)
                 <span className={styles.tituloPlano}>Proyectos</span>
               ) : (
-                <TextoTrazo key={vecesVista} texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer />
+                <TextoTrazo key={vecesVista} texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer alScroll={puenteOn} />
               )}
             </h2>
             <p ref={refCifras} className={styles.cifras}>{textoCifras}</p>

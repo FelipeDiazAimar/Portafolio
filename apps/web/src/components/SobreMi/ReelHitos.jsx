@@ -21,8 +21,11 @@ import { matrizCss } from '@/lib/reel/homografia.js';
 import puntosHitos from '@/data/puntosHitos.json';
 import { TITULAR } from './titular.js';
 import IntroAgentes, { AGENTES, introPendiente } from './IntroAgentes.jsx';
-import ObraScroll from './ObraScroll.jsx';
+import ObraScroll, { crecimientoCapa } from './ObraScroll.jsx';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
+import { registrarReel } from '@/lib/puente.js';
+import LineaReel from './LineaReel.jsx';
+import { COLOR_LINEA } from '@/lib/trazos.js';
 import styles from './ReelHitos.module.css';
 
 import { EsqueletoEscena } from '@/components/Esqueleto/Esqueleto.jsx';
@@ -56,19 +59,6 @@ const enPortada = (p) => [(DIORAMA.x + p.x * DIORAMA.w) / BASE.ancho, (DIORAMA.y
 const VANO = (puntosHitos.puerta ?? [{ x: 0.45, y: 0.3 }, { x: 0.55, y: 0.3 }, { x: 0.55, y: 0.5 }, { x: 0.45, y: 0.5 }]).map(enPortada);
 const CENTRO_VANO = [0, 1].map((k) => VANO.reduce((suma, v) => suma + v[k], 0) / 4);
 const MITAD_ANCHO_VANO = (Math.max(...VANO.map((v) => v[0])) - Math.min(...VANO.map((v) => v[0]))) / 2;
-// Cuánto del pasaje por la puerta se recorre con el scroll de la cola; el resto lo termina solo.
-const SALIDA_AL_SCROLL = 0.14;
-// La hoja de la puerta (HTML) que se apoya sobre el vano: mismas proporciones que la dibujada.
-const HOJA = { w: 190, h: 307 };
-// Qué tan atrás del vano queda Proyectos mientras uno se acerca: a más valor, más chico (más
-// lejos) se lo ve por la puerta. Con 0 quedaría pegado al vano, como una calcomanía.
-const FONDO_SALA = 0.13;
-// Tamaño con que se ve Proyectos justo al cruzar el vano: el último tramo (hasta 1) es la llegada.
-const ESCALA_CRUCE = 0.94;
-const suave = (x) => {
-  const v = limitar(x, 0, 1);
-  return v * v * (3 - 2 * v);
-};
 // El visor de cámara que se dibuja sobre la foto o el video abierto: ocupa la portada menos un
 // margen (en px de la portada) y se apoya con una matriz de perspectiva.
 const VISOR_UV = { x0: 0.045, y0: 0.07, x1: 0.955, y1: 0.93 };
@@ -113,9 +103,6 @@ const FOTO_UV = { x0: FOTO.x / BASE.ancho, y0: FOTO.y / BASE.alto, x1: (FOTO.x +
 const ENTERA = { x0: 0, y0: 0, x1: 1, y1: 1 };
 // Recorte del diorama que acompaña a cada nota (en px del dibujo, 800 × 600).
 const RECORTE = { w: 264, h: 150 };
-// Avisa a la sección Proyectos que se llega por la puerta: sus fichas ya están en su lugar (no
-// hace su entrada).
-const EVENTO_ENTRADA = 'portafolio:entrada-proyectos';
 
 // El texto de cada SVG se pide una sola vez.
 const textosSvg = new Map();
@@ -165,8 +152,6 @@ export default function ReelHitos({ hitos, alFallar }) {
   const refPuntos = useRef(null);
   const refNota = useRef(null);
   // salida hacia Proyectos: la puerta (hoja y vano), cuánto se avanzó en la cola y si está en curso
-  const refPortal = useRef(null);
-  const refResplandor = useRef(null);
   const refRecorte = useRef(null);
   // controles del video que se abre sobre una portada
   const refHud = useRef(null);
@@ -312,8 +297,13 @@ export default function ReelHitos({ hitos, alFallar }) {
 
   // Lo que la escena avisa en cada cuadro: hito más cercano (estado) y fase (variable CSS).
   const refFaseEscrita = useRef(-1);
+  const refLineaReel = useRef(null);
+  // progreso del scroll por los hitos (lo último que marcó ScrollTrigger)
+  const refProgresoReel = useRef(0);
+  const refLineaHero = useRef(null);
   const alCuadro = useCallback(
     (fase, velocidad = 0) => {
+      refLineaReel.current?.(fase);
       if (Math.abs(fase - refFaseEscrita.current) > 0.0008) {
         refFaseEscrita.current = fase;
         refPanel.current?.style.setProperty('--fase', fase.toFixed(4));
@@ -331,7 +321,6 @@ export default function ReelHitos({ hitos, alFallar }) {
       else if (!refQuietoDesde.current) refQuietoDesde.current = ahora;
       const escena = refEscena.current;
       const entrada = escena?.portadas[cercano]?.entrada.t ?? 0;
-      if (refPaso.current) refPintarPuerta.current?.();
       // si la cinta se mueve, la foto abierta se cierra
       if (!quieto && escena && escena.medioAbierto() >= 0) escena.cerrarMedio();
       let apoyado = quieto && entrada > 0.999 && refVivoListo.current === cercano && refSalida.current < 0.01 && !refTransicion.current && escena.medioAbierto() < 0;
@@ -360,8 +349,9 @@ export default function ReelHitos({ hitos, alFallar }) {
       if (conObras() && refEntro.current && !refIntroCorriendo.current && escena && !refTransicion.current) {
         escena.portadas.forEach((p, i) => {
           // la de la obra en curso la muestra su agente (dentro de su caja), no este fundido
-          if (refConstruidas.current.has(i) || refObra.current?.hito === i) return;
-          const objetivo = 0;
+          if (refObras.current.has(i)) return;
+          // las armadas, a la vista; las demás, escondidas (si algo dejó una armada escondida, vuelve)
+          const objetivo = refConstruidas.current.has(i) ? 1 : 0;
           if (Math.abs(p.entrada.t - objetivo) < 0.002) return;
           gsap.killTweensOf(p.entrada);
           p.entrada.t += (objetivo - p.entrada.t) * 0.14;
@@ -436,7 +426,8 @@ export default function ReelHitos({ hitos, alFallar }) {
         if (!vivo) return;
         escena = crearEscenaReel({ lienzo, total: N, reducido: refReducido.current, alCuadro, alFallar });
         refEscena.current = escena;
-        const ajustar = () => escena.redimensionar(panel.clientWidth, panel.clientHeight, window.matchMedia(CONSULTA_MOVIL).matches);
+        registrarReel({ escena, lienzo });
+        const ajustar =() => escena.redimensionar(panel.clientWidth, panel.clientHeight, window.matchMedia(CONSULTA_MOVIL).matches);
         ajustar();
         observador = new ResizeObserver(ajustar);
         observador.observe(panel);
@@ -449,6 +440,7 @@ export default function ReelHitos({ hitos, alFallar }) {
     return () => {
       vivo = false;
       observador?.disconnect();
+      if (escena) registrarReel(null, escena);
       escena?.destruir();
       refEscena.current = null;
       setEscenaN((n) => -Math.abs(n));
@@ -573,6 +565,10 @@ export default function ReelHitos({ hitos, alFallar }) {
     gsap.registerPlugin(ScrollTrigger);
     const contexto = gsap.context(() => {
       const aplicar = (yo, salto) => {
+        refProgresoReel.current = yo.progress;
+        // mientras los agentes arman la intro, el reel se queda en su primer hito (el plano que dibujan
+        // tiene que calzar con lo real); al terminar, gira hasta donde esté el scroll
+        if (refIntroCorriendo.current) return;
         refObjetivo.current = faseDeProgreso(yo.progress, N);
         // sin escena todavía (se carga al acercarse): la ficha y la regla siguen al scroll igual
         if (!refEscena.current) alCuadro(refObjetivo.current);
@@ -599,7 +595,9 @@ export default function ReelHitos({ hitos, alFallar }) {
         start: conIntro ? 'top 30%' : 'top 62%',
         once: !conIntro,
         onEnter: () => {
-          if (refEntro.current) return;
+          // una intro en curso (armando o desarmando) no se interrumpe: termina a su ritmo y, si la
+          // sección sigue a la vista, se vuelve a armar (ver el final del desarme)
+          if (refEntro.current || refIntroCorriendo.current) return;
           // se pasó de largo (menú del header hacia más abajo) o es la vista previa del menú:
           // directo a lo real, sin intro (trabaría el salto de ida y vuelta)
           const pasado = contenedor.getBoundingClientRect().bottom < window.innerHeight * 0.5;
@@ -617,7 +615,7 @@ export default function ReelHitos({ hitos, alFallar }) {
         });
       }
       // La cola: "Hoy" sigue fijo y la portada empieza a crecer desde su puerta, al ritmo del
-      // scroll. Pasado un punto, el portal termina solo (ver pasarAProyectos).
+      // scroll. Ahora es el comienzo del puente a Proyectos (ver Proyectos.jsx).
       const enCola = (yo, alScrollear) => {
         if (refTransicion.current) return;
         if (refPuertaCerrada.current()) {
@@ -627,10 +625,11 @@ export default function ReelHitos({ hitos, alFallar }) {
           refPanel.current?.style.setProperty('--salida', '0');
           return;
         }
+        // Sin puerta: la cola es el comienzo del puente a Proyectos (lo maneja Proyectos.jsx, que
+        // toma las portadas). Acá sólo se retira lo de alrededor, al ritmo del scroll.
         refSalida.current = yo.progress;
-        refEscena.current?.ponerSalida(yo.progress * SALIDA_AL_SCROLL);
+        refEscena.current?.ponerSalida(0);
         refPanel.current?.style.setProperty('--salida', yo.progress.toFixed(3));
-        if (alScrollear && yo.progress > 0.42 && yo.progress < 1 && yo.direction > 0) refPasar.current?.();
       };
       ScrollTrigger.create({
         trigger: contenedor,
@@ -643,231 +642,6 @@ export default function ReelHitos({ hitos, alFallar }) {
     return () => contexto.revert();
   }, [N, alCuadro, medir]);
 
-  // ---- pasaje a Proyectos: se entra por la puerta de "Hoy", en primera persona. La cámara se
-  // acerca, la hoja se abre hacia adentro y se cruza el vano. El vano es un hueco de verdad en el
-  // panel; detrás está la sección Proyectos, ya armada (con sus fichas en su lugar), que se ve
-  // lejos y chica al principio y crece a medida que uno se acerca, como una sala del otro lado.
-  // Del otro lado hay luz (oscuridad, en el tema oscuro): de lejos tapa lo que hay detrás, al
-  // cruzar envuelve la pantalla y se disipa ya en Proyectos. La vuelta es lo mismo al revés: se
-  // sale de espaldas por la puerta, que se cierra, hasta quedar de nuevo frente a "Hoy".
-  const refPasar = useRef(null);
-  const refVolver = useRef(null);
-  // pasaje en curso (null si no hay): cuánto abrió la hoja, cuánto avanzó y la sección de destino
-  const refPaso = useRef(null);
-  const refPintarPuerta = useRef(null);
-  // La luz y el tamaño de Proyectos: lo que no depende de dónde está la puerta en pantalla.
-  const ambientar = useCallback(() => {
-    const paso = refPaso.current;
-    const portal = refPortal.current;
-    const resplandor = refResplandor.current;
-    if (!paso || !portal || !resplandor) return;
-    const escala = paso.cruzado ? ESCALA_CRUCE + (1 - ESCALA_CRUCE) * paso.llegada : paso.s;
-    paso.proyectos.style.transform = `translateY(${paso.ty.toFixed(1)}px) scale(${escala.toFixed(4)})`;
-    // ya del otro lado, la luz se disipa
-    const queda = paso.cruzado ? 1 - paso.llegada : 1;
-    if (portal.dataset.cruzado !== String(paso.cruzado)) portal.dataset.cruzado = String(paso.cruzado);
-    portal.style.setProperty('--lejos', paso.lejos.toFixed(3));
-    portal.style.setProperty('--bruma', (Math.min(1, 0.2 + paso.lejos * 1.2) * queda).toFixed(3));
-    resplandor.style.setProperty('--fuerza', (paso.abre * (0.14 + 0.78 * suave((paso.t - 0.38) / 0.62)) * queda).toFixed(3));
-  }, []);
-  const pintarPuerta = useCallback(() => {
-    const panel = refPanel.current;
-    const portal = refPortal.current;
-    const resplandor = refResplandor.current;
-    const escena = refEscena.current;
-    const paso = refPaso.current;
-    if (!panel || !portal || !resplandor || !escena || !paso || paso.cruzado) return;
-    const q = VANO.map(([fx, fy]) => escena.puntoEn(N - 1, fx, fy));
-    // el vano va [arribaDer, arribaIzq, abajoIzq, abajoDer]; la hoja lo quiere desde arriba a la izquierda
-    const matriz = q.some((v) => !v) ? null : matrizCss(HOJA.w, HOJA.h, [q[1], q[0], q[3], q[2]]);
-    if (!matriz) return; // un cuadro sin medida: queda lo del anterior
-    const W = panel.clientWidth;
-    const H = panel.clientHeight;
-    const pts = q.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`);
-    panel.style.clipPath = `polygon(evenodd, 0px 0px, ${W}px 0px, ${W}px ${H}px, 0px ${H}px, 0px 0px, ${pts.join(', ')}, ${pts[0]})`;
-    portal.firstElementChild.style.transform = matriz;
-    portal.style.setProperty('--abre', paso.abre.toFixed(4));
-    // Profundidad: la puerta está a una distancia d y Proyectos un tramo más atrás, así que crece
-    // más despacio que la puerta. d sale del ancho del vano en pantalla (a más ancho, más cerca).
-    const ancho = Math.max(1, Math.abs(q[0][0] - q[1][0]));
-    const fondo = 1 / (1 + FONDO_SALA * Math.max(0, W / ancho - 0.8));
-    paso.lejos = 1 - fondo;
-    // al cruzar el vano llega justo al tamaño de cruce (la llegada hace el resto)
-    paso.s = ESCALA_CRUCE * (fondo + (1 - fondo) * suave((paso.t - 0.8) / 0.2));
-    const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4;
-    const cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
-    // crece desde el centro del vano: es el punto hacia donde se camina
-    paso.proyectos.style.transformOrigin = `${cx.toFixed(1)}px ${cy.toFixed(1)}px`;
-    // la luz sale del vano y crece con él
-    const altoVano = Math.abs(q[2][1] - q[1][1]);
-    resplandor.style.setProperty('--px', `${cx.toFixed(1)}px`);
-    resplandor.style.setProperty('--py', `${cy.toFixed(1)}px`);
-    resplandor.style.setProperty('--r', `${(altoVano * 0.95).toFixed(1)}px`);
-    ambientar();
-  }, [N, ambientar]);
-  refPintarPuerta.current = pintarPuerta;
-
-  // Lo que comparten la ida y la vuelta: quién participa, las trabas y cómo se deja todo al final.
-  const prepararPasaje = useCallback(() => {
-    const escena = refEscena.current;
-    const panel = refPanel.current;
-    const portal = refPortal.current;
-    const resplandor = refResplandor.current;
-    const contenedor = refContenedor.current;
-    const proyectos = document.getElementById('proyectos');
-    if (!escena || !panel || !portal || !resplandor || !contenedor || !proyectos) return null;
-    refTransicion.current = true;
-    cortarAnimacion();
-    setDetalle(null);
-    escena.cerrarMedio();
-    const raiz = document.documentElement;
-    // mientras dura, nadie más acomoda el scroll (embudos, URL por sección) ni la página se mueve
-    raiz.dataset.sinIman = 'true';
-    raiz.dataset.portal = 'true';
-    const traba = trabarScroll();
-    contenedor.style.zIndex = '8';
-    proyectos.style.willChange = 'transform';
-    portal.dataset.activo = 'true';
-    const pintar = () => {
-      const paso = refPaso.current;
-      if (!paso) return;
-      escena.ponerSalida(paso.t);
-      panel.style.setProperty('--salida', paso.ui.toFixed(3));
-      // sin el bucle de la escena corriendo (recién se llega a la sección), se dibuja a mano
-      if (!escena.activa()) {
-        escena.dibujar();
-        pintarPuerta();
-      }
-    };
-    const terminar = () => {
-      refPaso.current = null;
-      proyectos.style.transform = '';
-      proyectos.style.transformOrigin = '';
-      proyectos.style.willChange = '';
-      contenedor.style.zIndex = '';
-      panel.style.clipPath = '';
-      portal.dataset.activo = 'false';
-      resplandor.style.setProperty('--fuerza', '0');
-      traba.soltar();
-      delete raiz.dataset.sinIman;
-      delete raiz.dataset.portal;
-      refTransicion.current = false;
-    };
-    return { escena, panel, portal, resplandor, proyectos, traba, pintar, terminar };
-  }, [cortarAnimacion, pintarPuerta]);
-
-  const pasarAProyectos = useCallback(() => {
-    const m = medir();
-    if (!m || refTransicion.current || refPuertaCerrada.current()) return;
-    if (refReducido.current || !refEscena.current || !m.cola) {
-      scrollA(m.fin);
-      return;
-    }
-    const p = prepararPasaje();
-    if (!p) {
-      scrollA(m.fin);
-      return;
-    }
-    // Proyectos ya está armada detrás de la puerta: no hace su entrada
-    window.dispatchEvent(new CustomEvent(EVENTO_ENTRADA));
-    // Proyectos se acomoda detrás del panel, exactamente donde va a quedar al terminar
-    const paso = { abre: 0, t: SALIDA_AL_SCROLL * refSalida.current, ui: refSalida.current, llegada: 0, cruzado: false, s: ESCALA_CRUCE, lejos: 1, ty: -p.proyectos.getBoundingClientRect().top, proyectos: p.proyectos };
-    refPaso.current = paso;
-    pintarPuerta();
-    const cruzar = () => {
-      // ya se cruzó: la página salta a donde se la está viendo (no cambia nada en pantalla)
-      p.traba.mover(medir()?.fin ?? m.fin);
-      paso.cruzado = true;
-      paso.ty = 0;
-      p.panel.style.clipPath = '';
-      p.proyectos.style.transformOrigin = `${window.innerWidth / 2}px ${window.innerHeight / 2}px`;
-      ambientar();
-    };
-    gsap
-      .timeline({ onComplete: p.terminar })
-      // el acercamiento: arranca y llega suave, sin tirones
-      .to(paso, { t: 1, duration: 2.5, ease: 'sine.inOut', onUpdate: p.pintar }, 0)
-      .to(paso, { ui: 1, duration: 0.45, ease: 'power2.out' }, 0)
-      // la hoja cede apenas y después se abre del todo, hacia adentro
-      .to(paso, { abre: 0.07, duration: 0.35, ease: 'power2.out' }, 0.2)
-      .to(paso, { abre: 1, duration: 1.05, ease: 'power3.inOut' }, 0.55)
-      .add(cruzar, 2.5)
-      // del otro lado: la luz se disipa y Proyectos termina de llegar
-      .to(paso, { llegada: 1, duration: 0.95, ease: 'power2.out', onUpdate: ambientar }, 2.5);
-  }, [medir, scrollA, prepararPasaje, pintarPuerta, ambientar]);
-
-  // La vuelta: desde Proyectos, al subir, se sale de espaldas por la misma puerta.
-  const volverDeProyectos = useCallback(
-    (previo, y) => {
-      if (refTransicion.current || refReducido.current || document.documentElement.dataset.sinIman) return;
-      const m = medir();
-      const alto = window.innerHeight;
-      // sólo si se viene subiendo desde Proyectos (no un salto del menú, ni de más abajo de corrido)
-      if (!m || !m.cola || !refEscena.current || !(y < m.fin - 12 && y > m.fin - alto * 0.5 && previo > m.fin - alto * 0.25 && previo - y < alto * 0.5)) return;
-      // con un proyecto abierto, la sección se queda como está
-      if (document.querySelector('#proyectos [data-activo="true"]')) return;
-      const p = prepararPasaje();
-      if (!p) return;
-      const W = window.innerWidth;
-      const paso = { abre: 1, t: 1, ui: 1, llegada: 1, cruzado: true, s: ESCALA_CRUCE, lejos: 0, ty: 0, proyectos: p.proyectos };
-      refPaso.current = paso;
-      p.traba.mover(m.fin);
-      // la luz vuelve a envolver la pantalla, desde el centro
-      p.proyectos.style.transformOrigin = `${W / 2}px ${alto / 2}px`;
-      p.portal.firstElementChild.style.transform = matrizCss(HOJA.w, HOJA.h, [[-W, -alto], [2 * W, -alto], [2 * W, 2 * alto], [-W, 2 * alto]]);
-      p.portal.style.setProperty('--abre', '1');
-      p.resplandor.style.setProperty('--px', '50%');
-      p.resplandor.style.setProperty('--py', '50%');
-      p.resplandor.style.setProperty('--r', `${alto * 3}px`);
-      ambientar();
-      const descruzar = () => {
-        // se vuelve a estar de este lado del vano, con la página ya en "Hoy"
-        p.traba.mover(m.arriba + m.largo);
-        p.proyectos.style.transform = '';
-        paso.ty = -p.proyectos.getBoundingClientRect().top;
-        paso.cruzado = false;
-        refObjetivo.current = N - 1;
-        refAsentado.current = N - 1;
-        // si la sección todavía no había hecho su entrada, las portadas ya están
-        refEntro.current = true;
-        setEntro(true);
-        p.escena.portadas.forEach((portada) => {
-          gsap.killTweensOf(portada.entrada);
-          portada.entrada.t = 1;
-        });
-        p.escena.ponerSalida(1);
-        p.panel.style.setProperty('--salida', '1');
-        p.escena.saltarA(N - 1);
-        pintarPuerta();
-      };
-      const T = 0.5;
-      const seguir = () =>
-        gsap
-        .timeline({
-          onComplete: () => {
-            refSalida.current = 0;
-            p.escena.ponerSalida(0);
-            p.panel.style.setProperty('--salida', '0');
-            p.terminar();
-          },
-        })
-        .to(paso, { llegada: 0, duration: T, ease: 'power2.in', onUpdate: ambientar }, 0)
-        .add(descruzar, T)
-        .to(paso, { t: 0, duration: 2.4, ease: 'sine.inOut', onUpdate: p.pintar }, T)
-        // la hoja se cierra cuando ya se está afuera, y encaja al final
-        .to(paso, { abre: 0.07, duration: 1, ease: 'power3.inOut' }, T + 0.75)
-        .to(paso, { abre: 0, duration: 0.3, ease: 'power2.in' }, T + 1.75)
-        .to(paso, { ui: 0, duration: 0.5, ease: 'power2.out' }, T + 1.9);
-      // Antes de salir, Proyectos deshace su entrada (marquesina → tarjetas 3D → conectores) y
-      // avisa. Si nadie toma el pedido (celular, sin WebGL), se sale directo.
-      const pedido = { tomado: false, listo: seguir };
-      window.dispatchEvent(new CustomEvent('portafolio:salida-proyectos', { detail: pedido }));
-      if (!pedido.tomado) seguir();
-    },
-    [N, medir, prepararPasaje, pintarPuerta, ambientar]
-  );
-  refVolver.current = volverDeProyectos;
-  refPasar.current = pasarAProyectos;
 
   // ---- zoom de una portada ---------------------------------------------------------------
   useEffect(() => {
@@ -1001,12 +775,13 @@ export default function ReelHitos({ hitos, alFallar }) {
   }, []);
   const enCurso = intro !== null && intro !== 'esperando';
   useEffect(() => {
-    const contenedor = refContenedor.current;
-    if (!enCurso || !contenedor) return undefined;
+    if (process.env.NODE_ENV !== 'production') (window.__introLog ??= []).push([Math.round(performance.now()), 'estado', intro === null ? null : intro === 'esperando' ? 'esperando' : intro.sentido, entro]);
+  }, [intro, entro]);
+  // (glow-up) La intro ya no traba la página: se puede seguir scrolleando y los agentes terminan su
+  // animación igual, completa. Mientras tanto el reel queda en su primer hito (ver aplicar).
+  useEffect(() => {
+    if (!enCurso) return undefined;
     document.documentElement.dataset.sinIman = 'true';
-    const traba = trabarScroll();
-    traba.mover(Math.round(contenedor.getBoundingClientRect().top + window.scrollY));
-    refTrabaIntro.current = traba;
     return soltarIntro;
   }, [enCurso, soltarIntro]);
   const alFundirIntro = useCallback(() => {
@@ -1052,7 +827,8 @@ export default function ReelHitos({ hitos, alFallar }) {
   const conObras = () => Boolean(refConIntro.current) && !refReducido.current;
   // La puerta de "Hoy" no se abre hasta que los agentes terminan de construir esa portada.
   const refPuertaCerrada = useRef(() => false);
-  refPuertaCerrada.current = () => conObras() && refEntro.current && !refConstruidas.current.has(N - 1);
+  // (glow-up) la puerta ya no traba el paso a Proyectos: el scroll nunca se frena entre secciones
+  refPuertaCerrada.current = () => false;
   const ponerZonas = (i) => {
     const u = refEscena.current?.portadas[i]?.material.uniforms;
     const zonas = refZonas.current[i];
@@ -1197,6 +973,22 @@ export default function ReelHitos({ hitos, alFallar }) {
 
   const refIntroCorriendo = useRef(false);
   refIntroCorriendo.current = intro !== null;
+  // Terminada la intro: el reel gira (suave) hasta donde quedó el scroll. Si se siguió bajando, las
+  // portadas que los agentes no llegaron a armar quedan construidas (ni en blanco ni frenando).
+  useEffect(() => {
+    if (intro !== null) return;
+    const destino = faseDeProgreso(refProgresoReel.current, N);
+    if (Math.abs(destino - refObjetivo.current) < 0.001) return;
+    refObjetivo.current = destino;
+    if (destino > 0.5) {
+      for (let i = 0; i < N; i += 1) {
+        refConstruidas.current.add(i);
+        ponerZonas(i);
+      }
+    }
+    if (refEscena.current) refEscena.current.ponerObjetivo(destino);
+    else alCuadro(destino);
+  }, [intro, N, alCuadro]);
   const refIntroActual = useRef(null);
   refIntroActual.current = intro && intro !== 'esperando' ? intro : refIntroActual.current;
 
@@ -1206,10 +998,10 @@ export default function ReelHitos({ hitos, alFallar }) {
   // hito F hacia atrás, desarman la F, en orden inverso. Es la misma obra (siempre sobre F+1, con
   // avance q de 0 a 1) yendo para un lado o para el otro. El scroll sólo la dispara: trabajan a su
   // ritmo (SEG_POR_UNIDAD), scrollear no los apura.
-  const refObraScroll = useRef(null);
-  const [obra, setObra] = useState(null); // { hito, capas, ancho, alto, clave }
-  const refObra = useRef(null);
-  refObra.current = obra;
+  // las capas de agentes montadas: una por obra a la vista ({ hito, capas, ancho, alto, clave })
+  const refObrasScroll = useRef(new Map()); // clave → instancia de ObraScroll
+  const [obrasVista, setObrasVista] = useState([]);
+  const refObrasVista = useRef([]);
   const refMostrado = useRef(0);
   refMostrado.current = mostrado;
   const FILAS_FICHA = [
@@ -1254,7 +1046,7 @@ export default function ReelHitos({ hitos, alFallar }) {
   };
   // cuánto tarda la obra de una portada, en segundos
   const duracionObra = (i) => {
-    const capas = refObra.current?.hito === i ? refObra.current.capas : capasDeObra(i);
+    const capas = refObrasVista.current.find((v) => v.hito === i)?.capas ?? capasDeObra(i);
     return Math.max(SEG_MIN, Math.max(...capas.map((c) => c.tramo[1])) * SEG_POR_UNIDAD);
   };
   const soltarObra = (i, hecha) => {
@@ -1270,158 +1062,142 @@ export default function ReelHitos({ hitos, alFallar }) {
       if (el) el.style.clipPath = '';
     });
   };
-  // la obra en curso: sobre qué portada (siempre F+1) y cuánto va (0..1, por tiempo)
-  const refAvance = useRef(null); // { hito, q, ultimo }
-  // sentido del último movimiento del scroll (1 adelante, -1 atrás) y la fase del cuadro anterior
-  const refSentido = useRef({ fase: null, sentido: 1 });
-  const refFrente = useRef(null); // F: construidas de 0 a F (null = todavía no se sabe)
+  // Las obras de las portadas (los agentes que las arman): el scroll sólo las desata — al llegar
+  // una portada sin construir a la vista arranca la suya — y después cada una sigue a su ritmo,
+  // por tiempo real, se vea o no: si se sigue scrolleando continúa en segundo plano y, al volver,
+  // está donde iba. Nunca se apuran con el scroll. Al volver hacia atrás, las que quedan adelante
+  // se desarman (también a su ritmo). Varias pueden ir a la vez; los agentes se ven en la que está
+  // a la vista.
+  const refObras = useRef(new Map()); // hito → { q (0..1), meta (1 armar, 0 desarmar), ultimo (ms) }
+  const refSentidoObras = useRef({ fase: null, sentido: 1 });
   const SEG_POR_UNIDAD = 0.85;
   const SEG_MIN = 2.5;
-  // fija el frente: construidas 0..F. Las que se suman de golpe aparecen con un fundido; las que
-  // se sacan de golpe se apagan solas (ver el fundido de alCuadro).
-  const ponerFrente = (F) => {
-    const escena = refEscena.current;
-    refFrente.current = F;
-    const hechas = refConstruidas.current;
-    for (let i = 0; i < N; i++) {
-      const debe = i <= F;
-      if (debe === hechas.has(i)) continue;
-      if (debe) {
-        hechas.add(i);
-        const p = escena?.portadas[i];
-        if (p && p.entrada.t < 1) gsap.to(p.entrada, { t: 1, duration: 0.8, ease: 'expo.out', overwrite: true });
-      } else hechas.delete(i);
-      ponerZonas(i);
-    }
-  };
   const construirEnCuadro = (fase) => {
     const escena = refEscena.current;
     const panel = refPanel.current;
     if (!escena || !panel) return;
     const ahora = performance.now();
-    if (refFrente.current === null) {
-      const hechas = [...refConstruidas.current];
-      ponerFrente(hechas.length ? Math.max(...hechas) : Math.round(fase));
-    }
-    let F = refFrente.current;
-    let av = refAvance.current;
-    const mov = refSentido.current;
+    const hechas = refConstruidas.current;
+    const obras = refObras.current;
+    const mov = refSentidoObras.current;
     if (mov.fase !== null && fase - mov.fase > 1e-4) mov.sentido = 1;
     else if (mov.fase !== null && fase - mov.fase < -1e-4) mov.sentido = -1;
     mov.fase = fase;
-    // hasta dónde tendría que estar construido: saliendo del hito F hacia adelante, F+1; hacia
-    // atrás, F-1 (con un margen, para que parado en el hito no se dispare nada)
-    const deseado = fase > F + 0.002 ? Math.ceil(fase - 0.002) : fase < F - 0.002 ? Math.floor(fase + 0.002) : F;
-    if (av) {
-      // si se fue lejos de la obra (ya pasó la portada, o volvió más de un hito), se resuelve de
-      // golpe para que la que queda a la vista sea la que se arma
-      if (fase > av.hito + 0.5) {
-        ponerFrente(av.hito);
-        soltarObra(av.hito, true);
-        av = null;
-      } else if (fase < av.hito - 1.5) {
-        soltarObra(av.hito, false);
-        av = null;
-      }
-      F = refFrente.current;
+    // el scroll desata: yendo hacia una portada sin construir, los agentes la arman; volviendo
+    // (cuando la portada queda adelante, ya fuera de la vista), la desarman. Si se cambia de
+    // sentido a mitad de camino, siguen desde donde iban hacia el otro lado.
+    for (let i = 1; i < N; i += 1) {
+      const o = obras.get(i);
+      const cerca = Math.abs(fase - i) < 0.6;
+      const quedoAdelante = fase < i - 0.6 && mov.sentido < 0;
+      // la del frente y las de atrás que asoman a un costado; las de adelante, recién al llegar
+      const armar = cerca || (i < fase && fase - i < 1.6);
+      if (!o) {
+        // la que está a la vista siempre se arma, se llegue por donde se llegue
+        if (!hechas.has(i) && armar) obras.set(i, { q: 0, meta: 1, ultimo: ahora });
+        else if (hechas.has(i) && quedoAdelante) {
+          hechas.delete(i);
+          obras.set(i, { q: 1, meta: 0, ultimo: ahora });
+        }
+      } else if (o.meta === 0 && armar) o.meta = 1;
+      else if (o.meta === 1 && quedoAdelante) o.meta = 0;
     }
-    // una obra nueva arranca sólo si el scroll va para ese lado (o ya se llegó al otro hito): si
-    // no, parado a mitad de camino después de desarmar, volvería a armar enseguida
-    const llego = Math.abs(fase - deseado) < 0.002;
-    if (!av && deseado > F && (mov.sentido > 0 || llego)) {
-      if (deseado - F > 1) ponerFrente(deseado - 1);
-      av = { hito: refFrente.current + 1, q: 0, ultimo: ahora };
-    } else if (!av && deseado < F && (mov.sentido < 0 || llego)) {
-      if (F - deseado > 1) ponerFrente(deseado + 1);
-      // la del frente pasa a ser obra: completa, y los agentes la desarman
-      const h = refFrente.current;
-      ponerFrente(h - 1);
-      av = { hito: h, q: 1, ultimo: ahora };
-    }
-    let enCurso = null;
-    if (av) {
-      const dt = Math.min(0.1, Math.max(0, (ahora - av.ultimo) / 1000));
-      av.ultimo = ahora;
-      // hacia dónde: lo dice el sentido del scroll (yendo hacia la portada, la arman; volviendo,
-      // la desarman); quieto, siguen con lo que estaban. En los hitos de los extremos, sin dudas.
-      let meta = mov.sentido > 0 ? 1 : 0;
-      if (fase >= av.hito - 0.002) meta = 1;
-      else if (fase <= av.hito - 1 + 0.002) meta = 0;
-      const paso = dt / duracionObra(av.hito);
-      av.q = meta > av.q ? Math.min(1, av.q + paso) : Math.max(0, av.q - paso);
-      if (av.q >= 1 && meta === 1) {
-        ponerFrente(av.hito);
-        soltarObra(av.hito, true);
-        av = null;
-      } else if (av.q <= 0 && meta === 0) {
-        soltarObra(av.hito, false);
-        av = null;
-      } else {
-        enCurso = { i: av.hito, p: av.q };
+    if (!hechas.has(0) && !obras.has(0) && Math.abs(fase) < 0.6) obras.set(0, { q: 0, meta: 1, ultimo: ahora });
+    else if (obras.get(0)?.meta === 0 && Math.abs(fase) < 0.6) obras.get(0).meta = 1;
+    for (const [i, o] of obras) {
+      // tiempo real (sin tope): si este cuadro no corrió un rato, la obra igual avanzó
+      const paso = Math.max(0, ahora - o.ultimo) / 1000 / duracionObra(i);
+      o.q = o.meta === 1 ? Math.min(1, o.q + paso) : Math.max(0, o.q - paso);
+      o.ultimo = ahora;
+      if (o.q >= 1 && o.meta === 1) {
+        obras.delete(i);
+        hechas.add(i);
+        soltarObra(i, true);
+      } else if (o.q <= 0 && o.meta === 0) {
+        obras.delete(i);
+        soltarObra(i, false);
       }
     }
-    refAvance.current = av;
+    // los agentes: uno por cada obra a la vista (la del frente y las que asoman a los costados);
+    // las que no se ven descubren lo real sin ellos
+    const vista = [...obras.keys()].filter((i) => Math.abs(fase - i) < 1.6).sort((x, y) => Math.abs(fase - x) - Math.abs(fase - y));
+    for (const [i, o] of obras) {
+      if (vista.includes(i)) continue;
+      const portada = escena.portadas[i];
+      if (!portada) continue;
+      gsap.killTweensOf(portada.entrada);
+      portada.entrada.t = 1;
+      const u = portada.material.uniforms;
+      const capas = capasDeObra(i);
+      capas.forEach(({ revela }, j) => {
+        const t = crecimientoCapa(capas, j, o.q);
+        if (revela.tipo === 'carta') u.uCorte.value = t;
+        else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = t;
+      });
+    }
     // a la vista de las pruebas (sólo en desarrollo)
-    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, frente: refFrente.current, deseado, hito: av?.hito ?? null, q: av?.q ?? null };
-    const antes = refObra.current;
-    if (antes && antes.hito !== enCurso?.i && !refConstruidas.current.has(antes.hito)) soltarObra(antes.hito, false);
-    if (!enCurso) {
-      if (antes) {
-        refObra.current = null;
-        setObra(null);
-      }
-      return;
-    }
-    const { i, p } = enCurso;
-    const zonasN = Math.min(10, refZonas.current[i]?.length ?? 0);
-    const clave = `${i}-${zonasN}`;
-    if (antes?.clave !== clave) {
-      const base = panel.getBoundingClientRect();
-      ponerZonas(i);
-      refObra.current = { hito: i, capas: capasDeObra(i), ancho: base.width, alto: base.height, clave };
-      setObra(refObra.current);
-    }
-    const portada = escena.portadas[i];
-    gsap.killTweensOf(portada.entrada);
-    portada.entrada.t = 1;
-    const u = portada.material.uniforms;
-    const obraActual = refObraScroll.current;
-    if (!obraActual || obraActual.capas !== refObra.current.capas) {
-      // recién montada: este cuadro todavía no tiene dónde dibujar. Armando, la card espera
-      // tapada; desarmando, sigue entera hasta que los agentes empiezan
-      const entera = p >= 0.999;
-      u.uCorte.value = entera ? 1 : 0;
-      if (entera) u.uZonasT.value.fill(1);
-      return;
-    }
+    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, obras: [...obras].map(([i, o]) => [i, +o.q.toFixed(3), o.meta]), enCurso: vista, hechas: [...hechas].sort(), cuando: Math.round(ahora) };
     const base = panel.getBoundingClientRect();
-    const capas = refObra.current.capas;
-    const quads = capas.map(({ revela }) => {
-      if (revela.tipo === 'carta') return (t) => escena.esquinas(i, { x0: 0, y0: 0, x1: t, y1: t });
-      if (revela.tipo === 'zona') {
-        const { z } = revela;
-        return (t) => escena.esquinas(i, { x0: z.x0, y0: z.y0, x1: z.x0 + (z.x1 - z.x0) * t, y1: z.y0 + (z.y1 - z.y0) * t });
+    const claveDe = (i) => `${i}-${Math.min(10, refZonas.current[i]?.length ?? 0)}`;
+    const montadas = refObrasVista.current;
+    if (vista.map(claveDe).join('|') !== montadas.map((v) => v.clave).join('|')) {
+      const nuevas = vista.map((i) => {
+        const ya = montadas.find((v) => v.clave === claveDe(i));
+        if (ya) return ya;
+        ponerZonas(i);
+        return { hito: i, capas: capasDeObra(i), ancho: base.width, alto: base.height, clave: claveDe(i) };
+      });
+      refObrasVista.current = nuevas;
+      setObrasVista(nuevas);
+    }
+    for (const v of refObrasVista.current) {
+      const o = obras.get(v.hito);
+      if (!o) continue;
+      const i = v.hito;
+      const p = o.q;
+      const portada = escena.portadas[i];
+      if (!portada) continue;
+      gsap.killTweensOf(portada.entrada);
+      portada.entrada.t = 1;
+      const u = portada.material.uniforms;
+      const capa = refObrasScroll.current.get(v.clave);
+      if (!capa || capa.capas !== v.capas) {
+        // recién montada: este cuadro todavía no tiene dónde dibujar; lo real sigue su avance
+        v.capas.forEach(({ revela }, j) => {
+          const t = crecimientoCapa(v.capas, j, p);
+          if (revela.tipo === 'carta') u.uCorte.value = t;
+          else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = t;
+        });
+        continue;
       }
-      // las líneas de la ficha: sólo cuando la ficha ya muestra este hito
-      if (refMostrado.current !== i) return null;
-      const r = panel.querySelector(`.${revela.clase}`)?.getBoundingClientRect();
-      if (!r || r.width < 4) return null;
-      const x0 = r.left - base.left;
-      const y0 = r.top - base.top;
-      const x1 = r.right - base.left;
-      const y1 = r.bottom - base.top;
-      return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-    });
-    obraActual.actualizar(p, quads, (j, t) => {
-      const { revela } = capas[j];
-      if (revela.tipo === 'carta') u.uCorte.value = Math.max(0, Math.min(1, t));
-      else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = Math.max(0, Math.min(1, t));
-      else if (revela.tipo === 'fila') {
-        const el = panel.querySelector(`.${revela.clase}`);
-        if (refMostrado.current === i) recortar(el, t);
-        else if (el) el.style.clipPath = '';
-      }
-    });
+      const capas = v.capas;
+      const quads = capas.map(({ revela }) => {
+        if (revela.tipo === 'carta') return (t) => escena.esquinas(i, { x0: 0, y0: 0, x1: t, y1: t });
+        if (revela.tipo === 'zona') {
+          const { z } = revela;
+          return (t) => escena.esquinas(i, { x0: z.x0, y0: z.y0, x1: z.x0 + (z.x1 - z.x0) * t, y1: z.y0 + (z.y1 - z.y0) * t });
+        }
+        // las líneas de la ficha: sólo cuando la ficha ya muestra este hito
+        if (refMostrado.current !== i) return null;
+        const rf = panel.querySelector(`.${revela.clase}`)?.getBoundingClientRect();
+        if (!rf || rf.width < 4) return null;
+        const x0 = rf.left - base.left;
+        const y0 = rf.top - base.top;
+        const x1 = rf.right - base.left;
+        const y1 = rf.bottom - base.top;
+        return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+      });
+      capa.actualizar(p, quads, (j, t) => {
+        const { revela } = capas[j];
+        if (revela.tipo === 'carta') u.uCorte.value = Math.max(0, Math.min(1, t));
+        else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = Math.max(0, Math.min(1, t));
+        else if (revela.tipo === 'fila') {
+          const el = panel.querySelector(`.${revela.clase}`);
+          if (refMostrado.current === i) recortar(el, t);
+          else if (el) el.style.clipPath = '';
+        }
+      });
+    }
   };
   const refConstruirEnCuadro = useRef(construirEnCuadro);
   refConstruirEnCuadro.current = construirEnCuadro;
@@ -1440,14 +1216,18 @@ export default function ReelHitos({ hitos, alFallar }) {
       });
       setEntro(false);
       refConstruidas.current.clear();
-      refAvance.current = null;
-      refFrente.current = null;
-      refSentido.current = { fase: null, sentido: 1 };
+      refObras.current.clear();
+      refSentidoObras.current = { fase: null, sentido: 1 };
       limpiarRevelado();
       refPrerevelado.current = false;
-      // desarmado el plano, se sigue subiendo hasta el hero
       soltarIntro();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // (glow-up) el scroll no se fuerza hacia el hero: si mientras se desarmaba se volvió a bajar y
+      // la sección sigue a la vista, los agentes la arman de nuevo (si no, queda vacía y la intro no
+      // se volvía a disparar, porque ya se estaba pasado su punto de arranque)
+      requestAnimationFrame(() => {
+        const caja = refContenedor.current?.getBoundingClientRect();
+        if (caja && caja.top < window.innerHeight * 0.3 && caja.bottom > window.innerHeight * 0.5 && !refEntro.current) setIntro('esperando');
+      });
     }
   }, [soltarIntro, limpiarRevelado]);
 
@@ -1509,26 +1289,14 @@ export default function ReelHitos({ hitos, alFallar }) {
       const m = medir();
       if (!m) return;
       const alto = window.innerHeight;
-      if (m.caja.top > 1) {
-        // Entre el hero y la sección no se queda a mitad de camino: bajando, con que la hoja
-        // haya asomado, termina de subir; subiendo, vuelve al hero.
-        if (m.caja.top < alto * (sentido > 0 ? 0.9 : 0.4)) scrollA(m.arriba);
-        else if (sentido < 0 && m.caja.top < alto - 2 && m.arriba - alto >= 0) scrollA(m.arriba - alto);
-        return;
-      }
-      if (m.caja.bottom < alto - 1) {
-        // el panel ya se despegó: bajando se termina de pasar a Proyectos; subiendo, con casi todo
-        // el panel a la vista, se vuelve a "Hoy"
-        if (m.caja.bottom > alto * 0.74) scrollA(sentido > 0 ? m.fin : m.arriba + m.largo);
-        return;
-      }
-      // En la cola ("Hoy" fijo, Proyectos asomando): con un empujón decidido hacia abajo se pasa
-      // a Proyectos; si no, se vuelve a "Hoy". Quedarse a mitad dejaba la regla de años tapada.
+      // (glow-up) entre el hero y la sección no hay imán: el paso queda donde lo deja el scroll
+      if (m.caja.top > 1) return;
+      // El panel ya se despegó, o se está en la cola: ahí manda el puente a Proyectos (portadas →
+      // conectores → tarjetas), atado al scroll. No se imanta: se puede quedar a mitad y volver.
+      if (m.caja.bottom < alto - 1) return;
       const enCola = -m.caja.top - m.largo;
       if (m.cola > 0 && enCola > 2) {
         if (refPuertaCerrada.current()) irA(N - 1);
-        else if (sentido > 0 && enCola > Math.min(m.cola * 0.4, alto * 0.12)) pasarAProyectos();
-        else irA(N - 1);
         return;
       }
       // un avance corto pero decidido (un giro de rueda, un deslizamiento) va al hito siguiente;
@@ -1548,7 +1316,6 @@ export default function ReelHitos({ hitos, alFallar }) {
       const previo = ultimoY;
       if (y !== ultimoY) sentido = y > ultimoY ? 1 : -1;
       ultimoY = y;
-      if (y < previo) refVolver.current?.(previo, y);
       clearTimeout(espera);
       espera = setTimeout(asentar, ESPERA_IMAN_MS);
     };
@@ -1583,7 +1350,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       window.removeEventListener('touchend', alTocar);
       window.removeEventListener('touchcancel', alTocar);
     };
-  }, [medir, scrollA, irA, cortarAnimacion, pasarAProyectos, N]);
+  }, [medir, scrollA, irA, cortarAnimacion, N]);
 
   // ---- teclado: flechas = un hito; Inicio y Fin = primero y último -------------------------
   const refActivo = useRef(0);
@@ -1808,19 +1575,10 @@ export default function ReelHitos({ hitos, alFallar }) {
     <section id="sobre-mi" ref={refContenedor} className={styles.contenedor} style={{ '--pasos': N - 1 }} aria-labelledby="titulo-sobre-mi">
       {/* sólo para medir la cola (ver medir) */}
       <div className={styles.cola} data-cola aria-hidden="true" />
-      {/* La puerta por la que se pasa a Proyectos: una hoja igual a la del dibujo, apoyada sobre el
-          vano. Va debajo del panel (que tiene el vano recortado), así sólo se la ve por el hueco. */}
-      <div ref={refPortal} className={styles.portal} data-activo="false" data-claro={claro} aria-hidden="true">
-        <div className={styles.vano} style={{ width: HOJA.w, height: HOJA.h }}>
-          <span className={styles.bruma} />
-          <span className={styles.jamba} />
-          <span className={styles.hoja}>
-            <span className={styles.cuarteron} />
-            <span className={styles.cuarteron} />
-            <span className={styles.picaporte} />
-          </span>
-        </div>
-      </div>
+      {/* la bajada de la línea del sitio desde el hero hasta el borde del panel (ver LineaReel) */}
+      <svg ref={refLineaHero} className={styles.lineaHero} aria-hidden="true">
+        <path stroke={COLOR_LINEA.c0} />
+      </svg>
       <div
         ref={refPanel}
         className={styles.panel}
@@ -1839,6 +1597,7 @@ export default function ReelHitos({ hitos, alFallar }) {
         <EsqueletoEscena visible={!escenaLista && cerca} etiqueta="Cargando mi recorrido" />
         <div className={styles.luz} aria-hidden="true" />
         <div className={styles.grano} aria-hidden="true" />
+        <LineaReel total={N} refPoner={refLineaReel} refHero={refLineaHero} />
 
         <h2 id="titulo-sobre-mi" ref={refTitular} className={styles.titular} style={{ '--letras': Math.max(...TITULAR.map((renglon) => renglon.length)) }}>
           <span className={styles.soloLectores}>Sobre mí: </span>
@@ -1952,7 +1711,24 @@ export default function ReelHitos({ hitos, alFallar }) {
             </li>
           ))}
         </ol>
-        {obra && !intro ? <ObraScroll key={obra.clave} ref={refObraScroll} capas={obra.capas} ancho={obra.ancho} alto={obra.alto} /> : null}
+        {!intro
+          ? obrasVista.map((v, k) => (
+              <ObraScroll
+                key={v.clave}
+                ref={(el) => {
+                  if (el) refObrasScroll.current.set(v.clave, el);
+                  else refObrasScroll.current.delete(v.clave);
+                }}
+                capas={v.capas}
+                ancho={v.ancho}
+                alto={v.alto}
+                conPildora={k === 0}
+                // encima de la ficha sólo la obra de la portada que la ficha muestra (sus agentes arman
+                // esos renglones); las de las vecinas, por debajo: no tapan el texto
+                debajoDeLaFicha={v.hito !== activo}
+              />
+            ))
+          : null}
         {intro && intro !== 'esperando' ? (
           <IntroAgentes
             key={intro.sentido}
@@ -1967,8 +1743,6 @@ export default function ReelHitos({ hitos, alFallar }) {
           />
         ) : null}
       </div>
-      {/* La luz (u oscuridad) del otro lado de la puerta: sale del vano y envuelve la pantalla al cruzar. */}
-      <div ref={refResplandor} className={styles.resplandor} aria-hidden="true" />
     </section>
   );
 }

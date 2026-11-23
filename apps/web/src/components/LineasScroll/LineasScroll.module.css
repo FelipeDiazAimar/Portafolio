@@ -1,0 +1,50 @@
+/* El cuerpo de la línea va detrás de todo: un z-index negativo pinta sobre el fondo de la página y
+   debajo de cualquier sección, texto o escena. */
+.lienzo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2; /* debajo del hero (z -1) */
+  pointer-events: none;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* El final de la línea (su último tramo) va por encima de las secciones, debajo del header y del
+   teletransporte: siempre se ve hacia dónde va la línea. */
+.punta {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 790;
+  pointer-events: none;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lienzo path,
+.punta g {
+  will-change: opacity;
+}
+
+
+/* El último tramo dentro de una sección con fondo propio (LineaSeccion): entre el fondo y el
+   contenido. El viewBox es la porción de la página que ocupa la sección. */
+.seccion {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

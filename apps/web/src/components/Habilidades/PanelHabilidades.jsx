@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { AnimatePresence, animate, motion, useInView, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { alCuadro } from '@/lib/movimiento.js';
 import { TECNOLOGIAS } from '@/data/tecnologias.js';
 import TextoTrazo from '@/components/TextoTrazo/TextoTrazo.jsx';
 import Buscador from './Buscador.jsx';
@@ -9,56 +10,52 @@ import estilos from './Panel.module.css';
 
 const SALIDA = [0.16, 1, 0.3, 1];
 
-// Número que cuenta desde 0 cuando aparece.
-function Contador({ hasta, activo }) {
+// Número que cuenta desde 0 a medida que la sección entra (y descuenta al subir).
+function Contador({ hasta }) {
   const ref = useRef(null);
   useEffect(() => {
-    if (!activo || !ref.current) return undefined;
-    const control = animate(0, hasta, {
-      duration: 1.6,
-      ease: SALIDA,
-      onUpdate: (v) => {
-        if (ref.current) ref.current.textContent = String(Math.round(v));
-      },
+    const nodo = ref.current;
+    if (!nodo || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const seccion = nodo.closest('section') ?? nodo;
+    let ultimo = -1;
+    return alCuadro(() => {
+      const r = seccion.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const p = Math.max(0, Math.min(1, (vh * 0.85 - r.top) / (vh * 0.6)));
+      const v = Math.round(hasta * (1 - Math.pow(1 - p, 3)));
+      if (v !== ultimo) {
+        ultimo = v;
+        nodo.textContent = String(v);
+      }
     });
-    return () => control.stop();
-  }, [activo, hasta]);
-  return <span ref={ref}>{activo ? 0 : hasta}</span>;
+  }, [hasta]);
+  return <span ref={ref}>{hasta}</span>;
 }
 
-// Texto letra por letra: cada una cae desde arriba, desenfocada, con un pequeño rebote.
-function Letras({ texto, activo, retraso = 0 }) {
+// Texto letra por letra (cada una sube desde su máscara, con el scroll; ver Revelador).
+function Letras({ texto, desde = 'top 85%', hasta = 'top 45%' }) {
   return (
-    <span aria-label={texto}>
+    <span aria-label={texto} data-revelar="letras" data-revelar-en="seccion" data-revelar-desde={desde} data-revelar-hasta={hasta}>
       {Array.from(texto).map((letra, i) => (
-        <motion.span
-          key={`${letra}-${i}`}
-          aria-hidden="true"
-          className={estilos.letra}
-          initial={{ opacity: 0, y: -14, filter: 'blur(6px)' }}
-          animate={activo ? { opacity: 1, y: 0, filter: 'blur(0px)' } : undefined}
-          transition={{ delay: retraso + i * 0.035, type: 'spring', stiffness: 380, damping: 18 }}
-        >
-          {letra === ' ' ? ' ' : letra}
-        </motion.span>
+        <span key={`${letra}-${i}`} aria-hidden="true" className={`rv-u ${estilos.letra}`}>
+          <span className="rv-i">{letra === ' ' ? ' ' : letra}</span>
+        </span>
       ))}
     </span>
   );
 }
 
-// Bajada palabra por palabra: cada una entra desenfocada y sube a su lugar.
-function Palabras({ texto, activo, retraso = 0 }) {
-  return texto.split(' ').map((palabra, i) => (
-    <motion.span
-      key={`${palabra}-${i}`}
-      className={estilos.palabra}
-      initial={{ opacity: 0, y: 12, filter: 'blur(9px)' }}
-      animate={activo ? { opacity: 1, y: 0, filter: 'blur(0px)' } : undefined}
-      transition={{ delay: retraso + i * 0.05, duration: 0.65, ease: SALIDA }}
-    >
-      {palabra}{' '}
-    </motion.span>
-  ));
+// Bajada palabra por palabra (con el scroll).
+function Palabras({ texto, desde = 'top 78%', hasta = 'top 25%' }) {
+  return (
+    <span data-revelar="palabras" data-revelar-en="seccion" data-revelar-desde={desde} data-revelar-hasta={hasta}>
+      {texto.split(' ').map((palabra, i) => (
+        <span key={`${palabra}-${i}`} className={`rv-u ${estilos.palabra}`}>
+          <span className="rv-i">{palabra} </span>
+        </span>
+      ))}
+    </span>
+  );
 }
 
 // Chispas que salen disparadas al cambiar de vista.
@@ -107,53 +104,32 @@ export default function PanelHabilidades({ alBuscar, alLimpiar, modo, alModo }) 
     mq.addEventListener('change', leer);
     return () => mq.removeEventListener('change', leer);
   }, []);
-  const dentro = useInView(ref, { amount: 0.3 });
   const reducido = useReducedMotion();
-  const [vuelta, setVuelta] = useState(0);
-  const antes = useRef(false);
   const [disparo, setDisparo] = useState(0); // chispas de la estrellita
-  // cada entrada nueva a la sección vuelve a armar el contenido, y por eso se vuelve a animar
-  useEffect(() => {
-    if (dentro && !antes.current) setVuelta((v) => v + 1);
-    antes.current = dentro;
-  }, [dentro]);
-
-  // La aparición es breve y no mueve la pantalla: se anima siempre (si no, con las animaciones del
-  // sistema desactivadas la sección entraba sin ningún efecto).
-  const activo = vuelta > 0;
+  // glow-up: la entrada ya no corre por tiempo: cada parte se arma con el scroll (Revelador) y se
+  // desarma al subir.
 
   return (
     <div ref={ref} className={estilos.panel}>
-      <div key={vuelta} className={estilos.contenido}>
+      <div className={estilos.contenido}>
         <p className={estilos.antetitulo}>
-          <motion.span
-            className={estilos.punto}
-            aria-hidden="true"
-            initial={{ scale: 0 }}
-            animate={activo ? { scale: 1 } : undefined}
-            transition={{ type: 'spring', stiffness: 500, damping: 14 }}
-          />
-          <Letras texto="STACK" activo={activo} />
+          <span className={estilos.punto} aria-hidden="true" />
+          <Letras texto="STACK" />
           <span aria-hidden="true">·</span>
           <span>
-            <Contador hasta={TECNOLOGIAS.length} activo={activo} /> tecnologías
+            <Contador hasta={TECNOLOGIAS.length} /> tecnologías
           </span>
         </p>
 
         <h2 className={estilos.titulo}>
           {/* Celular: texto plano. El trazo animado en SVG con interletrado negativo se amontonaba y
               vibraba en Safari del iPhone. */}
-          {movil ? <span className={estilos.tituloPlano}>Habilidades</span> : <TextoTrazo texto="Habilidades" claseTexto={estilos.tituloTrazo} duracion={2.2} grosor={2.2} alVer />}
+          {movil ? <span className={estilos.tituloPlano}>Habilidades</span> : <TextoTrazo texto="Habilidades" claseTexto={estilos.tituloTrazo} duracion={2.2} grosor={2.2} alVer alScroll />}
         </h2>
 
         <p className={estilos.bajada}>
-          <Palabras texto="Lo que uso para construir mis proyectos, de la base de datos a la última animación." activo={activo} retraso={0.55} />
-          <motion.span
-            className={estilos.pista}
-            initial={{ opacity: 0, x: -10 }}
-            animate={activo ? { opacity: 1, x: 0 } : undefined}
-            transition={{ delay: 1.5, duration: 0.8, ease: SALIDA }}
-          >
+          <Palabras texto="Lo que uso para construir mis proyectos, de la base de datos a la última animación." />
+          <span className={estilos.pista} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 62%" data-revelar-hasta="top 12%">
             {modo === 'arbol' ? (
               <>Tocá una esfera o una categoría. La estrella vuelve a la hélice.</>
             ) : (
@@ -162,15 +138,10 @@ export default function PanelHabilidades({ alBuscar, alLimpiar, modo, alModo }) 
                 <span className={estilos.tactil}>Deslizá el modelo para girarlo. Tocá una barra: explota.</span> La estrella abre el árbol.
               </>
             )}
-          </motion.span>
+          </span>
         </p>
 
-        <motion.div
-          className={estilos.fila}
-          initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }}
-          animate={activo ? { opacity: 1, y: 0, filter: 'blur(0px)' } : undefined}
-          transition={{ delay: 0.85, duration: 0.75, ease: SALIDA }}
-        >
+        <div className={estilos.fila} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 58%" data-revelar-hasta="top 5%">
           <Buscador alElegir={alBuscar} alLimpiar={alLimpiar} />
           <motion.button
             type="button"
@@ -192,7 +163,7 @@ export default function PanelHabilidades({ alBuscar, alLimpiar, modo, alModo }) 
             </svg>
             <Chispas disparo={disparo} />
           </motion.button>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

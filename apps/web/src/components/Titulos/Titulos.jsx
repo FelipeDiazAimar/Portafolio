@@ -7,6 +7,8 @@ import { TITULOS } from "@/data/titulos.js";
 import TitulosPlanos from "./TitulosPlanos.jsx";
 import VistaTitulo from "./VistaTitulo.jsx";
 import styles from "./Titulos.module.css";
+import TextoPartido from "@/components/Revelar/TextoPartido.jsx";
+import LineaTitulos from "./LineaTitulos.jsx";
 
 import { EsqueletoEscena } from '@/components/Esqueleto/Esqueleto.jsx';
 // título escrito y foto (si tiene), intercalados. Los datos están en src/data/titulos.js.
@@ -147,9 +149,18 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
       // el scroll lleva el carrusel; al quedarse quieto, se acomoda en la tarjeta más cercana
       let arrastre = null;
       let espera = 0;
+      // la intro 'rise' de la cinta (PC) sigue al scroll: sube mientras la sección entra
+      const introPorScroll = () => {
+        if (!escena.ponerIntro) return;
+        const r = seccion.getBoundingClientRect();
+        const vh = window.innerHeight;
+        escena.ponerIntro((vh * 0.95 - r.top) / (vh * 0.85));
+      };
+      introPorScroll();
       const alScroll = () => {
         const p = avance();
         escena.seguir(p);
+        introPorScroll();
         clearTimeout(espera);
         espera = setTimeout(() => {
           const r = seccion.getBoundingClientRect();
@@ -366,12 +377,14 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
       >
         <canvas ref={refLienzo} className={styles.lienzo} aria-hidden="true" />
         <EsqueletoEscena visible={!escenaLista} etiqueta="Cargando títulos" />
+        {/* la línea del sitio, como una hélice alrededor de la cinta (sólo en PC) */}
+        {modo === "horizontal" ? <LineaTitulos refEscena={refEscena} total={total} /> : null}
 
         <div className={styles.izquierda}>
           <h2 id="titulo-titulos" className={styles.rotulo}>
-            Títulos
+            <TextoPartido texto="Títulos" data-revelar="letras" data-revelar-en="seccion" data-revelar-desde="top 70%" data-revelar-hasta="top 20%" />
           </h2>
-          <p className={styles.contador} aria-hidden="true">
+          <p className={styles.contador} aria-hidden="true" data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 62%" data-revelar-hasta="top 12%">
             <span key={indiceTitulo} className={styles.cambia}>
               {numero(indiceTitulo + 1)}
             </span>
@@ -380,7 +393,7 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
           </p>
         </div>
 
-        <div className={styles.derecha} aria-live="polite" aria-atomic="true">
+        <div className={styles.derecha} aria-live="polite" aria-atomic="true" data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 55%" data-revelar-hasta="top 5%">
           <div key={t.clave} className={styles.cambia}>
             <p className={styles.sr}>
               Título {indiceTitulo + 1} de {titulos.length}:

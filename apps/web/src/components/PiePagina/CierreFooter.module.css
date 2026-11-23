@@ -53,19 +53,14 @@
   margin-left: 0.22em;
 }
 
+/* Cada letra aparece con el scroll (--avance 0..1 lo escribe CierreFooter): sube, se enfoca y se
+   asienta, una detrás de otra; subiendo, se desarma igual. */
 .letra {
+  --k: clamp(0, calc(var(--avance, 0) * (var(--n, 16) + 3) - var(--i)), 1);
   display: inline-block;
-  opacity: 0;
-  transform: translateY(0.4em) scale(0.94);
-  filter: blur(10px);
-  transition: opacity 0.7s ease-out, transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), filter 0.8s ease-out;
-  transition-delay: calc(var(--i) * 45ms);
-}
-
-.visible .letra {
-  opacity: 1;
-  transform: none;
-  filter: blur(0);
+  opacity: var(--k);
+  transform: translateY(calc((1 - var(--k)) * 0.45em)) scale(calc(0.94 + var(--k) * 0.06));
+  filter: blur(calc((1 - var(--k)) * 10px));
 }
 
 .punto {
@@ -82,7 +77,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .letra {
-    transition: none;
     opacity: 1;
     transform: none;
     filter: none;

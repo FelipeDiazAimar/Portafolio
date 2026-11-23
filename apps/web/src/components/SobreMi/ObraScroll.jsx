@@ -38,7 +38,19 @@ function Flecha({ color }) {
 // `capas`: [{ nombre }]. El reel llama a `actualizar(p, quads, alCapa)` en cada cuadro: `quads[j]`
 // es dónde está la capa j ahora (4 puntos, px del panel; o una función t → forma) o null; `alCapa(j, t, forma)` recibe
 // cuánto creció la caja de la capa j (0..1) y su forma, para recortar lo real a ella.
-const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto }, ref) {
+// Cuánto creció la caja de la capa j (0..1) con el avance p de la obra (lo usa el reel para
+// descubrir lo real de las obras que siguen en segundo plano, sin sus agentes a la vista).
+export function crecimientoCapa(capas, j, p) {
+  const tramos = capas.map((capa, k) => capa.tramo ?? [k, k + 1]);
+  const total = Math.max(1, ...tramos.map((t) => t[1]));
+  const ritmo = (FINAL - INICIO) / (total + VUELTA);
+  const s0 = INICIO + tramos[j][0] * ritmo;
+  const largo = (tramos[j][1] - tramos[j][0]) * ritmo;
+  const sDibujo = s0 + largo * VIAJE;
+  return Math.min(1, Math.max(0, (p - sDibujo) / (largo * (1 - VIAJE))));
+}
+
+const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto, conPildora = true, debajoDeLaFicha = false }, ref) {
   const refRaiz = useRef(null);
   const refFormas = useRef([]);
   const refChips = useRef([]);
@@ -160,7 +172,7 @@ const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto }, ref) {
   );
 
   return (
-    <div ref={refRaiz} className={styles.intro} style={{ opacity: 0 }} aria-hidden="true">
+    <div ref={refRaiz} className={styles.intro} style={{ opacity: 0, ...(debajoDeLaFicha ? { zIndex: 2 } : null) }} aria-hidden="true">
       <svg className={styles.plano} width={ancho} height={alto}>
         {capas.map((capa, j) => (
           <polygon key={capa.nombre + j} ref={(el) => (refFormas.current[j] = el)} className={styles.forma} style={{ '--c': agenteDe(j).color, opacity: 0 }} />
@@ -189,7 +201,7 @@ const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto }, ref) {
           </div>
         );
       })}
-      <div className={styles.pildora} style={{ opacity: 1 }}>
+      <div className={styles.pildora} style={{ opacity: conPildora ? 1 : 0 }}>
         <span className={styles.avatares}>
           {AGENTES.map((ag, a) => (
             <i key={ag.nombre} ref={(el) => (refAvatares.current[a] = el)} style={{ '--f': ag.fondo ?? ag.color }} data-fuera="false" />

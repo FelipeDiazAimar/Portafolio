@@ -185,7 +185,7 @@ const FRAGMENTOS = /* glsl */ `
 `;
 
 const COLORES = {
-  oscuro: { fondo: '#0b0d12', papel: '#11141b', borde: '#ffffff', fuerzaBorde: 0.16, sombra: '#000000', fuerzaSombra: 0.62, brillo: 0.05 },
+  oscuro: { fondo: '#010101', papel: '#11141b', borde: '#ffffff', fuerzaBorde: 0.16, sombra: '#000000', fuerzaSombra: 0.62, brillo: 0.05 },
   claro: { fondo: '#f5f6f8', papel: '#fbfaf6', borde: '#0b0d12', fuerzaBorde: 0.1, sombra: '#1b2740', fuerzaSombra: 0.4, brillo: 0.07 },
 };
 

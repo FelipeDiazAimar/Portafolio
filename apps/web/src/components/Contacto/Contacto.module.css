@@ -9,7 +9,7 @@
   margin-left: calc(50% - 50vw);
   /* el <main> deja un padding abajo: sin esto asomaba una franja entre la sección y el footer */
   margin-bottom: calc(-1 * var(--space-3));
-  overflow-x: clip;
+  overflow: clip;
   scroll-margin-top: 0;
   background: var(--contacto-fondo);
   color: var(--contacto-texto);
@@ -20,7 +20,7 @@
   content: '';
   position: absolute;
   inset: auto 0 0;
-  z-index: 1;
+  z-index: 0; /* encima de la luz, debajo de la línea del sitio */
   height: 26vh;
   background: linear-gradient(to bottom, transparent, var(--contacto-fondo) 92%);
   pointer-events: none;

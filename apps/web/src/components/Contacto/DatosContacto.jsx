@@ -11,7 +11,7 @@ export default function DatosContacto({ nombre }) {
   const { copiar, texto, copiando } = useCopiar();
   return (
     <div className={styles.datos}>
-      <div className={styles.marca}>
+      <div className={styles.marca} data-revelar="subir">
         {nombre}
         <span>Desarrollador Full Stack · San Francisco, Córdoba, Argentina</span>
         <a className={styles.cv} href="/CV-Felipe-Diaz-Aimar.pdf" download="CV-Felipe-Diaz-Aimar.pdf">
@@ -22,7 +22,7 @@ export default function DatosContacto({ nombre }) {
           <small>PDF</small>
         </a>
       </div>
-      <ul className={styles.lista}>
+      <ul className={styles.lista} data-revelar="grupo">
         {DATOS_CONTACTO.map((dato) => {
           const Icono = ICONOS_CONTACTO[dato.icono];
           return (

@@ -167,28 +167,63 @@ const MapaRadar = forwardRef(function MapaRadar({ recorrido, trabajos, actual, a
       ctx.shadowBlur = 4;
       ctx.fill();
       ctx.shadowBlur = 0;
-      // anillo de avance por pasillo
+      // anillo de avance: una sola línea fina del color de la línea del sitio, con un brillo suave;
+      // los cambios de pasillo son marcas chicas sobre la pista, y el tramo que se señala con el
+      // mouse se resalta con el color de ese trabajo
       const u = s / recorrido.largo;
-      for (const arco of geo.arcos) {
-        const rgb = colores[arco.i];
-        ctx.lineCap = 'round';
-        ctx.lineWidth = arco.i === sobre ? 6 : 4;
-        ctx.strokeStyle = `rgba(${rgb},0.22)`;
-        ctx.beginPath();
-        ctx.arc(c, c, RADIO + 9, arco.a0, arco.a1);
-        ctx.stroke();
-        const lleno = Math.min(1, Math.max(0, (u - arco.desde) / (arco.hasta - arco.desde)));
-        if (lleno > 0) {
-          ctx.strokeStyle = `rgb(${rgb})`;
-          ctx.beginPath();
-          ctx.arc(c, c, RADIO + 9, arco.a0, arco.a0 + (arco.a1 - arco.a0) * lleno);
-          ctx.stroke();
-        }
-      }
-      // marca del punto actual en el anillo
-      const a = -Math.PI / 2 + u * Math.PI * 2;
+      const R = RADIO + 9;
+      const inicio = -Math.PI / 2;
+      const a = inicio + u * Math.PI * 2;
+      ctx.lineCap = 'round';
+      // pista
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.09)';
       ctx.beginPath();
-      ctx.arc(c + Math.cos(a) * (RADIO + 9), c + Math.sin(a) * (RADIO + 9), 4, 0, Math.PI * 2);
+      ctx.arc(c, c, R, 0, Math.PI * 2);
+      ctx.stroke();
+      // tramo señalado
+      const marcado = sobre !== null ? geo.arcos.find((arco) => arco.i === sobre) : null;
+      if (marcado) {
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = `rgba(${colores[marcado.i]},0.55)`;
+        ctx.beginPath();
+        ctx.arc(c, c, R, marcado.a0, marcado.a1);
+        ctx.stroke();
+      }
+      // avance
+      if (u > 0.002) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(61,119,255,0.9)';
+        ctx.shadowBlur = 8;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#3d77ff';
+        ctx.beginPath();
+        ctx.arc(c, c, R, inicio, a);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // marcas de cambio de pasillo
+      for (const arco of geo.arcos) {
+        if (arco.desde <= 0) continue;
+        const am = inicio + arco.desde * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(c + Math.cos(am) * R, c + Math.sin(am) * R, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = arco.desde <= u ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)';
+        ctx.fill();
+      }
+      // punto actual
+      const px = c + Math.cos(a) * R;
+      const py = c + Math.sin(a) * R;
+      ctx.save();
+      ctx.shadowColor = 'rgba(61,119,255,1)';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#3d77ff';
+      ctx.fill();
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(px, py, 2.2, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
     };
@@ -210,7 +245,7 @@ const MapaRadar = forwardRef(function MapaRadar({ recorrido, trabajos, actual, a
 
   const mostrado = trabajos[sobre ?? actual];
   return (
-    <nav className={styles.radar} aria-label="Mapa del recorrido" style={{ '--acento': mostrado.acento }}>
+    <nav className={styles.radar} aria-label="Mapa del recorrido" style={{ '--acento': mostrado.acento }} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 50%" data-revelar-hasta="top 0%">
       <canvas
         ref={refLienzo}
         className={styles.radarLienzo}

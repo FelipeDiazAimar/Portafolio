@@ -1,7 +1,8 @@
 /* El footer sigue el tema del sitio (variables --contacto-* de globals.css). */
 .envoltorio {
   position: relative;
-  background: var(--contacto-fondo);
+  /* transparente (es el mismo tono que la página): la línea del sitio llega a su final por detrás */
+  background: transparent;
   color: var(--contacto-texto);
 }
 

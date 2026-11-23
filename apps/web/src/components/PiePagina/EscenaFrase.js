@@ -234,6 +234,14 @@ export class EscenaFrase {
     return { ancho: this.anchoTinta * e, alto: this.altoTinta * e };
   }
 
+  // Centro de la última letra (el punto final) en px del lienzo, con la letra ya en su lugar.
+  centroUltima(fontPx, width, height) {
+    const l = this.letras[this.letras.length - 1];
+    if (!l) return null;
+    const k = fontPx / FRASE_UPM;
+    return [width / 2 + l.casa.x * k, height / 2 - l.casa.y * k];
+  }
+
   setLayout(layout) {
     this.layout = layout;
     const { width, height, fontPx } = layout;
