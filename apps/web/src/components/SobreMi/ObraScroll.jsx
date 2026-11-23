@@ -38,6 +38,18 @@ function Flecha({ color }) {
 // `capas`: [{ nombre }]. El reel llama a `actualizar(p, quads, alCapa)` en cada cuadro: `quads[j]`
 // es dónde está la capa j ahora (4 puntos, px del panel; o una función t → forma) o null; `alCapa(j, t, forma)` recibe
 // cuánto creció la caja de la capa j (0..1) y su forma, para recortar lo real a ella.
+// Cuánto creció la caja de la capa j (0..1) con el avance p de la obra (lo usa el reel para
+// descubrir lo real de las obras que siguen en segundo plano, sin sus agentes a la vista).
+export function crecimientoCapa(capas, j, p) {
+  const tramos = capas.map((capa, k) => capa.tramo ?? [k, k + 1]);
+  const total = Math.max(1, ...tramos.map((t) => t[1]));
+  const ritmo = (FINAL - INICIO) / (total + VUELTA);
+  const s0 = INICIO + tramos[j][0] * ritmo;
+  const largo = (tramos[j][1] - tramos[j][0]) * ritmo;
+  const sDibujo = s0 + largo * VIAJE;
+  return Math.min(1, Math.max(0, (p - sDibujo) / (largo * (1 - VIAJE))));
+}
+
 const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto }, ref) {
   const refRaiz = useRef(null);
   const refFormas = useRef([]);

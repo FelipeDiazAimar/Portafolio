@@ -25,6 +25,9 @@ const ADORNOS = 7;
 const LUZ_PROPIA = 1;
 // ... y cuánto le suma la luz de la escena (apenas: da volumen sin cambiarle el color)
 const LUZ_ESCENA = 0;
+// el barniz de las tarjetas "plastificadas": apenas un satinado (con más, el destello de la luz
+// las velaba de blanco y no se parecían a las de la marquesina)
+const BARNIZ_TARJETA = { clearcoat: 0.12, clearcoatRoughness: 0.6, envMapIntensity: 0 };
 const PROPORCION = 293 / 406; // alto / ancho de una tarjeta de la marquesina
 const limitar = (x, a, b) => Math.min(b, Math.max(a, x));
 const azar = (a, b) => a + Math.random() * (b - a);
@@ -225,7 +228,7 @@ export async function precalentarPiezas() {
   imagen.colorSpace = THREE.SRGBColorSpace;
   imagen.needsUpdate = true;
   const materiales = [];
-  for (const barniz of [{ clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0 }, { clearcoat: 0, envMapIntensity: 0 }]) {
+  for (const barniz of [BARNIZ_TARJETA, { clearcoat: 0, envMapIntensity: 0 }]) {
     materiales.push(new THREE.MeshPhysicalMaterial({ map: imagen, emissiveMap: imagen, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, ...barniz }));
     materiales.push(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0x3366ff, roughness: 1, metalness: 0, ...barniz }));
   }
@@ -348,7 +351,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     // (así tiene el mismo color que en la marquesina) y la escena le suma apenas un poco de
     // volumen. Al aplanarse deja de depender de la luz del todo (ver convertirCuadro).
     const real = caras.get(clave);
-    const barniz = plastificada ? { clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0 } : { clearcoat: 0, envMapIntensity: 0 };
+    const barniz = plastificada ? BARNIZ_TARJETA : { clearcoat: 0, envMapIntensity: 0 };
     const cara = guardar(new THREE.MeshPhysicalMaterial({ map: real, emissiveMap: real, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, ...barniz }));
     const canto = guardar(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: cantos.get(clave), roughness: 1, metalness: 0, ...barniz }));
     // caras de la caja: +x, −x, +y, −y, +z (frente), −z (dorso)
