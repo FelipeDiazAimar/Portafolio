@@ -55,6 +55,7 @@ const FRAG = /* glsl */ `
   uniform vec3 u_c0;
   uniform vec3 u_c1;
   uniform float u_claro;
+  uniform float u_alfa;
   varying float vT;
   varying vec3 vNormal;
   varying vec3 vView;
@@ -72,7 +73,7 @@ const FRAG = /* glsl */ `
     c += base * smoothstep(u_show - 0.025, u_show, vT) * 0.35;
     // la cola nace del aire (Lusion: aoThreshold)
     float cola = smoothstep(0.0, max(0.03, u_ao * 0.12), vT);
-    gl_FragColor = vec4(c, cola);
+    gl_FragColor = vec4(c, cola * u_alfa);
   }
 `;
 
@@ -207,6 +208,7 @@ export function crearEscenaLineas({ lienzo, uniones, obtenerTema }) {
           u_c0: { value: new THREE.Color(colores.c0) },
           u_c1: { value: new THREE.Color(colores.c1) },
           u_claro: { value: claro ? 1 : 0 },
+          u_alfa: { value: 1 },
         },
       });
       const malla = new THREE.Mesh(geo, mat);
@@ -226,7 +228,7 @@ export function crearEscenaLineas({ lienzo, uniones, obtenerTema }) {
       curva.points.forEach((v) => {
         yMax = Math.max(yMax, -v.y);
       });
-      lineas.push({ malla, tabla, yMin: Math.min(yMin, J - vh * 1.3), yMax: yMax + 40, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0) });
+      lineas.push({ malla, tabla, J, yMin: Math.min(yMin, J - vh * 1.3), yMax: yMax + 40, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0) });
     });
   }
 
@@ -272,7 +274,12 @@ export function crearEscenaLineas({ lienzo, uniones, obtenerTema }) {
       u.u_show.value = limitar(s, 0, 1);
       u.u_strength.value = fuerza;
       u.u_time.value = tiempo;
-      l.malla.visible = visible && u.u_show.value > 0.0005;
+      // Sólo se ve mientras su unión cruza la pantalla: con una sección en reposo (la unión arriba
+      // o abajo de todo) se desvanece, así nunca queda encima de un contenido quieto.
+      const lejos = Math.abs(l.J - (y + vh * 0.5)) / vh;
+      const a = limitar((0.5 - lejos) / 0.14, 0, 1);
+      u.u_alfa.value = a * a * (3 - 2 * a);
+      l.malla.visible = visible && u.u_show.value > 0.0005 && u.u_alfa.value > 0.002;
       if (l.malla.visible) alguna = true;
     });
     if (alguna || pintado) {
