@@ -50,7 +50,7 @@ export function crecimientoCapa(capas, j, p) {
   return Math.min(1, Math.max(0, (p - sDibujo) / (largo * (1 - VIAJE))));
 }
 
-const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto, conPildora = true }, ref) {
+const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto, conPildora = true, debajoDeLaFicha = false }, ref) {
   const refRaiz = useRef(null);
   const refFormas = useRef([]);
   const refChips = useRef([]);
@@ -172,7 +172,7 @@ const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto, conPildo
   );
 
   return (
-    <div ref={refRaiz} className={styles.intro} style={{ opacity: 0 }} aria-hidden="true">
+    <div ref={refRaiz} className={styles.intro} style={{ opacity: 0, ...(debajoDeLaFicha ? { zIndex: 2 } : null) }} aria-hidden="true">
       <svg className={styles.plano} width={ancho} height={alto}>
         {capas.map((capa, j) => (
           <polygon key={capa.nombre + j} ref={(el) => (refFormas.current[j] = el)} className={styles.forma} style={{ '--c': agenteDe(j).color, opacity: 0 }} />

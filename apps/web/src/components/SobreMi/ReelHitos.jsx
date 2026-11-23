@@ -1721,6 +1721,9 @@ export default function ReelHitos({ hitos, alFallar }) {
                 ancho={v.ancho}
                 alto={v.alto}
                 conPildora={k === 0}
+                // encima de la ficha sólo la obra de la portada que la ficha muestra (sus agentes arman
+                // esos renglones); las de las vecinas, por debajo: no tapan el texto
+                debajoDeLaFicha={v.hito !== activo}
               />
             ))
           : null}
