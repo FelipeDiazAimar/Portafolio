@@ -1,8 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import { EVENTO_RENDIMIENTO, modoRendimiento } from '@/lib/rendimiento.js';
+// misma onda expansiva que el cambio de tema: el estado nuevo se revela en vivo
+import cambiarConOnda from './ondaTema.js';
 
 export { EVENTO_RENDIMIENTO, modoRendimiento };
 
@@ -28,17 +31,22 @@ export default function useRendimiento() {
     return () => window.removeEventListener(EVENTO_RENDIMIENTO, alCambiar);
   }, []);
 
-  const alternar = useCallback(() => {
+  // `origen`: el elemento (o el evento del clic) desde donde nace la animación.
+  const alternar = useCallback((origen) => {
     const nuevo = !modoRendimiento();
-    document.documentElement.setAttribute('data-rendimiento', String(nuevo));
+    const elemento = origen?.currentTarget ?? origen;
+    cambiarConOnda(elemento, () => {
+      document.documentElement.setAttribute('data-rendimiento', String(nuevo));
+      // sincrónico: el toggle tiene que quedar en su estado nuevo antes de la captura
+      flushSync(() => window.dispatchEvent(new CustomEvent(EVENTO_RENDIMIENTO, { detail: nuevo })));
+      // los lienzos 3D recalculan su densidad de píxeles al redimensionarse
+      window.dispatchEvent(new Event('resize'));
+    });
     try {
       window.localStorage.setItem(CLAVE, String(nuevo));
     } catch {
       /* sin almacenamiento */
     }
-    window.dispatchEvent(new CustomEvent(EVENTO_RENDIMIENTO, { detail: nuevo }));
-    // los lienzos 3D recalculan su densidad de píxeles al redimensionarse
-    window.dispatchEvent(new Event('resize'));
   }, []);
 
   return { activo, alternar };

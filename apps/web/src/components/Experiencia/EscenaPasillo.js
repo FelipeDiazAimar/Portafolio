@@ -496,6 +496,16 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     return m;
   }
 
+  // Carteles colgantes: con el modo rendimiento usan la textura con el brillo horneado.
+  const carteles = []; // { material, normal, brillante }
+  function aplicarCartel(c) {
+    const textura = rendimiento ? c.brillante : c.normal;
+    if (c.material.map === textura) return;
+    c.material.map = textura;
+    c.material.emissiveMap = textura;
+    c.material.needsUpdate = true;
+  }
+
   // Cartel colgante al comienzo de cada pasillo: período, puesto y lugar.
   function cartelEntrada(padre, trabajo, numero) {
     const soporte = new THREE.MeshStandardMaterial({ color: 0x2c3038, metalness: 0.9, roughness: 0.35 });
@@ -508,26 +518,42 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     marco.position.set(0, ALTO - 0.62, -3.4);
     marco.castShadow = true;
     padre.add(marco);
-    lamina(
-      padre,
-      [2.3, 0.6],
-      [0, ALTO - 0.62, -3.378],
-      (ctx, w, h) => {
-        ctx.fillStyle = '#0d1016';
-        ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = trabajo.acento;
-        ctx.fillRect(0, 0, w * 0.012, h);
-        ctx.font = fuente(Math.round(h * 0.17), 800);
-        ctx.fillText(`${String(numero).padStart(2, '0')} · ${trabajo.periodo}`.toUpperCase(), w * 0.04, h * 0.3);
-        ctx.fillStyle = '#f4f5f7';
-        ctx.font = fuente(Math.round(h * 0.3), 800);
-        ctx.fillText(trabajo.puesto, w * 0.04, h * 0.64);
-        ctx.fillStyle = '#9aa1ac';
-        ctx.font = fuente(Math.round(h * 0.15), 500);
-        ctx.fillText(trabajo.lugar, w * 0.04, h * 0.88);
-      },
-      { emisivo: 0.85, resolucion: 300 },
-    );
+    // `brillo`: el resplandor del texto horneado en la textura. Sin modo rendimiento lo pone el
+    // bloom del postprocesado; con el modo activo ese pase se apaga y el cartel quedaba opaco.
+    const dibujar = (ctx, w, h, brillo = false) => {
+      ctx.fillStyle = '#0d1016';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = trabajo.acento;
+      ctx.fillRect(0, 0, w * 0.012, h);
+      const texto = (str, x, y, color, px, peso, halo) => {
+        ctx.font = fuente(Math.round(px), peso);
+        ctx.fillStyle = color;
+        if (brillo) {
+          // un halo suave por debajo y el texto nítido encima, como el bloom
+          ctx.shadowColor = color;
+          ctx.shadowBlur = h * 0.045 * halo;
+          ctx.globalAlpha = 0.55;
+          ctx.fillText(str, x, y);
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+        }
+        ctx.fillText(str, x, y);
+      };
+      texto(`${String(numero).padStart(2, '0')} · ${trabajo.periodo}`.toUpperCase(), w * 0.04, h * 0.3, trabajo.acento, h * 0.17, 800, 0.6);
+      texto(trabajo.puesto, w * 0.04, h * 0.64, '#f4f5f7', h * 0.3, 800, 1);
+      texto(trabajo.lugar, w * 0.04, h * 0.88, '#9aa1ac', h * 0.15, 500, 0.5);
+    };
+    const { material } = lamina(padre, [2.3, 0.6], [0, ALTO - 0.62, -3.378], dibujar, { emisivo: 0.85, resolucion: 300 });
+    const normal = material.map;
+    const lienzo = document.createElement('canvas');
+    lienzo.width = normal.image.width;
+    lienzo.height = normal.image.height;
+    dibujar(lienzo.getContext('2d'), lienzo.width, lienzo.height, true);
+    const brillante = new THREE.CanvasTexture(lienzo);
+    brillante.colorSpace = THREE.SRGBColorSpace;
+    brillante.anisotropy = normal.anisotropy;
+    carteles.push({ material, normal, brillante });
+    aplicarCartel(carteles.at(-1));
   }
 
   // Marco de puerta al entrar a cada pasillo (metal pintado, con un filo de luz del color del trabajo).
@@ -1042,6 +1068,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     renderer.toneMapping = composer && !activo ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
     // las sombras se quedan sólo en los objetos interactivos: el resto del pasillo no las proyecta ni las recibe
     escena.traverse(sombraSegunModo);
+    carteles.forEach(aplicarCartel);
     renderer.shadowMap.needsUpdate = true;
     escena.traverse((o) => {
       for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) m.needsUpdate = true;
@@ -1697,6 +1724,10 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
           }
         }
       });
+      for (const c of carteles) {
+        c.normal.dispose();
+        c.brillante.dispose();
+      }
       for (const z of zonas) z.materiales.atlas.dispose();
       entorno.dispose();
       efectos.destruir();

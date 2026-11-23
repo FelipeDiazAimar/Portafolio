@@ -22,7 +22,7 @@ export default function RendimientoToggle() {
   return (
     <div ref={refToggle} className={styles.wrapper} onMouseMove={manejarMovimientoRaton}>
       <GlassSurface
-        width={176}
+        width={184}
         height={40}
         borderRadius={100}
         className={styles.track}
@@ -37,7 +37,7 @@ export default function RendimientoToggle() {
         blueOffset={14}
         displace={0.2}
       >
-        <button type="button" role="switch" aria-checked={activo} className={styles.button} onClick={alternar}>
+        <button type="button" role="switch" data-toggle-rendimiento="" aria-checked={activo} className={styles.button} onClick={alternar}>
           <span className={styles.etiqueta}>Modo rendimiento</span>
           <span className={styles.pista} data-activo={activo ? 'true' : 'false'} aria-hidden="true">
             <span className={styles.thumb} />
