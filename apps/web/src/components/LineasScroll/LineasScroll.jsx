@@ -14,7 +14,7 @@
 //   2. del final de Proyectos hasta el centro de abajo de la pantalla, donde empieza el pasillo,
 //   3. de la salida del pasillo hasta el final de la página.
 import { useEffect, useRef } from 'react';
-import { alCuadro, movimientoReducido, scroll, SecondOrderDynamics, limitar } from '@/lib/movimiento.js';
+import { alCuadro, movimientoReducido, scroll, limitar } from '@/lib/movimiento.js';
 import { aRuta, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './LineasScroll.module.css';
 
@@ -148,7 +148,7 @@ export default function LineasScroll() {
         });
         const tabla = tablaAvance(trazo, 1);
         const largoEncima = encima ? largoHasta(trazo, tabla, encima.desdeY) : 0;
-        return { ruta, cola, g, encima, largoEncima, trazo, tabla, yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
+        return { ruta, cola, g, encima, largoEncima, trazo, tabla, yMin, yMax, ultimo: '' };
       });
     };
 
@@ -164,13 +164,9 @@ export default function LineasScroll() {
       const yPunta = y + vh * 0.56 + limitar((y - (maximo - vh)) / vh, 0, 1) * vh * 0.7;
       for (const l of lineas) {
         const objetivo = largoHasta(l.trazo, l.tabla, yPunta) / l.trazo.largo;
-        let show;
-        if (l.primero) {
-          l.resorte.fijar(objetivo);
-          l.primero = false;
-          show = objetivo;
-        } else show = l.resorte.actualizar(dt, objetivo);
-        show = limitar(show, 0, 1);
+        // sin suavizado propio (el scroll ya viene suavizado por Lenis): así los tramos y las líneas de
+        // Sobre mí y del pasillo avanzan al mismo ritmo y se empalman sin huecos
+        const show = limitar(objetivo, 0, 1);
         const enVista = l.yMax > y - 60 && l.yMin < y + vh + 60;
         const op = enVista && show > 0.002 ? 1 : 0;
         const dibujado = l.trazo.largo * show;

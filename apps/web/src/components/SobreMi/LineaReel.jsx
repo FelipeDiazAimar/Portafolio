@@ -41,7 +41,9 @@ export default function LineaReel({ total, refPoner }) {
       const corrimiento = avance * recorrido;
       // la entrada sigue al scroll vertical mientras el panel sube; después, el reel
       const arriba = panel.getBoundingClientRect().top;
-      const vertical = largoHasta(entrada, tablaY, window.innerHeight * 0.72 - arriba);
+      // misma regla que la línea del resto del sitio (punta a la altura del 56 % de la pantalla): así
+      // empieza justo donde llega la del hero y se ven como un solo trazo
+      const vertical = largoHasta(entrada, tablaY, window.innerHeight * 0.56 - arriba);
       const largo = vertical < entrada.largo - 0.5 ? vertical : entrada.largo + largoHasta(horizontal, tablaX, corrimiento + W * PUNTA_X);
       const clave = `${corrimiento.toFixed(1)}|${largo.toFixed(1)}`;
       if (clave === ultimo) return;
