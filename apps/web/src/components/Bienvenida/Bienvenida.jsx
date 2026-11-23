@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { preload } from 'react-dom';
 import FondoUnicorn, { puedeMostrarUnicorn, SDK_UNICORN, ESCENA_AURORA } from '@/components/FondoUnicorn/FondoUnicorn.jsx';
 import Cargador from './Cargador.jsx';
+import CargadorRecarga from './CargadorRecarga.jsx';
 import VenomBoton from './VenomBoton.jsx';
 import { UBICACION_AURORA, ubicacionAurora } from '@/lib/aurora.js';
 import { bienvenidaTerminada, terminarBienvenida } from '@/lib/bienvenida.js';
@@ -276,11 +277,12 @@ export default function Bienvenida({ locale = 'es' }) {
     return () => el.removeAttribute('data-portada-texto');
   }, [esperaTexto]);
 
-  if (!visible) {
-    return null;
-  }
-
+  // El loader de recarga va siempre en el HTML (el CSS lo muestra sólo en una recarga sin portada).
+  // Mismo árbol con o sin portada, así no se remonta cuando ella se va.
   return (
+    <>
+      <CargadorRecarga />
+      {visible && (
     <section
       className={`${styles.splash} ${saliendo ? styles.saliendo : ''} ${auroraLista && aurora ? styles.conAurora : ''} ${esperaTexto ? styles.esperaTexto : ''}`}
       aria-label={t.ariaLabel}
@@ -328,5 +330,7 @@ export default function Bienvenida({ locale = 'es' }) {
         <IconFlecha />
       </VenomBoton>
     </section>
+      )}
+    </>
   );
 }
