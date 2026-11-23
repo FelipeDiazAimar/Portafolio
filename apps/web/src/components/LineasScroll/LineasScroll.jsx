@@ -15,7 +15,7 @@
 //   3. de la salida del pasillo hasta el final de la página.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, SecondOrderDynamics, limitar } from '@/lib/movimiento.js';
-import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -46,11 +46,13 @@ function tramos(vw, vh) {
   const R = Math.min(vw, vh) * 0.13;
   return [
     {
-      // por la parte baja del hero (lejos del retrato y del nombre) y de ahí a Sobre mí
-      puntos: [[X(-0.06), vh * 0.72], [X(0.22), vh * 0.92], [X(0.55), s.top - vh * 0.04], [X(0.28), s.top + vh * 0.32], [X(-0.03), s.top + vh * 0.66]],
+      // por la parte baja del hero (lejos del retrato y del nombre) hasta el borde de arriba de
+      // Sobre mí, justo donde arranca la línea del reel (ENTRADA_REEL), llegando hacia abajo
+      puntos: [[X(-0.06), vh * 0.8], [X(0.14), vh * 0.93], [X(ENTRADA_REEL), s.top - vh * 0.22], [X(ENTRADA_REEL), s.top + 2]],
       lazos: [],
-      // sin final por encima: acá nunca pasa sobre el retrato
-      punta: [Infinity, -Infinity],
+      punta: [-Infinity, Infinity],
+      // entero por encima: así se ve sobre el fundido del borde de Sobre mí (no toca el retrato)
+      encima: true,
     },
     {
       puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
@@ -104,7 +106,7 @@ export default function LineasScroll() {
       grupo.replaceChildren();
       grupoPunta.replaceChildren();
       const ancho = grosorLinea(vw);
-      lineas = lista.map(({ puntos, lazos, punta }) => {
+      lineas = lista.map(({ puntos, lazos, punta, encima = false }) => {
         const guia = spline(puntos);
         const trazo = trazar(
           guia,
@@ -138,7 +140,7 @@ export default function LineasScroll() {
           yMin = Math.min(yMin, y);
           yMax = Math.max(yMax, y);
         });
-        return { ruta, cola, g, punta, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
+        return { ruta, cola, g, punta, encima, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
       });
     };
 
@@ -162,7 +164,7 @@ export default function LineasScroll() {
         const op = enVista && show > 0.002 ? 1 : 0;
         const dibujado = l.trazo.largo * show;
         // la punta, por encima de todo: mientras se está dibujando y es de este tramo
-        const conPunta = op && show < 0.999 && yPunta > l.punta[0] && yPunta < l.punta[1];
+        const conPunta = op && (l.encima || (show < 0.999 && yPunta > l.punta[0] && yPunta < l.punta[1]));
         const clave = `${op}|${conPunta}|${dibujado.toFixed(1)}`;
         if (clave === l.ultimo) continue;
         l.ultimo = clave;
@@ -170,7 +172,7 @@ export default function LineasScroll() {
         l.ruta.style.strokeDashoffset = (l.trazo.largo - dibujado).toFixed(1);
         l.g.style.opacity = conPunta ? '1' : '0';
         if (conPunta) {
-          const desde = Math.max(0, dibujado - LARGO_PUNTA);
+          const desde = l.encima ? 0 : Math.max(0, dibujado - LARGO_PUNTA);
           l.cola.style.strokeDasharray = `${(dibujado - desde).toFixed(1)} ${l.trazo.largo * 2}`;
           l.cola.style.strokeDashoffset = (-desde).toFixed(1);
         }

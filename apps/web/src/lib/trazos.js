@@ -165,3 +165,17 @@ export function puntoEnLargo(trazo, largo) {
   const f = (largo - largos[a]) / Math.max(1e-6, largos[b] - largos[a]);
   return [puntos[a][0] + (puntos[b][0] - puntos[a][0]) * f, puntos[a][1] + (puntos[b][1] - puntos[a][1]) * f];
 }
+
+// Dónde entra la línea en Sobre mí: el punto del borde de arriba del panel (fracción del ancho) en
+// que termina el tramo del hero y arranca la línea del reel. Así las dos se tocan.
+export const ENTRADA_REEL = 0.3;
+
+// Une dos trazos (el segundo empieza donde termina el primero).
+export function unirTrazos(a, b) {
+  const puntos = [...a.puntos, ...b.puntos.slice(1)];
+  const largos = [0];
+  for (let k = 1; k < puntos.length; k += 1) {
+    largos.push(largos[k - 1] + Math.hypot(puntos[k][0] - puntos[k - 1][0], puntos[k][1] - puntos[k - 1][1]));
+  }
+  return { puntos, largos, largo: largos[largos.length - 1] };
+}
