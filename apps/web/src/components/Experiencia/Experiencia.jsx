@@ -12,6 +12,7 @@ import DetalleObjeto from './DetalleObjeto.jsx';
 import Joystick from './Joystick.jsx';
 import styles from './Experiencia.module.css';
 
+import { EsqueletoEscena } from '@/components/Esqueleto/Esqueleto.jsx';
 // Alto de scroll por metro de pasillo (en svh): define qué tan rápido se camina.
 const SVH_POR_METRO = 6;
 
@@ -91,6 +92,7 @@ export default function Experiencia() {
 }
 
 function Pasillo({ trabajos, alFallar }) {
+  const [escenaLista, setEscenaLista] = useState(false);
   const recorrido = useMemo(() => armarRecorrido(trabajos), [trabajos]);
   const { tema } = useTema();
   const refSeccion = useRef(null);
@@ -221,6 +223,7 @@ function Pasillo({ trabajos, alFallar }) {
         return;
       }
       refEscena.current = escena;
+      setEscenaLista(true);
       const alRendimiento = (e) => escena.fijarRendimiento(Boolean(e.detail));
       window.addEventListener('portafolio:rendimiento', alRendimiento);
 
@@ -566,6 +569,7 @@ function Pasillo({ trabajos, alFallar }) {
     >
       <div ref={refEscenario} className={styles.escenario}>
         <canvas ref={refLienzo} className={styles.lienzo} aria-hidden="true" />
+        <EsqueletoEscena visible={!escenaLista} etiqueta="Cargando la experiencia" />
         <div className={styles.vineta} aria-hidden="true" />
         <canvas ref={refEscaneo} className={styles.escaneo} aria-hidden="true" />
         <div ref={refLuz} className={styles.luzFinal} aria-hidden="true" />

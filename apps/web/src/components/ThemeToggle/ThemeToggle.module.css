@@ -120,4 +120,30 @@
 /* Por encima de la portada de Bienvenida mientras está (src/lib/bienvenida.js). */
 :global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .wrapper {
   z-index: 10000;
+  /* en la portada los toggles cargan últimos: después del botón (que termina de entrar a ~1.75 s) */
+  opacity: 0;
+  animation: aparecerToggle 0.7s cubic-bezier(0.16, 1, 0.3, 1) 2.05s forwards;
+}
+
+/* esperan al texto de la portada (que a su vez espera a la aurora): ver data-portada-texto en Bienvenida.jsx */
+:global(html:not([data-sin-bienvenida]):not([data-portada-fuera]):not([data-portada-texto])) .wrapper {
+  animation-play-state: paused;
+}
+
+@keyframes aparecerToggle {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .wrapper {
+    opacity: 1;
+    animation: none;
+  }
 }

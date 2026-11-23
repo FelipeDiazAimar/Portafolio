@@ -15,6 +15,7 @@ import { hayWebGL } from '@/lib/soporteWebGL.js';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import estilos from './Habilidades.module.css';
 
+import { EsqueletoEscena } from '@/components/Esqueleto/Esqueleto.jsx';
 // Habilidades: un xilófono de vidrio con una barra por tecnología (adaptado de
 // https://github.com/Sujenphea/xylophone, MIT). La cinta de barras avanza sola y con el scroll de
 // la página; cada barra se enciende (con su nombre) al pasar por el foco, y pasar el mouse por
@@ -293,6 +294,7 @@ export default function Habilidades() {
               onPointerLeave={alSalir}
               onDoubleClick={() => refMotor.current?.restablecerVista()}
             />
+            <EsqueletoEscena visible={!listo} etiqueta="Cargando la hélice de tecnologías" />
             {listo && <MarcaUso refMarca={refMarca} tecnologia={senalada} />}
             {listo && (
               <div className={estilos.controles} role="group" aria-label="Vista del modelo">

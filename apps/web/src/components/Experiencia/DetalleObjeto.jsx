@@ -5,6 +5,7 @@ import { tecnologiaPorId } from '@/data/tecnologias.js';
 import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import styles from './Experiencia.module.css';
 
+import { ImagenCarga } from '@/components/Esqueleto/Esqueleto.jsx';
 const proyectoPorSlug = (slug) => (slug ? (proyectos.find((p) => p.slug === slug) ?? null) : null);
 
 const ESTADOS = { produccion: 'En producción', demo: 'Demo', desarrollo: 'En desarrollo' };
@@ -69,14 +70,14 @@ export default function DetalleObjeto({ objeto, trabajo, etapa, etapas, hermanos
         <div className={styles.detalleIntro}>
           {proyecto?.imagenes?.portada ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className={styles.detalleMiniatura} src={proyecto.imagenes.portada} alt="" loading="lazy" decoding="async" />
+            <ImagenCarga className={styles.detalleMiniatura} src={proyecto.imagenes.portada} alt="" loading="lazy" decoding="async" />
           ) : null}
           <div>
             {proyecto ? (
               <p className={styles.detalleCliente}>
                 {proyecto.imagenes?.logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={proyecto.imagenes.logo} alt="" className={styles.detalleLogo} />
+                  <ImagenCarga src={proyecto.imagenes.logo} alt="" className={styles.detalleLogo} />
                 ) : null}
                 {proyecto.cliente}
               </p>
@@ -176,7 +177,7 @@ export default function DetalleObjeto({ objeto, trabajo, etapa, etapas, hermanos
                   <a href={`/proyectos/${p.slug}`}>
                     {p.imagenes?.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imagenes.logo} alt="" />
+                      <ImagenCarga src={p.imagenes.logo} alt="" />
                     ) : null}
                     <span>
                       <b>{p.titulo}</b>

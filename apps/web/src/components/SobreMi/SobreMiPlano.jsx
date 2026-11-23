@@ -5,6 +5,7 @@ import { dividirResaltado } from '@/lib/resaltado.js';
 import { TITULAR } from './titular.js';
 import styles from './SobreMiPlano.module.css';
 
+import { ImagenCarga } from '@/components/Esqueleto/Esqueleto.jsx';
 // Sin WebGL (o si el contexto se pierde): los mismos siete hitos, uno debajo del otro, con su
 // diorama como imagen. Sin scroll guiado ni 3D: una línea de tiempo que se lee de corrido.
 export default function SobreMiPlano({ hitos }) {
@@ -37,7 +38,7 @@ export default function SobreMiPlano({ hitos }) {
             </div>
             <div className={styles.figura}>
               {/* eslint-disable-next-line @next/next/no-img-element -- next/image rasteriza los SVG y les quita la animación */}
-              <img src={`/hitos/diorama-${hito.id}-${claro ? 'claro' : 'oscuro'}.svg`} alt="" width="800" height="600" loading="lazy" decoding="async" />
+              <ImagenCarga src={`/hitos/diorama-${hito.id}-${claro ? 'claro' : 'oscuro'}.svg`} alt="" width="800" height="600" loading="lazy" decoding="async" />
             </div>
           </li>
         ))}

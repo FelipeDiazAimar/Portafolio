@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import './LogoLoop.css';
 
+import { ImagenCarga } from '@/components/Esqueleto/Esqueleto.jsx';
 const ANIMATION_CONFIG = { SMOOTH_TAU: 0.25, MIN_COPIES: 2, COPY_HEADROOM: 2 };
 
 const toCssLength = value => (typeof value === 'number' ? `${value}px` : (value ?? undefined));
@@ -241,7 +242,8 @@ export const LogoLoop = memo(
             {item.node}
           </span>
         ) : (
-          <img
+          <ImagenCarga
+            anchoMinimo="calc(var(--logoloop-logoHeight, 28px) * 2.2)"
             src={item.src}
             srcSet={item.srcSet}
             sizes={item.sizes}

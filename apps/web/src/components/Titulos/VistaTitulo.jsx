@@ -6,6 +6,7 @@ import { Mrs_Saint_Delafield } from "next/font/google";
 import { PERSONA } from "@/data/titulos.js";
 import styles from "./VistaTitulo.module.css";
 
+import { ImagenCarga } from '@/components/Esqueleto/Esqueleto.jsx';
 // letra manuscrita para la firma propia
 const manuscrita = Mrs_Saint_Delafield({
   weight: "400",
@@ -486,7 +487,7 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
                   ) : null}
                   <header className={styles.encabezado}>
                     {d.logo ? (
-                      <img
+                      <ImagenCarga
                         className={styles.logo}
                         src={d.logo}
                         alt={`Logo de ${d.institucion}`}
@@ -567,7 +568,7 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
                       ))}
                     </div>
                     {d.logoPie ? (
-                      <img className={styles.logoPie} src={d.logoPie} alt="" />
+                      <ImagenCarga className={styles.logoPie} src={d.logoPie} alt="" />
                     ) : (
                       <span className={styles.selloRelieve} aria-hidden="true">
                         {d.sigla ?? ""}
@@ -594,7 +595,7 @@ export default function VistaTitulo({ tarjeta, origen, alMostrar, alCerrar }) {
             }}
             {...propsLupa}
           >
-            <img
+            <ImagenCarga
               id={idTitulo}
               src={tarjeta.imagen}
               alt={`${tarjeta.nombre}, ${tarjeta.lugar}`}

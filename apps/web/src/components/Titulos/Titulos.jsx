@@ -8,6 +8,7 @@ import TitulosPlanos from "./TitulosPlanos.jsx";
 import VistaTitulo from "./VistaTitulo.jsx";
 import styles from "./Titulos.module.css";
 
+import { EsqueletoEscena } from '@/components/Esqueleto/Esqueleto.jsx';
 // título escrito y foto (si tiene), intercalados. Los datos están en src/data/titulos.js.
 const TARJETAS = TITULOS.flatMap((t, i) => {
   const comun = { ...t, indiceTitulo: i };
@@ -76,6 +77,7 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
   const refLienzo = useRef(null);
   const refEscena = useRef(null);
   const [actual, setActual] = useState(0);
+  const [escenaLista, setEscenaLista] = useState(false);
   const refActual = useRef(0);
   refActual.current = actual;
   // tarjeta abierta: { indice, origen } (origen: centro y tamaño en la pantalla)
@@ -127,6 +129,7 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
         return;
       }
       refEscena.current = escena;
+      setEscenaLista(true);
 
       const avance = () => {
         const r = seccion.getBoundingClientRect();
@@ -362,6 +365,7 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
         data-modo={modo ?? "vertical"}
       >
         <canvas ref={refLienzo} className={styles.lienzo} aria-hidden="true" />
+        <EsqueletoEscena visible={!escenaLista} etiqueta="Cargando títulos" />
 
         <div className={styles.izquierda}>
           <h2 id="titulo-titulos" className={styles.rotulo}>

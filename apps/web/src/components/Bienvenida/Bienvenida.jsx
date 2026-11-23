@@ -3,12 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { preload } from 'react-dom';
 import FondoUnicorn, { puedeMostrarUnicorn, SDK_UNICORN, ESCENA_AURORA } from '@/components/FondoUnicorn/FondoUnicorn.jsx';
+import Cargador from './Cargador.jsx';
 import VenomBoton from './VenomBoton.jsx';
 import { UBICACION_AURORA, ubicacionAurora } from '@/lib/aurora.js';
 import { bienvenidaTerminada, terminarBienvenida } from '@/lib/bienvenida.js';
 import { prefiereMovimientoReducido } from '@/lib/entrada.js';
 import { EVENTO_RENDIMIENTO } from '@/lib/rendimiento.js';
 import styles from './Bienvenida.module.css';
+
+// Loader previo: tiempo mínimo a la vista y tope máximo (ms).
+const CARGADOR_MIN_MS = 1800;
+const CARGADOR_TOPE_MS = 7000;
+// Cuánto dura el fade del loader antes de que empiece a entrar la portada (>= transición de Cargador.module.css).
+const CARGADOR_SALIDA_MS = 500;
 
 // Lo que tarda la portada en subir (igual que la transición de .saliendo en el CSS).
 const SALIDA_MS = 1000;
@@ -236,13 +243,42 @@ export default function Bienvenida({ locale = 'es' }) {
     setTexto((actual) => actual ?? 'normal');
   }
 
+  // Con la aurora configurada, el texto arranca en pausa (ya desde el HTML del servidor) hasta
+  // que se decide si hay escena; sin ella, la clase ni aparece y el texto entra enseguida.
+  // Loader previo: tapa la portada hasta que la escena arrancó (o se decidió entrar sin ella), con un
+  // mínimo para que no parpadee y un tope por si algo no llega.
+  const [minimoCargador, setMinimoCargador] = useState(false);
+  const [topeCargador, setTopeCargador] = useState(false);
+  useEffect(() => {
+    const m = setTimeout(() => setMinimoCargador(true), CARGADOR_MIN_MS);
+    const t = setTimeout(() => setTopeCargador(true), CARGADOR_TOPE_MS);
+    return () => {
+      clearTimeout(m);
+      clearTimeout(t);
+    };
+  }, []);
+  const cargando = !(topeCargador || (minimoCargador && (auroraLista || texto)));
+  // Transición loader → portada: el loader se desvanece (CSS de Cargador) y recién después entra el
+  // contenido, en escalera. Hasta entonces la portada sigue en pausa.
+  const [cargadorSalio, setCargadorSalio] = useState(false);
+  useEffect(() => {
+    if (cargando) return undefined;
+    const t = setTimeout(() => setCargadorSalio(true), CARGADOR_SALIDA_MS);
+    return () => clearTimeout(t);
+  }, [cargando]);
+  const esperaTexto = (UBICACION_AURORA === 'bienvenida' && !texto) || !cargadorSalio;
+
+  // los toggles del header (fuera de este árbol) cargan después del texto: les avisa por <html>
+  useEffect(() => {
+    const el = document.documentElement;
+    if (esperaTexto) el.removeAttribute('data-portada-texto');
+    else el.setAttribute('data-portada-texto', '');
+    return () => el.removeAttribute('data-portada-texto');
+  }, [esperaTexto]);
+
   if (!visible) {
     return null;
   }
-
-  // Con la aurora configurada, el texto arranca en pausa (ya desde el HTML del servidor) hasta
-  // que se decide si hay escena; sin ella, la clase ni aparece y el texto entra enseguida.
-  const esperaTexto = UBICACION_AURORA === 'bienvenida' && !texto;
 
   return (
     <section
@@ -285,7 +321,9 @@ export default function Bienvenida({ locale = 'es' }) {
         </a>
       </div>
 
-      <VenomBoton saliendo={saliendo} texto={t.boton} onClick={salir} pausado={esperaTexto}>
+      <Cargador visible={cargando} />
+
+      <VenomBoton saliendo={saliendo || cargando} texto={t.boton} onClick={salir} pausado={esperaTexto}>
         <span>{t.boton}</span>
         <IconFlecha />
       </VenomBoton>

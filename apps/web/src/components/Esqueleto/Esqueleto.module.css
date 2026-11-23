@@ -1,0 +1,101 @@
+/* Skeleton loaders compartidos. Colores derivados del texto del tema (--color-fg), así valen en claro
+   y en oscuro sin tocar nada. El brillo viaja de izquierda a derecha; con "reducir movimiento" queda quieto. */
+.bloque,
+.cargando {
+  --esq-base: color-mix(in srgb, var(--color-fg, #888) 9%, transparent);
+  --esq-brillo: color-mix(in srgb, var(--color-fg, #888) 17%, transparent);
+  background-color: var(--esq-base);
+  background-image: linear-gradient(100deg, transparent 20%, var(--esq-brillo) 50%, transparent 80%);
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: esqBrillo 1.6s ease-in-out infinite;
+}
+
+.bloque {
+  display: block;
+  border-radius: var(--esq-radio, 0.5rem);
+  width: var(--esq-ancho, 100%);
+  height: var(--esq-alto, 1rem);
+}
+
+/* <ImagenCarga>: el skeleton vive en la propia <img> (sin envoltorio, el layout no cambia) hasta que carga */
+.cargando {
+  min-width: 1px;
+  min-height: 1px;
+}
+
+/* No cargó (red, ruta rota): el bloque queda quieto y atenuado, sin brillo que sugiera que sigue cargando */
+.fallo {
+  --esq-base: color-mix(in srgb, var(--color-fg, #888) 7%, transparent);
+  background-color: var(--esq-base);
+  background-image: none;
+  animation: none;
+  font-size: 0;
+  color: transparent;
+}
+
+@keyframes esqBrillo {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -130% 0;
+  }
+}
+
+/* ---- overlay de escena (canvas 3D que todavía no está) ---- */
+.escena {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  pointer-events: none;
+  /* no aparece de golpe: si la escena llega rápido, ni se llega a ver */
+  opacity: 0;
+  animation: esqEntra 0.4s ease 0.35s forwards;
+  transition:
+    opacity 0.5s ease,
+    visibility 0s linear 0.5s;
+}
+
+.escenaOculta {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.escenaMarco {
+  --esq-radio: 1.25rem;
+  --esq-ancho: min(62%, 52rem);
+  --esq-alto: min(46%, 22rem);
+}
+
+.escenaLineas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: min(62%, 52rem);
+}
+
+@keyframes esqEntra {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bloque,
+  .cargando {
+    animation: none;
+  }
+  .escena {
+    animation: none;
+    opacity: 1;
+  }
+}

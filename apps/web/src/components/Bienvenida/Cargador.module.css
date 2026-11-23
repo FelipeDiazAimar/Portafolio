@@ -1,0 +1,76 @@
+/* From Uiverse.io by SelfMadeSystem - https://uiverse.io/SelfMadeSystem/giant-bird-69
+   MIT License, Copyright (c) SelfMadeSystem (SelfMadeSystem) */
+
+/* Capa que tapa la portada mientras carga; se va con un fade. El trazo toma el color del texto
+   (claro/oscuro según el tema). */
+.capa {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  opacity: 1;
+  transition:
+    opacity 0.6s ease,
+    visibility 0s linear 0s;
+}
+
+.oculta {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear 0.8s;
+}
+
+/* el dibujo no desaparece de golpe: se achica y se difumina mientras la capa se funde */
+.oculta .loader {
+  transform: scale(0.88);
+  filter: blur(6px);
+  opacity: 0;
+}
+
+.loader {
+  width: 12em;
+  height: 12em;
+  transition:
+    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.8s ease,
+    opacity 0.6s ease;
+}
+
+.loader path {
+  stroke: currentColor;
+  stroke-width: 0.6px;
+  animation:
+    dashArray 4s ease-in-out infinite,
+    dashOffset 4s linear infinite;
+}
+
+@keyframes dashArray {
+  0% {
+    stroke-dasharray: 0 1 359 0;
+  }
+
+  50% {
+    stroke-dasharray: 0 359 1 0;
+  }
+
+  100% {
+    stroke-dasharray: 359 1 0 0;
+  }
+}
+
+@keyframes dashOffset {
+  0% {
+    stroke-dashoffset: 365;
+  }
+
+  100% {
+    stroke-dashoffset: 5;
+  }
+}

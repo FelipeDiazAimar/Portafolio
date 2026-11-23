@@ -25,6 +25,7 @@ import ObraScroll from './ObraScroll.jsx';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import styles from './ReelHitos.module.css';
 
+import { EsqueletoEscena } from '@/components/Esqueleto/Esqueleto.jsx';
 const ESPERA_IMAN_MS = 170;
 const SALIDA_FICHA_MS = 200;
 const CONSULTA_MOVIL = '(max-width: 768px)';
@@ -1835,6 +1836,7 @@ export default function ReelHitos({ hitos, alFallar }) {
         onPointerCancel={alSoltar}
         onPointerLeave={alSalir}
       >
+        <EsqueletoEscena visible={!escenaLista && cerca} etiqueta="Cargando mi recorrido" />
         <div className={styles.luz} aria-hidden="true" />
         <div className={styles.grano} aria-hidden="true" />
 

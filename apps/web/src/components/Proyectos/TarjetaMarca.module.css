@@ -137,3 +137,65 @@
     white-space: nowrap;
   }
 }
+
+/* Skeleton de la tarjeta mientras llega su logo: la silueta de lo que va a aparecer (logo + nombre), en
+   la misma proporción (cqw), con el brillo sobre el color de la marca. */
+.logoEspera {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.esqueleto {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3cqw;
+}
+
+.esqLogo,
+.esqLinea {
+  display: block;
+  background-color: rgba(255, 255, 255, 0.1);
+  background-image: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.22) 50%, transparent 80%);
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: tarjetaBrillo 1.6s ease-in-out infinite;
+}
+
+.tarjeta[data-claro='true'] .esqLogo,
+.tarjeta[data-claro='true'] .esqLinea {
+  background-color: rgba(0, 0, 0, 0.08);
+  background-image: linear-gradient(100deg, transparent 20%, rgba(0, 0, 0, 0.14) 50%, transparent 80%);
+}
+
+.esqLogo {
+  width: 46%;
+  height: 26%;
+  border-radius: 5cqw;
+}
+
+.esqLinea {
+  width: 28%;
+  height: 3.2cqw;
+  border-radius: 999px;
+}
+
+@keyframes tarjetaBrillo {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -130% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqLogo,
+  .esqLinea {
+    animation: none;
+  }
+}

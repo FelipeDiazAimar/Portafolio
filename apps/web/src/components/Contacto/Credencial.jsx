@@ -11,6 +11,7 @@ import { observarTema, temaActual } from '@/lib/contacto/tema.js';
 import { crearCredencial, estiramiento, pasoCredencial, soltar } from './fisicaCredencial.js';
 import styles from './Credencial.module.css';
 
+import { ImagenCarga } from '@/components/Esqueleto/Esqueleto.jsx';
 const ANCHO = 290;
 const ALTO = 580;
 const HOYO = 16;
@@ -379,7 +380,7 @@ export default function Credencial() {
             </div>
             <div className={styles.foto}>
               {/* eslint-disable-next-line @next/next/no-img-element -- PNG sin fondo recortado a mano */}
-              <img src="/retrato.png" alt="Felipe Díaz Aimar" draggable={false} />
+              <ImagenCarga src="/retrato.png" alt="Felipe Díaz Aimar" draggable={false} />
             </div>
             <div className={styles.nombre}>
               Felipe Díaz
@@ -418,7 +419,7 @@ export default function Credencial() {
             <p>Si encontrás esta credencial, devolvésela a su dueño: escaneá y escribile.</p>
             <div className={styles.qr}>
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático */}
-              <img src="/qr-whatsapp.svg" alt="" draggable={false} />
+              <ImagenCarga src="/qr-whatsapp.svg" alt="" draggable={false} />
             </div>
             <span className={styles.qrPie}>WhatsApp · wa.me/5493564690844</span>
           </div>
