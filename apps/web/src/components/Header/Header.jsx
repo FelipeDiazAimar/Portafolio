@@ -7,6 +7,7 @@ import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegaci
 import MenuMovil from '@/components/MenuMovil/MenuMovil.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
+import useSeccionVisible from '@/hooks/useSeccionVisible.js';
 import { irASeccion, terminarVistaPrevia, vistaPrevia } from '@/lib/teletransporte.js';
 import styles from './Header.module.css';
 
@@ -98,6 +99,7 @@ const DEMORA_NOMBRE_MS = 3300;
 
 export default function Header() {
   const estaScrolleado = useScrollPasadoViewport();
+  const seccionActiva = useSeccionVisible();
   const refPildoraGrande = useRef(null);
   const [mostrarNombreDescifrado, setMostrarNombreDescifrado] = useState(false);
 
@@ -194,7 +196,7 @@ export default function Header() {
             transition={TRANSICION_FADE}
           >
             {ENLACES.map((enlace) => (
-              <div key={enlace.href} className={styles.miniWrapper}>
+              <div key={enlace.href} className={styles.miniWrapper} data-seccion-activa={enlace.seccion === seccionActiva ? 'true' : undefined}>
                 <GlassSurface width="100%" height={40} borderRadius={100} {...PROPS_GLASS}>
                   <ElementoNavegacion enlace={enlace} icono={enlace.icono} variante="mini" />
                 </GlassSurface>

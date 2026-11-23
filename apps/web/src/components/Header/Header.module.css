@@ -142,7 +142,9 @@
 }
 
 .miniWrapper:hover,
-.miniWrapper:focus-within {
+.miniWrapper:focus-within,
+/* la píldora de la sección que se está viendo muestra su rótulo */
+.miniWrapper[data-seccion-activa='true'] {
   max-width: 220px;
 }
 

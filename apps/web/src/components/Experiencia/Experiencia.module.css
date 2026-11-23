@@ -4,6 +4,9 @@
   /* sale del ancho máximo de <main>, como Proyectos y Habilidades */
   width: 100vw;
   margin-left: calc(50% - 50vw);
+  /* aire entre Proyectos y el pasillo: las tarjetas de Proyectos sobresalen 30svh de su sección y
+     se desvanecen en este hueco; con más que eso queda fondo vacío entre una sección y la otra */
+  margin-top: clamp(16rem, 60svh, 36rem);
   scroll-margin-top: 0;
   /* por encima de las tarjetas que Proyectos deja flotar sobre la sección siguiente (z 7): el
      pasillo las tapa, y el borde de arriba se funde con la página (useUnionSeccion) */
@@ -97,13 +100,16 @@
   color: var(--color-fg);
 }
 
+/* el título ya lo muestra la píldora activa del header: acá queda sólo para lectores de pantalla */
 .titulo {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-weight: 800;
-  font-size: clamp(1.9rem, 4.4vw, 3.2rem);
-  line-height: 1;
-  letter-spacing: -0.02em;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .tarjeta {
