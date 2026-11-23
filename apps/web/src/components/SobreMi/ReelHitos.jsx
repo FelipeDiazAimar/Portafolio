@@ -820,7 +820,8 @@ export default function ReelHitos({ hitos, alFallar }) {
   const conObras = () => Boolean(refConIntro.current) && !refReducido.current;
   // La puerta de "Hoy" no se abre hasta que los agentes terminan de construir esa portada.
   const refPuertaCerrada = useRef(() => false);
-  refPuertaCerrada.current = () => conObras() && refEntro.current && !refConstruidas.current.has(N - 1);
+  // (glow-up) la puerta ya no traba el paso a Proyectos: el scroll nunca se frena entre secciones
+  refPuertaCerrada.current = () => false;
   const ponerZonas = (i) => {
     const u = refEscena.current?.portadas[i]?.material.uniforms;
     const zonas = refZonas.current[i];
@@ -1293,13 +1294,8 @@ export default function ReelHitos({ hitos, alFallar }) {
       const m = medir();
       if (!m) return;
       const alto = window.innerHeight;
-      if (m.caja.top > 1) {
-        // Entre el hero y la sección no se queda a mitad de camino: bajando, con que la hoja
-        // haya asomado, termina de subir; subiendo, vuelve al hero.
-        if (m.caja.top < alto * (sentido > 0 ? 0.9 : 0.4)) scrollA(m.arriba);
-        else if (sentido < 0 && m.caja.top < alto - 2 && m.arriba - alto >= 0) scrollA(m.arriba - alto);
-        return;
-      }
+      // (glow-up) entre el hero y la sección no hay imán: el paso queda donde lo deja el scroll
+      if (m.caja.top > 1) return;
       // El panel ya se despegó, o se está en la cola: ahí manda el puente a Proyectos (portadas →
       // conectores → tarjetas), atado al scroll. No se imanta: se puede quedar a mitad y volver.
       if (m.caja.bottom < alto - 1) return;

@@ -94,6 +94,23 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
   // de quién es cada caja: lo decide la línea de tiempo (el que quede libre antes); de entrada, en
   // ronda (sólo para pintar cada caja del color de su agente antes de que corra)
   const dueno = useMemo(() => capas.map((_, i) => i % agentes.length), [capas, agentes.length]);
+  // la hoja punteada tiene huecos con la forma de las portadas: mientras se arman no se ven puntos
+  // encima de ellas
+  const mascaraGrilla = useMemo(() => {
+    const formas = capas.filter((c) => c.revela?.tipo === 'portada' && c.puntos?.length);
+    if (!formas.length || !ancho || !alto) return undefined;
+    const d = [`M0 0H${ancho}V${alto}H0Z`, ...formas.map((c) => `M${c.puntos.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z`)].join('');
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${ancho}' height='${alto}' viewBox='0 0 ${ancho} ${alto}'><path fill='white' fill-rule='evenodd' d='${d}'/></svg>`;
+    const capasMascara = `url("data:image/svg+xml,${encodeURIComponent(svg)}"), radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent)`;
+    return {
+      WebkitMaskImage: capasMascara,
+      maskImage: capasMascara,
+      WebkitMaskSize: '100% 100%',
+      maskSize: '100% 100%',
+      WebkitMaskComposite: 'source-in',
+      maskComposite: 'intersect',
+    };
+  }, [capas, ancho, alto]);
 
   useEffect(() => {
     const raiz = refRaiz.current;
@@ -299,7 +316,7 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
 
   return (
     <div ref={refRaiz} className={styles.intro} aria-hidden="true">
-      <div className={styles.grilla} />
+      <div className={styles.grilla} style={mascaraGrilla} />
       <svg className={styles.plano} width={ancho} height={alto}>
         {capas.map((capa, i) => {
           const agente = agentes[dueno[i]];
