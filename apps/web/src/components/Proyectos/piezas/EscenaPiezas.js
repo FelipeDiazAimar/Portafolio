@@ -493,21 +493,23 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     // ... y va a su lugar en el montón. Al volver a esta etapa desde la física, el "lugar" pasa a
     // ser donde estaba.
     const m = marco();
-    // La pileta de siempre: el montón flotando en el centro del recuadro (la física lo junta y lo
-    // mantiene vivo). Las piezas aparecen ahí, de a una, a medida que todo se oscurece.
-    const [cx0, cy0] = [m.x + m.w / 2, m.y + m.h / 2];
+    // La entrada de siempre (la de antes del glow-up): cuando el recuadro aparece en la oscuridad,
+    // las piezas entran volando desde afuera, por todos los costados, chocan y se juntan alrededor
+    // del título. Hasta entonces no existen. Se guarda de dónde y con qué empuje salen.
     piezas.forEach((a) => {
-      a.casa = new THREE.Vector3(cx0 + azar(-0.34, 0.34) * m.w, cy0 + azar(-0.28, 0.28) * m.h, azar(-160, 160));
+      a.p0 = a.p.clone();
+      a.v0 = a.v.clone();
+      a.casa = a.p.clone();
       a.qBase = a.malla.quaternion.clone();
       a.qCasa = a.qBase.clone();
-      a.demoraPuente = azar(0, 1);
       a.conector.scale.setScalar(0.0001);
-      a.p.copy(a.casa);
-      a.v.set(0, 0, 0);
+      a.r = 0.01;
     });
+    void m;
     armarPortadas(puente.portadas);
   }
   const punto = new THREE.Vector3();
+  let lanzadas = false;
   const salidaCubica = (x) => 1 - Math.pow(1 - limitar(x, 0, 1), 3);
   // Las portadas se rompen y de cada una salen sus conectores. `t`: 0 = portadas enteras, 1 = sólo conectores.
   function portadasCuadro(t) {
@@ -521,11 +523,22 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       p.material.opacity = p.opacidad * (1 - suaveP(limitar((e - 0.5) / 0.5, 0, 1)));
     }
     if (!portadas3d.length) {
-      // aparecen en la pileta (la física las mueve): cada una crece a su turno con un rebote
-      for (const a of piezas) {
-        const ei = limitar((t - 0.3 - a.demoraPuente * 0.35) / 0.3, 0, 1);
-        a.conector.scale.setScalar(Math.max(0.0001, a.r0 * 0.98 * rebote(ei)));
-        a.r = Math.max(0.01, a.r0 * ei);
+      // se lanzan cuando el recuadro ya está a la vista; si se vuelve antes, se van
+      if (t > 0.42 && !lanzadas) {
+        lanzadas = true;
+        for (const a of piezas) {
+          a.p.copy(a.p0);
+          a.v.copy(a.v0);
+          a.malla.position.set(a.p.x, -a.p.y, a.p.z);
+          a.conector.scale.setScalar(a.r0 * 0.98);
+          a.r = a.r0;
+        }
+      } else if (t < 0.3 && lanzadas) {
+        lanzadas = false;
+        for (const a of piezas) {
+          a.conector.scale.setScalar(0.0001);
+          a.r = 0.01;
+        }
       }
       return;
     }
