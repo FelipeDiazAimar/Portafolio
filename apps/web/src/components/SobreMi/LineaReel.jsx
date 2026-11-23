@@ -17,6 +17,7 @@
 import { useEffect, useRef } from 'react';
 import { alCuadro } from '@/lib/movimiento.js';
 import { aRuta, bezier, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tablaAvance, trazar, unirTrazos } from '@/lib/trazos.js';
+import { aPagina, arribasSecciones, EVENTO_LINEA_EDITADA, puntosLinea } from '@/lib/lineaEditable.js';
 import styles from './ReelHitos.module.css';
 
 const POR_HITO = 0.78; // ancho de trazo por hito, en pantallas
@@ -78,7 +79,13 @@ export default function LineaReel({ total, refPoner, refHero }) {
       const xE = W * ENTRADA_REEL;
       // 1. la bajada del hero, en coordenadas de la sección (y < 0 = arriba de ella, sobre el hero)
       const arriba = contenedor.getBoundingClientRect().top + window.scrollY;
-      const hero = trazar(spline([[-W * 0.06, vh * 0.8 - arriba], [W * 0.14, vh * 0.93 - arriba], [xE, -vh * 0.22], [xE, 0]]));
+      // (si se dibujó a mano en el modo editor, pasa por esos puntos)
+      const mano = (puntosLinea().hero ?? []).map((q) => {
+        const [x, y] = aPagina(q, arribasSecciones(), W, vh);
+        return [x, y - arriba];
+      });
+      const pasos = mano.length ? mano : [[-W * 0.06, vh * 0.8 - arriba], [W * 0.14, vh * 0.93 - arriba]];
+      const hero = trazar(spline([...pasos, [xE, -vh * 0.22], [xE, 0]]));
       svgHero.style.top = `${-arriba}px`;
       svgHero.style.height = `${arriba + 2}px`;
       svgHero.setAttribute('viewBox', `0 ${-arriba} ${W} ${arriba + 2}`);
@@ -117,7 +124,9 @@ export default function LineaReel({ total, refPoner, refHero }) {
     // también mientras se baja (el reel todavía no manda su fase)
     const quitar = alCuadro(pintar);
     window.addEventListener('scroll', pintar, { passive: true });
+    window.addEventListener(EVENTO_LINEA_EDITADA, armar);
     return () => {
+      window.removeEventListener(EVENTO_LINEA_EDITADA, armar);
       ro.disconnect();
       quitar();
       window.removeEventListener('scroll', pintar);

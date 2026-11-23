@@ -1,0 +1,95 @@
+/* Editor de la línea (sólo con ?editarLinea). */
+.capa {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  cursor: crosshair;
+}
+
+.puntos {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9991;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.guia {
+  fill: none;
+  stroke: #ffcc33;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 5;
+}
+
+.punto {
+  fill: #ffcc33;
+  stroke: #111;
+  stroke-width: 2;
+  cursor: grab;
+}
+
+.numero {
+  fill: #ffcc33;
+  font: 600 12px/1 system-ui, sans-serif;
+  paint-order: stroke;
+  stroke: #000;
+  stroke-width: 3px;
+}
+
+.panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9992;
+  width: min(380px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(12, 14, 20, 0.92);
+  border: 1px solid rgba(255, 204, 51, 0.4);
+  color: #eee;
+  font: 13px/1.4 system-ui, sans-serif;
+  display: grid;
+  gap: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.tramos,
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.panel button {
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.panel button.elegido {
+  border-color: #ffcc33;
+  background: rgba(255, 204, 51, 0.18);
+}
+
+.panel button.principal {
+  background: #3d77ff;
+  border-color: #3d77ff;
+  color: #fff;
+}
+
+.ayuda {
+  margin: 0;
+  color: #aab;
+  font-size: 12px;
+}
+
+.aviso {
+  margin: 0;
+  color: #ffcc33;
+}

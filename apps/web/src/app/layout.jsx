@@ -12,6 +12,7 @@ import UrlPorScroll from '@/components/UrlPorScroll/UrlPorScroll.jsx';
 import ScrollSuave from '@/components/ScrollSuave/ScrollSuave.jsx';
 import Precarga from '@/components/Precarga/Precarga.jsx';
 import LineasScroll from '@/components/LineasScroll/LineasScroll.jsx';
+import EditorLinea from '@/components/EditorLinea/EditorLinea.jsx';
 import Revelador from '@/components/Revelar/Revelador.jsx';
 import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { SCRIPT_BIENVENIDA } from '@/lib/bienvenida.js';
@@ -108,6 +109,7 @@ export default async function RootLayout({ children }) {
           <main>{children}</main>
           <PiePagina />
           <LineasScroll />
+          <EditorLinea />
           <Revelador />
         </ProveedorPortfolio>
       </body>

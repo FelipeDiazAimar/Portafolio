@@ -20,6 +20,7 @@ import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, limitar } from '@/lib/movimiento.js';
 import { aRuta, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, puntaDePagina, SALIDA_TITULOS, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import { EVENTO_PISO, puntaPisoEntrada, registrarLineaFinal } from '@/lib/puente.js';
+import { aPagina, arribasSecciones, EVENTO_LINEA_EDITADA, puntosLinea } from '@/lib/lineaEditable.js';
 import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -63,10 +64,16 @@ function tramos(vw, vh) {
   const [px, py] = puntaPisoEntrada() ?? [0.5, 0.62];
   // el punto final de "Gracias por pasar." (medido sin la animación de las letras, ver puntoFinal)
   const fin = puntoFinal() ?? [X(0.58), f.bottom - vh * 0.06];
+  // puntos dibujados a mano (modo editor): si un tramo los tiene, reemplazan el recorrido de siempre
+  const propios = puntosLinea();
+  const arribas = arribasSecciones();
+  const aMano = (tramo) => (propios[tramo] ?? []).map((q) => aPagina(q, arribas, vw, vh));
+  const manoA = aMano('a');
+  const manoC = aMano('c');
   return [
     {
       // A. de Proyectos a la punta de la línea del piso
-      puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(px), e.top + vh * 0.12], [X(px), e.top + vh * py]],
+      puntos: [...(manoA.length ? manoA : [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28]]), [X(px), e.top + vh * 0.12], [X(px), e.top + vh * py]],
       lazos: [],
       // mientras el pasillo sube, la parte de adentro va por encima y termina sobre la punta del piso;
       // ya con el pasillo arriba se funde y queda la del piso
@@ -87,18 +94,22 @@ function tramos(vw, vh) {
       puntos: [
         [X(SALIDA_TITULOS), t.bottom - 1],
         [X(SALIDA_TITULOS), t.bottom + vh * 0.08],
-        // Habilidades: por la derecha del todo
-        [X(0.95), h.top + vh * 0.3],
-        [X(0.955), h.top + vh * 0.78],
-        // Contacto: entre la credencial y el texto
-        [X(0.4), c.top + vh * 0.3],
-        [X(0.33), c.top + vh * 0.82],
-        // footer: la reseña por el margen izquierdo (la gelatina es un lienzo opaco), cruza por
-        // detrás de los datos, baja por el margen derecho y de ahí al punto final
-        [X(0.03), f.top + vh * 0.3],
-        [X(0.04), f.top + vh * 0.62],
-        [X(0.95), f.top + vh * 0.95],
-        [X(0.9), fin[1] - vh * 0.02],
+        ...(manoC.length
+          ? manoC
+          : [
+            // Habilidades: por la derecha del todo
+            [X(0.95), h.top + vh * 0.3],
+            [X(0.955), h.top + vh * 0.78],
+            // Contacto: entre la credencial y el texto
+            [X(0.4), c.top + vh * 0.3],
+            [X(0.33), c.top + vh * 0.82],
+            // footer: la reseña por el margen izquierdo (la gelatina es un lienzo opaco), cruza por
+            // detrás de los datos, baja por el margen derecho y de ahí al punto final
+            [X(0.03), f.top + vh * 0.3],
+            [X(0.04), f.top + vh * 0.62],
+            [X(0.95), f.top + vh * 0.95],
+          ]),
+        ...(manoC.length ? [] : [[X(0.9), fin[1] - vh * 0.02]]),
         fin,
       ],
       lazos: [],
@@ -218,6 +229,7 @@ export default function LineasScroll() {
     window.addEventListener('resize', pedir);
     const conPiso = () => armar(true);
     window.addEventListener(EVENTO_PISO, conPiso);
+    window.addEventListener(EVENTO_LINEA_EDITADA, conPiso);
     const tarde = setTimeout(() => armar(), 2500);
     return () => {
       clearTimeout(espera);
@@ -226,6 +238,7 @@ export default function LineasScroll() {
       ro.disconnect();
       window.removeEventListener('resize', pedir);
       window.removeEventListener(EVENTO_PISO, conPiso);
+      window.removeEventListener(EVENTO_LINEA_EDITADA, conPiso);
     };
   }, []);
 
