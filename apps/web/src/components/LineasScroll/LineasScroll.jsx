@@ -85,7 +85,7 @@ function tramos(vw, vh) {
   const bordeA = [[X(0.5), e.top - vh * 0.1], [X(0.5), e.top + 2]];
   // (sin los puntos que caen antes de donde baja la hélice de Títulos, ni los muy pegados entre sí:
   // dejan esquinas cerradas)
-  const manoC = ralear(aMano('c').filter(([, y]) => y > t.bottom + vh * 0.12), vh * 0.2);
+  const manoC = ralear(aMano('c').filter(([, y]) => y > t.bottom + vh * 0.25), vh * 0.2);
   return [
     {
       // A. de Proyectos al borde de arriba del pasillo

@@ -253,5 +253,6 @@ export function puntaDePagina(y, vh) {
 // como una hélice alrededor del carrusel y sale por el borde de abajo a esta altura del ancho.
 export const ENTRADA_TITULOS = 0.5;
 export const SALIDA_TITULOS = 0.725;
-// por dónde baja la línea al salir de Títulos (pegada al texto de la tarjeta, que empieza en ~0.79)
-export const BAJADA_TITULOS = 0.775;
+// por dónde baja la línea al salir de Títulos: por detrás del texto de la tarjeta, pegada al borde
+// derecho (ahí sigue la de Habilidades)
+export const BAJADA_TITULOS = 0.955;
