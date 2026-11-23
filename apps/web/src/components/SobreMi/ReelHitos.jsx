@@ -348,7 +348,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       if (conObras() && refEntro.current && !refIntroCorriendo.current && escena && !refTransicion.current) {
         escena.portadas.forEach((p, i) => {
           // la de la obra en curso la muestra su agente (dentro de su caja), no este fundido
-          if (refObra.current?.hito === i || refObras.current.has(i)) return;
+          if (refObras.current.has(i)) return;
           // las armadas, a la vista; las demás, escondidas (si algo dejó una armada escondida, vuelve)
           const objetivo = refConstruidas.current.has(i) ? 1 : 0;
           if (Math.abs(p.entrada.t - objetivo) < 0.002) return;
@@ -997,10 +997,10 @@ export default function ReelHitos({ hitos, alFallar }) {
   // hito F hacia atrás, desarman la F, en orden inverso. Es la misma obra (siempre sobre F+1, con
   // avance q de 0 a 1) yendo para un lado o para el otro. El scroll sólo la dispara: trabajan a su
   // ritmo (SEG_POR_UNIDAD), scrollear no los apura.
-  const refObraScroll = useRef(null);
-  const [obra, setObra] = useState(null); // { hito, capas, ancho, alto, clave }
-  const refObra = useRef(null);
-  refObra.current = obra;
+  // las capas de agentes montadas: una por obra a la vista ({ hito, capas, ancho, alto, clave })
+  const refObrasScroll = useRef(new Map()); // clave → instancia de ObraScroll
+  const [obrasVista, setObrasVista] = useState([]);
+  const refObrasVista = useRef([]);
   const refMostrado = useRef(0);
   refMostrado.current = mostrado;
   const FILAS_FICHA = [
@@ -1045,7 +1045,7 @@ export default function ReelHitos({ hitos, alFallar }) {
   };
   // cuánto tarda la obra de una portada, en segundos
   const duracionObra = (i) => {
-    const capas = refObra.current?.hito === i ? refObra.current.capas : capasDeObra(i);
+    const capas = refObrasVista.current.find((v) => v.hito === i)?.capas ?? capasDeObra(i);
     return Math.max(SEG_MIN, Math.max(...capas.map((c) => c.tramo[1])) * SEG_POR_UNIDAD);
   };
   const soltarObra = (i, hecha) => {
@@ -1089,8 +1089,8 @@ export default function ReelHitos({ hitos, alFallar }) {
       const o = obras.get(i);
       const cerca = Math.abs(fase - i) < 0.6;
       const quedoAdelante = fase < i - 0.6 && mov.sentido < 0;
-      // también las que asoman a los costados: las de atrás siempre; las de adelante, yendo hacia ellas
-      const armar = cerca || (i < fase && fase - i < 1.6) || (i > fase && i - fase < 1.6 && mov.sentido > 0);
+      // la del frente y las de atrás que asoman a un costado; las de adelante, recién al llegar
+      const armar = cerca || (i < fase && fase - i < 1.6);
       if (!o) {
         // la que está a la vista siempre se arma, se llegue por donde se llegue
         if (!hechas.has(i) && armar) obras.set(i, { q: 0, meta: 1, ultimo: ahora });
@@ -1117,14 +1117,11 @@ export default function ReelHitos({ hitos, alFallar }) {
         soltarObra(i, false);
       }
     }
-    // los agentes, en la obra que está a la vista; las otras descubren lo real sin ellos
-    let enCurso = null;
+    // los agentes: uno por cada obra a la vista (la del frente y las que asoman a los costados);
+    // las que no se ven descubren lo real sin ellos
+    const vista = [...obras.keys()].filter((i) => Math.abs(fase - i) < 1.6).sort((x, y) => Math.abs(fase - x) - Math.abs(fase - y));
     for (const [i, o] of obras) {
-      // (también las vecinas que asoman a los costados: ahí se ve a los agentes desarmar)
-      if (Math.abs(fase - i) < 1.6 && (!enCurso || Math.abs(fase - i) < Math.abs(fase - enCurso.i))) enCurso = { i, p: o.q };
-    }
-    for (const [i, o] of obras) {
-      if (enCurso?.i === i) continue;
+      if (vista.includes(i)) continue;
       const portada = escena.portadas[i];
       if (!portada) continue;
       gsap.killTweensOf(portada.entrada);
@@ -1138,67 +1135,68 @@ export default function ReelHitos({ hitos, alFallar }) {
       });
     }
     // a la vista de las pruebas (sólo en desarrollo)
-    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, obras: [...obras].map(([i, o]) => [i, +o.q.toFixed(3), o.meta]), enCurso: enCurso?.i ?? null, hechas: [...hechas].sort(), cuando: Math.round(ahora) };
-    const antes = refObra.current;
-    // (si su obra sigue en segundo plano, no se toca: la maneja el bucle de arriba)
-    if (antes && antes.hito !== enCurso?.i && !refConstruidas.current.has(antes.hito) && !obras.has(antes.hito)) soltarObra(antes.hito, false);
-    if (!enCurso) {
-      if (antes) {
-        refObra.current = null;
-        setObra(null);
-      }
-      return;
-    }
-    const { i, p } = enCurso;
-    const zonasN = Math.min(10, refZonas.current[i]?.length ?? 0);
-    const clave = `${i}-${zonasN}`;
-    if (antes?.clave !== clave) {
-      const base = panel.getBoundingClientRect();
-      ponerZonas(i);
-      refObra.current = { hito: i, capas: capasDeObra(i), ancho: base.width, alto: base.height, clave };
-      setObra(refObra.current);
-    }
-    const portada = escena.portadas[i];
-    gsap.killTweensOf(portada.entrada);
-    portada.entrada.t = 1;
-    const u = portada.material.uniforms;
-    const obraActual = refObraScroll.current;
-    if (!obraActual || obraActual.capas !== refObra.current.capas) {
-      // recién montada: este cuadro todavía no tiene dónde dibujar. Armando, la card espera
-      // tapada; desarmando, sigue entera hasta que los agentes empiezan
-      const entera = p >= 0.999;
-      u.uCorte.value = entera ? 1 : 0;
-      if (entera) u.uZonasT.value.fill(1);
-      return;
-    }
+    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, obras: [...obras].map(([i, o]) => [i, +o.q.toFixed(3), o.meta]), enCurso: vista, hechas: [...hechas].sort(), cuando: Math.round(ahora) };
     const base = panel.getBoundingClientRect();
-    const capas = refObra.current.capas;
-    const quads = capas.map(({ revela }) => {
-      if (revela.tipo === 'carta') return (t) => escena.esquinas(i, { x0: 0, y0: 0, x1: t, y1: t });
-      if (revela.tipo === 'zona') {
-        const { z } = revela;
-        return (t) => escena.esquinas(i, { x0: z.x0, y0: z.y0, x1: z.x0 + (z.x1 - z.x0) * t, y1: z.y0 + (z.y1 - z.y0) * t });
+    const claveDe = (i) => `${i}-${Math.min(10, refZonas.current[i]?.length ?? 0)}`;
+    const montadas = refObrasVista.current;
+    if (vista.map(claveDe).join('|') !== montadas.map((v) => v.clave).join('|')) {
+      const nuevas = vista.map((i) => {
+        const ya = montadas.find((v) => v.clave === claveDe(i));
+        if (ya) return ya;
+        ponerZonas(i);
+        return { hito: i, capas: capasDeObra(i), ancho: base.width, alto: base.height, clave: claveDe(i) };
+      });
+      refObrasVista.current = nuevas;
+      setObrasVista(nuevas);
+    }
+    for (const v of refObrasVista.current) {
+      const o = obras.get(v.hito);
+      if (!o) continue;
+      const i = v.hito;
+      const p = o.q;
+      const portada = escena.portadas[i];
+      if (!portada) continue;
+      gsap.killTweensOf(portada.entrada);
+      portada.entrada.t = 1;
+      const u = portada.material.uniforms;
+      const capa = refObrasScroll.current.get(v.clave);
+      if (!capa || capa.capas !== v.capas) {
+        // recién montada: este cuadro todavía no tiene dónde dibujar; lo real sigue su avance
+        v.capas.forEach(({ revela }, j) => {
+          const t = crecimientoCapa(v.capas, j, p);
+          if (revela.tipo === 'carta') u.uCorte.value = t;
+          else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = t;
+        });
+        continue;
       }
-      // las líneas de la ficha: sólo cuando la ficha ya muestra este hito
-      if (refMostrado.current !== i) return null;
-      const r = panel.querySelector(`.${revela.clase}`)?.getBoundingClientRect();
-      if (!r || r.width < 4) return null;
-      const x0 = r.left - base.left;
-      const y0 = r.top - base.top;
-      const x1 = r.right - base.left;
-      const y1 = r.bottom - base.top;
-      return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-    });
-    obraActual.actualizar(p, quads, (j, t) => {
-      const { revela } = capas[j];
-      if (revela.tipo === 'carta') u.uCorte.value = Math.max(0, Math.min(1, t));
-      else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = Math.max(0, Math.min(1, t));
-      else if (revela.tipo === 'fila') {
-        const el = panel.querySelector(`.${revela.clase}`);
-        if (refMostrado.current === i) recortar(el, t);
-        else if (el) el.style.clipPath = '';
-      }
-    });
+      const capas = v.capas;
+      const quads = capas.map(({ revela }) => {
+        if (revela.tipo === 'carta') return (t) => escena.esquinas(i, { x0: 0, y0: 0, x1: t, y1: t });
+        if (revela.tipo === 'zona') {
+          const { z } = revela;
+          return (t) => escena.esquinas(i, { x0: z.x0, y0: z.y0, x1: z.x0 + (z.x1 - z.x0) * t, y1: z.y0 + (z.y1 - z.y0) * t });
+        }
+        // las líneas de la ficha: sólo cuando la ficha ya muestra este hito
+        if (refMostrado.current !== i) return null;
+        const rf = panel.querySelector(`.${revela.clase}`)?.getBoundingClientRect();
+        if (!rf || rf.width < 4) return null;
+        const x0 = rf.left - base.left;
+        const y0 = rf.top - base.top;
+        const x1 = rf.right - base.left;
+        const y1 = rf.bottom - base.top;
+        return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+      });
+      capa.actualizar(p, quads, (j, t) => {
+        const { revela } = capas[j];
+        if (revela.tipo === 'carta') u.uCorte.value = Math.max(0, Math.min(1, t));
+        else if (revela.tipo === 'zona') u.uZonasT.value[revela.k] = Math.max(0, Math.min(1, t));
+        else if (revela.tipo === 'fila') {
+          const el = panel.querySelector(`.${revela.clase}`);
+          if (refMostrado.current === i) recortar(el, t);
+          else if (el) el.style.clipPath = '';
+        }
+      });
+    }
   };
   const refConstruirEnCuadro = useRef(construirEnCuadro);
   refConstruirEnCuadro.current = construirEnCuadro;
@@ -1711,7 +1709,21 @@ export default function ReelHitos({ hitos, alFallar }) {
             </li>
           ))}
         </ol>
-        {obra && !intro ? <ObraScroll key={obra.clave} ref={refObraScroll} capas={obra.capas} ancho={obra.ancho} alto={obra.alto} /> : null}
+        {!intro
+          ? obrasVista.map((v, k) => (
+              <ObraScroll
+                key={v.clave}
+                ref={(el) => {
+                  if (el) refObrasScroll.current.set(v.clave, el);
+                  else refObrasScroll.current.delete(v.clave);
+                }}
+                capas={v.capas}
+                ancho={v.ancho}
+                alto={v.alto}
+                conPildora={k === 0}
+              />
+            ))
+          : null}
         {intro && intro !== 'esperando' ? (
           <IntroAgentes
             key={intro.sentido}

@@ -50,7 +50,7 @@ export function crecimientoCapa(capas, j, p) {
   return Math.min(1, Math.max(0, (p - sDibujo) / (largo * (1 - VIAJE))));
 }
 
-const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto }, ref) {
+const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto, conPildora = true }, ref) {
   const refRaiz = useRef(null);
   const refFormas = useRef([]);
   const refChips = useRef([]);
@@ -201,7 +201,7 @@ const ObraScroll = forwardRef(function ObraScroll({ capas, ancho, alto }, ref) {
           </div>
         );
       })}
-      <div className={styles.pildora} style={{ opacity: 1 }}>
+      <div className={styles.pildora} style={{ opacity: conPildora ? 1 : 0 }}>
         <span className={styles.avatares}>
           {AGENTES.map((ag, a) => (
             <i key={ag.nombre} ref={(el) => (refAvatares.current[a] = el)} style={{ '--f': ag.fondo ?? ag.color }} data-fuera="false" />
