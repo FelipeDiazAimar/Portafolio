@@ -55,7 +55,7 @@ function tramos(vw, vh) {
       encima: true,
     },
     {
-      puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
+      puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
       lazos: [],
       punta: [-Infinity, e.top],
     },
@@ -66,6 +66,8 @@ function tramos(vw, vh) {
         [X(0.2), e.bottom + vh * 0.45],
         [X(0.82), t.top + t.alto * 0.3],
         [X(0.18), t.top + t.alto * 0.7],
+        // un giro cerrado de vez en cuando
+        [X(0.3), t.top + t.alto * 0.7 + vh * 0.06],
         [X(0.8), h.top - vh * 0.1],
         [X(0.28), h.top + vh * 0.6],
         [X(0.74), c.top + vh * 0.1],

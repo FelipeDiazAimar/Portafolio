@@ -37,6 +37,7 @@ export function trazar(guia, lazos = [], paso = 5) {
   const orden = [...lazos].sort((a, b) => a.u - b.u);
   let u = 0;
   for (const lazo of orden) {
+    if (lazo.u <= u) continue;
     tramo(u, lazo.u);
     const A = guia(lazo.u);
     const T = tangente(guia, lazo.u);
@@ -45,12 +46,35 @@ export function trazar(guia, lazos = [], paso = 5) {
     const C = [A[0] + s * lazo.r * N[0], A[1] + s * lazo.r * N[1]];
     const t0 = Math.atan2(A[1] - C[1], A[0] - C[0]);
     const total = TAU * (lazo.giros ?? 1);
+    // El rulo avanza mientras gira (como una "l" cursiva): entra en A y sale más adelante, en E,
+    // sobre la misma guía y con su misma dirección (sin quiebre). El centro viaja del círculo tangente
+    // en A al círculo tangente en E, y el ángulo se ajusta para terminar justo en E.
+    const avance = lazo.r * (lazo.avance ?? 1.35);
+    let u2 = lazo.u;
+    while (u2 < 1) {
+      const p = guia(u2);
+      if (Math.hypot(p[0] - A[0], p[1] - A[1]) >= avance) break;
+      u2 += 0.0005;
+    }
+    u2 = Math.min(1, u2);
+    const E = guia(u2);
+    const TE = tangente(guia, u2);
+    const NE = [-TE[1], TE[0]];
+    const CE = [E[0] + s * lazo.r * NE[0], E[1] + s * lazo.r * NE[1]];
+    const tFin = t0 + s * total;
+    let tE = Math.atan2(E[1] - CE[1], E[0] - CE[0]);
+    while (tE - tFin > Math.PI) tE -= TAU;
+    while (tFin - tE > Math.PI) tE += TAU;
     const n = Math.max(24, Math.ceil((total * lazo.r) / paso));
     for (let k = 1; k <= n; k += 1) {
-      const t = t0 + s * (total * k) / n;
-      agregar([C[0] + Math.cos(t) * lazo.r, C[1] + Math.sin(t) * lazo.r]);
+      const f = k / n;
+      const e = f * f * (3 - 2 * f);
+      const t = t0 + s * total * f + (tE - tFin) * e;
+      const cx = C[0] + (CE[0] - C[0]) * e;
+      const cy = C[1] + (CE[1] - C[1]) * e;
+      agregar([cx + Math.cos(t) * lazo.r, cy + Math.sin(t) * lazo.r]);
     }
-    u = lazo.u;
+    u = Math.min(1, u2);
   }
   tramo(u, 1);
   const largos = [0];
