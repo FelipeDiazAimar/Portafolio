@@ -266,3 +266,14 @@
     transform: translateY(0);
   }
 }
+
+/* la aurora se puede agarrar y arrastrar (FondoUnicorn/interaccion.js) */
+.conAurora {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.conAurora[data-arrastrando] {
+  cursor: grabbing;
+}

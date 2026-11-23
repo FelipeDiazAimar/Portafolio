@@ -3,11 +3,12 @@
 import { useEffect, useRef } from 'react';
 import { modoRendimiento } from '@/lib/rendimiento.js';
 import { esTactil } from '@/lib/entrada.js';
+import { conectarInteraccion } from './interaccion.js';
 
 // Escena de Unicorn Studio exportada como JSON (public/escenas). El SDK se baja una sola vez del
 // CDN, con versión fija, recién cuando hace falta una escena.
 export const SDK_UNICORN = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.6.1/dist/unicornStudio.umd.js';
-// "Azure Wave" exportada de Unicorn, con seguimiento del mouse activado (trackMouse) en las capas
+// "Azure Wave" exportada de Unicorn, con seguimiento del mouse (trackMouse 0,3 / 0,65 / 0,45) en las capas
 // gradient, nebula y normalMap; el original sin tocar sigue en Descargas/unicorn-local.
 export const ESCENA_AURORA = '/escenas/aurora.json';
 
@@ -46,6 +47,7 @@ export default function FondoUnicorn({ archivo = ESCENA_AURORA, className, alLis
   useEffect(() => {
     let cancelado = false;
     let escena = null;
+    let desconectar = () => {};
     const tactil = esTactil();
     cargarSdk()
       .then((US) =>
@@ -64,6 +66,8 @@ export default function FondoUnicorn({ archivo = ESCENA_AURORA, className, alLis
           return;
         }
         escena = s;
+        // hover, clic y arrastre sobre todo el contenedor (el texto de encima deja pasar el mouse)
+        desconectar = conectarInteraccion(s, ref.current?.parentElement);
         avisos.current.alListo?.();
       })
       .catch(() => {
@@ -71,6 +75,7 @@ export default function FondoUnicorn({ archivo = ESCENA_AURORA, className, alLis
       });
     return () => {
       cancelado = true;
+      desconectar();
       escena?.destroy?.();
     };
   }, [archivo]);
