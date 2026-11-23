@@ -348,8 +348,9 @@ export default function ReelHitos({ hitos, alFallar }) {
       if (conObras() && refEntro.current && !refIntroCorriendo.current && escena && !refTransicion.current) {
         escena.portadas.forEach((p, i) => {
           // la de la obra en curso la muestra su agente (dentro de su caja), no este fundido
-          if (refConstruidas.current.has(i) || refObra.current?.hito === i || refObras.current.has(i)) return;
-          const objetivo = 0;
+          if (refObra.current?.hito === i || refObras.current.has(i)) return;
+          // las armadas, a la vista; las demás, escondidas (si algo dejó una armada escondida, vuelve)
+          const objetivo = refConstruidas.current.has(i) ? 1 : 0;
           if (Math.abs(p.entrada.t - objetivo) < 0.002) return;
           gsap.killTweensOf(p.entrada);
           p.entrada.t += (objetivo - p.entrada.t) * 0.14;
@@ -593,7 +594,9 @@ export default function ReelHitos({ hitos, alFallar }) {
         start: conIntro ? 'top 30%' : 'top 62%',
         once: !conIntro,
         onEnter: () => {
-          if (refEntro.current) return;
+          // una intro en curso (armando o desarmando) no se interrumpe: termina a su ritmo y, si la
+          // sección sigue a la vista, se vuelve a armar (ver el final del desarme)
+          if (refEntro.current || refIntroCorriendo.current) return;
           // se pasó de largo (menú del header hacia más abajo) o es la vista previa del menú:
           // directo a lo real, sin intro (trabaría el salto de ida y vuelta)
           const pasado = contenedor.getBoundingClientRect().bottom < window.innerHeight * 0.5;
@@ -770,6 +773,9 @@ export default function ReelHitos({ hitos, alFallar }) {
     delete document.documentElement.dataset.sinIman;
   }, []);
   const enCurso = intro !== null && intro !== 'esperando';
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') (window.__introLog ??= []).push([Math.round(performance.now()), 'estado', intro === null ? null : intro === 'esperando' ? 'esperando' : intro.sentido, entro]);
+  }, [intro, entro]);
   // (glow-up) La intro ya no traba la página: se puede seguir scrolleando y los agentes terminan su
   // animación igual, completa. Mientras tanto el reel queda en su primer hito (ver aplicar).
   useEffect(() => {
@@ -1083,16 +1089,20 @@ export default function ReelHitos({ hitos, alFallar }) {
       const o = obras.get(i);
       const cerca = Math.abs(fase - i) < 0.6;
       const quedoAdelante = fase < i - 0.6 && mov.sentido < 0;
+      // también las que asoman a los costados: las de atrás siempre; las de adelante, yendo hacia ellas
+      const armar = cerca || (i < fase && fase - i < 1.6) || (i > fase && i - fase < 1.6 && mov.sentido > 0);
       if (!o) {
-        if (!hechas.has(i) && cerca && mov.sentido >= 0) obras.set(i, { q: 0, meta: 1, ultimo: ahora });
+        // la que está a la vista siempre se arma, se llegue por donde se llegue
+        if (!hechas.has(i) && armar) obras.set(i, { q: 0, meta: 1, ultimo: ahora });
         else if (hechas.has(i) && quedoAdelante) {
           hechas.delete(i);
           obras.set(i, { q: 1, meta: 0, ultimo: ahora });
         }
-      } else if (o.meta === 0 && cerca && mov.sentido > 0) o.meta = 1;
+      } else if (o.meta === 0 && armar) o.meta = 1;
       else if (o.meta === 1 && quedoAdelante) o.meta = 0;
     }
     if (!hechas.has(0) && !obras.has(0) && Math.abs(fase) < 0.6) obras.set(0, { q: 0, meta: 1, ultimo: ahora });
+    else if (obras.get(0)?.meta === 0 && Math.abs(fase) < 0.6) obras.get(0).meta = 1;
     for (const [i, o] of obras) {
       // tiempo real (sin tope): si este cuadro no corrió un rato, la obra igual avanzó
       const paso = Math.max(0, ahora - o.ultimo) / 1000 / duracionObra(i);
@@ -1110,7 +1120,8 @@ export default function ReelHitos({ hitos, alFallar }) {
     // los agentes, en la obra que está a la vista; las otras descubren lo real sin ellos
     let enCurso = null;
     for (const [i, o] of obras) {
-      if (Math.abs(fase - i) < 0.6 && (!enCurso || Math.abs(fase - i) < Math.abs(fase - enCurso.i))) enCurso = { i, p: o.q };
+      // (también las vecinas que asoman a los costados: ahí se ve a los agentes desarmar)
+      if (Math.abs(fase - i) < 1.6 && (!enCurso || Math.abs(fase - i) < Math.abs(fase - enCurso.i))) enCurso = { i, p: o.q };
     }
     for (const [i, o] of obras) {
       if (enCurso?.i === i) continue;
@@ -1127,7 +1138,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       });
     }
     // a la vista de las pruebas (sólo en desarrollo)
-    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, obras: [...obras].map(([i, o]) => [i, +o.q.toFixed(3)]), enCurso: enCurso?.i ?? null };
+    if (process.env.NODE_ENV !== 'production') window.__obra = { fase, obras: [...obras].map(([i, o]) => [i, +o.q.toFixed(3), o.meta]), enCurso: enCurso?.i ?? null, hechas: [...hechas].sort(), cuando: Math.round(ahora) };
     const antes = refObra.current;
     // (si su obra sigue en segundo plano, no se toca: la maneja el bucle de arriba)
     if (antes && antes.hito !== enCurso?.i && !refConstruidas.current.has(antes.hito) && !obras.has(antes.hito)) soltarObra(antes.hito, false);

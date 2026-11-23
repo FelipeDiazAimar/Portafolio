@@ -13,6 +13,8 @@
 .grilla {
   position: absolute;
   inset: 0;
+  z-index: 0; /* en el panel, con su trama: debajo del titular y del lienzo de las portadas */
+  pointer-events: none;
   background-image: radial-gradient(circle at center, color-mix(in srgb, var(--color-fg) 22%, transparent) 0.9px, transparent 1.3px);
   background-size: 18px 18px;
   -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent);

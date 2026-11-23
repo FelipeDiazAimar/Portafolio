@@ -26,7 +26,7 @@
   right: 0;
   bottom: 100%;
   height: 46svh;
-  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-bg) 55%, transparent) 45%, var(--color-bg));
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--fondo-hondo, var(--color-bg)) 55%, transparent) 45%, var(--fondo-hondo, var(--color-bg)));
   opacity: clamp(0, calc(var(--llega, 1) * 4), 1);
   pointer-events: none;
 }
@@ -65,7 +65,7 @@
   height: 100svh;
   overflow: hidden;
   isolation: isolate;
-  background: var(--color-bg);
+  background: var(--fondo-hondo, var(--color-bg));
   color: var(--tinta);
   /* lo vertical es scroll de la página; lo horizontal mueve la cinta */
   touch-action: pan-y;

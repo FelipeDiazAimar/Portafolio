@@ -10,7 +10,8 @@
 //
 // Las capas llegan medidas desde el reel (px del panel): cuatro esquinas por capa, así las
 // portadas curvas en perspectiva se dibujan con su forma exacta y no con una caja aproximada.
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import styles from './IntroAgentes.module.css';
 
@@ -70,6 +71,13 @@ function Flecha({ color }) {
 // (0..1) y su forma en ese momento: lo real que le toca se ve recortado a ella.
 export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar, alOcultar, alCapa, sentido = 'armar' }) {
   const refRaiz = useRef(null);
+  // La hoja punteada va en el panel, debajo del lienzo de las portadas y del titular (no en esta
+  // capa, que está encima de todo): así no hay puntos sobre lo real, ni huecos donde no hay nada.
+  const [panelHoja, setPanelHoja] = useState(null);
+  const refGrilla = useRef(null);
+  useEffect(() => {
+    setPanelHoja(refRaiz.current?.parentElement ?? null);
+  }, []);
   const refFormas = useRef([]);
   const refChips = useRef([]);
   const refMedidas = useRef([]);
@@ -94,26 +102,13 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
   // de quién es cada caja: lo decide la línea de tiempo (el que quede libre antes); de entrada, en
   // ronda (sólo para pintar cada caja del color de su agente antes de que corra)
   const dueno = useMemo(() => capas.map((_, i) => i % agentes.length), [capas, agentes.length]);
-  // la hoja punteada tiene huecos con la forma de las portadas: mientras se arman no se ven puntos
-  // encima de ellas
-  const mascaraGrilla = useMemo(() => {
-    const formas = capas.filter((c) => c.revela?.tipo === 'portada' && c.puntos?.length);
-    if (!formas.length || !ancho || !alto) return undefined;
-    const d = [`M0 0H${ancho}V${alto}H0Z`, ...formas.map((c) => `M${c.puntos.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z`)].join('');
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${ancho}' height='${alto}' viewBox='0 0 ${ancho} ${alto}'><path fill='white' fill-rule='evenodd' d='${d}'/></svg>`;
-    const capasMascara = `url("data:image/svg+xml,${encodeURIComponent(svg)}"), radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent)`;
-    return {
-      WebkitMaskImage: capasMascara,
-      maskImage: capasMascara,
-      WebkitMaskSize: '100% 100%',
-      maskSize: '100% 100%',
-      WebkitMaskComposite: 'source-in',
-      maskComposite: 'intersect',
-    };
-  }, [capas, ancho, alto]);
+
 
   useEffect(() => {
     const raiz = refRaiz.current;
+    if (process.env.NODE_ENV !== 'production') (window.__introLog ??= []).push([Math.round(performance.now()), 'efecto', sentido, capas.length, !!panelHoja, !!raiz]);
+    // (espera a que la hoja punteada esté puesta en el panel)
+    if (raiz && capas.length > 0 && !panelHoja) return undefined;
     if (!raiz || capas.length === 0) {
       if (sentido === 'desarmar') refOcultar.current?.();
       else refFundir.current?.();
@@ -137,11 +132,12 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
     contar();
 
     const terminar = () => {
+      if (process.env.NODE_ENV !== 'production') (window.__introLog ??= []).push([Math.round(performance.now()), 'terminar', sentido, preparando]);
       if (!preparando) refTerminar.current?.();
     };
     const tl = gsap.timeline({ paused: desarmar, onComplete: desarmar ? undefined : terminar, onReverseComplete: desarmar ? terminar : undefined });
     tl.fromTo(raiz, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power1.out' }, 0);
-    tl.fromTo(refRaiz.current.querySelector(`.${styles.grilla}`), { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.out' }, 0);
+    if (refGrilla.current) tl.fromTo(refGrilla.current, { opacity: 0 }, { opacity: 1, duration: 0.8, ease: 'power1.out' }, 0);
     tl.fromTo(`.${styles.pildora}`, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out' }, 0.15);
 
     // Los agentes salen de su pelotita de color en la píldora de abajo, recién cuando les toca su
@@ -290,7 +286,7 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
       fin + 0.25
     );
     tl.to(refCursores.current.filter(Boolean), { opacity: 0, scale: 0.6, duration: 0.3, stagger: 0.02, ease: 'power2.in' }, fin);
-    tl.to(raiz, { opacity: 0, duration: 0.85, ease: 'power2.inOut' }, fin + 0.35);
+    tl.to([raiz, refGrilla.current].filter(Boolean), { opacity: 0, duration: 0.85, ease: 'power2.inOut' }, fin + 0.35);
 
     if (desarmar) {
       tl.progress(1);
@@ -312,11 +308,11 @@ export default function IntroAgentes({ capas, ancho, alto, alFundir, alTerminar,
       window.removeEventListener('pointerdown', acelerar, opciones);
       tl.kill();
     };
-  }, [capas, agentes, dueno, ancho, alto, sentido]);
+  }, [capas, agentes, dueno, ancho, alto, sentido, panelHoja]);
 
   return (
     <div ref={refRaiz} className={styles.intro} aria-hidden="true">
-      <div className={styles.grilla} style={mascaraGrilla} />
+      {panelHoja ? createPortal(<div ref={refGrilla} className={styles.grilla} style={{ opacity: 0 }} aria-hidden="true" />, panelHoja) : null}
       <svg className={styles.plano} width={ancho} height={alto}>
         {capas.map((capa, i) => {
           const agente = agentes[dueno[i]];
