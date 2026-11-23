@@ -1,0 +1,13 @@
+/* Sólo existe a la vista en una recarga sin portada (html[data-cargador-recarga], lo pone el
+   script del <head>). Va por encima de todo, header incluido. */
+.recarga {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  pointer-events: none;
+}
+
+:global(html[data-cargador-recarga]) .recarga {
+  display: block;
+}

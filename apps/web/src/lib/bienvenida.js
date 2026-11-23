@@ -53,6 +53,9 @@ export const SCRIPT_BIENVENIDA = `(function() {
     if (forzada) sessionStorage.removeItem(clave);
     if (location.pathname !== '/' || (!forzada && (location.hash.length > 1 || sessionStorage.getItem(clave) === '1'))) {
       document.documentElement.setAttribute('data-sin-bienvenida', '');
+      // recarga (F5, Ctrl+Shift+R) sin portada: igual se ve el loader (CargadorRecarga)
+      var nav = performance.getEntriesByType('navigation')[0];
+      if (nav && nav.type === 'reload') document.documentElement.setAttribute('data-cargador-recarga', '');
     }
     addEventListener('pagehide', function() {
       try {
