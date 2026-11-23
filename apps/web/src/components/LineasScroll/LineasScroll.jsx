@@ -1,22 +1,26 @@
 'use client';
 
-// La línea del sitio (como las de lusion.co): un solo trazo 2D cian, con rulos redondos, que baja
-// por toda la página y se va dibujando con el scroll (la punta sigue a la mitad de la pantalla; al
-// subir se recoge). Va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la
-// página, nunca encima de un texto, una tarjeta o una escena.
+// La línea del sitio (como las de lusion.co): un solo trazo 2D azul eléctrico, de curvas amplias y
+// casi sin rulos, que baja por toda la página y se va dibujando con el scroll (la punta sigue a la
+// mitad de la pantalla; al subir se recoge).
 //
-// Es continua entre secciones: donde una sección tiene su propio fondo, la línea sigue adentro de
-// ella con su forma: en Sobre mí corre horizontal con el reel (LineaReel) y en Experiencia se vuelve
-// la línea central del piso del pasillo (EscenaPasillo). Acá van los tres tramos sobre el fondo:
+// El cuerpo va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la página.
+// La punta (su cabeza y el último tramo corto) va en otra capa por encima de las secciones: siempre
+// se ve hacia dónde va la línea, aunque esté pasando por detrás de una escena.
+//
+// Es continua entre secciones: en Sobre mí corre horizontal con el reel (LineaReel) y en Experiencia
+// es la línea central del piso del pasillo (EscenaPasillo). Acá van los tres tramos restantes:
 //   1. del inicio hasta el borde izquierdo de Sobre mí (donde arranca la del reel),
 //   2. del final de Proyectos hasta el centro de abajo de la pantalla, donde empieza el pasillo,
 //   3. de la salida del pasillo hasta el final de la página.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, SecondOrderDynamics, limitar } from '@/lib/movimiento.js';
-import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, puntoEnLargo, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
+// largo del tramo de la punta que se ve por encima de todo (px)
+const LARGO_PUNTA = 90;
 
 function caja(sel, y0) {
   const n = document.querySelector(sel);
@@ -25,7 +29,9 @@ function caja(sel, y0) {
   return { top: r.top + y0, bottom: r.bottom + y0, alto: r.height };
 }
 
-// Los tramos: puntos de paso (px de página) y en qué tramos de la guía va un rulo.
+// Los tramos: puntos de paso (px de página), en qué tramos de la guía va un rulo (uno solo en todo
+// el recorrido) y entre qué alturas de página la punta es de este tramo (fuera de eso la línea sigue
+// dentro de una sección con la suya).
 function tramos(vw, vh) {
   const y0 = window.scrollY;
   const s = caja('#sobre-mi', y0);
@@ -37,48 +43,49 @@ function tramos(vw, vh) {
   const f = caja('footer', y0);
   if (!s || !p || !e || !t || !h || !c || !f) return [];
   const X = (k) => k * vw;
-  const R = Math.min(vw, vh) * 0.12;
+  const R = Math.min(vw, vh) * 0.13;
   return [
     {
-      puntos: [[X(-0.06), vh * 0.1], [X(0.74), vh * 0.42], [X(0.34), s.top - vh * 0.12], [X(-0.03), s.top + vh * 0.66]],
-      lazos: [{ tramo: 1, r: R, sentido: 1 }],
+      puntos: [[X(-0.06), vh * 0.12], [X(0.62), vh * 0.38], [X(0.82), s.top - vh * 0.35], [X(0.3), s.top + vh * 0.2], [X(-0.03), s.top + vh * 0.66]],
+      lazos: [],
+      punta: [-Infinity, s.top],
     },
     {
-      puntos: [[X(1.06), p.bottom - vh * 0.45], [X(0.28), p.bottom - vh * 0.08], [X(0.66), e.top - vh * 0.22], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
-      lazos: [{ tramo: 1, r: R * 0.9, sentido: -1 }],
+      puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
+      lazos: [],
+      punta: [-Infinity, e.top],
     },
     {
       puntos: [
         [X(0.5), e.bottom - vh * 0.4],
-        [X(0.5), e.bottom + vh * 0.02],
-        [X(0.22), e.bottom + vh * 0.34],
-        [X(0.78), t.top + vh * 0.2],
-        [X(0.16), t.top + t.alto * 0.5],
-        [X(0.84), h.top - vh * 0.22],
-        [X(0.3), h.top + vh * 0.55],
-        [X(0.76), c.top - vh * 0.18],
-        [X(0.24), c.top + vh * 0.62],
-        [X(0.68), f.top + vh * 0.2],
-        [X(0.9), f.bottom - vh * 0.12],
+        [X(0.5), e.bottom + vh * 0.05],
+        [X(0.2), e.bottom + vh * 0.45],
+        [X(0.82), t.top + t.alto * 0.3],
+        [X(0.18), t.top + t.alto * 0.7],
+        [X(0.8), h.top - vh * 0.1],
+        [X(0.28), h.top + vh * 0.6],
+        [X(0.74), c.top + vh * 0.1],
+        [X(0.3), c.top + vh * 0.7],
+        [X(0.7), f.top + vh * 0.25],
+        [X(0.92), f.bottom - vh * 0.12],
       ],
-      lazos: [
-        { tramo: 2, r: R * 0.85, sentido: 1 },
-        { tramo: 4, r: R * 1.1, sentido: -1 },
-        { tramo: 6, r: R * 0.9, sentido: 1 },
-        { tramo: 8, r: R, sentido: -1 },
-      ],
+      lazos: [{ tramo: 5, r: R, sentido: -1 }],
+      punta: [e.bottom, Infinity],
     },
   ];
 }
 
 export default function LineasScroll() {
   const refSvg = useRef(null);
+  const refPunta = useRef(null);
 
   useEffect(() => {
     const svg = refSvg.current;
-    if (!svg || movimientoReducido()) return undefined;
+    const svgPunta = refPunta.current;
+    if (!svg || !svgPunta || movimientoReducido()) return undefined;
     const grupo = svg.querySelector('g');
-    const grad = svg.querySelector('linearGradient');
+    const grupoPunta = svgPunta.querySelector('g');
+    const grads = [svg.querySelector('linearGradient'), svgPunta.querySelector('linearGradient')];
     let lineas = [];
     let firma = '';
     let espera = 0;
@@ -91,10 +98,11 @@ export default function LineasScroll() {
       const nueva = `${vw}x${vh}|${lista.map((l) => l.puntos.map((q) => Math.round(q[1])).join(',')).join('|')}`;
       if (!forzar && nueva === firma) return;
       firma = nueva;
-      grad.setAttribute('y2', String(Math.round(vh * 1.3)));
+      grads.forEach((g) => g.setAttribute('y2', String(Math.round(vh * 1.3))));
       grupo.replaceChildren();
-      const ancho = grosorLinea(vw).toFixed(1);
-      lineas = lista.map(({ puntos, lazos }) => {
+      grupoPunta.replaceChildren();
+      const ancho = grosorLinea(vw);
+      lineas = lista.map(({ puntos, lazos, punta }) => {
         const guia = spline(puntos);
         const trazo = trazar(
           guia,
@@ -103,30 +111,50 @@ export default function LineasScroll() {
             return { u: (a + b) / 2, r, sentido };
           })
         );
+        const d = aRuta(trazo.puntos);
         const ruta = document.createElementNS(SVG, 'path');
-        ruta.setAttribute('d', aRuta(trazo.puntos));
-        ruta.setAttribute('stroke', 'url(#linea-cian)');
-        ruta.setAttribute('stroke-width', ancho);
+        ruta.setAttribute('d', d);
+        ruta.setAttribute('stroke', 'url(#linea-azul)');
+        ruta.setAttribute('stroke-width', ancho.toFixed(1));
         ruta.style.strokeDasharray = `${trazo.largo} ${trazo.largo + 10}`;
         ruta.style.strokeDashoffset = String(trazo.largo);
         ruta.style.opacity = '0';
         grupo.appendChild(ruta);
+        // la punta: el mismo camino (sólo su último tramo) y la cabeza con un halo
+        const cola = document.createElementNS(SVG, 'path');
+        cola.setAttribute('d', d);
+        cola.setAttribute('stroke', 'url(#linea-azul-punta)');
+        cola.setAttribute('stroke-width', ancho.toFixed(1));
+        cola.style.strokeDasharray = `${LARGO_PUNTA} ${trazo.largo * 2}`;
+        const halo = document.createElementNS(SVG, 'circle');
+        halo.setAttribute('r', (ancho * 1.6).toFixed(1));
+        halo.setAttribute('class', styles.halo);
+        const cabeza = document.createElementNS(SVG, 'circle');
+        cabeza.setAttribute('r', (ancho * 0.62).toFixed(1));
+        cabeza.setAttribute('class', styles.cabeza);
+        const g = document.createElementNS(SVG, 'g');
+        g.append(cola, halo, cabeza);
+        g.style.opacity = '0';
+        grupoPunta.appendChild(g);
         let yMin = Infinity;
         let yMax = -Infinity;
         trazo.puntos.forEach(([, y]) => {
           yMin = Math.min(yMin, y);
           yMax = Math.max(yMax, y);
         });
-        return { ruta, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
+        return { ruta, cola, halo, cabeza, g, punta, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
       });
     };
 
     const cuadro = (dt, s) => {
       const y = s.y;
       const vh = window.innerHeight;
-      grupo.setAttribute('transform', `translate(0 ${(-y).toFixed(1)})`);
+      const t = `translate(0 ${(-y).toFixed(1)})`;
+      grupo.setAttribute('transform', t);
+      grupoPunta.setAttribute('transform', t);
+      const yPunta = y + vh * 0.56;
       for (const l of lineas) {
-        const objetivo = largoHasta(l.trazo, l.tabla, y + vh * 0.56) / l.trazo.largo;
+        const objetivo = largoHasta(l.trazo, l.tabla, yPunta) / l.trazo.largo;
         let show;
         if (l.primero) {
           l.resorte.fijar(objetivo);
@@ -136,11 +164,25 @@ export default function LineasScroll() {
         show = limitar(show, 0, 1);
         const enVista = l.yMax > y - 60 && l.yMin < y + vh + 60;
         const op = enVista && show > 0.002 ? 1 : 0;
-        const clave = `${op}|${show.toFixed(4)}`;
+        const dibujado = l.trazo.largo * show;
+        // la punta, por encima de todo: mientras se está dibujando y es de este tramo
+        const conPunta = op && show < 0.999 && yPunta > l.punta[0] && yPunta < l.punta[1];
+        const clave = `${op}|${conPunta}|${dibujado.toFixed(1)}`;
         if (clave === l.ultimo) continue;
         l.ultimo = clave;
         l.ruta.style.opacity = String(op);
-        l.ruta.style.strokeDashoffset = (l.trazo.largo * (1 - show)).toFixed(1);
+        l.ruta.style.strokeDashoffset = (l.trazo.largo - dibujado).toFixed(1);
+        l.g.style.opacity = conPunta ? '1' : '0';
+        if (conPunta) {
+          const desde = Math.max(0, dibujado - LARGO_PUNTA);
+          l.cola.style.strokeDasharray = `${(dibujado - desde).toFixed(1)} ${l.trazo.largo * 2}`;
+          l.cola.style.strokeDashoffset = (-desde).toFixed(1);
+          const [px, py] = puntoEnLargo(l.trazo, dibujado);
+          for (const c of [l.halo, l.cabeza]) {
+            c.setAttribute('cx', px.toFixed(1));
+            c.setAttribute('cy', py.toFixed(1));
+          }
+        }
       }
     };
 
@@ -164,15 +206,22 @@ export default function LineasScroll() {
     };
   }, []);
 
+  const degrade = (id) => (
+    <linearGradient id={id} gradientUnits="userSpaceOnUse" spreadMethod="reflect" x1="0" y1="0" x2="0" y2="900">
+      <stop offset="0" stopColor={COLOR_LINEA.c0} />
+      <stop offset="1" stopColor={COLOR_LINEA.c1} />
+    </linearGradient>
+  );
   return (
-    <svg ref={refSvg} className={styles.lienzo} aria-hidden="true">
-      <defs>
-        <linearGradient id="linea-cian" gradientUnits="userSpaceOnUse" spreadMethod="reflect" x1="0" y1="0" x2="0" y2="900">
-          <stop offset="0" stopColor={COLOR_LINEA.c0} />
-          <stop offset="1" stopColor={COLOR_LINEA.c1} />
-        </linearGradient>
-      </defs>
-      <g />
-    </svg>
+    <>
+      <svg ref={refSvg} className={styles.lienzo} aria-hidden="true">
+        <defs>{degrade('linea-azul')}</defs>
+        <g />
+      </svg>
+      <svg ref={refPunta} className={styles.punta} aria-hidden="true">
+        <defs>{degrade('linea-azul-punta')}</defs>
+        <g />
+      </svg>
+    </>
   );
 }

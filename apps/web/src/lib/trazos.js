@@ -146,5 +146,22 @@ export function spline(puntos) {
   return guia;
 }
 
-// El color de la línea (el cian del tubo original): se alterna suave a lo largo del recorrido.
-export const COLOR_LINEA = { c0: '#94fffb', c1: '#1285dc' };
+// El color de la línea: azul eléctrico (el acento del sitio), que se alterna suave a lo largo del recorrido.
+export const COLOR_LINEA = { c0: '#4d8dff', c1: '#1f3dff' };
+
+// Punto del trazo a un largo dado.
+export function puntoEnLargo(trazo, largo) {
+  const { puntos, largos } = trazo;
+  if (largo <= 0) return puntos[0];
+  const n = largos.length - 1;
+  if (largo >= largos[n]) return puntos[n];
+  let a = 0;
+  let b = n;
+  while (b - a > 1) {
+    const m = (a + b) >> 1;
+    if (largos[m] >= largo) b = m;
+    else a = m;
+  }
+  const f = (largo - largos[a]) / Math.max(1e-6, largos[b] - largos[a]);
+  return [puntos[a][0] + (puntos[b][0] - puntos[a][0]) * f, puntos[a][1] + (puntos[b][1] - puntos[a][1]) * f];
+}

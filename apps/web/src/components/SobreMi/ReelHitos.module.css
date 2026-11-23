@@ -1077,3 +1077,19 @@
   stroke-linejoin: round;
   opacity: clamp(0, calc(1 - var(--salida, 0) * 1.6), 1);
 }
+
+/* La punta de la línea del reel va por encima de las portadas: siempre se ve. */
+.lineaPunta {
+  z-index: 4;
+}
+
+.lineaCabeza {
+  fill: #9cc2ff;
+  stroke: none;
+}
+
+.lineaHalo {
+  fill: #2f5cff;
+  stroke: none;
+  opacity: 0.28;
+}

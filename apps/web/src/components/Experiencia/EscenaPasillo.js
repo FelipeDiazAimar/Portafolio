@@ -1802,8 +1802,8 @@ function crearLineaPiso(recorrido) {
     side: THREE.DoubleSide,
     uniforms: {
       uHasta: { value: 0 },
-      uC0: { value: new THREE.Color('#94fffb') },
-      uC1: { value: new THREE.Color('#1285dc') },
+      uC0: { value: new THREE.Color('#4d8dff') },
+      uC1: { value: new THREE.Color('#1f3dff') },
     },
     vertexShader: /* glsl */ `
       attribute vec2 aDato;
