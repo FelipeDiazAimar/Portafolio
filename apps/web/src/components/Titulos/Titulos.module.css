@@ -9,7 +9,7 @@
   margin-left: calc(50% - 50vw);
   /* clip y no hidden: hidden rompe el sticky del escenario */
   overflow: clip;
-  background: var(--color-bg);
+  background: var(--fondo-hondo, var(--color-bg));
   color: var(--color-fg);
   scroll-margin-top: 0;
   isolation: isolate;

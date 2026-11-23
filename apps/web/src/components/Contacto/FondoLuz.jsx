@@ -25,7 +25,7 @@ const PALETAS = {
     estela: '31, 107, 255',
   },
   dark: {
-    base: [11, 13, 18],
+    base: [1, 1, 1],
     manchas: [
       { color: [26, 54, 120], fuerza: 0.42 },
       { color: [16, 70, 168], fuerza: 0.3 },

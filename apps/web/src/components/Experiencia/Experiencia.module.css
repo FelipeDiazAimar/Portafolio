@@ -19,7 +19,7 @@
   height: 100vh;
   height: 100svh;
   overflow: hidden;
-  background: var(--color-bg);
+  background: var(--fondo-hondo, var(--color-bg));
   color: #f4f5f7;
 }
 
@@ -64,7 +64,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--color-bg);
+  background: var(--fondo-hondo, var(--color-bg));
   opacity: var(--fundido, 0);
 }
 

@@ -49,7 +49,7 @@ const LUZ = {
 };
 
 const PALETAS = {
-  dark: { fondo: '#0b0d12', exposicion: 1.05 },
+  dark: { fondo: '#010101', exposicion: 1.05 },
   light: { fondo: '#f5f6f8', exposicion: 1.12 },
 };
 

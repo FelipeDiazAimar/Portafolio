@@ -30,7 +30,7 @@ html::-webkit-scrollbar {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--color-bg);
+  background: var(--fondo-hondo, var(--color-bg));
   color: var(--color-fg);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -62,7 +62,9 @@ html.onda-tema *::after {
    claro = blanco, oscuro = casi negro; el acento es azul eléctrico / celeste en ambos. */
 :root {
   /* oscuro (por defecto, igual que los tokens) */
-  --contacto-fondo: #0b0d12;
+  /* negro hondo, el mismo de Habilidades: fondo de la página (hero, Títulos, Contacto y footer) */
+  --fondo-hondo: #010101;
+  --contacto-fondo: #010101;
   --contacto-texto: #f4f5f7;
   --contacto-tenue: rgba(244, 245, 247, 0.55);
   --contacto-fantasma: rgba(244, 245, 247, 0.2);
@@ -89,6 +91,7 @@ html.onda-tema *::after {
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
+    --fondo-hondo: var(--color-bg);
     --contacto-fondo: #f7f8fa;
     --contacto-texto: #0f1218;
     --contacto-tenue: rgba(15, 18, 24, 0.52);
@@ -115,6 +118,7 @@ html.onda-tema *::after {
 }
 
 :root[data-theme='light'] {
+  --fondo-hondo: var(--color-bg);
   --contacto-fondo: #f7f8fa;
   --contacto-texto: #0f1218;
   --contacto-tenue: rgba(15, 18, 24, 0.52);
@@ -140,7 +144,8 @@ html.onda-tema *::after {
 }
 
 :root[data-theme='dark'] {
-  --contacto-fondo: #0b0d12;
+  --fondo-hondo: #010101;
+  --contacto-fondo: #010101;
   --contacto-texto: #f4f5f7;
   --contacto-tenue: rgba(244, 245, 247, 0.55);
   --contacto-fantasma: rgba(244, 245, 247, 0.2);

@@ -80,7 +80,10 @@ let suavizadoFuerza = 0;
 export function tickMovimiento(dt) {
   if (typeof window === 'undefined') return;
   const lenis = window.__lenis;
-  const y = lenis ? lenis.animatedScroll : window.scrollY;
+  // (el scroll suavizado puede pasarse un poco del final o del principio; la página no se mueve más
+  // allá, así que lo que sigue al scroll tampoco)
+  const limite = lenis?.limit ?? document.documentElement.scrollHeight - window.innerHeight;
+  const y = Math.min(Math.max(0, lenis ? lenis.animatedScroll : window.scrollY), Math.max(0, limite));
   const vel = lenis && lenis.isScrolling ? lenis.velocity : ultimoY === null ? 0 : y - ultimoY;
   ultimoY = y;
   scroll.y = y;
