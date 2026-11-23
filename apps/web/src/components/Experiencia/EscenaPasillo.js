@@ -13,6 +13,7 @@
 //   viñeta. En celulares se dibuja directo, sin AO.
 // Sólo se dibujan y se cargan el pasillo actual y sus vecinos.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { BlendFunction, BloomEffect, EffectComposer, EffectPass, KernelSize, OutlineEffect, RenderPass, SMAAEffect, SMAAPreset, ToneMappingEffect, ToneMappingMode, VignetteEffect } from 'postprocessing';
@@ -745,7 +746,13 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     plano(g, ANCHO, L, matTecho, [0, ALTO, -L / 2], [Math.PI / 2, 0, 0], [ANCHO / TEXEL.techo, L / TEXEL.techo]);
     plano(g, L, ALTO, matPared, [-ANCHO / 2, ALTO / 2, -L / 2], [0, Math.PI / 2, 0], [L / TEXEL.pared, ALTO / TEXEL.pared]);
     plano(g, L, ALTO, matPared, [ANCHO / 2, ALTO / 2, -L / 2], [0, -Math.PI / 2, 0], [L / TEXEL.pared, ALTO / TEXEL.pared]);
-    for (let z = 1.5; z < L; z += 3) plano(g, 1.2, 0.3, matLuzTecho, [0, ALTO - 0.005, -z], [Math.PI / 2, 0, 0]);
+    // las tiras de luz del techo, todas en una sola malla
+    const tiras = [];
+    for (let z = 1.5; z < L; z += 3) tiras.push(new THREE.PlaneGeometry(1.2, 0.3).rotateX(Math.PI / 2).translate(0, ALTO - 0.005, -z));
+    const mallaTiras = new THREE.Mesh(mergeGeometries(tiras), matLuzTecho);
+    mallaTiras.receiveShadow = true;
+    g.add(mallaTiras);
+    tiras.forEach((t) => t.dispose());
     if (i === 0) plano(g, ANCHO, ALTO, matPared, [0, ALTO / 2, 0], [0, Math.PI, 0], [ANCHO / TEXEL.pared, ALTO / TEXEL.pared]);
     portal(g, trabajo.acento);
     posters(g, p, trabajo, i);
@@ -918,6 +925,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
       modelo.rotation.y = colocacion.giro ?? 0;
       padre.add(modelo);
       if (ancla !== undefined) modelo.traverse((m) => (m.userData.ancla = ancla));
+      if (rendimiento) modelo.traverse(sombraSegunModo);
       construccion.aplicar(modelo, zona.indice, 1.2, { destacado: ancla !== undefined });
       mostrarCompilado(modelo);
     };
@@ -946,9 +954,42 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
       construccion.aplicar(poblado.grupo, zona.indice, 1.2, { destacado: ancla !== undefined });
       modelo.add(poblado.grupo);
       if (ancla !== undefined) poblado.grupo.traverse((m) => (m.userData.ancla = ancla));
+      if (rendimiento) poblado.grupo.traverse(sombraSegunModo);
     });
     await Promise.allSettled(poblado.colocaciones.map((c) => ubicar(c, modelo, zona, ancla)));
     return modelo;
+  }
+
+  // Lo suelto que se repite en un pasillo (el mismo modelo varias veces) se dibuja con una malla
+  // instanciada por pieza: una llamada de dibujo por pieza en vez de una por copia
+  async function ubicarInstanciados(id, lista, zona) {
+    const plantilla = await recursos.plantilla(id).catch(() => null);
+    if (!plantilla || destruida) return;
+    plantilla.updateMatrixWorld(true);
+    const eje = new THREE.Vector3(0, 1, 0);
+    const unidad = new THREE.Vector3(1, 1, 1);
+    const colocadas = lista.map((c) => new THREE.Matrix4().compose(new THREE.Vector3(c.x, c.y, c.z), new THREE.Quaternion().setFromAxisAngle(eje, c.giro ?? 0), unidad));
+    const grupo = new THREE.Group();
+    // comparte geometría y materiales con la plantilla: destruir() no los libera de nuevo
+    grupo.userData.id = id;
+    const matriz = new THREE.Matrix4();
+    plantilla.traverse((o) => {
+      if (!o.isMesh) return;
+      const inst = new THREE.InstancedMesh(o.geometry, o.material, lista.length);
+      colocadas.forEach((c, k) => inst.setMatrixAt(k, matriz.multiplyMatrices(c, o.matrixWorld)));
+      inst.instanceMatrix.needsUpdate = true;
+      inst.castShadow = o.castShadow;
+      inst.receiveShadow = o.receiveShadow;
+      inst.computeBoundingSphere();
+      grupo.add(inst);
+    });
+    await enCola(() => {
+      if (destruida) return;
+      zona.g.add(grupo);
+      if (rendimiento) grupo.traverse(sombraSegunModo);
+      construccion.aplicar(grupo, zona.indice, 1.2);
+      mostrarCompilado(grupo);
+    });
   }
 
   function cargarZona(i) {
@@ -965,7 +1006,11 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     );
     Promise.allSettled([...tooltip, ...conPoblar.map((c) => ubicar(c, zona.g, zona))]).then((resultados) => {
       for (const r of resultados) if (r.status === 'rejected') console.warn('[pasillo]', r.reason);
-      return Promise.allSettled(sueltos.map((c) => ubicar(c, zona.g, zona)));
+      const porId = new Map();
+      for (const c of sueltos) porId.set(c.id, [...(porId.get(c.id) ?? []), c]);
+      return Promise.allSettled(
+        [...porId].map(([id, lista]) => (lista.length > 1 ? ubicarInstanciados(id, lista, zona) : ubicar(lista[0], zona.g, zona))),
+      );
     });
   }
 
@@ -979,6 +1024,14 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
   const cielo = crearFondo(escena, camara);
   cielo.fijar('aurora');
   let temaActual = tema;
+  function sombraSegunModo(o) {
+    if (!o.isMesh) return;
+    o.userData.sombra ??= [o.castShadow, o.receiveShadow];
+    const [proyecta, recibe] = o.userData.sombra;
+    const conSombra = !rendimiento || o.userData.ancla !== undefined;
+    o.castShadow = proyecta && conSombra;
+    o.receiveShadow = recibe && conSombra;
+  }
   function fijarRendimiento(activo) {
     rendimiento = activo;
     ratioMax = activo ? Math.min(1, ratioOriginal) : ratioOriginal;
@@ -987,8 +1040,8 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     tamano(ancho, alto);
     // sin el último pase del postprocesado, el mapeo de tonos lo hace el renderer
     renderer.toneMapping = composer && !activo ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-    renderer.shadowMap.enabled = !activo;
-    foco.castShadow = !activo;
+    // las sombras se quedan sólo en los objetos interactivos: el resto del pasillo no las proyecta ni las recibe
+    escena.traverse(sombraSegunModo);
     renderer.shadowMap.needsUpdate = true;
     escena.traverse((o) => {
       for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : []) m.needsUpdate = true;
@@ -1069,6 +1122,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
   let sFoco = 0;
   // hasta cuándo (performance.now) el scroll sólo acompaña al foco y no lo suelta
   let acomodando = 0;
+  let viajando = false; // true mientras la cámara pasa de un objeto enfocado a otro
   let mezcla = 0; // 0 = caminando, 1 = mirando el objeto
   const posFoco = new THREE.Vector3();
   const miraFoco = new THREE.Vector3();
@@ -1101,6 +1155,8 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     if (i < 0 || i >= anclas.length) return;
     const a = anclas[i];
     const s = Math.min(recorrido.largo, Math.max(0, bases[a.pasillo] + recorrido.pasillos[a.pasillo].objetos[a.objeto].a));
+    // si ya se miraba otro objeto, la cámara viaja de uno a otro en vez de saltar
+    viajando = enfocado >= 0;
     enfocado = i;
     sFoco = s;
     acomodando = performance.now() + 1200;
@@ -1432,8 +1488,15 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
         // el destino se recuerda para poder volver desde ahí
         ojo.position.copy(posFoco);
         ojo.lookAt(miraFoco);
-        ultimaPos.copy(posFoco);
-        ultimaQ.copy(ojo.quaternion);
+        if (viajando) {
+          const k = 1 - Math.exp(-dt * 3.4);
+          ultimaPos.lerp(posFoco, k);
+          ultimaQ.slerp(ojo.quaternion, k);
+          if (ultimaPos.distanceToSquared(posFoco) < 0.0004 && ultimaQ.angleTo(ojo.quaternion) < 0.004) viajando = false;
+        } else {
+          ultimaPos.copy(posFoco);
+          ultimaQ.copy(ojo.quaternion);
+        }
       }
       qFoco.copy(ultimaQ);
       const e = mezcla * mezcla * (3 - 2 * mezcla);
@@ -1502,17 +1565,29 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     });
   }
 
-  function arrancar() {
+  // se dibuja sólo con la sección a la vista (`pedida`) y la pestaña visible
+  let pedida = false;
+  function iniciar() {
     if (corriendo) return;
     corriendo = true;
     reloj.reset();
     cuadro = requestAnimationFrame(tic);
   }
-  function frenar() {
+  function detener() {
     corriendo = false;
     cancelAnimationFrame(cuadro);
     cuadro = 0;
   }
+  function arrancar() {
+    pedida = true;
+    if (!document.hidden) iniciar();
+  }
+  function frenar() {
+    pedida = false;
+    detener();
+  }
+  const alCambiarVisibilidad = () => (document.hidden ? detener() : pedida && !destruida && iniciar());
+  document.addEventListener('visibilitychange', alCambiarVisibilidad);
 
   const alPerderContexto = (e) => {
     e.preventDefault();
@@ -1604,6 +1679,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
       clearTimeout(precarga);
       frenar();
       lienzo.removeEventListener('webglcontextlost', alPerderContexto);
+      document.removeEventListener('visibilitychange', alCambiarVisibilidad);
       const compartidos = new Set();
       recursos.destruir();
       escena.traverse((o) => {

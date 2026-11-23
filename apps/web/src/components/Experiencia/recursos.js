@@ -58,6 +58,9 @@ export function crearRecursos(renderer, medidaDe = () => null) {
                 m.transparent = true;
                 m.opacity = Math.min(m.opacity, 0.28);
                 m.depthWrite = false;
+              } else if (m.side === THREE.DoubleSide && !m.transparent && !m.alphaTest) {
+                // las caras traseras de lo opaco no se ven: no se dibujan
+                m.side = THREE.FrontSide;
               }
             }
           });
@@ -132,6 +135,7 @@ export function crearRecursos(renderer, medidaDe = () => null) {
 
   return {
     instancia,
+    plantilla: modelo,
     precargar: (ids) => Promise.all(ids.map((id) => modelo(id).catch(() => null))),
     materialPBR,
     destruir() {
