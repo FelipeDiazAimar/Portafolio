@@ -144,6 +144,7 @@ export default function Revelador() {
       return () => document.documentElement.classList.remove('rv-quieto');
     }
     const vivos = new Map(); // elemento → animaciones
+    let olas = []; // los [data-ola] (los arma escanear)
     let espera = 0;
 
     const escanear = () => {
@@ -176,7 +177,6 @@ export default function Revelador() {
 
     // "wave" por velocidad: se escribe sólo en los [data-ola] (en <html> recalcularía los
     // estilos de toda la página en cada cuadro)
-    let olas = [];
     let ultimo = 0;
     const quitar = alCuadro((_dt, s) => {
       const ola = Math.max(-1, Math.min(1, s.vel / 60));

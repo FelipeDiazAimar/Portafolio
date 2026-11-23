@@ -91,7 +91,9 @@ export default function Proyectos() {
   const cifras = resumenCifras();
   const refSeccion = useRef(null);
   const refNulo = useRef(null);
-  const [puenteOn, setPuenteOn] = useState(false);
+  // null hasta saberlo en el cliente: el alto del puente ya lo da el CSS desde el servidor (así un
+  // ancla o la restauración del scroll caen en su lugar), y sólo se quita si resulta que no va
+  const [puenteOn, setPuenteOn] = useState(null);
   useEffect(() => {
     const mq = window.matchMedia(CONSULTA_MOVIL);
     const evaluar = () => setPuenteOn(!reducido && !mq.matches && hayWebGL());
@@ -632,7 +634,7 @@ export default function Proyectos() {
   const ocultas = useMemo(() => [activo, ...saliendo].filter(Boolean), [activo, saliendo]);
 
   return (
-    <section ref={refSeccion} id="proyectos" className={styles.contenedor} data-puente={puenteOn ? 'true' : 'false'} data-salto-al-final={puenteOn ? 'true' : 'false'} aria-labelledby="titulo-proyectos">
+    <section ref={refSeccion} id="proyectos" className={styles.contenedor} data-puente={puenteOn === null ? undefined : String(puenteOn)} data-salto-al-final={puenteOn === false ? 'false' : 'true'} aria-labelledby="titulo-proyectos">
       <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'}>
         <div ref={refFondo} className={styles.fondo} data-ola>
           {marquesinaCerca ? (
