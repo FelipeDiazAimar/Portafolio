@@ -666,8 +666,65 @@
     }
   },
   {
-    "slug": "crm-inmobiliaria",
+    "slug": "simulacion-paty",
     "orden": 13,
+    "titulo": "Simulación de la planta de hamburguesas PATY",
+    "cliente": "UTN San Francisco · Simulación 2026",
+    "tipo": "academico",
+    "periodo": "2026",
+    "estado": "demo",
+    "destacado": false,
+    "privado": false,
+    "color": "#ff2040",
+    "problema": "La formadora parecía el cuello de botella de las líneas L7 y L8, pero probar cambios en la planta real es caro: había que medirlo en un modelo antes de invertir.",
+    "resumen": "Simulación de eventos discretos en FlexSim de dos líneas de hamburguesas, con datos reales de la planta (paradas, pesajes, camiones), planta 3D en Blender y una web en tiempo real. Trabajo final en grupo de tres.",
+    "contexto": "Caso real de la materia Simulación (Ingeniería en Sistemas, UTN San Francisco, docente Sergio Revilla). Datos de la planta de uno de los integrantes; ajustes con Kolmogorov-Smirnov y remuestreo en lugar de forzar distribuciones.",
+    "features": [
+      "Modelo en FlexSim de recepción, desencajado, picado, mezclado, formado, túnel, envasado y estibado",
+      "Datos reales: 1.267 paradas, 11.882 pallets, 306 camiones y 246 corridas de formado",
+      "Cuatro escenarios con 10 réplicas de 24 h, números aleatorios comunes y diferencias pareadas",
+      "Servidor MCP propio con 73 herramientas para que un asistente corra el modelo",
+      "Web en tiempo real (Next.js, Three.js, ECharts) alimentada por la telemetría de FlexSim"
+    ],
+    "metricas": [
+      "Cuello real: mezcladoras por el lavado de 30 min, no la formadora",
+      "Formadoras a 1.843 kg/h: +9,3 pallets/día (+18,9 %)",
+      "Más materia prima o batch de 1.200 kg: sin efecto distinguible de cero"
+    ],
+    "stack": [
+      "nextjs",
+      "react",
+      "typescript",
+      "threejs",
+      "webgl",
+      "python",
+      "mcp",
+      "vercel",
+      "git",
+      "github"
+    ],
+    "enlaces": {
+      "sitio": null,
+      "repo": "https://github.com/FelipeDiazAimar/3DModelingPaty",
+      "repoFrontend": null,
+      "repoBackend": null
+    },
+    "imagenes": {
+      "portada": "/proyectos/simulacion-paty/portada.webp",
+      "logo": "/proyectos/simulacion-paty/logo.webp",
+      "movil": null,
+      "completa": null
+    },
+    "caso": {
+      "problema": "",
+      "solucion": "",
+      "reto": "",
+      "metrica": ""
+    }
+  },
+  {
+    "slug": "crm-inmobiliaria",
+    "orden": 14,
     "titulo": "CRM Inmobiliaria",
     "cliente": "Proyecto propio",
     "tipo": "personal",
@@ -713,7 +770,7 @@
   },
   {
     "slug": "portafolio",
-    "orden": 14,
+    "orden": 15,
     "titulo": "Este portafolio",
     "cliente": "Proyecto propio",
     "tipo": "personal",
