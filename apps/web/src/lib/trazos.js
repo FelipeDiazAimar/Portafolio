@@ -152,6 +152,22 @@ export function suavizar(puntos, { fijosIni = 1, fijosFin = 1, vueltas = 3 } = {
   return [...ini, ...medio, ...fin];
 }
 
+// Saca los puntos marcados demasiado cerca del anterior (dejan esquinas cerradas al redondear).
+// El primero y el último quedan siempre.
+export function ralear(puntos, distancia) {
+  if (puntos.length < 3) return puntos;
+  const sale = [puntos[0]];
+  for (let i = 1; i < puntos.length - 1; i += 1) {
+    const [ax, ay] = sale[sale.length - 1];
+    if (Math.hypot(puntos[i][0] - ax, puntos[i][1] - ay) >= distancia) sale.push(puntos[i]);
+  }
+  const ultimo = puntos[puntos.length - 1];
+  const [ax, ay] = sale[sale.length - 1];
+  if (sale.length > 1 && Math.hypot(ultimo[0] - ax, ultimo[1] - ay) < distancia * 0.5) sale.pop();
+  sale.push(ultimo);
+  return sale;
+}
+
 export function spline(puntos) {
   const P = [puntos[0], ...puntos, puntos[puntos.length - 1]];
   const tramos = [];
