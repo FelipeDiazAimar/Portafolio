@@ -14,6 +14,7 @@ import { IconoTecnologia } from '@/components/Proyectos/iconosTecnologias.jsx';
 import { hayWebGL } from '@/lib/soporteWebGL.js';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import estilos from './Habilidades.module.css';
+import LineaSeccion from '@/components/LineasScroll/LineaSeccion.jsx';
 
 // Habilidades: un xilófono de vidrio con una barra por tecnología (adaptado de
 // https://github.com/Sujenphea/xylophone, MIT). La cinta de barras avanza sola y con el scroll de
@@ -297,6 +298,9 @@ export default function Habilidades() {
             )}
           </div>
         )}
+
+        {/* la línea del sitio pasa por acá: entre la escena (fondo) y el panel */}
+        <LineaSeccion />
 
         {/* Lista real de tecnologías: sin WebGL se ve como píldoras; con WebGL queda para lectores
             de pantalla, y sus logos (los mismos de Proyectos) alimentan el atlas de las barras. */}

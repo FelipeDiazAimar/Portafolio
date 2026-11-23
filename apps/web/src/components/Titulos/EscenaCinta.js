@@ -575,6 +575,9 @@ export function crearEscenaCinta({
       if (corriendo) dibujar();
     },
     estado: () => ({
+      // px entre una tarjeta y la siguiente y alto de tarjeta (los usa la hélice de la línea)
+      paso: paso(),
+      altoTarjeta: altoTarjeta(),
       posicion,
       destino,
       indice: modulo(Math.round(destino), total),

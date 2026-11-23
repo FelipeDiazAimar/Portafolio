@@ -374,11 +374,10 @@ export default function Proyectos() {
   //   10 → 42 %          cada conector se vuelve la tarjeta 3D de su proyecto
   //   48 → 88 %          cada tarjeta vuela a su lugar de la marquesina y se aplana
   //   86 → 96 %          la escena se funde con la marquesina de verdad
-  //   55 → 93 %          el título viaja al header
+  //   50 → 80 %          el título se desvanece
   // Subiendo, todo se desarma igual. En celular, sin WebGL o con movimiento reducido no hay
   // puente: la sección es la de siempre.
-  const mvX = useMotionValue(0);
-  const mvY = useMotionValue(0);
+  const mvO = useMotionValue(1);
   const mvS = useMotionValue(1);
   const refDestino = useRef({ x: 0, y: 0 });
   refDestino.current = destinoTitulo;
@@ -492,22 +491,15 @@ export default function Proyectos() {
         ultimoIntro = intro;
         panel.dataset.intro = intro;
       }
-      // el título viaja al header (y vuelve) con el scroll
-      const q = limitar((y - (llegada + L * 0.55)) / (L * 0.38), 0, 1);
+      // el título se desvanece con el scroll (y vuelve al subir); ya no viaja al header
+      const q = limitar((y - (llegada + L * 0.5)) / (L * 0.3), 0, 1);
       const e = q * q * (3 - 2 * q);
-      const d = refDestino.current;
-      mvX.set(d.x * e);
-      mvY.set(d.y * e);
-      mvS.set(1 + (refEscalaTitulo.current - 1) * e);
+      mvO.set(1 - e);
+      mvS.set(1 - e * 0.04);
       const visto = q > 0.02;
       if (visto !== ultimoVisto) {
         ultimoVisto = visto;
         setTituloVisto(visto);
-      }
-      const header = q >= 1;
-      if (header !== ultimoHeader) {
-        ultimoHeader = header;
-        setEnHeader(header);
       }
     };
     aplicar(window.scrollY);
@@ -525,7 +517,7 @@ export default function Proyectos() {
       lienzo.style.removeProperty('--abre-k');
       delete panel.dataset.intro;
     };
-  }, [puenteOn, opcionesEscena, terminarIntro, mvX, mvY, mvS]);
+  }, [puenteOn, opcionesEscena, terminarIntro, mvO, mvS]);
   useEffect(() => terminarIntro, [terminarIntro]);
 
   // Teclado con la sección a la vista: flechas recorren, Escape vuelve a la marquesina.
@@ -686,7 +678,7 @@ export default function Proyectos() {
             onAnimationComplete={() => {
               if (tituloVisto && !reducido) setEnHeader(true);
             }}
-            style={puenteOn ? { x: mvX, y: mvY, scale: mvS, visibility: enHeader ? 'hidden' : 'visible' } : { visibility: enHeader ? 'hidden' : 'visible' }}
+            style={puenteOn ? { opacity: mvO, scale: mvS } : { visibility: enHeader ? 'hidden' : 'visible' }}
           >
             <h2 id="titulo-proyectos" className={styles.titulo}>
               {movil ? (

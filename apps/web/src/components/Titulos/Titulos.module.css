@@ -279,3 +279,21 @@
 .seccion:has(.escenario[data-modo='horizontal']) {
   background: transparent;
 }
+
+/* La línea del sitio como hélice alrededor de la cinta (LineaTitulos): la capa de atrás va debajo
+   del lienzo de las tarjetas y la de adelante encima (recortada a donde la hélice pasa por delante). */
+.linea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lineaAtras {
+  z-index: -1;
+}

@@ -33,3 +33,18 @@
   will-change: opacity;
 }
 
+
+/* El último tramo dentro de una sección con fondo propio (LineaSeccion): entre el fondo y el
+   contenido. El viewBox es la porción de la página que ocupa la sección. */
+.seccion {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -27,6 +27,7 @@ import { crearEfectos } from './efectosPasillo.js';
 import { crearConstruccion } from './construccion.js';
 import { crearFondo } from './fondos.js';
 import { modoRendimiento } from '@/lib/rendimiento.js';
+import { registrarPuntaPiso } from '@/lib/puente.js';
 
 const ALTURA_OJOS = 1.62;
 const MIRADA_ADELANTE = 2.6;
@@ -738,6 +739,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
   const raiz = new THREE.Group();
   escena.add(raiz);
   const lineaPiso = crearLineaPiso(recorrido);
+  let puntaInformada = false;
   raiz.add(lineaPiso.malla);
   if (process.env.NODE_ENV !== 'production') {
     window.__escenaPasillo = escena;
@@ -1537,6 +1539,14 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
       camara.quaternion.copy(qCaminar);
     }
     camara.updateMatrixWorld();
+    // La primera vez, con la cámara en el arranque: dónde cae en pantalla la punta de la línea del
+    // piso (la línea de la página que baja de Proyectos termina ahí, ver LineasScroll).
+    if (!puntaInformada && actual < 1 && mezcla === 0 && mezclaLibre === 0) {
+      puntaInformada = true;
+      const [px, pz] = puntoEn(recorrido, actual + lineaPiso.adelante - 0.8); // antes del difuminado de la punta
+      const v = new THREE.Vector3(px, 0.012, pz).project(camara);
+      registrarPuntaPiso([(v.x + 1) / 2, (1 - v.y) / 2]);
+    }
     // velocidad real de la cámara (para los efectos)
     const recorrido_ = camara.position.distanceTo(posPrevia);
     posPrevia.copy(camara.position);
@@ -1766,6 +1776,7 @@ function envolver(ctx, texto, x, y, ancho, interlineado) {
 // La línea del sitio, ya en el pasillo: una cinta cian en el centro del piso, a lo largo de todo el
 // recorrido (también en las curvas entre pasillos). Se dibuja delante de la cámara a medida que se
 // camina (unos metros adelante, con la punta difuminada) y se recoge al volver.
+const ADELANTE_LINEA = 6.5; // cuántos metros por delante de la cámara llega la línea del piso
 function crearLineaPiso(recorrido) {
   const ANCHO_LINEA = 0.11;
   const PASO = 0.08;
@@ -1800,6 +1811,9 @@ function crearLineaPiso(recorrido) {
     depthWrite: false,
     toneMapped: false,
     side: THREE.DoubleSide,
+    // va pegada al centro del piso, donde nada la tapa: sin prueba de profundidad, así a lo lejos
+    // el piso no se la come y llega hasta su punta
+    depthTest: false,
     uniforms: {
       uHasta: { value: 0 },
       uC0: { value: new THREE.Color('#4d8dff') },
@@ -1829,13 +1843,16 @@ function crearLineaPiso(recorrido) {
   });
   const malla = new THREE.Mesh(geo, material);
   malla.frustumCulled = false;
-  malla.renderOrder = 2;
+  malla.renderOrder = 10;
   let hasta = 0;
   return {
     malla,
+    adelante: ADELANTE_LINEA,
     // `s`: metros recorridos por la cámara
     avanzar(s, dt) {
-      const objetivo = s + 6.5;
+      const objetivo = s + ADELANTE_LINEA;
+      // la primera vez ya entera (si no, al entrar al pasillo la línea crecía desde la cámara)
+      if (hasta === 0) hasta = objetivo;
       hasta += (objetivo - hasta) * (1 - Math.exp(-(dt || 0.016) * 5));
       material.uniforms.uHasta.value = hasta;
     },

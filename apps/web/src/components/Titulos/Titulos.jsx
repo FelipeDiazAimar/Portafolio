@@ -8,6 +8,7 @@ import TitulosPlanos from "./TitulosPlanos.jsx";
 import VistaTitulo from "./VistaTitulo.jsx";
 import styles from "./Titulos.module.css";
 import TextoPartido from "@/components/Revelar/TextoPartido.jsx";
+import LineaTitulos from "./LineaTitulos.jsx";
 
 // título escrito y foto (si tiene), intercalados. Los datos están en src/data/titulos.js.
 const TARJETAS = TITULOS.flatMap((t, i) => {
@@ -372,6 +373,8 @@ function Carrusel({ titulos, tarjetas, alFallar }) {
         data-modo={modo ?? "vertical"}
       >
         <canvas ref={refLienzo} className={styles.lienzo} aria-hidden="true" />
+        {/* la línea del sitio, como una hélice alrededor de la cinta (sólo en PC) */}
+        {modo === "horizontal" ? <LineaTitulos refEscena={refEscena} total={total} /> : null}
 
         <div className={styles.izquierda}>
           <h2 id="titulo-titulos" className={styles.rotulo}>

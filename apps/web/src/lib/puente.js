@@ -41,3 +41,25 @@ export function calcarPortadas() {
   });
   return lista.sort((a, b) => a.orden - b.orden);
 }
+
+// ---- Pasillo: dónde cae en pantalla la punta de la línea del piso al entrar -------------------
+// (fracciones de la pantalla). La escena del pasillo la informa con la cámara en el arranque, y la
+// línea de la página termina justo ahí: así la que baja de Proyectos empalma con la del piso.
+let puntaPiso = null;
+export const EVENTO_PISO = 'portafolio:linea-piso';
+export function registrarPuntaPiso(xy) {
+  puntaPiso = xy;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENTO_PISO));
+}
+export const puntaPisoEntrada = () => puntaPiso;
+
+// ---- El último tramo de la línea (de Títulos al final de la página) ---------------------------
+// Lo arma LineasScroll; las secciones con fondo propio pintado en su escena (Habilidades, Contacto)
+// lo vuelven a dibujar adentro, entre su fondo y su contenido (ver LineaSeccion).
+let lineaFinal = null;
+export const EVENTO_LINEA_FINAL = 'portafolio:linea-final';
+export function registrarLineaFinal(valor) {
+  lineaFinal = valor;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENTO_LINEA_FINAL));
+}
+export const lineaFinalActual = () => lineaFinal;

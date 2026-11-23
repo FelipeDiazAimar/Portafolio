@@ -17,6 +17,7 @@ import Gracias from './Gracias.jsx';
 import SlideDestino, { AVION } from './SlideDestino.jsx';
 import styles from './Contacto.module.css';
 import TextoPartido from '@/components/Revelar/TextoPartido.jsx';
+import LineaSeccion from '@/components/LineasScroll/LineaSeccion.jsx';
 
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 const SACUDIDAS_NERVIOSO = 6;
@@ -450,6 +451,8 @@ export default function Contacto() {
   return (
     <section id="contacto" ref={refSeccion} className={styles.seccion} aria-labelledby="titulo-contacto">
       <FondoLuz ref={refFondo} />
+      {/* la línea del sitio pasa por acá: entre el fondo de luz y el contenido */}
+      <LineaSeccion />
       <div className={styles.columnaCredencial} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 85%" data-revelar-hasta="top 25%">
         <Credencial />
       </div>

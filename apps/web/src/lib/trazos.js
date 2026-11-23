@@ -204,3 +204,15 @@ export function unirTrazos(a, b) {
   }
   return { puntos, largos, largo: largos[largos.length - 1] };
 }
+
+// La regla de la punta en todo el sitio: a la altura del 56 % de la pantalla (px de página); al
+// llegar al final de la página se adelanta, así la línea termina de dibujarse con el último scroll.
+export function puntaDePagina(y, vh) {
+  const maximo = document.documentElement.scrollHeight - vh;
+  return y + vh * 0.56 + Math.min(1, Math.max(0, (y - (maximo - vh)) / vh)) * vh * 0.7;
+}
+
+// Títulos: la línea entra por el borde de arriba, al centro (viene del pasillo por el centro), gira
+// como una hélice alrededor del carrusel y sale por el borde de abajo a esta altura del ancho.
+export const ENTRADA_TITULOS = 0.5;
+export const SALIDA_TITULOS = 0.725;
