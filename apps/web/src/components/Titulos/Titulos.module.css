@@ -273,3 +273,9 @@
 .escenario[data-modo='horizontal'] .lienzo:active {
   cursor: grabbing;
 }
+
+/* PC (cinta): la escena es transparente y la sección también, así la línea del sitio pasa por detrás
+   de las tarjetas (el fondo de la página es del mismo color). En celular sigue opaca. */
+.seccion:has(.escenario[data-modo='horizontal']) {
+  background: transparent;
+}

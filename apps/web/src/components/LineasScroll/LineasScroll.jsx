@@ -4,9 +4,9 @@
 // casi sin rulos, que baja por toda la página y se va dibujando con el scroll (la punta sigue a la
 // mitad de la pantalla; al subir se recoge).
 //
-// El cuerpo va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la página.
-// El final de la línea (su último tramo) va en otra capa por encima de las secciones: siempre se ve
-// hasta dónde llegó, aunque el resto esté pasando por detrás de una escena.
+// Va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la página. Sólo dos
+// tramos van además por encima, donde no tapan nada: la bajada del hero hasta Sobre mí y la llegada
+// al pasillo (por el centro, donde nace la línea del piso).
 //
 // Es continua entre secciones: en Sobre mí corre horizontal con el reel (LineaReel) y en Experiencia
 // es la línea central del piso del pasillo (EscenaPasillo). Acá van los tres tramos restantes:
@@ -19,8 +19,6 @@ import { aRuta, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tabl
 import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
-// largo del tramo de la punta que se ve por encima de todo (px)
-const LARGO_PUNTA = 150;
 
 function caja(sel, y0) {
   const n = document.querySelector(sel);
@@ -29,9 +27,8 @@ function caja(sel, y0) {
   return { top: r.top + y0, bottom: r.bottom + y0, alto: r.height };
 }
 
-// Los tramos: puntos de paso (px de página), en qué tramos de la guía va un rulo (uno solo en todo
-// el recorrido) y entre qué alturas de página la punta es de este tramo (fuera de eso la línea sigue
-// dentro de una sección con la suya).
+// Los tramos: puntos de paso (px de página), en qué tramo de la guía va un rulo (uno solo en todo el
+// recorrido) y qué parte va además por encima del contenido.
 function tramos(vw, vh) {
   const y0 = window.scrollY;
   const s = caja('#sobre-mi', y0);
@@ -50,14 +47,16 @@ function tramos(vw, vh) {
       // Sobre mí, justo donde arranca la línea del reel (ENTRADA_REEL), llegando hacia abajo
       puntos: [[X(-0.06), vh * 0.8], [X(0.14), vh * 0.93], [X(ENTRADA_REEL), s.top - vh * 0.22], [X(ENTRADA_REEL), s.top + 2]],
       lazos: [],
-      punta: [-Infinity, Infinity],
       // entero por encima: así se ve sobre el fundido del borde de Sobre mí (no toca el retrato)
-      encima: true,
+      encima: { desdeY: -Infinity, alfa: () => 1 },
     },
     {
       puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
       lazos: [],
-      punta: [-Infinity, e.top],
+      // La llegada al pasillo: mientras la sección sube, la línea baja por el centro de la pantalla por
+      // encima de la escena, justo donde nace la línea del piso; ya con el pasillo arriba se funde y
+      // queda la del piso.
+      encima: { desdeY: e.top - 2, alfa: (y) => limitar((e.top - y) / (vh * 0.35), 0, 1) },
     },
     {
       puntos: [
@@ -72,11 +71,13 @@ function tramos(vw, vh) {
         [X(0.28), h.top + vh * 0.6],
         [X(0.74), c.top + vh * 0.1],
         [X(0.3), c.top + vh * 0.7],
-        [X(0.7), f.top + vh * 0.25],
-        [X(0.92), f.bottom - vh * 0.12],
+        [X(0.7), f.top + vh * 0.2],
+        // por el margen derecho, por debajo del mapa, y termina bajo "Gracias por pasar."
+        [X(0.95), f.top + vh * 0.55],
+        [X(0.88), f.bottom - vh * 0.1],
+        [X(0.58), f.bottom - vh * 0.06],
       ],
       lazos: [{ tramo: 5, r: R, sentido: -1 }],
-      punta: [e.bottom, Infinity],
     },
   ];
 }
@@ -108,7 +109,7 @@ export default function LineasScroll() {
       grupo.replaceChildren();
       grupoPunta.replaceChildren();
       const ancho = grosorLinea(vw);
-      lineas = lista.map(({ puntos, lazos, punta, encima = false }) => {
+      lineas = lista.map(({ puntos, lazos, encima = null }) => {
         const guia = spline(puntos);
         const trazo = trazar(
           guia,
@@ -126,23 +127,28 @@ export default function LineasScroll() {
         ruta.style.strokeDashoffset = String(trazo.largo);
         ruta.style.opacity = '0';
         grupo.appendChild(ruta);
-        // el final de la línea: el mismo camino, sólo su último tramo
-        const cola = document.createElementNS(SVG, 'path');
-        cola.setAttribute('d', d);
-        cola.setAttribute('stroke', 'url(#linea-azul-punta)');
-        cola.setAttribute('stroke-width', ancho.toFixed(1));
-        cola.style.strokeDasharray = `${LARGO_PUNTA} ${trazo.largo * 2}`;
-        const g = document.createElementNS(SVG, 'g');
-        g.append(cola);
-        g.style.opacity = '0';
-        grupoPunta.appendChild(g);
+        // la parte que va por encima de todo (sólo en los tramos que lo piden): el mismo camino
+        let cola = null;
+        let g = null;
+        if (encima) {
+          cola = document.createElementNS(SVG, 'path');
+          cola.setAttribute('d', d);
+          cola.setAttribute('stroke', 'url(#linea-azul-punta)');
+          cola.setAttribute('stroke-width', ancho.toFixed(1));
+          g = document.createElementNS(SVG, 'g');
+          g.append(cola);
+          g.style.opacity = '0';
+          grupoPunta.appendChild(g);
+        }
         let yMin = Infinity;
         let yMax = -Infinity;
         trazo.puntos.forEach(([, y]) => {
           yMin = Math.min(yMin, y);
           yMax = Math.max(yMax, y);
         });
-        return { ruta, cola, g, punta, encima, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
+        const tabla = tablaAvance(trazo, 1);
+        const largoEncima = encima ? largoHasta(trazo, tabla, encima.desdeY) : 0;
+        return { ruta, cola, g, encima, largoEncima, trazo, tabla, yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
       });
     };
 
@@ -152,7 +158,10 @@ export default function LineasScroll() {
       const t = `translate(0 ${(-y).toFixed(1)})`;
       grupo.setAttribute('transform', t);
       grupoPunta.setAttribute('transform', t);
-      const yPunta = y + vh * 0.56;
+      // la punta sigue a la mitad de la pantalla; al llegar al final de la página se adelanta, así la
+      // línea termina de dibujarse con el último scroll (antes quedaba trabada a mitad)
+      const maximo = document.documentElement.scrollHeight - vh;
+      const yPunta = y + vh * 0.56 + limitar((y - (maximo - vh)) / vh, 0, 1) * vh * 0.7;
       for (const l of lineas) {
         const objetivo = largoHasta(l.trazo, l.tabla, yPunta) / l.trazo.largo;
         let show;
@@ -165,18 +174,19 @@ export default function LineasScroll() {
         const enVista = l.yMax > y - 60 && l.yMin < y + vh + 60;
         const op = enVista && show > 0.002 ? 1 : 0;
         const dibujado = l.trazo.largo * show;
-        // la punta, por encima de todo: mientras se está dibujando y es de este tramo
-        const conPunta = op && (l.encima || (show < 0.999 && yPunta > l.punta[0] && yPunta < l.punta[1]));
-        const clave = `${op}|${conPunta}|${dibujado.toFixed(1)}`;
+        const alfaEncima = l.encima && op && dibujado > l.largoEncima ? l.encima.alfa(y) : 0;
+        const clave = `${op}|${alfaEncima.toFixed(3)}|${dibujado.toFixed(1)}`;
         if (clave === l.ultimo) continue;
         l.ultimo = clave;
         l.ruta.style.opacity = String(op);
         l.ruta.style.strokeDashoffset = (l.trazo.largo - dibujado).toFixed(1);
-        l.g.style.opacity = conPunta ? '1' : '0';
-        if (conPunta) {
-          const desde = l.encima ? 0 : Math.max(0, dibujado - LARGO_PUNTA);
-          l.cola.style.strokeDasharray = `${(dibujado - desde).toFixed(1)} ${l.trazo.largo * 2}`;
-          l.cola.style.strokeDashoffset = (-desde).toFixed(1);
+        if (l.g) {
+          l.g.style.opacity = alfaEncima.toFixed(3);
+          if (alfaEncima > 0) {
+            const desde = Math.max(0, l.largoEncima);
+            l.cola.style.strokeDasharray = `${(dibujado - desde).toFixed(1)} ${l.trazo.largo * 2}`;
+            l.cola.style.strokeDashoffset = (-desde).toFixed(1);
+          }
         }
       }
     };

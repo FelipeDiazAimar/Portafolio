@@ -1,15 +1,14 @@
 'use client';
 
 // La línea de "Sobre mí", continuación de la que viene del hero. Entra por el borde de arriba del
-// panel en el mismo punto donde termina la del hero (ENTRADA_REEL), baja pegada al borde izquierdo y
-// se vuelve horizontal: acá el scroll mueve el reel de costado, así que la línea también corre de
-// costado.
+// panel en el mismo punto y con la misma dirección (hacia abajo) que trae la del hero
+// (ENTRADA_REEL), se curva hacia la derecha y sigue por el medio de la pantalla: acá el scroll mueve
+// el reel de costado, así que la línea también corre de costado.
 //   - mientras el panel sube, la entrada se dibuja con el scroll vertical (la punta sigue a la
 //     altura de la pantalla, como la línea del resto del sitio);
 //   - ya con el panel arriba, el tramo horizontal se desplaza con la fase del reel y se va dibujando
 //     (la punta queda un poco a la derecha del centro).
-// Va dentro del panel, sobre el fondo (luz y trama) y debajo del titular y las portadas, por la
-// franja libre de abajo: así nunca cruza una portada y su final siempre está a la vista.
+// Va dentro del panel, sobre el fondo (luz y trama) y por detrás del titular y las portadas.
 // `refPoner.current(fase)` le pasa la fase del reel; ReelHitos la llama en cada cuadro.
 import { useEffect, useRef } from 'react';
 import { alCuadro } from '@/lib/movimiento.js';
@@ -17,13 +16,6 @@ import { aRuta, bezier, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, tabl
 import styles from './ReelHitos.module.css';
 
 const POR_HITO = 0.78; // ancho de trazo por hito, en pantallas
-// dónde hay un giro cerrado (u del tramo horizontal) y hacia qué lado
-const GIROS = [
-  [0.2, -1],
-  [0.36, 1],
-  [0.71, -1],
-  [0.86, 1],
-];
 
 export default function LineaReel({ total, refPoner }) {
   const refSvg = useRef(null);
@@ -46,7 +38,7 @@ export default function LineaReel({ total, refPoner }) {
       const corrimiento = avance * recorrido;
       // la entrada sigue al scroll vertical mientras el panel sube; después, el reel
       const arriba = panel.getBoundingClientRect().top;
-      const vertical = largoHasta(entrada, tablaY, window.innerHeight * 0.9 - arriba);
+      const vertical = largoHasta(entrada, tablaY, window.innerHeight * 0.72 - arriba);
       const largo = vertical < entrada.largo - 0.5 ? vertical : entrada.largo + largoHasta(horizontal, tablaX, corrimiento + W * 0.62);
       const clave = `${corrimiento.toFixed(1)}|${largo.toFixed(1)}`;
       if (clave === ultimo) return;
@@ -63,27 +55,22 @@ export default function LineaReel({ total, refPoner }) {
       const W = panel.clientWidth;
       const H = panel.clientHeight;
       if (W < 2 || H < 2) return;
-      const movil = W < 768;
       const recorrido = (total - 1) * W * POR_HITO;
-      // por la franja libre de abajo, debajo de las portadas
-      const base = H * (movil ? 0.5 : 0.87);
-      const x0 = W * 0.06;
-      // entrada: desde el borde de arriba, donde termina la línea del hero, pegada al borde izquierdo
-      // (por fuera de las portadas) hasta el comienzo del tramo horizontal, yendo hacia la derecha
+      // por el medio de la pantalla
+      const base = H * 0.5;
       const xE = W * ENTRADA_REEL;
-      const entrada = trazar(bezier([xE, -2], [W * 0.03, H * 0.12], [x0 - W * 0.12, base], [x0, base]));
-      // horizontal: ondas bajas y, de vez en cuando, un giro cerrado (pulsos angostos), con un rulo
-      const ola = H * (movil ? 0.06 : 0.035);
-      const largoX = W * 0.9 + recorrido;
+      const x0 = W * 0.5;
+      // entrada: sale hacia abajo (como llega la del hero) y se curva hacia la derecha, sin quiebre
+      const entrada = trazar(bezier([xE, -2], [xE, base * 0.62], [x0 - W * 0.14, base], [x0, base]));
+      // horizontal: curvas amplias, sin rulos (arranca plana y hacia la derecha: empalma con la entrada)
+      const largoX = W * 0.7 + recorrido;
+      const ola = H * 0.11;
       const guia = (u) => {
-        const fase1 = u * Math.PI * Math.max(1, total - 1) * 0.55;
-        // arranca plana y hacia la derecha: así empalma con la entrada
-        const suave = Math.min(1, u * 6);
-        const bruscos = GIROS.reduce((acc, [c, signo]) => acc + signo * Math.exp(-(((u - c) / 0.012) ** 2)), 0) * H * 0.055;
-        return [x0 + u * largoX, base + (Math.sin(fase1) * ola + Math.sin(fase1 * 2.3) * ola * 0.35 + bruscos) * suave];
+        const fase1 = u * Math.PI * Math.max(1, total - 1) * 0.5;
+        const suave = Math.min(1, u * 5);
+        return [x0 + u * largoX, base + (Math.sin(fase1) * ola + Math.sin(fase1 * 1.7 + 0.8) * ola * 0.45 - Math.sin(0.8) * ola * 0.45) * suave];
       };
-      const R = Math.min(W, H) * (movil ? 0.06 : 0.05);
-      const horizontal = trazar(guia, [{ u: 0.53, r: R, sentido: -1 }]);
+      const horizontal = trazar(guia);
       const trazo = unirTrazos(entrada, horizontal);
       ruta.setAttribute('d', aRuta(trazo.puntos));
       ruta.setAttribute('stroke-width', grosorLinea(W).toFixed(1));

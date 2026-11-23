@@ -169,7 +169,8 @@ void main() {
   }
 
   color *= uSceneAlpha;
-  fragColor = vec4(uFondo * (1.0 - color.a) + color.rgb, 1.0);
+  // transparente (premultiplicado): detrás se ve el fondo de la página y la línea del sitio
+  fragColor = color;
 }
 `;
 
@@ -194,7 +195,7 @@ export function crearEscenaCinta({
   const renderer = new THREE.WebGLRenderer({
     canvas: lienzo,
     antialias: false,
-    alpha: false,
+    alpha: true,
     depth: false,
     powerPreference: "high-performance",
   });

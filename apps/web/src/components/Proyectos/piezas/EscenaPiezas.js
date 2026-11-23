@@ -305,7 +305,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   // radio de choque: que el montón ocupe una bola de ~la mitad del alto del panel
   const marco0 = marco();
   // en el puente son más chicos: flotan por toda la pantalla, no dentro de un recuadro
-  const radio = puente ? limitar(Math.sqrt((marco0.w * marco0.h * 0.5) / Math.max(8, total) / Math.PI), 34, 100) : limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
+  const radio = puente ? limitar(Math.sqrt((marco0.w * marco0.h * 0.95) / Math.max(8, total) / Math.PI), 40, 125) : limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
   // así está inclinada la grilla de la marquesina: las tarjetas 3D flotan ya con esa inclinación
   const grilla = new THREE.Quaternion();
   if (iniciales[0]) grilla.copy(poseDeTarjeta(iniciales[0], { posicion: new THREE.Vector3(), cuaternion: new THREE.Quaternion() }).cuaternion);
@@ -538,7 +538,8 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     if (!portadas3d.length) {
       // caída: del cielo a su lugar en la pila, con un pique al llegar
       for (const a of piezas) {
-        const ei = limitar((t - 0.1 - a.demoraPuente) / 0.45, 0, 1);
+        // caída corta y acelerada (gravedad), cada una a su turno
+        const ei = limitar((t - 0.08 - a.demoraPuente * 0.9) / 0.26, 0, 1);
         a.p.lerpVectors(a.cielo, a.casa, piqueAlCaer(ei));
         a.v.set(0, 0, 0);
         a.malla.position.set(a.p.x, -a.p.y, a.p.z);
@@ -665,7 +666,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       // reparten por todo el ancho del recuadro en vez de apilarse en el medio.
       const franja = marco().w * 0.36;
       if (puente && !portadas3d.length) {
-        a.v.y += 650 * dt;
+        a.v.y += 2600 * dt;
       } else {
         a.v.x += (limitar(a.p.x, cx - franja, cx + franja) - a.p.x) * 3.4 * dt;
         a.v.y += (cy - a.p.y) * 6.2 * dt;
@@ -946,7 +947,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
         comoTarjetas = limitar(tP * 1.2, 0, 1);
       }
       for (const m of deAcento) m.color.lerp(colorAcento, 1 - Math.exp(-9 * dt));
-      for (let paso = 0; paso < 4; paso++) simular(dt / 4);
+      for (let paso = 0; paso < 8; paso++) simular(dt / 8);
     }
     renderizador.render(escena, camara);
   }
