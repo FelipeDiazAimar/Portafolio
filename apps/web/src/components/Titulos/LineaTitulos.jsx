@@ -12,7 +12,7 @@
 // (encima), recortada a los tramos en que la hélice pasa por delante.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido } from '@/lib/movimiento.js';
-import { aRuta, bezier, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, SALIDA_TITULOS, tablaAvance, trazar, unirTrazos } from '@/lib/trazos.js';
+import { aRuta, bezier, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, SALIDA_TITULOS, BAJADA_TITULOS, tablaAvance, trazar, unirTrazos } from '@/lib/trazos.js';
 import styles from './Titulos.module.css';
 
 const PUNTA_Y = 0.56;
@@ -66,7 +66,9 @@ export default function LineaTitulos({ refEscena, total }) {
       const pend = (A * Math.sin(theta(xFin)) * Math.PI * 2) / giro;
       const largoT = Math.hypot(1, pend) || 1;
       const yF = yDe(xFin);
-      const salida = trazar(bezier([xFin, yF], [xFin + (W * 0.06) / largoT, yF + (pend * W * 0.06) / largoT], [xFin, H * 0.9], [xFin, H + 2]));
+      // baja un poco más a la derecha que la punta, cerca del texto
+      const xBajada = xFin + W * (BAJADA_TITULOS - SALIDA_TITULOS);
+      const salida = trazar(bezier([xFin, yF], [xFin + (W * 0.06) / largoT, yF + (pend * W * 0.06) / largoT], [xBajada, H * 0.9], [xBajada, H + 2]));
       const trazo = unirTrazos(unirTrazos(entrada, helice), salida);
       const d = aRuta(trazo.puntos);
       const ancho = grosorLinea(W).toFixed(1);

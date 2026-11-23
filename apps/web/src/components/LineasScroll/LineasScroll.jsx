@@ -18,7 +18,7 @@
 // La llegada al pasillo y la salida (A y B) van además por encima mientras la escena entra o se va.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, limitar } from '@/lib/movimiento.js';
-import { ralear, suavizar, aRuta, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, puntaDePagina, SALIDA_TITULOS, spline, tablaAvance, trazar } from '@/lib/trazos.js';
+import { ralear, suavizar, aRuta, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, puntaDePagina, BAJADA_TITULOS, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import { EVENTO_PISO, registrarLineaFinal } from '@/lib/puente.js';
 import { aPagina, arribasSecciones, EVENTO_LINEA_EDITADA, puntosLinea } from '@/lib/lineaEditable.js';
 import styles from './LineasScroll.module.css';
@@ -108,9 +108,9 @@ function tramos(vw, vh) {
     {
       // C. del borde de abajo de Títulos al punto de "Gracias por pasar."
       puntos: (manoC.length ? (q) => suavizar(q, { vueltas: 4 }) : (q) => q)([
-        [X(SALIDA_TITULOS), t.bottom - 1],
+        [X(BAJADA_TITULOS), t.bottom - 1],
         // (sale de la hélice bajando derecho; a mano, este punto sólo orienta el giro)
-        [X(SALIDA_TITULOS), t.bottom + vh * (manoC.length ? 0.07 : 0.08)],
+        [X(BAJADA_TITULOS), t.bottom + vh * (manoC.length ? 0.07 : 0.08)],
         ...(manoC.length
           ? manoC
           : [
