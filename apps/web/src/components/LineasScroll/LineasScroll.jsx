@@ -81,6 +81,10 @@ function tramos(vw, vh) {
   const arribas = arribasSecciones();
   const aMano = (tramo) => (propios[tramo] ?? []).map((q) => aPagina(q, arribas, vw, vh));
   const manoA = aMano('a');
+  // dónde termina lo dibujado a mano en el pasillo: si ya baja hasta la línea del piso (más abajo que
+  // su punta), termina ahí mismo; la de encima se ve hasta que la punta llega a ese final
+  const finA = manoA.length ? manoA[manoA.length - 1] : null;
+  const aPiso = finA && finA[1] > e.top + vh * py ? [] : [[X(px), e.top + vh * py]];
   const manoC = aMano('c');
   return [
     {
@@ -88,13 +92,13 @@ function tramos(vw, vh) {
       // (a mano: redondeado, entra por el borde izquierdo — si arrancara en medio de la pantalla
       // aparecería de la nada — y termina directo en la punta del piso)
       puntos: manoA.length
-        ? suavizar([[X(-0.06), manoA[0][1] - vh * 0.3], ...manoA, [X(px), e.top + vh * py]])
+        ? suavizar([[X(-0.06), manoA[0][1] - vh * 0.3], ...manoA, ...aPiso])
         : [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(px), e.top + vh * 0.12], [X(px), e.top + vh * py]],
       lazos: [],
       // mientras el pasillo sube, la parte de adentro va por encima y termina sobre la punta del piso;
       // ya con el pasillo arriba se funde y queda la del piso
       // (entera desde que la punta cruza el borde, así llega ya unida a la punta del piso)
-      encima: { desdeY: e.top - 2, hastaY: Infinity, completo: true, trasPunta: true, alfa: (y) => limitar((e.top - y) / (vh * 0.3), 0, 1) },
+      encima: { desdeY: e.top - 2, hastaY: Infinity, completo: true, trasPunta: true, alfa: finA ? (y) => limitar((finA[1] - vh * 0.4 - y) / (vh * 0.16), 0, 1) : (y) => limitar((e.top - y) / (vh * 0.3), 0, 1) },
     },
     {
       // B. salida del pasillo: del centro de la luz del final, hacia abajo, al borde de Títulos
