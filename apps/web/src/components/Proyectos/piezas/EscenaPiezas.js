@@ -25,6 +25,8 @@ const ADORNOS = 7;
 const LUZ_PROPIA = 1;
 // ... y cuánto le suma la luz de la escena (apenas: da volumen sin cambiarle el color)
 const LUZ_ESCENA = 0;
+// (la cara y el canto, sin reflejo especular: el de un plástico común les sumaba un velo gris
+// parejo y el negro dejaba de ser negro)
 // el barniz de las tarjetas "plastificadas": apenas un satinado (con más, el destello de la luz
 // las velaba de blanco y no se parecían a las de la marquesina)
 const BARNIZ_TARJETA = { clearcoat: 0.12, clearcoatRoughness: 0.6, envMapIntensity: 0 };
@@ -229,8 +231,8 @@ export async function precalentarPiezas() {
   imagen.needsUpdate = true;
   const materiales = [];
   for (const barniz of [BARNIZ_TARJETA, { clearcoat: 0, envMapIntensity: 0 }]) {
-    materiales.push(new THREE.MeshPhysicalMaterial({ map: imagen, emissiveMap: imagen, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, ...barniz }));
-    materiales.push(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0x3366ff, roughness: 1, metalness: 0, ...barniz }));
+    materiales.push(new THREE.MeshPhysicalMaterial({ map: imagen, emissiveMap: imagen, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, specularIntensity: 0, ...barniz }));
+    materiales.push(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0x3366ff, roughness: 1, metalness: 0, specularIntensity: 0, ...barniz }));
   }
   for (const brillante of [true, false]) {
     materiales.push(new THREE.MeshPhysicalMaterial({ color: 0x3366ff, roughness: brillante ? 0.1 : 0.6, metalness: 0, clearcoat: brillante ? 1 : 0, clearcoatRoughness: 0.06, envMapIntensity: brillante ? 0.75 : 0.18 }));
@@ -352,8 +354,8 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     // volumen. Al aplanarse deja de depender de la luz del todo (ver convertirCuadro).
     const real = caras.get(clave);
     const barniz = plastificada ? BARNIZ_TARJETA : { clearcoat: 0, envMapIntensity: 0 };
-    const cara = guardar(new THREE.MeshPhysicalMaterial({ map: real, emissiveMap: real, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, ...barniz }));
-    const canto = guardar(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: cantos.get(clave), roughness: 1, metalness: 0, ...barniz }));
+    const cara = guardar(new THREE.MeshPhysicalMaterial({ map: real, emissiveMap: real, emissive: 0xffffff, emissiveIntensity: LUZ_PROPIA, color: new THREE.Color().setScalar(LUZ_ESCENA), roughness: 1, metalness: 0, specularIntensity: 0, ...barniz }));
+    const canto = guardar(new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: cantos.get(clave), roughness: 1, metalness: 0, specularIntensity: 0, ...barniz }));
     // caras de la caja: +x, −x, +y, −y, +z (frente), −z (dorso)
     return { cara, canto, lista: [canto, canto, canto, canto, cara, cara] };
   };

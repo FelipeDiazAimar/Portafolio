@@ -349,7 +349,7 @@ export default function Proyectos() {
     const info = new Map(
       proyectos.map((p) => {
         const marca = marcaDe(p.slug);
-        return [p.slug, { color: p.color, tarjeta: marca.fondo ?? mezclar(p.color, '#07090f', 0.3), logo: marca.logo ?? null, nombre: marca.nombre ?? (marca.logo ? null : p.titulo), bajada: marca.bajada ?? null, claro: Boolean(marca.claro) }];
+        return [p.slug, { color: p.color, tarjeta: marca.fondo ?? mezclar(p.color, '#07090f', 0.22), logo: marca.logo ?? null, nombre: marca.nombre ?? (marca.logo ? null : p.titulo), bajada: marca.bajada ?? null, claro: Boolean(marca.claro) }];
       })
     );
     return {

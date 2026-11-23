@@ -1210,9 +1210,14 @@ export default function ReelHitos({ hitos, alFallar }) {
       refSentidoObras.current = { fase: null, sentido: 1 };
       limpiarRevelado();
       refPrerevelado.current = false;
-      // desarmado el plano, se sigue subiendo hasta el hero
       soltarIntro();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // (glow-up) el scroll no se fuerza hacia el hero: si mientras se desarmaba se volvió a bajar y
+      // la sección sigue a la vista, los agentes la arman de nuevo (si no, queda vacía y la intro no
+      // se volvía a disparar, porque ya se estaba pasado su punto de arranque)
+      requestAnimationFrame(() => {
+        const caja = refContenedor.current?.getBoundingClientRect();
+        if (caja && caja.top < window.innerHeight * 0.3 && caja.bottom > window.innerHeight * 0.5 && !refEntro.current) setIntro('esperando');
+      });
     }
   }, [soltarIntro, limpiarRevelado]);
 
