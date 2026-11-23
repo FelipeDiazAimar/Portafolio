@@ -16,6 +16,7 @@ export const MARCAS = {
   'gestor-proyectos-sap': { nombre: 'Gestor SAP', bajada: 'Proyectos · MBRF' },
   bibliotech: { nombre: 'BiblioTech', bajada: 'Biblioteca inteligente' },
   movii: { logo: '/proyectos/movii/marca.webp', fondo: '#10131c', nombre: 'Movii', bajada: 'Última milla' },
+  'simulacion-paty': { logo: '/proyectos/simulacion-paty/marca.webp', fondo: '#0a0a0e', nombre: 'PATY', bajada: 'Simulación de planta' },
   'crm-inmobiliaria': { nombre: 'CRM', bajada: 'Inmobiliaria' },
   portafolio: { nombre: 'Portafolio', bajada: 'Este sitio' },
 };
