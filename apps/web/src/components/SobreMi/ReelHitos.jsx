@@ -56,19 +56,6 @@ const enPortada = (p) => [(DIORAMA.x + p.x * DIORAMA.w) / BASE.ancho, (DIORAMA.y
 const VANO = (puntosHitos.puerta ?? [{ x: 0.45, y: 0.3 }, { x: 0.55, y: 0.3 }, { x: 0.55, y: 0.5 }, { x: 0.45, y: 0.5 }]).map(enPortada);
 const CENTRO_VANO = [0, 1].map((k) => VANO.reduce((suma, v) => suma + v[k], 0) / 4);
 const MITAD_ANCHO_VANO = (Math.max(...VANO.map((v) => v[0])) - Math.min(...VANO.map((v) => v[0]))) / 2;
-// Cuánto del pasaje por la puerta se recorre con el scroll de la cola; el resto lo termina solo.
-const SALIDA_AL_SCROLL = 0.14;
-// La hoja de la puerta (HTML) que se apoya sobre el vano: mismas proporciones que la dibujada.
-const HOJA = { w: 190, h: 307 };
-// Qué tan atrás del vano queda Proyectos mientras uno se acerca: a más valor, más chico (más
-// lejos) se lo ve por la puerta. Con 0 quedaría pegado al vano, como una calcomanía.
-const FONDO_SALA = 0.13;
-// Tamaño con que se ve Proyectos justo al cruzar el vano: el último tramo (hasta 1) es la llegada.
-const ESCALA_CRUCE = 0.94;
-const suave = (x) => {
-  const v = limitar(x, 0, 1);
-  return v * v * (3 - 2 * v);
-};
 // El visor de cámara que se dibuja sobre la foto o el video abierto: ocupa la portada menos un
 // margen (en px de la portada) y se apoya con una matriz de perspectiva.
 const VISOR_UV = { x0: 0.045, y0: 0.07, x1: 0.955, y1: 0.93 };
@@ -113,9 +100,6 @@ const FOTO_UV = { x0: FOTO.x / BASE.ancho, y0: FOTO.y / BASE.alto, x1: (FOTO.x +
 const ENTERA = { x0: 0, y0: 0, x1: 1, y1: 1 };
 // Recorte del diorama que acompaña a cada nota (en px del dibujo, 800 × 600).
 const RECORTE = { w: 264, h: 150 };
-// Avisa a la sección Proyectos que se llega por la puerta: sus fichas ya están en su lugar (no
-// hace su entrada).
-const EVENTO_ENTRADA = 'portafolio:entrada-proyectos';
 
 // El texto de cada SVG se pide una sola vez.
 const textosSvg = new Map();
@@ -165,8 +149,6 @@ export default function ReelHitos({ hitos, alFallar }) {
   const refPuntos = useRef(null);
   const refNota = useRef(null);
   // salida hacia Proyectos: la puerta (hoja y vano), cuánto se avanzó en la cola y si está en curso
-  const refPortal = useRef(null);
-  const refResplandor = useRef(null);
   const refRecorte = useRef(null);
   // controles del video que se abre sobre una portada
   const refHud = useRef(null);
@@ -331,7 +313,6 @@ export default function ReelHitos({ hitos, alFallar }) {
       else if (!refQuietoDesde.current) refQuietoDesde.current = ahora;
       const escena = refEscena.current;
       const entrada = escena?.portadas[cercano]?.entrada.t ?? 0;
-      if (refPaso.current) refPintarPuerta.current?.();
       // si la cinta se mueve, la foto abierta se cierra
       if (!quieto && escena && escena.medioAbierto() >= 0) escena.cerrarMedio();
       let apoyado = quieto && entrada > 0.999 && refVivoListo.current === cercano && refSalida.current < 0.01 && !refTransicion.current && escena.medioAbierto() < 0;
@@ -619,7 +600,7 @@ export default function ReelHitos({ hitos, alFallar }) {
         });
       }
       // La cola: "Hoy" sigue fijo y la portada empieza a crecer desde su puerta, al ritmo del
-      // scroll. Pasado un punto, el portal termina solo (ver pasarAProyectos).
+      // scroll. Ahora es el comienzo del puente a Proyectos (ver Proyectos.jsx).
       const enCola = (yo, alScrollear) => {
         if (refTransicion.current) return;
         if (refPuertaCerrada.current()) {
@@ -646,231 +627,6 @@ export default function ReelHitos({ hitos, alFallar }) {
     return () => contexto.revert();
   }, [N, alCuadro, medir]);
 
-  // ---- pasaje a Proyectos: se entra por la puerta de "Hoy", en primera persona. La cámara se
-  // acerca, la hoja se abre hacia adentro y se cruza el vano. El vano es un hueco de verdad en el
-  // panel; detrás está la sección Proyectos, ya armada (con sus fichas en su lugar), que se ve
-  // lejos y chica al principio y crece a medida que uno se acerca, como una sala del otro lado.
-  // Del otro lado hay luz (oscuridad, en el tema oscuro): de lejos tapa lo que hay detrás, al
-  // cruzar envuelve la pantalla y se disipa ya en Proyectos. La vuelta es lo mismo al revés: se
-  // sale de espaldas por la puerta, que se cierra, hasta quedar de nuevo frente a "Hoy".
-  const refPasar = useRef(null);
-  const refVolver = useRef(null);
-  // pasaje en curso (null si no hay): cuánto abrió la hoja, cuánto avanzó y la sección de destino
-  const refPaso = useRef(null);
-  const refPintarPuerta = useRef(null);
-  // La luz y el tamaño de Proyectos: lo que no depende de dónde está la puerta en pantalla.
-  const ambientar = useCallback(() => {
-    const paso = refPaso.current;
-    const portal = refPortal.current;
-    const resplandor = refResplandor.current;
-    if (!paso || !portal || !resplandor) return;
-    const escala = paso.cruzado ? ESCALA_CRUCE + (1 - ESCALA_CRUCE) * paso.llegada : paso.s;
-    paso.proyectos.style.transform = `translateY(${paso.ty.toFixed(1)}px) scale(${escala.toFixed(4)})`;
-    // ya del otro lado, la luz se disipa
-    const queda = paso.cruzado ? 1 - paso.llegada : 1;
-    if (portal.dataset.cruzado !== String(paso.cruzado)) portal.dataset.cruzado = String(paso.cruzado);
-    portal.style.setProperty('--lejos', paso.lejos.toFixed(3));
-    portal.style.setProperty('--bruma', (Math.min(1, 0.2 + paso.lejos * 1.2) * queda).toFixed(3));
-    resplandor.style.setProperty('--fuerza', (paso.abre * (0.14 + 0.78 * suave((paso.t - 0.38) / 0.62)) * queda).toFixed(3));
-  }, []);
-  const pintarPuerta = useCallback(() => {
-    const panel = refPanel.current;
-    const portal = refPortal.current;
-    const resplandor = refResplandor.current;
-    const escena = refEscena.current;
-    const paso = refPaso.current;
-    if (!panel || !portal || !resplandor || !escena || !paso || paso.cruzado) return;
-    const q = VANO.map(([fx, fy]) => escena.puntoEn(N - 1, fx, fy));
-    // el vano va [arribaDer, arribaIzq, abajoIzq, abajoDer]; la hoja lo quiere desde arriba a la izquierda
-    const matriz = q.some((v) => !v) ? null : matrizCss(HOJA.w, HOJA.h, [q[1], q[0], q[3], q[2]]);
-    if (!matriz) return; // un cuadro sin medida: queda lo del anterior
-    const W = panel.clientWidth;
-    const H = panel.clientHeight;
-    const pts = q.map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`);
-    panel.style.clipPath = `polygon(evenodd, 0px 0px, ${W}px 0px, ${W}px ${H}px, 0px ${H}px, 0px 0px, ${pts.join(', ')}, ${pts[0]})`;
-    portal.firstElementChild.style.transform = matriz;
-    portal.style.setProperty('--abre', paso.abre.toFixed(4));
-    // Profundidad: la puerta está a una distancia d y Proyectos un tramo más atrás, así que crece
-    // más despacio que la puerta. d sale del ancho del vano en pantalla (a más ancho, más cerca).
-    const ancho = Math.max(1, Math.abs(q[0][0] - q[1][0]));
-    const fondo = 1 / (1 + FONDO_SALA * Math.max(0, W / ancho - 0.8));
-    paso.lejos = 1 - fondo;
-    // al cruzar el vano llega justo al tamaño de cruce (la llegada hace el resto)
-    paso.s = ESCALA_CRUCE * (fondo + (1 - fondo) * suave((paso.t - 0.8) / 0.2));
-    const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4;
-    const cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
-    // crece desde el centro del vano: es el punto hacia donde se camina
-    paso.proyectos.style.transformOrigin = `${cx.toFixed(1)}px ${cy.toFixed(1)}px`;
-    // la luz sale del vano y crece con él
-    const altoVano = Math.abs(q[2][1] - q[1][1]);
-    resplandor.style.setProperty('--px', `${cx.toFixed(1)}px`);
-    resplandor.style.setProperty('--py', `${cy.toFixed(1)}px`);
-    resplandor.style.setProperty('--r', `${(altoVano * 0.95).toFixed(1)}px`);
-    ambientar();
-  }, [N, ambientar]);
-  refPintarPuerta.current = pintarPuerta;
-
-  // Lo que comparten la ida y la vuelta: quién participa, las trabas y cómo se deja todo al final.
-  const prepararPasaje = useCallback(() => {
-    const escena = refEscena.current;
-    const panel = refPanel.current;
-    const portal = refPortal.current;
-    const resplandor = refResplandor.current;
-    const contenedor = refContenedor.current;
-    const proyectos = document.getElementById('proyectos');
-    if (!escena || !panel || !portal || !resplandor || !contenedor || !proyectos) return null;
-    refTransicion.current = true;
-    cortarAnimacion();
-    setDetalle(null);
-    escena.cerrarMedio();
-    const raiz = document.documentElement;
-    // mientras dura, nadie más acomoda el scroll (embudos, URL por sección) ni la página se mueve
-    raiz.dataset.sinIman = 'true';
-    raiz.dataset.portal = 'true';
-    const traba = trabarScroll();
-    contenedor.style.zIndex = '8';
-    proyectos.style.willChange = 'transform';
-    portal.dataset.activo = 'true';
-    const pintar = () => {
-      const paso = refPaso.current;
-      if (!paso) return;
-      escena.ponerSalida(paso.t);
-      panel.style.setProperty('--salida', paso.ui.toFixed(3));
-      // sin el bucle de la escena corriendo (recién se llega a la sección), se dibuja a mano
-      if (!escena.activa()) {
-        escena.dibujar();
-        pintarPuerta();
-      }
-    };
-    const terminar = () => {
-      refPaso.current = null;
-      proyectos.style.transform = '';
-      proyectos.style.transformOrigin = '';
-      proyectos.style.willChange = '';
-      contenedor.style.zIndex = '';
-      panel.style.clipPath = '';
-      portal.dataset.activo = 'false';
-      resplandor.style.setProperty('--fuerza', '0');
-      traba.soltar();
-      delete raiz.dataset.sinIman;
-      delete raiz.dataset.portal;
-      refTransicion.current = false;
-    };
-    return { escena, panel, portal, resplandor, proyectos, traba, pintar, terminar };
-  }, [cortarAnimacion, pintarPuerta]);
-
-  const pasarAProyectos = useCallback(() => {
-    const m = medir();
-    if (!m || refTransicion.current || refPuertaCerrada.current()) return;
-    if (refReducido.current || !refEscena.current || !m.cola) {
-      scrollA(m.fin);
-      return;
-    }
-    const p = prepararPasaje();
-    if (!p) {
-      scrollA(m.fin);
-      return;
-    }
-    // Proyectos ya está armada detrás de la puerta: no hace su entrada
-    window.dispatchEvent(new CustomEvent(EVENTO_ENTRADA));
-    // Proyectos se acomoda detrás del panel, exactamente donde va a quedar al terminar
-    const paso = { abre: 0, t: SALIDA_AL_SCROLL * refSalida.current, ui: refSalida.current, llegada: 0, cruzado: false, s: ESCALA_CRUCE, lejos: 1, ty: -p.proyectos.getBoundingClientRect().top, proyectos: p.proyectos };
-    refPaso.current = paso;
-    pintarPuerta();
-    const cruzar = () => {
-      // ya se cruzó: la página salta a donde se la está viendo (no cambia nada en pantalla)
-      p.traba.mover(medir()?.fin ?? m.fin);
-      paso.cruzado = true;
-      paso.ty = 0;
-      p.panel.style.clipPath = '';
-      p.proyectos.style.transformOrigin = `${window.innerWidth / 2}px ${window.innerHeight / 2}px`;
-      ambientar();
-    };
-    gsap
-      .timeline({ onComplete: p.terminar })
-      // el acercamiento: arranca y llega suave, sin tirones
-      .to(paso, { t: 1, duration: 2.5, ease: 'sine.inOut', onUpdate: p.pintar }, 0)
-      .to(paso, { ui: 1, duration: 0.45, ease: 'power2.out' }, 0)
-      // la hoja cede apenas y después se abre del todo, hacia adentro
-      .to(paso, { abre: 0.07, duration: 0.35, ease: 'power2.out' }, 0.2)
-      .to(paso, { abre: 1, duration: 1.05, ease: 'power3.inOut' }, 0.55)
-      .add(cruzar, 2.5)
-      // del otro lado: la luz se disipa y Proyectos termina de llegar
-      .to(paso, { llegada: 1, duration: 0.95, ease: 'power2.out', onUpdate: ambientar }, 2.5);
-  }, [medir, scrollA, prepararPasaje, pintarPuerta, ambientar]);
-
-  // La vuelta: desde Proyectos, al subir, se sale de espaldas por la misma puerta.
-  const volverDeProyectos = useCallback(
-    (previo, y) => {
-      if (refTransicion.current || refReducido.current || document.documentElement.dataset.sinIman) return;
-      const m = medir();
-      const alto = window.innerHeight;
-      // sólo si se viene subiendo desde Proyectos (no un salto del menú, ni de más abajo de corrido)
-      if (!m || !m.cola || !refEscena.current || !(y < m.fin - 12 && y > m.fin - alto * 0.5 && previo > m.fin - alto * 0.25 && previo - y < alto * 0.5)) return;
-      // con un proyecto abierto, la sección se queda como está
-      if (document.querySelector('#proyectos [data-activo="true"]')) return;
-      const p = prepararPasaje();
-      if (!p) return;
-      const W = window.innerWidth;
-      const paso = { abre: 1, t: 1, ui: 1, llegada: 1, cruzado: true, s: ESCALA_CRUCE, lejos: 0, ty: 0, proyectos: p.proyectos };
-      refPaso.current = paso;
-      p.traba.mover(m.fin);
-      // la luz vuelve a envolver la pantalla, desde el centro
-      p.proyectos.style.transformOrigin = `${W / 2}px ${alto / 2}px`;
-      p.portal.firstElementChild.style.transform = matrizCss(HOJA.w, HOJA.h, [[-W, -alto], [2 * W, -alto], [2 * W, 2 * alto], [-W, 2 * alto]]);
-      p.portal.style.setProperty('--abre', '1');
-      p.resplandor.style.setProperty('--px', '50%');
-      p.resplandor.style.setProperty('--py', '50%');
-      p.resplandor.style.setProperty('--r', `${alto * 3}px`);
-      ambientar();
-      const descruzar = () => {
-        // se vuelve a estar de este lado del vano, con la página ya en "Hoy"
-        p.traba.mover(m.arriba + m.largo);
-        p.proyectos.style.transform = '';
-        paso.ty = -p.proyectos.getBoundingClientRect().top;
-        paso.cruzado = false;
-        refObjetivo.current = N - 1;
-        refAsentado.current = N - 1;
-        // si la sección todavía no había hecho su entrada, las portadas ya están
-        refEntro.current = true;
-        setEntro(true);
-        p.escena.portadas.forEach((portada) => {
-          gsap.killTweensOf(portada.entrada);
-          portada.entrada.t = 1;
-        });
-        p.escena.ponerSalida(1);
-        p.panel.style.setProperty('--salida', '1');
-        p.escena.saltarA(N - 1);
-        pintarPuerta();
-      };
-      const T = 0.5;
-      const seguir = () =>
-        gsap
-        .timeline({
-          onComplete: () => {
-            refSalida.current = 0;
-            p.escena.ponerSalida(0);
-            p.panel.style.setProperty('--salida', '0');
-            p.terminar();
-          },
-        })
-        .to(paso, { llegada: 0, duration: T, ease: 'power2.in', onUpdate: ambientar }, 0)
-        .add(descruzar, T)
-        .to(paso, { t: 0, duration: 2.4, ease: 'sine.inOut', onUpdate: p.pintar }, T)
-        // la hoja se cierra cuando ya se está afuera, y encaja al final
-        .to(paso, { abre: 0.07, duration: 1, ease: 'power3.inOut' }, T + 0.75)
-        .to(paso, { abre: 0, duration: 0.3, ease: 'power2.in' }, T + 1.75)
-        .to(paso, { ui: 0, duration: 0.5, ease: 'power2.out' }, T + 1.9);
-      // Antes de salir, Proyectos deshace su entrada (marquesina → tarjetas 3D → conectores) y
-      // avisa. Si nadie toma el pedido (celular, sin WebGL), se sale directo.
-      const pedido = { tomado: false, listo: seguir };
-      window.dispatchEvent(new CustomEvent('portafolio:salida-proyectos', { detail: pedido }));
-      if (!pedido.tomado) seguir();
-    },
-    [N, medir, prepararPasaje, pintarPuerta, ambientar]
-  );
-  refVolver.current = volverDeProyectos;
-  refPasar.current = pasarAProyectos;
 
   // ---- zoom de una portada ---------------------------------------------------------------
   useEffect(() => {
@@ -1578,7 +1334,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       window.removeEventListener('touchend', alTocar);
       window.removeEventListener('touchcancel', alTocar);
     };
-  }, [medir, scrollA, irA, cortarAnimacion, pasarAProyectos, N]);
+  }, [medir, scrollA, irA, cortarAnimacion, N]);
 
   // ---- teclado: flechas = un hito; Inicio y Fin = primero y último -------------------------
   const refActivo = useRef(0);
@@ -1803,19 +1559,6 @@ export default function ReelHitos({ hitos, alFallar }) {
     <section id="sobre-mi" ref={refContenedor} className={styles.contenedor} style={{ '--pasos': N - 1 }} aria-labelledby="titulo-sobre-mi">
       {/* sólo para medir la cola (ver medir) */}
       <div className={styles.cola} data-cola aria-hidden="true" />
-      {/* La puerta por la que se pasa a Proyectos: una hoja igual a la del dibujo, apoyada sobre el
-          vano. Va debajo del panel (que tiene el vano recortado), así sólo se la ve por el hueco. */}
-      <div ref={refPortal} className={styles.portal} data-activo="false" data-claro={claro} aria-hidden="true">
-        <div className={styles.vano} style={{ width: HOJA.w, height: HOJA.h }}>
-          <span className={styles.bruma} />
-          <span className={styles.jamba} />
-          <span className={styles.hoja}>
-            <span className={styles.cuarteron} />
-            <span className={styles.cuarteron} />
-            <span className={styles.picaporte} />
-          </span>
-        </div>
-      </div>
       <div
         ref={refPanel}
         className={styles.panel}
@@ -1961,8 +1704,6 @@ export default function ReelHitos({ hitos, alFallar }) {
           />
         ) : null}
       </div>
-      {/* La luz (u oscuridad) del otro lado de la puerta: sale del vano y envuelve la pantalla al cruzar. */}
-      <div ref={refResplandor} className={styles.resplandor} aria-hidden="true" />
     </section>
   );
 }

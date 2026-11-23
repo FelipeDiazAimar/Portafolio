@@ -634,7 +634,7 @@ export default function Proyectos() {
   return (
     <section ref={refSeccion} id="proyectos" className={styles.contenedor} data-puente={puenteOn ? 'true' : 'false'} data-salto-al-final={puenteOn ? 'true' : 'false'} aria-labelledby="titulo-proyectos">
       <div ref={refPanel} className={styles.panel} data-activo={proyecto ? 'true' : 'false'} data-titulo-visto={tituloVisto ? 'true' : 'false'}>
-        <div ref={refFondo} className={styles.fondo}>
+        <div ref={refFondo} className={styles.fondo} data-ola>
           {marquesinaCerca ? (
           <ThreeDMarquee
             images={tarjetas}

@@ -164,6 +164,7 @@ export default function Revelador() {
         vivos.set(el, armar(el));
         cambios = true;
       });
+      olas = [...document.querySelectorAll('[data-ola]')];
       if (cambios) ScrollTrigger.refresh();
     };
     const pedir = () => {
@@ -173,15 +174,16 @@ export default function Revelador() {
     const mo = new MutationObserver(pedir);
     mo.observe(document.body, { childList: true, subtree: true });
 
-    // "wave" por velocidad
-    const raiz = document.documentElement;
+    // "wave" por velocidad: se escribe sólo en los [data-ola] (en <html> recalcularía los
+    // estilos de toda la página en cada cuadro)
+    let olas = [];
     let ultimo = 0;
     const quitar = alCuadro((_dt, s) => {
       const ola = Math.max(-1, Math.min(1, s.vel / 60));
       const redondeado = Math.round(ola * 200) / 200;
       if (redondeado !== ultimo) {
         ultimo = redondeado;
-        raiz.style.setProperty('--ola', String(redondeado));
+        for (const el of olas) el.style.setProperty('--ola', String(redondeado));
       }
     });
 
@@ -195,7 +197,7 @@ export default function Revelador() {
           a.kill();
         })
       );
-      raiz.style.removeProperty('--ola');
+      olas.forEach((el) => el.style.removeProperty('--ola'));
     };
   }, []);
   return null;
