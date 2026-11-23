@@ -19,7 +19,7 @@
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, limitar } from '@/lib/movimiento.js';
 import { ralear, suavizar, aRuta, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, puntaDePagina, SALIDA_TITULOS, spline, tablaAvance, trazar } from '@/lib/trazos.js';
-import { EVENTO_PISO, puntaPisoEntrada, registrarLineaFinal } from '@/lib/puente.js';
+import { EVENTO_PISO, registrarLineaFinal } from '@/lib/puente.js';
 import { aPagina, arribasSecciones, EVENTO_LINEA_EDITADA, puntosLinea } from '@/lib/lineaEditable.js';
 import styles from './LineasScroll.module.css';
 
@@ -73,35 +73,28 @@ function tramos(vw, vh) {
   const X = (k) => k * vw;
   // la punta de la línea del piso al entrar al pasillo (la informa la escena; si todavía no, un valor
   // típico: centrada, un poco debajo de la mitad)
-  const [px, py] = puntaPisoEntrada() ?? [0.5, 0.62];
   // el punto final de "Gracias por pasar." (medido sin la animación de las letras, ver puntoFinal)
   const fin = puntoFinal() ?? [X(0.58), f.bottom - vh * 0.06];
   // puntos dibujados a mano (modo editor): si un tramo los tiene, reemplazan el recorrido de siempre
   const propios = puntosLinea();
   const arribas = arribasSecciones();
   const aMano = (tramo) => (propios[tramo] ?? []).map((q) => aPagina(q, arribas, vw, vh));
-  // a mano sólo hasta el borde del pasillo: adentro la línea va por encima de la escena, así que
-  // baja por el borde derecho (sobre las estanterías, lejos de las tarjetas y del minimapa) y entra
-  // al centro, en la punta de la línea del piso
-  const manoA = aMano('a').filter(([, y]) => y < e.top - vh * 0.02);
-  const pasilloA = [[X(0.93), e.top - vh * 0.06], [X(0.965), e.top + vh * 0.14], [X(0.9), e.top + vh * 0.36], [X(0.64), e.top + vh * 0.5], [X(px), e.top + vh * py]];
-  const finA = manoA.length ? pasilloA[pasilloA.length - 1] : null;
+  // a mano sólo hasta el borde del pasillo: la línea termina en el borde de arriba de la sección
+  // (bajando al centro) y la escena del pasillo la tapa al subir
+  const manoA = aMano('a').filter(([, y]) => y < e.top - vh * 0.15);
+  const bordeA = [[X(0.5), e.top - vh * 0.1], [X(0.5), e.top + 2]];
   // (sin los puntos que caen antes de donde baja la hélice de Títulos, ni los muy pegados entre sí:
   // dejan esquinas cerradas)
-  const manoC = ralear(aMano('c').filter(([, y]) => y > t.bottom + vh * 0.2), vh * 0.22);
+  const manoC = ralear(aMano('c').filter(([, y]) => y > t.bottom + vh * 0.12), vh * 0.2);
   return [
     {
-      // A. de Proyectos a la punta de la línea del piso
-      // (a mano: redondeado, entra por el borde izquierdo — si arrancara en medio de la pantalla
-      // aparecería de la nada — y termina directo en la punta del piso)
+      // A. de Proyectos al borde de arriba del pasillo
+      // (a mano: redondeado y entra por el borde izquierdo — si arrancara en medio de la pantalla
+      // aparecería de la nada)
       puntos: manoA.length
-        ? suavizar(ralear([[X(-0.06), manoA[0][1] - vh * 0.3], ...manoA, ...pasilloA], vh * 0.12), { vueltas: 4 })
-        : [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(px), e.top + vh * 0.12], [X(px), e.top + vh * py]],
+        ? suavizar(ralear([[X(-0.06), manoA[0][1] - vh * 0.3], ...manoA, ...bordeA], vh * 0.12), { fijosFin: 2, vueltas: 4 })
+        : [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], ...bordeA],
       lazos: [],
-      // mientras el pasillo sube, la parte de adentro va por encima y termina sobre la punta del piso;
-      // ya con el pasillo arriba se funde y queda la del piso
-      // (entera desde que la punta cruza el borde, así llega ya unida a la punta del piso)
-      encima: { desdeY: e.top - 2, hastaY: Infinity, completo: true, trasPunta: true, alfa: finA ? (y) => limitar((finA[1] - vh * 0.4 - y) / (vh * 0.16), 0, 1) : (y) => limitar((e.top - y) / (vh * 0.3), 0, 1) },
     },
     {
       // B. salida del pasillo: del centro de la luz del final, hacia abajo, al borde de Títulos
@@ -117,7 +110,7 @@ function tramos(vw, vh) {
       puntos: (manoC.length ? (q) => suavizar(q, { vueltas: 4 }) : (q) => q)([
         [X(SALIDA_TITULOS), t.bottom - 1],
         // (sale de la hélice bajando derecho; a mano, este punto sólo orienta el giro)
-        [X(SALIDA_TITULOS), t.bottom + vh * (manoC.length ? 0.18 : 0.08)],
+        [X(SALIDA_TITULOS), t.bottom + vh * (manoC.length ? 0.07 : 0.08)],
         ...(manoC.length
           ? manoC
           : [
