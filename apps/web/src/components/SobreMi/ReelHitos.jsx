@@ -24,6 +24,7 @@ import IntroAgentes, { AGENTES, introPendiente } from './IntroAgentes.jsx';
 import ObraScroll from './ObraScroll.jsx';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import { registrarReel } from '@/lib/puente.js';
+import LineaReel from './LineaReel.jsx';
 import styles from './ReelHitos.module.css';
 
 const ESPERA_IMAN_MS = 170;
@@ -294,8 +295,10 @@ export default function ReelHitos({ hitos, alFallar }) {
 
   // Lo que la escena avisa en cada cuadro: hito más cercano (estado) y fase (variable CSS).
   const refFaseEscrita = useRef(-1);
+  const refLineaReel = useRef(null);
   const alCuadro = useCallback(
     (fase, velocidad = 0) => {
+      refLineaReel.current?.(fase);
       if (Math.abs(fase - refFaseEscrita.current) > 0.0008) {
         refFaseEscrita.current = fase;
         refPanel.current?.style.setProperty('--fase', fase.toFixed(4));
@@ -1576,6 +1579,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       >
         <div className={styles.luz} aria-hidden="true" />
         <div className={styles.grano} aria-hidden="true" />
+        <LineaReel total={N} refPoner={refLineaReel} />
 
         <h2 id="titulo-sobre-mi" ref={refTitular} className={styles.titular} style={{ '--letras': Math.max(...TITULAR.map((renglon) => renglon.length)) }}>
           <span className={styles.soloLectores}>Sobre mí: </span>
