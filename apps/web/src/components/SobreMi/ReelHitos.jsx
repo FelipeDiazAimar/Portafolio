@@ -607,8 +607,7 @@ export default function ReelHitos({ hitos, alFallar }) {
           // un poco más abajo del borde: la intro deja el scroll justo en el borde (progreso 0, que
           // para ScrollTrigger es no haber entrado) y al subir no se disparaba la salida
           start: 'top 5%',
-          // (glow-up) al volver al hero ya no se desarma: lo que los agentes armaron queda armado
-          onLeaveBack: () => {},
+          onLeaveBack: () => refDesarmar.current?.(),
         });
       }
       // La cola: "Hoy" sigue fijo y la portada empieza a crecer desde su puerta, al ritmo del
@@ -1059,9 +1058,11 @@ export default function ReelHitos({ hitos, alFallar }) {
   // Las obras de las portadas (los agentes que las arman): el scroll sólo las desata — al llegar
   // una portada sin construir a la vista arranca la suya — y después cada una sigue a su ritmo,
   // por tiempo real, se vea o no: si se sigue scrolleando continúa en segundo plano y, al volver,
-  // está donde iba. Nunca se apuran ni se desarman con el scroll. Varias pueden ir a la vez; los
-  // agentes se ven en la que está a la vista.
-  const refObras = useRef(new Map()); // hito → { q (0..1), ultimo (ms) }
+  // está donde iba. Nunca se apuran con el scroll. Al volver hacia atrás, las que quedan adelante
+  // se desarman (también a su ritmo). Varias pueden ir a la vez; los agentes se ven en la que está
+  // a la vista.
+  const refObras = useRef(new Map()); // hito → { q (0..1), meta (1 armar, 0 desarmar), ultimo (ms) }
+  const refSentidoObras = useRef({ fase: null, sentido: 1 });
   const SEG_POR_UNIDAD = 0.85;
   const SEG_MIN = 2.5;
   const construirEnCuadro = (fase) => {
@@ -1071,18 +1072,39 @@ export default function ReelHitos({ hitos, alFallar }) {
     const ahora = performance.now();
     const hechas = refConstruidas.current;
     const obras = refObras.current;
-    for (const i of new Set([Math.floor(fase), Math.ceil(fase)])) {
-      if (i < 0 || i >= N || hechas.has(i) || obras.has(i)) continue;
-      if (Math.abs(fase - i) < 0.6) obras.set(i, { q: 0, ultimo: ahora });
+    const mov = refSentidoObras.current;
+    if (mov.fase !== null && fase - mov.fase > 1e-4) mov.sentido = 1;
+    else if (mov.fase !== null && fase - mov.fase < -1e-4) mov.sentido = -1;
+    mov.fase = fase;
+    // el scroll desata: yendo hacia una portada sin construir, los agentes la arman; volviendo
+    // (cuando la portada queda adelante, ya fuera de la vista), la desarman. Si se cambia de
+    // sentido a mitad de camino, siguen desde donde iban hacia el otro lado.
+    for (let i = 1; i < N; i += 1) {
+      const o = obras.get(i);
+      const cerca = Math.abs(fase - i) < 0.6;
+      const quedoAdelante = fase < i - 0.6 && mov.sentido < 0;
+      if (!o) {
+        if (!hechas.has(i) && cerca && mov.sentido >= 0) obras.set(i, { q: 0, meta: 1, ultimo: ahora });
+        else if (hechas.has(i) && quedoAdelante) {
+          hechas.delete(i);
+          obras.set(i, { q: 1, meta: 0, ultimo: ahora });
+        }
+      } else if (o.meta === 0 && cerca && mov.sentido > 0) o.meta = 1;
+      else if (o.meta === 1 && quedoAdelante) o.meta = 0;
     }
+    if (!hechas.has(0) && !obras.has(0) && Math.abs(fase) < 0.6) obras.set(0, { q: 0, meta: 1, ultimo: ahora });
     for (const [i, o] of obras) {
       // tiempo real (sin tope): si este cuadro no corrió un rato, la obra igual avanzó
-      o.q = Math.min(1, o.q + Math.max(0, ahora - o.ultimo) / 1000 / duracionObra(i));
+      const paso = Math.max(0, ahora - o.ultimo) / 1000 / duracionObra(i);
+      o.q = o.meta === 1 ? Math.min(1, o.q + paso) : Math.max(0, o.q - paso);
       o.ultimo = ahora;
-      if (o.q >= 1) {
+      if (o.q >= 1 && o.meta === 1) {
         obras.delete(i);
         hechas.add(i);
         soltarObra(i, true);
+      } else if (o.q <= 0 && o.meta === 0) {
+        obras.delete(i);
+        soltarObra(i, false);
       }
     }
     // los agentes, en la obra que está a la vista; las otras descubren lo real sin ellos
@@ -1185,6 +1207,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       setEntro(false);
       refConstruidas.current.clear();
       refObras.current.clear();
+      refSentidoObras.current = { fase: null, sentido: 1 };
       limpiarRevelado();
       refPrerevelado.current = false;
       // desarmado el plano, se sigue subiendo hasta el hero
