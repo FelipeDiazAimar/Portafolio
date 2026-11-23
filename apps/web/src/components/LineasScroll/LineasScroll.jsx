@@ -18,7 +18,7 @@
 // La llegada al pasillo y la salida (A y B) van además por encima mientras la escena entra o se va.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, limitar } from '@/lib/movimiento.js';
-import { aRuta, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, puntaDePagina, SALIDA_TITULOS, spline, tablaAvance, trazar } from '@/lib/trazos.js';
+import { suavizar, aRuta, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, puntaDePagina, SALIDA_TITULOS, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import { EVENTO_PISO, puntaPisoEntrada, registrarLineaFinal } from '@/lib/puente.js';
 import { aPagina, arribasSecciones, EVENTO_LINEA_EDITADA, puntosLinea } from '@/lib/lineaEditable.js';
 import styles from './LineasScroll.module.css';
@@ -28,6 +28,18 @@ const SVG = 'http://www.w3.org/2000/svg';
 // Centro del punto de "Gracias por pasar." en px de página, medido por su lugar en la página (sin
 // transformaciones): las letras se animan con el scroll y su rectángulo en pantalla se corre.
 function puntoFinal() {
+  // en modo vidrio la frase se dibuja en un lienzo con su propia tipografía: la escena informa dónde
+  // queda el punto (relativo a la caja del vidrio)
+  const vidrio = document.querySelector('[class*="CierreFooter_vidrio"]');
+  if (vidrio?.dataset.puntoX) {
+    let vx = 0;
+    let vy = 0;
+    for (let n = vidrio; n; n = n.offsetParent) {
+      vx += n.offsetLeft;
+      vy += n.offsetTop;
+    }
+    return [vx + Number(vidrio.dataset.puntoX), vy + Number(vidrio.dataset.puntoY)];
+  }
   const el = document.querySelector('[class*="CierreFooter_punto"]');
   if (!el) return null;
   let x = 0;
@@ -73,7 +85,11 @@ function tramos(vw, vh) {
   return [
     {
       // A. de Proyectos a la punta de la línea del piso
-      puntos: [...(manoA.length ? manoA : [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28]]), [X(px), e.top + vh * 0.12], [X(px), e.top + vh * py]],
+      // (a mano: redondeado, entra por el borde izquierdo — si arrancara en medio de la pantalla
+      // aparecería de la nada — y termina directo en la punta del piso)
+      puntos: manoA.length
+        ? suavizar([[X(-0.06), manoA[0][1] - vh * 0.3], ...manoA, [X(px), e.top + vh * py]])
+        : [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(px), e.top + vh * 0.12], [X(px), e.top + vh * py]],
       lazos: [],
       // mientras el pasillo sube, la parte de adentro va por encima y termina sobre la punta del piso;
       // ya con el pasillo arriba se funde y queda la del piso
@@ -91,7 +107,7 @@ function tramos(vw, vh) {
     },
     {
       // C. del borde de abajo de Títulos al punto de "Gracias por pasar."
-      puntos: [
+      puntos: (manoC.length ? (q) => suavizar(q, { fijosIni: 2, vueltas: 4 }) : (q) => q)([
         [X(SALIDA_TITULOS), t.bottom - 1],
         [X(SALIDA_TITULOS), t.bottom + vh * 0.08],
         ...(manoC.length
@@ -111,7 +127,7 @@ function tramos(vw, vh) {
           ]),
         ...(manoC.length ? [] : [[X(0.9), fin[1] - vh * 0.02]]),
         fin,
-      ],
+      ]),
       lazos: [],
       final: true,
     },

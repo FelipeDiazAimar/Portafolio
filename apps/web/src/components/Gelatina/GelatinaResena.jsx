@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Gelatina, subdividirCurva } from './fisicaGelatina.js';
 import { DOMINIO_SDF, FRAGMENT, FRAGMENT_SDF, PUNTOS_CURVA, TEXELES_SDF, VERTEX } from './shaderGelatina.js';
+import LineaSeccion from '@/components/LineasScroll/LineaSeccion.jsx';
 import styles from './GelatinaResena.module.css';
 
 const AZUL_ELECTRICO = [0.12, 0.48, 1];
@@ -360,6 +361,8 @@ export default function GelatinaResena() {
         )}
         <span className={styles.pista} aria-hidden="true">arrastrá ↔</span>
       </div>
+      {/* la línea del sitio pasa por encima de la gelatina (al final: queda arriba del lienzo) */}
+      <LineaSeccion />
     </section>
   );
 }

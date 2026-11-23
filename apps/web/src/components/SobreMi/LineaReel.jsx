@@ -16,7 +16,7 @@
 // `refPoner.current(fase)` le pasa la fase del reel; ReelHitos la llama en cada cuadro.
 import { useEffect, useRef } from 'react';
 import { alCuadro } from '@/lib/movimiento.js';
-import { aRuta, bezier, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tablaAvance, trazar, unirTrazos } from '@/lib/trazos.js';
+import { suavizar, aRuta, bezier, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tablaAvance, trazar, unirTrazos } from '@/lib/trazos.js';
 import { aPagina, arribasSecciones, EVENTO_LINEA_EDITADA, puntosLinea } from '@/lib/lineaEditable.js';
 import styles from './ReelHitos.module.css';
 
@@ -80,12 +80,17 @@ export default function LineaReel({ total, refPoner, refHero }) {
       // 1. la bajada del hero, en coordenadas de la sección (y < 0 = arriba de ella, sobre el hero)
       const arriba = contenedor.getBoundingClientRect().top + window.scrollY;
       // (si se dibujó a mano en el modo editor, pasa por esos puntos)
-      const mano = (puntosLinea().hero ?? []).map((q) => {
-        const [x, y] = aPagina(q, arribasSecciones(), W, vh);
-        return [x, y - arriba];
-      });
-      const pasos = mano.length ? mano : [[-W * 0.06, vh * 0.8 - arriba], [W * 0.14, vh * 0.93 - arriba]];
-      const hero = trazar(spline([...pasos, [xE, -vh * 0.22], [xE, 0]]));
+      // (sólo los puntos de antes del borde: adentro manda la línea del reel; redondeados, y bajando
+      // derecho al empalme)
+      const mano = (puntosLinea().hero ?? [])
+        .map((q) => {
+          const [x, y] = aPagina(q, arribasSecciones(), W, vh);
+          return [x, y - arriba];
+        })
+        .filter(([, y]) => y < -vh * 0.14);
+      const hero = mano.length
+        ? trazar(spline(suavizar([...mano, [xE, -vh * 0.1], [xE, 0]], { fijosFin: 2 })))
+        : trazar(spline([[-W * 0.06, vh * 0.8 - arriba], [W * 0.14, vh * 0.93 - arriba], [xE, -vh * 0.22], [xE, 0]]));
       svgHero.style.top = `${-arriba}px`;
       svgHero.style.height = `${arriba + 2}px`;
       svgHero.setAttribute('viewBox', `0 ${-arriba} ${W} ${arriba + 2}`);

@@ -131,6 +131,27 @@ export function grosorLinea(vw) {
 
 // Guía suave que pasa por todos los puntos (Catmull-Rom centrípeta): u 0..1 se reparte entre los
 // tramos según su largo, así la velocidad es pareja. Para encadenar secciones en un solo trazo.
+// Redondea un recorrido marcado a mano (Chaikin): corta cada esquina en sus cuartos, varias veces.
+// Los primeros fijosIni y los últimos fijosFin puntos quedan exactos (son los empalmes).
+export function suavizar(puntos, { fijosIni = 1, fijosFin = 1, vueltas = 3 } = {}) {
+  if (puntos.length < 3) return puntos;
+  const ini = puntos.slice(0, Math.max(0, fijosIni - 1));
+  const fin = puntos.slice(puntos.length - Math.max(0, fijosFin - 1));
+  let medio = puntos.slice(ini.length, puntos.length - fin.length);
+  for (let v = 0; v < vueltas; v += 1) {
+    const sig = [medio[0]];
+    for (let i = 0; i < medio.length - 1; i += 1) {
+      const [ax, ay] = medio[i];
+      const [bx, by] = medio[i + 1];
+      if (i > 0) sig.push([ax * 0.75 + bx * 0.25, ay * 0.75 + by * 0.25]);
+      if (i < medio.length - 2) sig.push([ax * 0.25 + bx * 0.75, ay * 0.25 + by * 0.75]);
+    }
+    sig.push(medio[medio.length - 1]);
+    medio = sig;
+  }
+  return [...ini, ...medio, ...fin];
+}
+
 export function spline(puntos) {
   const P = [puntos[0], ...puntos, puntos[puntos.length - 1]];
   const tramos = [];

@@ -110,6 +110,13 @@ export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
         contenedor.style.top = `${(host.clientHeight - h) / 2}px`;
         escena.setLayout({ width: w, height: h, fontPx });
         rectLienzo = null;
+        // dónde se dibuja el punto final (relativo a la caja del vidrio): ahí termina la línea del sitio
+        const punto = escena.centroUltima(fontPx, w, h);
+        if (punto) {
+          host.dataset.puntoX = (punto[0] - margen).toFixed(1);
+          host.dataset.puntoY = (punto[1] + (host.clientHeight - h) / 2).toFixed(1);
+          window.dispatchEvent(new Event('portafolio:linea-editada'));
+        }
       };
 
       const rect = () => (rectLienzo ??= contenedor.getBoundingClientRect());

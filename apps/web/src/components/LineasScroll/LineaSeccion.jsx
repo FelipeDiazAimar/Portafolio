@@ -25,10 +25,13 @@ export default function LineaSeccion() {
     const armar = () => {
       linea = lineaFinalActual();
       if (!linea) return;
-      const arriba = seccion.getBoundingClientRect().top + window.scrollY;
+      const caja = seccion.getBoundingClientRect();
+      const arriba = caja.top + window.scrollY;
+      // (la sección puede no empezar en el borde izquierdo: p. ej. la reseña del footer)
+      const izquierda = caja.left + window.scrollX;
       const W = seccion.clientWidth;
       const H = seccion.clientHeight;
-      svg.setAttribute('viewBox', `0 ${arriba.toFixed(1)} ${W} ${H}`);
+      svg.setAttribute('viewBox', `${izquierda.toFixed(1)} ${arriba.toFixed(1)} ${W} ${H}`);
       ruta.setAttribute('d', linea.d);
       ruta.setAttribute('stroke-width', linea.ancho.toFixed(1));
       ruta.style.strokeDasharray = `${linea.trazo.largo} ${linea.trazo.largo + 10}`;
