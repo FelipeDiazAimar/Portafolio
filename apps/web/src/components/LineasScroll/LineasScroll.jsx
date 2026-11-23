@@ -24,6 +24,21 @@ import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
+// Centro del punto de "Gracias por pasar." en px de página, medido por su lugar en la página (sin
+// transformaciones): las letras se animan con el scroll y su rectángulo en pantalla se corre.
+function puntoFinal() {
+  const el = document.querySelector('[class*="CierreFooter_punto"]');
+  if (!el) return null;
+  let x = 0;
+  let y = 0;
+  for (let n = el; n; n = n.offsetParent) {
+    x += n.offsetLeft;
+    y += n.offsetTop;
+  }
+  // el punto se dibuja abajo de su caja (sobre la línea de base)
+  return [x + el.offsetWidth * 0.42, y + el.offsetHeight * 0.74];
+}
+
 function caja(sel, y0) {
   const n = document.querySelector(sel);
   if (!n) return null;
@@ -46,9 +61,8 @@ function tramos(vw, vh) {
   // la punta de la línea del piso al entrar al pasillo (la informa la escena; si todavía no, un valor
   // típico: centrada, un poco debajo de la mitad)
   const [px, py] = puntaPisoEntrada() ?? [0.5, 0.62];
-  // el punto final de "Gracias por pasar."
-  const punto = caja('[class*="CierreFooter_punto"]', y0);
-  const fin = punto ? [punto.cx, punto.cy] : [X(0.58), f.bottom - vh * 0.06];
+  // el punto final de "Gracias por pasar." (medido sin la animación de las letras, ver puntoFinal)
+  const fin = puntoFinal() ?? [X(0.58), f.bottom - vh * 0.06];
   return [
     {
       // A. de Proyectos a la punta de la línea del piso
@@ -73,14 +87,17 @@ function tramos(vw, vh) {
       puntos: [
         [X(SALIDA_TITULOS), t.bottom - 1],
         [X(SALIDA_TITULOS), t.bottom + vh * 0.08],
-        // Habilidades: por la izquierda, detrás del texto y del buscador
-        [X(0.42), h.top + vh * 0.32],
-        [X(0.12), h.top + vh * 0.7],
+        // Habilidades: por la derecha del todo
+        [X(0.95), h.top + vh * 0.3],
+        [X(0.955), h.top + vh * 0.78],
         // Contacto: entre la credencial y el texto
         [X(0.4), c.top + vh * 0.3],
         [X(0.33), c.top + vh * 0.82],
-        // footer: por el margen derecho y de ahí al punto final
-        [X(0.94), f.top + vh * 0.4],
+        // footer: la reseña por el margen izquierdo (la gelatina es un lienzo opaco), cruza por
+        // detrás de los datos, baja por el margen derecho y de ahí al punto final
+        [X(0.03), f.top + vh * 0.3],
+        [X(0.04), f.top + vh * 0.62],
+        [X(0.95), f.top + vh * 0.95],
         [X(0.9), fin[1] - vh * 0.02],
         fin,
       ],

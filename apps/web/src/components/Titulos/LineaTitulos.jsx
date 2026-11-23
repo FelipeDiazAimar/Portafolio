@@ -2,7 +2,7 @@
 
 // La línea del sitio en Títulos (PC, cinta horizontal): una hélice que gira alrededor del carrusel,
 // pasando por delante y por detrás de las tarjetas. Acá el scroll mueve la cinta de costado, así que
-// la hélice también: avanza con la posición real del carrusel, una vuelta por tarjeta.
+// la hélice también: avanza con la posición real del carrusel, y da tres vueltas en todo el recorrido.
 //   - entra por el borde de arriba, al centro (ENTRADA_TITULOS), donde llega la línea del pasillo, y
 //     se curva hasta la hélice; mientras el panel sube se dibuja con el scroll vertical;
 //   - la hélice se dibuja con el carrusel (la punta, a la derecha: SALIDA_TITULOS del ancho);
@@ -16,6 +16,7 @@ import { aRuta, bezier, COLOR_LINEA, ENTRADA_TITULOS, grosorLinea, largoHasta, S
 import styles from './Titulos.module.css';
 
 const PUNTA_Y = 0.56;
+const VUELTAS = 3; // vueltas de la hélice en todo el carrusel
 const SVG = 'http://www.w3.org/2000/svg';
 
 export default function LineaTitulos({ refEscena, total }) {
@@ -51,7 +52,9 @@ export default function LineaTitulos({ refEscena, total }) {
       const x0 = xE + W * 0.12;
       // la punta va a la derecha; al final del carrusel la hélice termina justo ahí
       const xFin = (total - 1) * lambda + W * SALIDA_TITULOS;
-      const theta = (x) => ((x - x0) / lambda) * Math.PI * 2;
+      // tres vueltas en todo el recorrido (no una por tarjeta)
+      const giro = (xFin - x0) / VUELTAS;
+      const theta = (x) => ((x - x0) / giro) * Math.PI * 2;
       // arriba en x0 (y = cy − A), bajando por delante: profundidad = sen θ (> 0 = delante)
       const yDe = (x) => cy - A * Math.cos(theta(x));
       const entrada = trazar(bezier([xE, -2], [xE, (cy - A) * 0.7], [x0 - W * 0.08, cy - A], [x0, cy - A]));
@@ -60,7 +63,7 @@ export default function LineaTitulos({ refEscena, total }) {
         return [x, yDe(x)];
       });
       // salida: sigue la tangente de la hélice y baja al borde de abajo
-      const pend = (A * Math.sin(theta(xFin)) * Math.PI * 2) / lambda;
+      const pend = (A * Math.sin(theta(xFin)) * Math.PI * 2) / giro;
       const largoT = Math.hypot(1, pend) || 1;
       const yF = yDe(xFin);
       const salida = trazar(bezier([xFin, yF], [xFin + (W * 0.06) / largoT, yF + (pend * W * 0.06) / largoT], [xFin, H * 0.9], [xFin, H + 2]));
@@ -74,12 +77,11 @@ export default function LineaTitulos({ refEscena, total }) {
       }
       // la capa de adelante sólo se ve donde la hélice pasa por delante (sen θ > 0)
       recorte.replaceChildren();
-      const vueltas = Math.ceil((xFin - x0) / lambda) + 1;
-      for (let k = 0; k < vueltas; k += 1) {
+      for (let k = 0; k < VUELTAS; k += 1) {
         const r = document.createElementNS(SVG, 'rect');
-        r.setAttribute('x', String(x0 + k * lambda));
+        r.setAttribute('x', String(x0 + k * giro));
         r.setAttribute('y', String(-H));
-        r.setAttribute('width', String(lambda / 2));
+        r.setAttribute('width', String(giro / 2));
         r.setAttribute('height', String(H * 3));
         recorte.appendChild(r);
       }
