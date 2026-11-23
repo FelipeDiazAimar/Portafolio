@@ -23,6 +23,7 @@ import { TITULAR } from './titular.js';
 import IntroAgentes, { AGENTES, introPendiente } from './IntroAgentes.jsx';
 import ObraScroll from './ObraScroll.jsx';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
+import { registrarReel } from '@/lib/puente.js';
 import styles from './ReelHitos.module.css';
 
 const ESPERA_IMAN_MS = 170;
@@ -435,7 +436,8 @@ export default function ReelHitos({ hitos, alFallar }) {
         if (!vivo) return;
         escena = crearEscenaReel({ lienzo, total: N, reducido: refReducido.current, alCuadro, alFallar });
         refEscena.current = escena;
-        const ajustar = () => escena.redimensionar(panel.clientWidth, panel.clientHeight, window.matchMedia(CONSULTA_MOVIL).matches);
+        registrarReel({ escena, lienzo });
+        const ajustar =() => escena.redimensionar(panel.clientWidth, panel.clientHeight, window.matchMedia(CONSULTA_MOVIL).matches);
         ajustar();
         observador = new ResizeObserver(ajustar);
         observador.observe(panel);
@@ -448,6 +450,7 @@ export default function ReelHitos({ hitos, alFallar }) {
     return () => {
       vivo = false;
       observador?.disconnect();
+      if (escena) registrarReel(null, escena);
       escena?.destruir();
       refEscena.current = null;
       setEscenaN((n) => -Math.abs(n));
@@ -626,10 +629,11 @@ export default function ReelHitos({ hitos, alFallar }) {
           refPanel.current?.style.setProperty('--salida', '0');
           return;
         }
+        // Sin puerta: la cola es el comienzo del puente a Proyectos (lo maneja Proyectos.jsx, que
+        // toma las portadas). Acá sólo se retira lo de alrededor, al ritmo del scroll.
         refSalida.current = yo.progress;
-        refEscena.current?.ponerSalida(yo.progress * SALIDA_AL_SCROLL);
+        refEscena.current?.ponerSalida(0);
         refPanel.current?.style.setProperty('--salida', yo.progress.toFixed(3));
-        if (alScrollear && yo.progress > 0.42 && yo.progress < 1 && yo.direction > 0) refPasar.current?.();
       };
       ScrollTrigger.create({
         trigger: contenedor,
@@ -1515,19 +1519,12 @@ export default function ReelHitos({ hitos, alFallar }) {
         else if (sentido < 0 && m.caja.top < alto - 2 && m.arriba - alto >= 0) scrollA(m.arriba - alto);
         return;
       }
-      if (m.caja.bottom < alto - 1) {
-        // el panel ya se despegó: bajando se termina de pasar a Proyectos; subiendo, con casi todo
-        // el panel a la vista, se vuelve a "Hoy"
-        if (m.caja.bottom > alto * 0.74) scrollA(sentido > 0 ? m.fin : m.arriba + m.largo);
-        return;
-      }
-      // En la cola ("Hoy" fijo, Proyectos asomando): con un empujón decidido hacia abajo se pasa
-      // a Proyectos; si no, se vuelve a "Hoy". Quedarse a mitad dejaba la regla de años tapada.
+      // El panel ya se despegó, o se está en la cola: ahí manda el puente a Proyectos (portadas →
+      // conectores → tarjetas), atado al scroll. No se imanta: se puede quedar a mitad y volver.
+      if (m.caja.bottom < alto - 1) return;
       const enCola = -m.caja.top - m.largo;
       if (m.cola > 0 && enCola > 2) {
         if (refPuertaCerrada.current()) irA(N - 1);
-        else if (sentido > 0 && enCola > Math.min(m.cola * 0.4, alto * 0.12)) pasarAProyectos();
-        else irA(N - 1);
         return;
       }
       // un avance corto pero decidido (un giro de rueda, un deslizamiento) va al hito siguiente;
@@ -1547,7 +1544,6 @@ export default function ReelHitos({ hitos, alFallar }) {
       const previo = ultimoY;
       if (y !== ultimoY) sentido = y > ultimoY ? 1 : -1;
       ultimoY = y;
-      if (y < previo) refVolver.current?.(previo, y);
       clearTimeout(espera);
       espera = setTimeout(asentar, ESPERA_IMAN_MS);
     };

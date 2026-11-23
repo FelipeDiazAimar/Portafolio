@@ -28,6 +28,7 @@ const LUZ_ESCENA = 0;
 const PROPORCION = 293 / 406; // alto / ancho de una tarjeta de la marquesina
 const limitar = (x, a, b) => Math.min(b, Math.max(a, x));
 const azar = (a, b) => a + Math.random() * (b - a);
+const suaveP = (x) => x * x * (3 - 2 * x);
 const expoIO = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2);
 const rebote = (x) => {
   // llega pasándose un poco y vuelve (back.out)
@@ -249,7 +250,15 @@ export async function precalentarPiezas() {
   renderizador.forceContextLoss();
 }
 
-export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = false, recuadro = null, alFallar = null, inversa = false }) {
+// `puente`: el modo atado al scroll (glow-up). Nada corre por tiempo: Proyectos llama a
+// `ponerProgreso(etapa, t)` con lo que marca el scroll y la escena se arma o se desarma:
+//   'portadas'  (t 0→1) las portadas de "Sobre mí" (calcadas sobre las del reel) se rompen en conectores
+//   'flotar'    los conectores flotan y chocan (física; el cursor los empuja)
+//   'mutar'     (t 0→1) cada conector se vuelve la tarjeta 3D de su proyecto
+//   'convertir' (t 0→1) cada tarjeta vuela a su lugar de la marquesina y se aplana
+// `puente.portadas`: [{ imagen (canvas), quad: [[x,y] × 4] (px del lienzo: arribaIzq, arribaDer,
+// abajoDer, abajoIzq), opacidad }].
+export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = false, recuadro = null, alFallar = null, inversa = false, puente = null }) {
   const renderizador = new THREE.WebGLRenderer({ canvas: lienzo, alpha: true, antialias: true, powerPreference: 'high-performance' });
   renderizador.setClearColor(0x000000, 0);
   renderizador.outputColorSpace = THREE.SRGBColorSpace;
@@ -295,7 +304,8 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   const total = iniciales.length + ADORNOS;
   // radio de choque: que el montón ocupe una bola de ~la mitad del alto del panel
   const marco0 = marco();
-  const radio = limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
+  // en el puente son más chicos: flotan por toda la pantalla, no dentro de un recuadro
+  const radio = puente ? limitar(Math.min(marco0.w, marco0.h) * 0.5 * Math.cbrt(0.5 / Math.max(8, total)), 34, 110) : limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
   // así está inclinada la grilla de la marquesina: las tarjetas 3D flotan ya con esa inclinación
   const grilla = new THREE.Quaternion();
   if (iniciales[0]) grilla.copy(poseDeTarjeta(iniciales[0], { posicion: new THREE.Vector3(), cuaternion: new THREE.Quaternion() }).cuaternion);
@@ -396,6 +406,136 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     pieza.objetivo = objetivo;
   });
   for (let i = 0; i < ADORNOS; i++) nacer(radio * azar(0.55, 0.85), { adorno: true, clave: null });
+  // la demora de la mutación (la conversión la pisa con la suya)
+  for (const a of piezas) a.demoraMut = a.demora;
+
+  // ---- puente: de las portadas de "Sobre mí" a los conectores (atado al scroll) ---------------
+  const portadas3d = [];
+  // Calca las portadas (se puede repetir: al volver desde abajo, la escena nació sin ellas). Cada
+  // una es una grilla con los puntos exactos de la portada curva en pantalla (z = 0 mide 1:1 en
+  // px), así al empezar se ve idéntica a la del reel; después se mueve entera como un cuerpo.
+  function armarPortadas(lista) {
+    for (const p of portadas3d.splice(0)) {
+      escena.remove(p.malla);
+      p.malla.geometry.dispose();
+      p.material.map?.dispose();
+      p.material.dispose();
+    }
+    (lista ?? []).forEach((p, k) => {
+      const n = p.grilla;
+      const lado = n + 1;
+      let cx = 0;
+      let cy = 0;
+      p.puntos.forEach(([x, y]) => {
+        cx += x;
+        cy += y;
+      });
+      cx /= p.puntos.length;
+      cy /= p.puntos.length;
+      const posiciones = new Float32Array(lado * lado * 3);
+      const uvs = new Float32Array(lado * lado * 2);
+      p.puntos.forEach(([x, y], i) => {
+        posiciones[i * 3] = x - cx;
+        posiciones[i * 3 + 1] = -(y - cy);
+        uvs[i * 2] = (i % lado) / n;
+        uvs[i * 2 + 1] = 1 - Math.floor(i / lado) / n;
+      });
+      const indices = [];
+      for (let f = 0; f < n; f += 1) {
+        for (let c = 0; c < n; c += 1) {
+          const a = f * lado + c;
+          indices.push(a, a + lado, a + 1, a + 1, a + lado, a + lado + 1);
+        }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
+      geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      const textura = new THREE.CanvasTexture(p.imagen);
+      textura.colorSpace = THREE.SRGBColorSpace;
+      textura.anisotropy = 4;
+      const material = new THREE.MeshBasicMaterial({ map: textura, transparent: true, opacity: p.opacidad ?? 1, side: THREE.DoubleSide, depthWrite: false });
+      // la niebla del reel (las de los costados se ven apagadas)
+      if (p.niebla) material.color.lerp(new THREE.Color(claro ? '#f5f6f8' : '#0b0d12'), p.niebla);
+      const malla = new THREE.Mesh(geo, material);
+      malla.frustumCulled = false;
+      malla.renderOrder = -10 + k;
+      malla.position.set(cx, -cy, 0);
+      escena.add(malla);
+      portadas3d.push({
+        malla,
+        material,
+        opacidad: p.opacidad ?? 1,
+        puntos: p.puntos,
+        lado,
+        c: [cx, cy],
+        // tamaño aproximado (diagonal), para repartir los conectores
+        tam: Math.hypot(p.puntos[lado * lado - 1][0] - p.puntos[0][0], p.puntos[lado * lado - 1][1] - p.puntos[0][1]),
+        eje: new THREE.Vector3(azar(-1, 1), azar(-1, 1), azar(-0.4, 0.4)).normalize(),
+        demora: (lista.length - 1 - k) * 0.05,
+      });
+    });
+    // Cada conector nace de un punto de una portada (las más grandes dan más)
+    const pesos = portadas3d.map((p) => p.tam * p.opacidad);
+    const totalPeso = pesos.reduce((suma, x) => suma + x, 0) || 1;
+    piezas.forEach((a, i) => {
+      let r = ((i * 0.6180339) % 1) * totalPeso;
+      let k = 0;
+      while (k < pesos.length - 1 && r > pesos[k]) {
+        r -= pesos[k];
+        k += 1;
+      }
+      const p = portadas3d[k];
+      a.origen = p ? { k, i: (1 + Math.floor(azar(0, p.lado - 2))) * p.lado + 1 + Math.floor(azar(0, p.lado - 2)) } : null;
+    });
+  }
+  if (puente) {
+    // ... y va a su lugar en el montón. Al volver a esta etapa desde la física, el "lugar" pasa a
+    // ser donde estaba.
+    const m = marco();
+    piezas.forEach((a) => {
+      a.casa = new THREE.Vector3(m.x + m.w * azar(0.14, 0.86), m.y + m.h * azar(0.2, 0.8), azar(-160, 160));
+      a.qBase = a.malla.quaternion.clone();
+      a.qCasa = a.qBase.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(azar(-1, 1), azar(-1, 1), azar(-1, 1)).normalize(), azar(2, 4)));
+      a.demoraPuente = azar(0, 0.35);
+      a.conector.scale.setScalar(0.0001);
+      a.p.copy(a.casa);
+      a.v.set(0, 0, 0);
+    });
+    armarPortadas(puente.portadas);
+  }
+  const punto = new THREE.Vector3();
+  const salidaCubica = (x) => 1 - Math.pow(1 - limitar(x, 0, 1), 3);
+  // Las portadas se rompen y de cada una salen sus conectores. `t`: 0 = portadas enteras, 1 = sólo conectores.
+  function portadasCuadro(t) {
+    for (const p of portadas3d) {
+      const e = suaveP(limitar((t - p.demora) / 0.55, 0, 1));
+      p.malla.visible = e < 0.999;
+      if (!p.malla.visible) continue;
+      p.malla.position.set(p.c[0], -p.c[1], e * 260);
+      p.malla.quaternion.setFromAxisAngle(p.eje, e * 1.4);
+      p.malla.scale.setScalar(Math.max(0.0001, 1 - e * e));
+      p.material.opacity = p.opacidad * (1 - suaveP(limitar((e - 0.5) / 0.5, 0, 1)));
+    }
+    for (const a of piezas) {
+      const ei = limitar((t - 0.12 - a.demoraPuente * 0.5) / 0.6, 0, 1);
+      const e = salidaCubica(ei);
+      if (a.origen && portadas3d[a.origen.k]) {
+        const p = portadas3d[a.origen.k];
+        const [sx, sy] = p.puntos[a.origen.i];
+        punto.set(sx, sy, 0).lerp(a.casa, e);
+      } else {
+        punto.copy(a.casa);
+      }
+      a.p.copy(punto);
+      a.p.z += Math.sin(Math.PI * e) * 180;
+      a.v.set(0, 0, 0);
+      a.malla.position.set(a.p.x, -a.p.y, a.p.z);
+      a.malla.quaternion.slerpQuaternions(a.qBase, a.qCasa, e);
+      a.conector.scale.setScalar(Math.max(0.0001, a.r0 * 0.98 * rebote(ei)));
+      if (a.adorno) a.r = Math.max(0.01, a.r0 * e);
+    }
+  }
 
   // ---- al revés: de tarjeta plana a tarjeta 3D, y de tarjeta 3D a conector -------------------
   let reversa = inversa ? { fase: 'plana', t0: null, resolver: null } : null;
@@ -561,9 +701,20 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   function mutarCuadro(t) {
     let pendientes = 0;
     for (const a of piezas) {
-      const k = limitar((t - a.demora) / 0.7, 0, 1);
+      const k = limitar((t - a.demoraMut) / 0.7, 0, 1);
       if (k < 1) pendientes++;
-      if (k <= 0) continue;
+      if (k <= 0) {
+        // (atado al scroll se puede volver atrás: todavía conector entero)
+        if (puente) {
+          a.conector.scale.setScalar(a.r0 * 0.98);
+          if (a.adorno) a.r = a.r0;
+          else if (a.tarjeta) {
+            a.tarjeta.visible = false;
+            a.tarjeta.scale.setScalar(0.0001);
+          }
+        }
+        continue;
+      }
       // el conector se encoge mientras gira y, del mismo punto, sale la tarjeta
       const sale = k * k * (3 - 2 * k);
       a.conector.scale.setScalar(a.r0 * 0.98 * (1 - sale));
@@ -662,15 +813,102 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     return pendientes === 0;
   }
 
+  // ---- puente: etapas atadas al scroll -------------------------------------------------------
+  const ORDEN = { portadas: 0, flotar: 1, mutar: 2, convertir: 3 };
+  let etapaP = 'portadas';
+  let tP = 0;
+  // la física retoma desde donde quedó cada pieza
+  function aFisica() {
+    for (const a of piezas) {
+      a.malla.matrixAutoUpdate = true;
+      a.malla.scale.setScalar(1);
+      a.p.set(a.malla.position.x, -a.malla.position.y, a.malla.position.z);
+      a.v.set(0, 0, 0);
+    }
+  }
+  function salirDe(etapa, subiendo) {
+    if (etapa === 'portadas') {
+      portadasCuadro(1);
+      portadas3d.forEach((p) => (p.malla.visible = false));
+      aFisica();
+    } else if (etapa === 'mutar') {
+      mutarCuadro(subiendo ? 9 : 0);
+      comoTarjetas = subiendo ? 1 : 0;
+    } else if (etapa === 'convertir' && !subiendo) {
+      // vuelven a flotar como tarjetas 3D desde donde iban
+      aFisica();
+      for (const a of piezas) {
+        a.demora = a.demoraMut;
+        if (a.cara) {
+          a.cara.emissiveIntensity = LUZ_PROPIA;
+          a.cara.color.setScalar(LUZ_ESCENA);
+          a.cara.clearcoat = a.canto.clearcoat = a.barniz;
+        }
+      }
+      conversion = null;
+    }
+  }
+  function entrarEn(etapa, bajando) {
+    if (etapa === 'portadas' && bajando) {
+      // de vuelta a las portadas: cada conector vuelve desde donde está ahora
+      for (const a of piezas) {
+        a.casa.copy(a.p);
+        a.qCasa.copy(a.malla.quaternion);
+      }
+    } else if (etapa === 'mutar' && bajando) {
+      mutarCuadro(9);
+      comoTarjetas = 1;
+    } else if (etapa === 'convertir' && !bajando) {
+      comoTarjetas = 1;
+      mutarCuadro(9);
+      prepararConversion();
+      conversion = { t0: 0, resolver: null, hecha: false };
+    }
+  }
+  function ponerProgreso(etapa, t) {
+    if (!puente || !(etapa in ORDEN)) return;
+    let actual = etapaP;
+    // de a un paso, así cada etapa deja todo como la siguiente lo espera
+    while (actual !== etapa) {
+      const subiendo = ORDEN[etapa] > ORDEN[actual];
+      const siguiente = Object.keys(ORDEN).find((k) => ORDEN[k] === ORDEN[actual] + (subiendo ? 1 : -1));
+      salirDe(actual, subiendo);
+      entrarEn(siguiente, !subiendo);
+      actual = siguiente;
+    }
+    etapaP = etapa;
+    tP = limitar(t, 0, 1);
+  }
+  function cuadroPuente(dt) {
+    if (etapaP === 'portadas') {
+      portadasCuadro(tP);
+    } else if (etapaP === 'convertir') {
+      convertirCuadro(tP * 1.42);
+    } else {
+      if (etapaP === 'mutar') {
+        mutarCuadro(tP * 1.3);
+        comoTarjetas = limitar(tP * 1.2, 0, 1);
+      }
+      for (const m of deAcento) m.color.lerp(colorAcento, 1 - Math.exp(-9 * dt));
+      for (let paso = 0; paso < 4; paso++) simular(dt / 4);
+    }
+    renderizador.render(escena, camara);
+  }
+
   // ---- bucle --------------------------------------------------------------------------------
   let destruido = false;
   let raf = 0;
   let ultimo = null;
+  let activoP = true;
   function cuadro(ahora) {
     if (destruido) return;
     raf = requestAnimationFrame(cuadro);
     const dt = ultimo === null ? 0 : Math.min(1 / 30, (ahora - ultimo) / 1000);
     ultimo = ahora;
+    if (puente) {
+      if (activoP) cuadroPuente(dt);
+      return;
+    }
     if (reversa && (reversa.fase === 'plana' || reversa.fase === 'desarmando')) {
       let t = -1;
       if (reversa.fase === 'desarmando') {
@@ -729,7 +967,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   };
   // Un clic sobre el recuadro, con los conectores a la vista: cambia el color y los sacude.
   const alPulsar = (evento) => {
-    if (conversion || mutacion || (reversa && reversa.fase !== 'conectores')) return;
+    if (puente ? etapaP !== 'flotar' || !activoP : conversion || mutacion || (reversa && reversa.fase !== 'conectores')) return;
     alMover(evento);
     const m = marco();
     if (puntero.x < m.x || puntero.x > m.x + m.w || puntero.y < m.y || puntero.y > m.y + m.h) return;
@@ -758,6 +996,20 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   lienzo.addEventListener('webglcontextlost', alPerderContexto);
 
   return {
+    // ---- puente (atado al scroll) ----
+    ponerProgreso,
+    tienePortadas: () => portadas3d.length > 0,
+    // Calca las portadas ahora; los conectores vuelven a ellas desde donde estén.
+    ponerPortadas(lista) {
+      armarPortadas(lista);
+      if (etapaP === 'portadas') portadasCuadro(tP);
+    },
+    etapaPuente: () => etapaP,
+    // fuera de pantalla no se dibuja ni se simula
+    activar(si) {
+      activoP = Boolean(si);
+      if (activoP) ultimo = null;
+    },
     piezas: () => piezas.length,
     // En qué tiempo está: 'conectores', 'mutando', 'tarjetas' (3D, flotando) o 'aplanando'.
     etapa: () => (conversion ? 'aplanando' : !mutacion ? 'conectores' : mutacion.hecha ? 'tarjetas' : 'mutando'),
@@ -804,6 +1056,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       document.removeEventListener('pointerleave', alSalir);
       observador.disconnect();
       lienzo.removeEventListener('webglcontextlost', alPerderContexto);
+      armarPortadas([]);
       desechables.forEach((cosa) => cosa.dispose());
       entorno.dispose();
       pmrem.dispose();

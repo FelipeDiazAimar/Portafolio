@@ -5,7 +5,7 @@
   /* Cola: tramo final en que "Hoy" sigue fijo. La marquesina de Proyectos sube 30svh por encima
      de su sección (a propósito, ver Proyectos.module.css); sin esta cola tapaba la regla de años
      y el texto del último hito. */
-  --cola: 34svh;
+  --cola: 80svh;
   /* Respiro: espacio vacío de verdad entre esta sección y Proyectos. */
   --respiro: 34svh;
   margin-bottom: var(--respiro);
@@ -1180,4 +1180,11 @@
 .panel[data-midiendo='true'],
 .panel[data-midiendo='true'] * {
   transition: none !important;
+}
+
+/* Puente a Proyectos (glow-up): las portadas pasan a la escena de las piezas, que las calca encima
+   y las rompe en conectores. Mientras tanto las de acá no se ven (ver lib/puente.js). */
+:global(html[data-puente='on']) .lienzo,
+:global(html[data-puente='on']) .vivo {
+  visibility: hidden;
 }

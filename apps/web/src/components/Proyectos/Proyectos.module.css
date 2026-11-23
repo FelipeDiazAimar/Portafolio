@@ -386,3 +386,28 @@
     animation: none;
   }
 }
+
+/* ---- Puente desde "Sobre mí" (glow-up, ver Proyectos.jsx) -------------------------------------
+   La sección se alarga y el panel queda pegado arriba mientras el scroll arma las piezas: portadas
+   → conectores → tarjetas 3D → marquesina. El lienzo de las piezas es fijo y ocupa la ventana:
+   así las piezas siguen en pantalla mientras "Sobre mí" se va y el panel llega. */
+.contenedor[data-puente='true'] {
+  --puente: 230svh;
+  height: calc(max(100svh, 600px) + var(--puente));
+  /* un ancla (#proyectos) llega con la sección ya armada: al final del puente */
+  scroll-margin-top: calc(-1 * var(--puente));
+}
+
+.contenedor[data-puente='true'] .panel {
+  position: sticky;
+  top: 0;
+}
+
+.contenedor[data-puente='true'] .intro {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  clip-path: none;
+  z-index: 1;
+}

@@ -101,7 +101,10 @@ function medirSeccion(id) {
   if (!el) return null;
   // Sin scroll-margin-top: ese margen deja aire sobre el destino cuando se llega por un ancla, pero
   // en un teletransporte la sección tiene que quedar pegada al borde, sin una franja de la anterior.
-  return { top: el.getBoundingClientRect().top, margen: 0 };
+  // Una sección con recorrido propio pegado arriba (data-salto-al-final, p. ej. el puente de
+  // Proyectos) se muestra ya armada: se va al final de ese recorrido.
+  const extra = el.dataset.saltoAlFinal === 'true' ? Math.max(0, el.offsetHeight - (el.firstElementChild?.offsetHeight ?? el.offsetHeight)) : 0;
+  return { top: el.getBoundingClientRect().top + extra, margen: 0 };
 }
 
 function maximoScroll() {

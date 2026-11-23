@@ -12,7 +12,7 @@ import styles from './LineasScroll.module.css';
 // [selector de la sección que entra, preset]. La línea cruza la unión con la sección anterior.
 const UNIONES = [
   ['#sobre-mi', 'reel'],
-  ['#proyectos', 'office'],
+  // (Sobre mí → Proyectos no lleva línea: ahí la transición es el puente de las piezas)
   ['#experiencia', 'goal'],
   ['#titulos', 'capability'],
   ['#habilidades', 'reel'],
