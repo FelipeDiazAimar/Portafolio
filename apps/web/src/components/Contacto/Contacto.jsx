@@ -16,6 +16,7 @@ import FondoLuz from './FondoLuz.jsx';
 import Gracias from './Gracias.jsx';
 import SlideDestino, { AVION } from './SlideDestino.jsx';
 import styles from './Contacto.module.css';
+import TextoPartido from '@/components/Revelar/TextoPartido.jsx';
 
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 const SACUDIDAS_NERVIOSO = 6;
@@ -449,13 +450,14 @@ export default function Contacto() {
   return (
     <section id="contacto" ref={refSeccion} className={styles.seccion} aria-labelledby="titulo-contacto">
       <FondoLuz ref={refFondo} />
-      <div className={styles.columnaCredencial}>
+      <div className={styles.columnaCredencial} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 85%" data-revelar-hasta="top 25%">
         <Credencial />
       </div>
 
       <div className={`${styles.panel} ${gracias ? styles.conGracias : ''}`}>
         <h2 id="titulo-contacto" className={styles.titulo}>
-          Hablemos<span className={styles.punto}>.</span>
+          <TextoPartido texto="Hablemos" data-revelar="letras" data-revelar-en="seccion" data-revelar-desde="top 80%" data-revelar-hasta="top 30%" />
+          <span className={styles.punto}>.</span>
         </h2>
         {estado && (
           <p className={`${styles.estado} ${estado.durmiendo ? styles.duerme : ''}`}>
@@ -464,7 +466,7 @@ export default function Contacto() {
           </p>
         )}
 
-        <div className={styles.chips} role="group" aria-label="Motivo del mensaje">
+        <div className={styles.chips} role="group" aria-label="Motivo del mensaje" data-revelar="grupo" data-revelar-en="seccion" data-revelar-desde="top 70%" data-revelar-hasta="top 20%">
           {Object.entries(MENSAJES).map(([clave, m]) => (
             <button
               key={clave}
@@ -549,12 +551,12 @@ export default function Contacto() {
             </div>
           )}
         </div>
-        <p className={styles.pista}>{pista}</p>
+        <p className={styles.pista} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 60%" data-revelar-hasta="top 10%">{pista}</p>
         <p className={styles.soloLectores} aria-live="polite">
           {vivo}
         </p>
 
-        <div className={styles.slides}>
+        <div className={styles.slides} data-revelar="grupo" data-revelar-en="seccion" data-revelar-desde="top 62%" data-revelar-hasta="top 5%">
           <SlideDestino
             ref={refSlides.wa}
             destino="wa"

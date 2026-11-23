@@ -92,55 +92,58 @@ function trazado(forma, J, vw, vh, margin, lado) {
     }
     return p;
   };
-  const R = Math.min(vw, vh) * 0.17;
+  const R = Math.min(vw, vh) * 0.15;
+  // La curva vive en la unión: entra desde 1,15 pantallas antes y se va por un costado apenas
+  // pasada la unión, así con la sección nueva ya arriba no queda nada encima de su contenido.
+  const Y = (k) => J + (-1.15 + (k + 1.05) * 0.6) * vh;
   let pts;
   if (forma === 0) {
     // reel: entra por un costado, da una vuelta grande y baja en S
     pts = [
-      [-s * (W + 120), J - vh * 1.05, -40],
-      [-s * W * 0.55, J - vh * 0.85, 60],
-      [s * W * 0.05 + mx, J - vh * 0.55 + my, 120],
-      ...lazo(s * W * 0.12 + mx, J - vh * 0.32 + my, R, 1, 40, -Math.PI / 2),
-      [s * W * 0.42, J - vh * 0.02, -80],
-      [-s * W * 0.18, J + vh * 0.32, 60],
-      [-s * W * 0.62, J + vh * 0.62, -20],
-      [-s * (W + 160), J + vh * 0.95, 0],
+      [-s * (W + 120), Y(-1.05), -40],
+      [-s * W * 0.55, Y(-0.85), 60],
+      [s * W * 0.05 + mx, Y(-0.55) + my, 120],
+      ...lazo(s * W * 0.12 + mx, Y(-0.32) + my, R, 1, 40, -Math.PI / 2),
+      [s * W * 0.42, Y(-0.02), -80],
+      [-s * W * 0.18, Y(0.32), 60],
+      [-s * W * 0.62, Y(0.62), -20],
+      [-s * (W + 160), Y(0.95), 0],
     ];
   } else if (forma === 1) {
     // goal: zigzag ancho con un bucle chico arriba de la unión
     pts = [
-      [s * (W + 120), J - vh * 1.0, 0],
-      [s * W * 0.35, J - vh * 0.78, 80],
-      [-s * W * 0.45 + mx, J - vh * 0.52, -60],
-      ...lazo(-s * W * 0.32 + mx, J - vh * 0.3 + my, R * 0.75, 1, 0, Math.PI / 2),
-      [s * W * 0.15, J - vh * 0.05, 120],
-      [s * W * 0.55, J + vh * 0.28, -40],
-      [-s * W * 0.1, J + vh * 0.58, 30],
-      [-s * (W + 140), J + vh * 0.9, 0],
+      [s * (W + 120), Y(-1.0), 0],
+      [s * W * 0.35, Y(-0.78), 80],
+      [-s * W * 0.45 + mx, Y(-0.52), -60],
+      ...lazo(-s * W * 0.32 + mx, Y(-0.3) + my, R * 0.75, 1, 0, Math.PI / 2),
+      [s * W * 0.15, Y(-0.05), 120],
+      [s * W * 0.55, Y(0.28), -40],
+      [-s * W * 0.1, Y(0.58), 30],
+      [-s * (W + 140), Y(0.9), 0],
     ];
   } else if (forma === 2) {
     // capability: cae por el centro haciendo un resorte de dos vueltas
     pts = [
-      [-s * W * 0.2, J - vh * 1.05, 0],
-      [-s * W * 0.05 + mx, J - vh * 0.72, 80],
-      ...lazo(s * W * 0.02 + mx, J - vh * 0.48 + my, R * 0.7, 1, 0, Math.PI),
-      ...lazo(s * W * 0.02 + mx, J - vh * 0.18 + my, R * 0.9, 1, 40, Math.PI),
-      [s * W * 0.4, J + vh * 0.2, -60],
-      [s * W * 0.15, J + vh * 0.55, 40],
-      [-s * W * 0.5, J + vh * 0.85, 0],
-      [-s * (W + 120), J + vh * 1.05, 0],
+      [-s * W * 0.2, Y(-1.05), 0],
+      [-s * W * 0.05 + mx, Y(-0.72), 80],
+      ...lazo(s * W * 0.02 + mx, Y(-0.48) + my, R * 0.7, 1, 0, Math.PI),
+      ...lazo(s * W * 0.02 + mx, Y(-0.18) + my, R * 0.9, 1, 40, Math.PI),
+      [s * W * 0.4, Y(0.2), -60],
+      [s * W * 0.15, Y(0.55), 40],
+      [-s * W * 0.5, Y(0.85), 0],
+      [-s * (W + 120), Y(1.05), 0],
     ];
   } else {
     // office: barrido largo de lado a lado, como una firma
     pts = [
-      [-s * (W + 120), J - vh * 0.9, 0],
-      [-s * W * 0.2, J - vh * 0.72, 90],
-      [s * W * 0.6, J - vh * 0.5, -40],
-      [s * W * 0.2 + mx, J - vh * 0.28 + my, 60],
-      ...lazo(-s * W * 0.12 + mx, J - vh * 0.12 + my, R * 0.6, 1, 20, 0),
-      [-s * W * 0.55, J + vh * 0.18, -50],
-      [s * W * 0.1, J + vh * 0.45, 40],
-      [s * (W + 140), J + vh * 0.8, 0],
+      [-s * (W + 120), Y(-0.9), 0],
+      [-s * W * 0.2, Y(-0.72), 90],
+      [s * W * 0.6, Y(-0.5), -40],
+      [s * W * 0.2 + mx, Y(-0.28) + my, 60],
+      ...lazo(-s * W * 0.12 + mx, Y(-0.12) + my, R * 0.6, 1, 20, 0),
+      [-s * W * 0.55, Y(0.18), -50],
+      [s * W * 0.1, Y(0.45), 40],
+      [s * (W + 140), Y(0.8), 0],
     ];
   }
   return new THREE.CatmullRomCurve3(
@@ -223,7 +226,7 @@ export function crearEscenaLineas({ lienzo, uniones, obtenerTema }) {
       curva.points.forEach((v) => {
         yMax = Math.max(yMax, -v.y);
       });
-      lineas.push({ malla, tabla, yMin: Math.min(yMin, J - vh * 1.2), yMax: yMax + 40, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0) });
+      lineas.push({ malla, tabla, yMin: Math.min(yMin, J - vh * 1.3), yMax: yMax + 40, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0) });
     });
   }
 

@@ -208,7 +208,7 @@ export default function PiePagina() {
         />
       </div>
       <CierreFooter />
-      <div className={styles.pie}>
+      <div className={styles.pie} data-revelar="subir" data-revelar-desde="top 100%" data-revelar-hasta="top 85%">
         <p className={styles.derechos}>© {new Date().getFullYear()}</p>
       </div>
 

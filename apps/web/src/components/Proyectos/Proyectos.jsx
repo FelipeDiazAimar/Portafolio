@@ -689,7 +689,7 @@ export default function Proyectos() {
                 // celular: texto común (el trazo SVG medía mal la fuente y dejaba las letras pegadas)
                 <span className={styles.tituloPlano}>Proyectos</span>
               ) : (
-                <TextoTrazo key={vecesVista} texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer />
+                <TextoTrazo key={vecesVista} texto="Proyectos" claseTexto={styles.tituloTrazo} duracion={2.6} grosor={2.5} alVer alScroll={puenteOn} />
               )}
             </h2>
             <p ref={refCifras} className={styles.cifras}>{textoCifras}</p>

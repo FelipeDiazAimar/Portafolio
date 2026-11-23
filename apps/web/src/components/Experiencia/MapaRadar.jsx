@@ -210,7 +210,7 @@ const MapaRadar = forwardRef(function MapaRadar({ recorrido, trabajos, actual, a
 
   const mostrado = trabajos[sobre ?? actual];
   return (
-    <nav className={styles.radar} aria-label="Mapa del recorrido" style={{ '--acento': mostrado.acento }}>
+    <nav className={styles.radar} aria-label="Mapa del recorrido" style={{ '--acento': mostrado.acento }} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 50%" data-revelar-hasta="top 0%">
       <canvas
         ref={refLienzo}
         className={styles.radarLienzo}

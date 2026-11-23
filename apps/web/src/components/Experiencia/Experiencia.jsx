@@ -630,7 +630,7 @@ function Pasillo({ trabajos, alFallar }) {
           />
         ) : null}
 
-        <header className={styles.cabecera} data-enfocado={foco !== null ? 'true' : 'false'}>
+        <header className={styles.cabecera} data-enfocado={foco !== null ? 'true' : 'false'} data-revelar="subir" data-revelar-en="seccion" data-revelar-desde="top 55%" data-revelar-hasta="top 5%">
           <h2 id="titulo-experiencia" className={styles.titulo}>
             Experiencia
           </h2>
@@ -653,6 +653,10 @@ function Pasillo({ trabajos, alFallar }) {
           type="button"
           className={styles.botonLibre}
           data-libre={libre ? 'true' : 'false'}
+          data-revelar="subir"
+          data-revelar-en="seccion"
+          data-revelar-desde="top 45%"
+          data-revelar-hasta="top 0%"
           onClick={libre ? salirLibre : entrarLibre}
           aria-pressed={libre}
         >

@@ -11,7 +11,14 @@ import styles from './CierreFooter.module.css';
 const MARGEN_EM = 0.32; // aire alrededor de la tinta para la inclinación, el bisel y la lente
 const MOVIMIENTO = { masa: 1.4, tension: 120, friccion: 26 };
 const APARICION = { masa: 1, tension: 280, friccion: 28 };
-const RETRASO_LETRA_MS = 35;
+// Cuánto se reveló la frase del cierre (0..1), según el scroll: empieza cuando asoma por abajo y
+// termina con la frase entera a la vista (al final de la página). Lo comparten el texto CSS y el 3D.
+export function avanceCierre(el) {
+  if (!el) return 1;
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight;
+  return Math.max(0, Math.min(1, ((vh - r.top) / Math.max(1, r.height)) * 0.92));
+}
 
 // Resorte amortiguado de un valor; integración semi-implícita con paso acotado.
 class Resorte {
@@ -88,8 +95,6 @@ export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
       let rectLienzo = null;
       let fontPx = 0;
       let enPantalla = false;
-      let aparecio = false;
-      let inicioAparicion = 0;
       let t0 = performance.now();
       let ultimo = t0;
 
@@ -152,12 +157,12 @@ export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
         ultimo = ahora;
 
         for (const r of [inclX, inclY, hover, punteroX, punteroY]) r.paso(dt, MOVIMIENTO);
-        if (aparecio) {
-          aparicion.forEach((r, i) => {
-            if (ahora - inicioAparicion >= i * RETRASO_LETRA_MS) r.meta = 1;
-            r.paso(dt, APARICION);
-          });
-        }
+        // glow-up: cada letra aparece según el scroll (y se va al subir), no por tiempo
+        const avance = avanceCierre(host);
+        aparicion.forEach((r, i) => {
+          r.meta = Math.max(0, Math.min(1, avance * (total + 3) - i));
+          r.paso(dt, APARICION);
+        });
         if (mascara && objetivoMascara) {
           mascara.x += (objetivoMascara.x - mascara.x) * 0.16;
           mascara.y += (objetivoMascara.y - mascara.y) * 0.16;
@@ -209,10 +214,6 @@ export default function FraseVidrio({ hostRef, fraseRef, onEstado }) {
         ([entrada]) => {
           enPantalla = entrada.isIntersecting;
           if (enPantalla) {
-            if (!aparecio && entrada.intersectionRatio >= 0.25) {
-              aparecio = true;
-              inicioAparicion = performance.now();
-            }
             arrancar();
           } else {
             parar();

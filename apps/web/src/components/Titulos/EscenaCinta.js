@@ -313,6 +313,8 @@ export function crearEscenaCinta({
     hecha: reducido,
     desde: performance.now(),
   };
+  // glow-up: la intro la maneja el scroll (ponerIntro), no el reloj
+  let introExterna = false;
 
   const altoTarjeta = () => Math.max(24, AJUSTE.alto * H);
   const anchoTarjeta = () => AJUSTE.aspecto * altoTarjeta();
@@ -426,12 +428,15 @@ export function crearEscenaCinta({
     let animando = false;
 
     if (
+      !introExterna &&
       !intro.hecha &&
       !intro.corriendo &&
       (listas.every(Boolean) || ahora - intro.desde > 3500)
     )
       intro.corriendo = true;
-    if (intro.corriendo) {
+    if (introExterna) {
+      // nada: el scroll ya dejó intro.t donde va
+    } else if (intro.corriendo) {
       intro.t = Math.min(1, intro.t + dt / DURACION_INTRO);
       if (intro.t >= 1) {
         intro.corriendo = false;
@@ -439,7 +444,7 @@ export function crearEscenaCinta({
       }
       animando = true;
     }
-    if (!intro.hecha && !intro.corriendo) animando = true; // esperando las imágenes
+    if (!introExterna && !intro.hecha && !intro.corriendo) animando = true; // esperando las imágenes
 
     // resorte crítico del original (modo rueda), en tarjetas en vez de píxeles
     const rigidez = 80;
@@ -537,6 +542,17 @@ export function crearEscenaCinta({
       destino = p;
       velocidad = 0;
       dibujar();
+    },
+    // La intro 'rise' atada al scroll: t 0 → 1 mientras la sección entra (y al revés subiendo).
+    ponerIntro(t) {
+      if (reducido) return;
+      introExterna = true;
+      const v = clamp01(t);
+      if (v === intro.t && (v >= 1) === intro.hecha) return;
+      intro.t = v;
+      intro.hecha = v >= 1;
+      intro.corriendo = v > 0 && v < 1;
+      if (corriendo) pedirCuadro();
     },
     saltarIntro() {
       intro.t = 1;

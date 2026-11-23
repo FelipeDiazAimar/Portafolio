@@ -230,10 +230,14 @@ html[data-rendimiento='true'] *::after {
   will-change: transform;
   transform-origin: 0% 100%;
 }
-/* Salida al irse la sección: va en propiedades sueltas, así no pisa el transform de la entrada */
-.rv-salida {
-  translate: 0 calc(var(--rv-s, 0) * -80px);
-  scale: calc(1 - var(--rv-s, 0) * 0.05);
+/* Entrada, salida y parallax (Revelador): variables que se componen en las propiedades sueltas
+   translate y scale, así no pisan el transform propio del elemento (centrados, hover, etc.). */
+.rv {
+  translate: 0 calc(var(--rv-y, 0px) + var(--rv-p, 0%) + var(--rv-s, 0) * -80px);
+  scale: calc(var(--rv-e, 1) * var(--rv-sx, 1) * (1 - var(--rv-s, 0) * 0.05)) calc(var(--rv-e, 1) * (1 - var(--rv-s, 0) * 0.05));
+}
+[data-revelar='linea'].rv {
+  transform-origin: 0 50%;
 }
 /* "Wave" de Lusion: con un scroll rápido la imagen se inclina y estira apenas (--ola: −1..1) */
 [data-ola] {
