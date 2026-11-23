@@ -210,3 +210,38 @@ html[data-rendimiento='true'] *::after {
   -webkit-backdrop-filter: none !important;
 }
 
+
+/* ---- Glow-up: apariciones atadas al scroll (ver components/Revelar) ---------------------- */
+/* Texto partido: cada unidad en su máscara; la palabra no se corta entre renglones. */
+.rv-p {
+  display: inline-block;
+  white-space: nowrap;
+}
+.rv-u {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* margen para los descendentes (g, p, y) sin correr la línea */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.rv-i {
+  display: inline-block;
+  will-change: transform;
+  transform-origin: 0% 100%;
+}
+/* Salida al irse la sección: va en propiedades sueltas, así no pisa el transform de la entrada */
+.rv-salida {
+  translate: 0 calc(var(--rv-s, 0) * -80px);
+  scale: calc(1 - var(--rv-s, 0) * 0.05);
+}
+/* "Wave" de Lusion: con un scroll rápido la imagen se inclina y estira apenas (--ola: −1..1) */
+[data-ola] {
+  transform: skewY(calc(var(--ola, 0) * 2.2deg)) scaleY(calc(1 + abs(var(--ola, 0)) * 0.04));
+  transform-origin: 50% 50%;
+}
+@supports not (scale: calc(1 + abs(1) * 1)) {
+  [data-ola] {
+    transform: skewY(calc(var(--ola, 0) * 2.2deg));
+  }
+}

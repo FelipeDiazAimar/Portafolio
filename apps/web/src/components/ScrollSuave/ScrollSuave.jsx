@@ -16,8 +16,18 @@ import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import 'lenis/dist/lenis.css';
+import { tickMovimiento } from '@/lib/movimiento.js';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function ScrollSuave() {
+  // estado común del scroll (posición, velocidad, fuerza) para líneas, apariciones y "wave"
+  useEffect(() => {
+    const tic = (_t, deltaMs) => tickMovimiento((deltaMs || 16.7) / 1000);
+    gsap.ticker.add(tic);
+    return () => gsap.ticker.remove(tic);
+  }, []);
+
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const lenis = new Lenis({
