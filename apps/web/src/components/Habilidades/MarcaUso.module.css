@@ -81,7 +81,11 @@
   bottom: 62px;
   font: 700 10px/1.2 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   letter-spacing: 0.04em;
-  white-space: nowrap;
+  /* si no entra en una línea, baja a más renglones (el ancho lo fija Habilidades.jsx según el lugar libre) */
+  width: max-content;
+  max-width: var(--ancho-texto, 230px);
+  white-space: normal;
+  overflow-wrap: anywhere;
   text-shadow: 0 1px 6px rgba(0, 20, 80, 0.8);
   opacity: 0;
   animation: aparecer 0.35s 0.45s ease forwards;
@@ -126,8 +130,3 @@
   }
 }
 
-@media (max-width: 600px) {
-  .texto {
-    max-width: 120px;
-  }
-}

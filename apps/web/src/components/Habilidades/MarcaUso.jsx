@@ -36,8 +36,10 @@ export default function MarcaUso({ refMarca, tecnologia }) {
             <path className={estilos.cruz} d="M84 -62 V-54 M80 -58 H88" />
           </svg>
           <div className={estilos.texto} data-texto>
-            {visibles.join(' · ')}
-            {resto > 0 ? ` · +${resto} más` : ''}
+            {visibles.map((titulo) => (
+              <div key={titulo}>{titulo}</div>
+            ))}
+            {resto > 0 && <div>{`+${resto} más`}</div>}
           </div>
         </div>
       )}

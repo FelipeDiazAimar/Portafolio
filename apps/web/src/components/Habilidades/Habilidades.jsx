@@ -110,11 +110,19 @@ export default function Habilidades() {
             // la izquierda); si no entran, las otras dos. El ancho se mide del texto real (una sola línea).
             const W = lienzo.clientWidth;
             const H = lienzo.clientHeight;
-            const necesito = 160 + (marca.querySelector('[data-texto]')?.offsetWidth ?? 260) * 1.7;
+            // El texto parte en renglones si no entra (ver --ancho-texto abajo): alcanza con que quepan
+            // ANCHO_MIN px de texto; la línea guía y la cruz ocupan ~200px antes de que empiece.
+            const ANCHO_MIN = 110;
+            const ANCHO_MAX = 230;
+            const SALIDA = 200;
+            const necesito = SALIDA + ANCHO_MIN * 1.7;
             const cabe = (o, holgura = 0) => {
               const p = info[o.extremo];
               const ancho = o.lado === 'der' ? p.x + necesito <= W + holgura : p.x - necesito >= -holgura;
-              const alto = o.vert === 'arr' ? p.y - 175 >= -holgura : p.y + 120 <= H - 130 + holgura;
+              // cada proyecto va en su renglón: el texto crece hacia afuera de la barra
+              const renglones = marca.querySelectorAll('[data-texto] > div').length || 1;
+              const extra = Math.max(0, renglones - 1) * 12 * 1.7;
+              const alto = o.vert === 'arr' ? p.y - 175 - extra >= -holgura : p.y + 120 + extra <= H - 130 + holgura;
               return ancho && alto;
             };
             let elegida = refOpcion.current;
@@ -131,6 +139,13 @@ export default function Habilidades() {
               refOpcion.current = elegida;
             }
             const p = info[elegida.extremo];
+            // ancho que le queda al texto hacia el lado elegido (se descuenta la escala 1.7 y un margen)
+            const libre = (elegida.lado === 'der' ? W - p.x : p.x) - SALIDA - 16;
+            const ancho = Math.round(Math.max(ANCHO_MIN, Math.min(ANCHO_MAX, libre / 1.7)));
+            if (marca.dataset.ancho !== String(ancho)) {
+              marca.dataset.ancho = String(ancho);
+              marca.style.setProperty('--ancho-texto', `${ancho}px`);
+            }
             marca.dataset.lado = elegida.lado;
             marca.dataset.vert = elegida.vert;
             marca.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0)`;
