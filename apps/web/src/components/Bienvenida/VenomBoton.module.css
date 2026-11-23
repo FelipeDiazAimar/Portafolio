@@ -1,0 +1,99 @@
+.caja {
+  position: relative;
+  z-index: 1;
+  display: block;
+  /* ancho y alto de la píldora del original (≈ 60px de alto); el marco la rodea sin empujar el layout */
+  width: 230px;
+  height: 60px;
+  margin-top: var(--space-3);
+  opacity: 0;
+  animation: venomReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.95s;
+}
+
+.cajaPausada {
+  animation-play-state: paused;
+}
+
+.marco {
+  /* cubre toda la ventana (va en un portal al body): el cursor 3D vive en toda la portada, incluso sobre el header */
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color-scheme: normal;
+  pointer-events: none;
+  /* por encima de todo (header y toggles incluidos); no captura clics, así que se pueden tocar */
+  z-index: 2147483000;
+  transition: opacity 0.3s ease;
+}
+
+.marcoSaliendo {
+  opacity: 0;
+}
+
+/* tema oscuro: el botón pasa a blanco (negativo del original; el matiz se devuelve para conservar el brillo azulado) */
+:global(:root[data-theme='dark']) .marco {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme])) .marco {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+/* el botón real queda encima, invisible: foco por teclado y lectores de pantalla */
+.boton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.boton:focus-visible {
+  outline: 2px solid #8fb4ff;
+  outline-offset: 6px;
+}
+
+.botonVisible {
+  color: #f5f7ff;
+  background: radial-gradient(120% 140% at 30% 20%, #2a2d3c, #0b0d14 60%);
+  box-shadow: 0 14px 30px -14px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+@keyframes venomReveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caja {
+    animation: none;
+    opacity: 1;
+  }
+}

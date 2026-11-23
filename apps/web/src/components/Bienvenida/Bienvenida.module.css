@@ -40,75 +40,7 @@
   }
 }
 
-/* Botón para bajar al hero: entra último, después del link */
-.boton {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: var(--space-3);
-  padding: 0.8rem 1.4rem;
-  border: 1px solid color-mix(in srgb, var(--color-fg) 35%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-fg) 8%, transparent);
-  backdrop-filter: blur(8px);
-  color: var(--color-fg);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  opacity: 0;
-  transform: translateY(100%);
-  animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 0.95s;
-  transition:
-    color 0.9s ease,
-    background-color 0.25s ease,
-    border-color 0.25s ease;
-}
-
-.boton:hover {
-  background: color-mix(in srgb, var(--color-fg) 16%, transparent);
-  border-color: color-mix(in srgb, var(--color-fg) 60%, transparent);
-}
-
-/* sobre la aurora el fondo cambia de claro a oscuro según la onda: relleno sólido, legible en todo */
-.conAurora .boton {
-  border-color: transparent;
-  background: rgba(250, 251, 255, 0.92);
-  color: #0e1233;
-  box-shadow: 0 8px 28px rgba(4, 8, 40, 0.28);
-}
-
-.conAurora .boton:hover {
-  background: #ffffff;
-}
-
-.boton:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-.boton svg {
-  animation: flechaBaja 1.8s ease-in-out 2s infinite;
-}
-
-@keyframes flechaBaja {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(3px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .boton svg {
-    animation: none;
-  }
-}
+/* El botón vive en VenomBoton (píldora negra + tentáculos): este archivo ya no define botón. */
 
 /* Aurora de Unicorn Studio detrás del texto (src/lib/aurora.js la prende o la apaga). Aparece
    recién cuando la escena arrancó; con ella el splash pasa a texto claro sobre fondo azul en
@@ -131,12 +63,11 @@
   opacity: 1;
 }
 
-/* el texto espera a la aurora: las animaciones de entrada quedan en pausa en su primer cuadro */
+/* el texto espera a la aurora: las animaciones de entrada quedan en pausa en su primer cuadro
+   (el botón venom se pausa con su prop pausado en Bienvenida.jsx) */
 .esperaTexto .icon,
 .esperaTexto .line,
-.esperaTexto .link,
-.esperaTexto .boton,
-.esperaTexto .boton svg {
+.esperaTexto .link {
   animation-play-state: paused;
 }
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { preload } from 'react-dom';
 import FondoUnicorn, { puedeMostrarUnicorn, SDK_UNICORN, ESCENA_AURORA } from '@/components/FondoUnicorn/FondoUnicorn.jsx';
+import VenomBoton from './VenomBoton.jsx';
 import { UBICACION_AURORA, ubicacionAurora } from '@/lib/aurora.js';
 import { bienvenidaTerminada, terminarBienvenida } from '@/lib/bienvenida.js';
 import { prefiereMovimientoReducido } from '@/lib/entrada.js';
@@ -284,10 +285,10 @@ export default function Bienvenida({ locale = 'es' }) {
         </a>
       </div>
 
-      <button type="button" className={styles.boton} onClick={salir}>
+      <VenomBoton saliendo={saliendo} texto={t.boton} onClick={salir} pausado={esperaTexto}>
         <span>{t.boton}</span>
         <IconFlecha />
-      </button>
+      </VenomBoton>
     </section>
   );
 }
