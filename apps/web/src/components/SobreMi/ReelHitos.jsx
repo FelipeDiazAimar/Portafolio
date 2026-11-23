@@ -25,6 +25,7 @@ import ObraScroll from './ObraScroll.jsx';
 import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import { registrarReel } from '@/lib/puente.js';
 import LineaReel from './LineaReel.jsx';
+import { COLOR_LINEA } from '@/lib/trazos.js';
 import styles from './ReelHitos.module.css';
 
 const ESPERA_IMAN_MS = 170;
@@ -296,6 +297,7 @@ export default function ReelHitos({ hitos, alFallar }) {
   // Lo que la escena avisa en cada cuadro: hito más cercano (estado) y fase (variable CSS).
   const refFaseEscrita = useRef(-1);
   const refLineaReel = useRef(null);
+  const refLineaHero = useRef(null);
   const alCuadro = useCallback(
     (fase, velocidad = 0) => {
       refLineaReel.current?.(fase);
@@ -1583,6 +1585,10 @@ export default function ReelHitos({ hitos, alFallar }) {
     <section id="sobre-mi" ref={refContenedor} className={styles.contenedor} style={{ '--pasos': N - 1 }} aria-labelledby="titulo-sobre-mi">
       {/* sólo para medir la cola (ver medir) */}
       <div className={styles.cola} data-cola aria-hidden="true" />
+      {/* la bajada de la línea del sitio desde el hero hasta el borde del panel (ver LineaReel) */}
+      <svg ref={refLineaHero} className={styles.lineaHero} aria-hidden="true">
+        <path stroke={COLOR_LINEA.c0} />
+      </svg>
       <div
         ref={refPanel}
         className={styles.panel}
@@ -1600,7 +1606,7 @@ export default function ReelHitos({ hitos, alFallar }) {
       >
         <div className={styles.luz} aria-hidden="true" />
         <div className={styles.grano} aria-hidden="true" />
-        <LineaReel total={N} refPoner={refLineaReel} />
+        <LineaReel total={N} refPoner={refLineaReel} refHero={refLineaHero} />
 
         <h2 id="titulo-sobre-mi" ref={refTitular} className={styles.titular} style={{ '--letras': Math.max(...TITULAR.map((renglon) => renglon.length)) }}>
           <span className={styles.soloLectores}>Sobre mí: </span>

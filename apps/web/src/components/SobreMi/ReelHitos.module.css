@@ -1079,3 +1079,18 @@
 }
 
 
+
+/* La bajada de la línea desde el hero (ver LineaReel): anclada a la sección y extendida hacia arriba,
+   así se mueve con el scroll nativo igual que la del panel. Por encima del fundido del borde y del
+   hero, por debajo del panel. */
+.lineaHero {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -4,18 +4,17 @@
 // casi sin rulos, que baja por toda la página y se va dibujando con el scroll (la punta sigue a la
 // mitad de la pantalla; al subir se recoge).
 //
-// Va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la página. Sólo dos
-// tramos van además por encima, donde no tapan nada: la bajada del hero hasta Sobre mí y la llegada
-// al pasillo (por el centro, donde nace la línea del piso).
+// Va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la página. Sólo la llegada
+// al pasillo va además por encima (por el centro, donde nace la línea del piso), mientras entra.
 //
 // Es continua entre secciones: en Sobre mí corre horizontal con el reel (LineaReel) y en Experiencia
 // es la línea central del piso del pasillo (EscenaPasillo). Acá van los tres tramos restantes:
-//   1. del inicio hasta el borde izquierdo de Sobre mí (donde arranca la del reel),
-//   2. del final de Proyectos hasta el centro de abajo de la pantalla, donde empieza el pasillo,
-//   3. de la salida del pasillo hasta el final de la página.
+// (la bajada del hero hasta Sobre mí la dibuja Sobre mí misma, ver LineaReel)
+//   1. del final de Proyectos hasta el centro de abajo de la pantalla, donde empieza el pasillo,
+//   2. de la salida del pasillo hasta el final de la página.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, limitar } from '@/lib/movimiento.js';
-import { aRuta, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -42,14 +41,6 @@ function tramos(vw, vh) {
   const X = (k) => k * vw;
   const R = Math.min(vw, vh) * 0.13;
   return [
-    {
-      // por la parte baja del hero (lejos del retrato y del nombre) hasta el borde de arriba de
-      // Sobre mí, justo donde arranca la línea del reel (ENTRADA_REEL), llegando hacia abajo
-      puntos: [[X(-0.06), vh * 0.8], [X(0.14), vh * 0.93], [X(ENTRADA_REEL), s.top - vh * 0.22], [X(ENTRADA_REEL), s.top + 2]],
-      lazos: [],
-      // entero por encima: así se ve sobre el fundido del borde de Sobre mí (no toca el retrato)
-      encima: { desdeY: -Infinity, alfa: () => 1 },
-    },
     {
       puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.16), p.bottom + vh * 0.04], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
       lazos: [],

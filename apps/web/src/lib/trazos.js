@@ -170,8 +170,9 @@ export function spline(puntos) {
   return guia;
 }
 
-// El color de la línea: azul eléctrico (el acento del sitio), que se alterna suave a lo largo del recorrido.
-export const COLOR_LINEA = { c0: '#4a86ff', c1: '#2d5bff' };
+// El color de la línea: azul eléctrico parejo (un solo tono: así no hay saltos de color donde se
+// empalman sus partes).
+export const COLOR_LINEA = { c0: '#3d77ff', c1: '#3d77ff' };
 
 // Punto del trazo a un largo dado.
 export function puntoEnLargo(trazo, largo) {
