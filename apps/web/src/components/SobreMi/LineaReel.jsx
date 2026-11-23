@@ -7,7 +7,7 @@
 //   - mientras el panel sube, la entrada se dibuja con el scroll vertical (la punta sigue a la
 //     altura de la pantalla, como la línea del resto del sitio);
 //   - ya con el panel arriba, el tramo horizontal se desplaza con la fase del reel y se va dibujando
-//     (la punta queda un poco a la derecha del centro).
+//     (la punta queda a la derecha, entre la portada del frente y la siguiente).
 // Va dentro del panel, sobre el fondo (luz y trama) y por detrás del titular y las portadas.
 // `refPoner.current(fase)` le pasa la fase del reel; ReelHitos la llama en cada cuadro.
 import { useEffect, useRef } from 'react';
@@ -16,6 +16,9 @@ import { aRuta, bezier, COLOR_LINEA, ENTRADA_REEL, grosorLinea, largoHasta, tabl
 import styles from './ReelHitos.module.css';
 
 const POR_HITO = 0.78; // ancho de trazo por hito, en pantallas
+// dónde queda la punta (fracción del ancho): en el hueco entre la portada del frente y la de la
+// derecha, así nunca queda tapada
+const PUNTA_X = 0.725;
 
 export default function LineaReel({ total, refPoner }) {
   const refSvg = useRef(null);
@@ -39,7 +42,7 @@ export default function LineaReel({ total, refPoner }) {
       // la entrada sigue al scroll vertical mientras el panel sube; después, el reel
       const arriba = panel.getBoundingClientRect().top;
       const vertical = largoHasta(entrada, tablaY, window.innerHeight * 0.72 - arriba);
-      const largo = vertical < entrada.largo - 0.5 ? vertical : entrada.largo + largoHasta(horizontal, tablaX, corrimiento + W * 0.62);
+      const largo = vertical < entrada.largo - 0.5 ? vertical : entrada.largo + largoHasta(horizontal, tablaX, corrimiento + W * PUNTA_X);
       const clave = `${corrimiento.toFixed(1)}|${largo.toFixed(1)}`;
       if (clave === ultimo) return;
       ultimo = clave;

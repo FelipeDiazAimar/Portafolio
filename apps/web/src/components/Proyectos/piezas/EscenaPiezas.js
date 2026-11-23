@@ -305,7 +305,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   // radio de choque: que el montón ocupe una bola de ~la mitad del alto del panel
   const marco0 = marco();
   // en el puente son más chicos: flotan por toda la pantalla, no dentro de un recuadro
-  const radio = puente ? limitar(Math.sqrt((marco0.w * marco0.h * 0.95) / Math.max(8, total) / Math.PI), 40, 125) : limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
+  const radio = limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
   // así está inclinada la grilla de la marquesina: las tarjetas 3D flotan ya con esa inclinación
   const grilla = new THREE.Quaternion();
   if (iniciales[0]) grilla.copy(poseDeTarjeta(iniciales[0], { posicion: new THREE.Vector3(), cuaternion: new THREE.Quaternion() }).cuaternion);
@@ -493,37 +493,22 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     // ... y va a su lugar en el montón. Al volver a esta etapa desde la física, el "lugar" pasa a
     // ser donde estaba.
     const m = marco();
-    // Caen desde arriba del recuadro y se apilan llenándolo: su lugar final es una pila por filas,
-    // de abajo hacia arriba (las de abajo caen primero), y arrancan bien por encima del recuadro.
-    const diametro = radio * 2;
-    const columnas = Math.max(1, Math.floor((m.w - diametro * 0.4) / diametro));
-    const filas = Math.ceil(piezas.length / columnas);
-    const orden = [...piezas].sort(() => Math.random() - 0.5);
-    orden.forEach((a, n) => {
-      const fila = Math.floor(n / columnas);
-      const col = n % columnas;
-      const corrida = fila % 2 ? diametro * 0.5 : 0;
-      const x = m.x + diametro * 0.7 + col * ((m.w - diametro * 1.4) / Math.max(1, columnas - 1 + (fila % 2 ? 0.5 : 0))) + corrida * 0.5 + azar(-10, 10);
-      const y = m.y + m.h - radio * 1.05 - fila * diametro * 0.86 + azar(-8, 8);
-      a.casa = new THREE.Vector3(limitar(x, m.x + radio, m.x + m.w - radio), Math.max(m.y + radio, y), azar(-120, 120));
-      a.cielo = new THREE.Vector3(a.casa.x + azar(-60, 60), m.y - azar(0.25, 1.35) * m.h - diametro, azar(-120, 120));
+    // La pileta de siempre: el montón flotando en el centro del recuadro (la física lo junta y lo
+    // mantiene vivo). Las piezas aparecen ahí, de a una, a medida que todo se oscurece.
+    const [cx0, cy0] = [m.x + m.w / 2, m.y + m.h / 2];
+    piezas.forEach((a) => {
+      a.casa = new THREE.Vector3(cx0 + azar(-0.34, 0.34) * m.w, cy0 + azar(-0.28, 0.28) * m.h, azar(-160, 160));
       a.qBase = a.malla.quaternion.clone();
-      a.qCasa = a.qBase.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(azar(-1, 1), azar(-1, 1), azar(-1, 1)).normalize(), azar(2, 4)));
-      a.demoraPuente = (filas > 1 ? fila / (filas - 1) : 0) * 0.42 + azar(0, 0.08);
-      a.p.copy(a.cielo);
+      a.qCasa = a.qBase.clone();
+      a.demoraPuente = azar(0, 1);
+      a.conector.scale.setScalar(0.0001);
+      a.p.copy(a.casa);
       a.v.set(0, 0, 0);
     });
     armarPortadas(puente.portadas);
   }
   const punto = new THREE.Vector3();
   const salidaCubica = (x) => 1 - Math.pow(1 - limitar(x, 0, 1), 3);
-  // caída con un pique corto al tocar (bounce.out suave)
-  const piqueAlCaer = (x) => {
-    const v = limitar(x, 0, 1);
-    if (v < 0.72) return (v / 0.72) * (v / 0.72);
-    const k = (v - 0.86) / 0.14;
-    return 1 - 0.06 * (1 - k * k);
-  };
   // Las portadas se rompen y de cada una salen sus conectores. `t`: 0 = portadas enteras, 1 = sólo conectores.
   function portadasCuadro(t) {
     for (const p of portadas3d) {
@@ -536,16 +521,11 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       p.material.opacity = p.opacidad * (1 - suaveP(limitar((e - 0.5) / 0.5, 0, 1)));
     }
     if (!portadas3d.length) {
-      // caída: del cielo a su lugar en la pila, con un pique al llegar
+      // aparecen en la pileta (la física las mueve): cada una crece a su turno con un rebote
       for (const a of piezas) {
-        // caída corta y acelerada (gravedad), cada una a su turno
-        const ei = limitar((t - 0.08 - a.demoraPuente * 0.9) / 0.26, 0, 1);
-        a.p.lerpVectors(a.cielo, a.casa, piqueAlCaer(ei));
-        a.v.set(0, 0, 0);
-        a.malla.position.set(a.p.x, -a.p.y, a.p.z);
-        a.malla.quaternion.slerpQuaternions(a.qBase, a.qCasa, salidaCubica(ei));
-        a.conector.scale.setScalar(a.r0 * 0.98);
-        a.r = a.r0;
+        const ei = limitar((t - 0.3 - a.demoraPuente * 0.35) / 0.3, 0, 1);
+        a.conector.scale.setScalar(Math.max(0.0001, a.r0 * 0.98 * rebote(ei)));
+        a.r = Math.max(0.01, a.r0 * ei);
       }
       return;
     }
@@ -665,12 +645,8 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       // A lo ancho no van a un punto sino a una franja: dentro de ella nada las junta, así se
       // reparten por todo el ancho del recuadro en vez de apilarse en el medio.
       const franja = marco().w * 0.36;
-      if (puente && !portadas3d.length) {
-        a.v.y += 2600 * dt;
-      } else {
-        a.v.x += (limitar(a.p.x, cx - franja, cx + franja) - a.p.x) * 3.4 * dt;
-        a.v.y += (cy - a.p.y) * 6.2 * dt;
-      }
+      a.v.x += (limitar(a.p.x, cx - franja, cx + franja) - a.p.x) * 3.4 * dt;
+      a.v.y += (cy - a.p.y) * 6.2 * dt;
       a.v.z += -a.p.z * 4.5 * dt;
       // el cursor las aparta
       if (puntero.activo) {
@@ -939,6 +915,8 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   function cuadroPuente(dt) {
     if (etapaP === 'portadas') {
       portadasCuadro(tP);
+      // la pileta ya está viva mientras aparece (y el mouse la empuja)
+      if (!portadas3d.length) for (let paso = 0; paso < 8; paso++) simular(dt / 8);
     } else if (etapaP === 'convertir') {
       convertirCuadro(tP * 1.42);
     } else {
@@ -1024,7 +1002,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   };
   // Un clic sobre el recuadro, con los conectores a la vista: cambia el color y los sacude.
   const alPulsar = (evento) => {
-    if (puente ? etapaP !== 'flotar' || !activoP : conversion || mutacion || (reversa && reversa.fase !== 'conectores')) return;
+    if (puente ? !['portadas', 'flotar'].includes(etapaP) || !activoP : conversion || mutacion || (reversa && reversa.fase !== 'conectores')) return;
     alMover(evento);
     const m = marco();
     if (puntero.x < m.x || puntero.x > m.x + m.w || puntero.y < m.y || puntero.y > m.y + m.h) return;

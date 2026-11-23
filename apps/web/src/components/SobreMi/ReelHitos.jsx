@@ -762,14 +762,35 @@ export default function ReelHitos({ hitos, alFallar }) {
     delete document.documentElement.dataset.sinIman;
   }, []);
   const enCurso = intro !== null && intro !== 'esperando';
+  // (glow-up) La intro ya no traba la página: se puede seguir scrolleando y los agentes siguen
+  // armando (el plano va dentro del panel y sube con él). Recién cuando el reel empieza a girar (o
+  // se vuelve hacia el hero) la intro termina en el acto: lo real queda armado y el reel sigue al
+  // scroll.
   useEffect(() => {
     const contenedor = refContenedor.current;
     if (!enCurso || !contenedor) return undefined;
     document.documentElement.dataset.sinIman = 'true';
-    const traba = trabarScroll();
-    traba.mover(Math.round(contenedor.getBoundingClientRect().top + window.scrollY));
-    refTrabaIntro.current = traba;
-    return soltarIntro;
+    let cortada = false;
+    const alScroll = () => {
+      const arriba = contenedor.getBoundingClientRect().top;
+      if (cortada || (arriba > -40 && arriba < window.innerHeight * 0.85)) return;
+      cortada = true;
+      if (refSentidoIntro.current === 'desarmar') alTerminarIntro();
+      else {
+        alFundirIntro();
+        setIntro(null);
+        // cortada a mitad: todas las portadas quedan construidas (ni en blanco ni frenando el scroll)
+        for (let i = 0; i < N; i += 1) {
+          refConstruidas.current.add(i);
+          ponerZonas(i);
+        }
+      }
+    };
+    window.addEventListener('scroll', alScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', alScroll);
+      soltarIntro();
+    };
   }, [enCurso, soltarIntro]);
   const alFundirIntro = useCallback(() => {
     soltarIntro();
