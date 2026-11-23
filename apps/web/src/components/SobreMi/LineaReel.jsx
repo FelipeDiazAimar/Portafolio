@@ -87,9 +87,9 @@ export default function LineaReel({ total, refPoner, refHero }) {
           const [x, y] = aPagina(q, arribasSecciones(), W, vh);
           return [x, y - arriba];
         })
-        .filter(([, y]) => y < -vh * 0.14);
+        .filter(([, y]) => y < -vh * 0.32);
       const hero = mano.length
-        ? trazar(spline(suavizar([...mano, [xE, -vh * 0.1], [xE, 0]], { fijosFin: 2 })))
+        ? trazar(spline(suavizar([...mano, [xE, -vh * 0.2], [xE, -vh * 0.08], [xE, 0]], { fijosFin: 2, vueltas: 4 })))
         : trazar(spline([[-W * 0.06, vh * 0.8 - arriba], [W * 0.14, vh * 0.93 - arriba], [xE, -vh * 0.22], [xE, 0]]));
       svgHero.style.top = `${-arriba}px`;
       svgHero.style.height = `${arriba + 2}px`;

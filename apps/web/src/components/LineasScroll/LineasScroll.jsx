@@ -85,7 +85,8 @@ function tramos(vw, vh) {
   // su punta), termina ahí mismo; la de encima se ve hasta que la punta llega a ese final
   const finA = manoA.length ? manoA[manoA.length - 1] : null;
   const aPiso = finA && finA[1] > e.top + vh * py ? [] : [[X(px), e.top + vh * py]];
-  const manoC = aMano('c');
+  // (sin los puntos que caen antes de donde baja la hélice de Títulos: harían subir y bajar la línea)
+  const manoC = aMano('c').filter(([, y]) => y > t.bottom + vh * 0.14);
   return [
     {
       // A. de Proyectos a la punta de la línea del piso
