@@ -5,8 +5,8 @@
 // mitad de la pantalla; al subir se recoge).
 //
 // El cuerpo va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la página.
-// La punta (su cabeza y el último tramo corto) va en otra capa por encima de las secciones: siempre
-// se ve hacia dónde va la línea, aunque esté pasando por detrás de una escena.
+// El final de la línea (su último tramo) va en otra capa por encima de las secciones: siempre se ve
+// hasta dónde llegó, aunque el resto esté pasando por detrás de una escena.
 //
 // Es continua entre secciones: en Sobre mí corre horizontal con el reel (LineaReel) y en Experiencia
 // es la línea central del piso del pasillo (EscenaPasillo). Acá van los tres tramos restantes:
@@ -15,12 +15,12 @@
 //   3. de la salida del pasillo hasta el final de la página.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, SecondOrderDynamics, limitar } from '@/lib/movimiento.js';
-import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, puntoEnLargo, spline, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './LineasScroll.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
 // largo del tramo de la punta que se ve por encima de todo (px)
-const LARGO_PUNTA = 90;
+const LARGO_PUNTA = 150;
 
 function caja(sel, y0) {
   const n = document.querySelector(sel);
@@ -46,9 +46,11 @@ function tramos(vw, vh) {
   const R = Math.min(vw, vh) * 0.13;
   return [
     {
-      puntos: [[X(-0.06), vh * 0.12], [X(0.62), vh * 0.38], [X(0.82), s.top - vh * 0.35], [X(0.3), s.top + vh * 0.2], [X(-0.03), s.top + vh * 0.66]],
+      // por la parte baja del hero (lejos del retrato y del nombre) y de ahí a Sobre mí
+      puntos: [[X(-0.06), vh * 0.72], [X(0.22), vh * 0.92], [X(0.55), s.top - vh * 0.04], [X(0.28), s.top + vh * 0.32], [X(-0.03), s.top + vh * 0.66]],
       lazos: [],
-      punta: [-Infinity, s.top],
+      // sin final por encima: acá nunca pasa sobre el retrato
+      punta: [Infinity, -Infinity],
     },
     {
       puntos: [[X(1.06), p.bottom - vh * 0.5], [X(0.26), p.bottom - vh * 0.1], [X(0.72), e.top - vh * 0.28], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
@@ -120,20 +122,14 @@ export default function LineasScroll() {
         ruta.style.strokeDashoffset = String(trazo.largo);
         ruta.style.opacity = '0';
         grupo.appendChild(ruta);
-        // la punta: el mismo camino (sólo su último tramo) y la cabeza con un halo
+        // el final de la línea: el mismo camino, sólo su último tramo
         const cola = document.createElementNS(SVG, 'path');
         cola.setAttribute('d', d);
         cola.setAttribute('stroke', 'url(#linea-azul-punta)');
         cola.setAttribute('stroke-width', ancho.toFixed(1));
         cola.style.strokeDasharray = `${LARGO_PUNTA} ${trazo.largo * 2}`;
-        const halo = document.createElementNS(SVG, 'circle');
-        halo.setAttribute('r', (ancho * 1.6).toFixed(1));
-        halo.setAttribute('class', styles.halo);
-        const cabeza = document.createElementNS(SVG, 'circle');
-        cabeza.setAttribute('r', (ancho * 0.62).toFixed(1));
-        cabeza.setAttribute('class', styles.cabeza);
         const g = document.createElementNS(SVG, 'g');
-        g.append(cola, halo, cabeza);
+        g.append(cola);
         g.style.opacity = '0';
         grupoPunta.appendChild(g);
         let yMin = Infinity;
@@ -142,7 +138,7 @@ export default function LineasScroll() {
           yMin = Math.min(yMin, y);
           yMax = Math.max(yMax, y);
         });
-        return { ruta, cola, halo, cabeza, g, punta, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
+        return { ruta, cola, g, punta, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
       });
     };
 
@@ -177,11 +173,6 @@ export default function LineasScroll() {
           const desde = Math.max(0, dibujado - LARGO_PUNTA);
           l.cola.style.strokeDasharray = `${(dibujado - desde).toFixed(1)} ${l.trazo.largo * 2}`;
           l.cola.style.strokeDashoffset = (-desde).toFixed(1);
-          const [px, py] = puntoEnLargo(l.trazo, dibujado);
-          for (const c of [l.halo, l.cabeza]) {
-            c.setAttribute('cx', px.toFixed(1));
-            c.setAttribute('cy', py.toFixed(1));
-          }
         }
       }
     };

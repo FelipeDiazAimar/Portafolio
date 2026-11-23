@@ -13,7 +13,7 @@
   stroke-linejoin: round;
 }
 
-/* La punta (cabeza y último tramo corto) va por encima de las secciones, debajo del header y del
+/* El final de la línea (su último tramo) va por encima de las secciones, debajo del header y del
    teletransporte: siempre se ve hacia dónde va la línea. */
 .punta {
   position: fixed;
@@ -33,13 +33,3 @@
   will-change: opacity;
 }
 
-.cabeza {
-  fill: #9cc2ff;
-  stroke: none;
-}
-
-.halo {
-  fill: #2f5cff;
-  stroke: none;
-  opacity: 0.28;
-}

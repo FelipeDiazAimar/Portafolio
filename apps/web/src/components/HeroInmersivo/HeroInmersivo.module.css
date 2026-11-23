@@ -32,7 +32,9 @@
   gap: clamp(1.5rem, 4vw, 4rem);
   padding-left: clamp(2rem, 8vw, 6rem);
   padding-right: clamp(2rem, 8vw, 6rem);
-  background: var(--color-bg);
+  /* transparente (el fondo de la página es del mismo color): la línea del sitio pasa por detrás del
+     retrato y del nombre, sin taparlos */
+  background: transparent;
 }
 
 /* Teléfono: el texto va arriba a la izquierda, debajo del logo, y el retrato

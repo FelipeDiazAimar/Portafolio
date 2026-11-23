@@ -4,14 +4,14 @@
 // horizontal. Es un trazo largo (casi una pantalla por hito) de curvas amplias, con un solo rulo a
 // mitad de camino; se desplaza con la fase del reel y se va dibujando (la punta queda un poco a la
 // derecha del centro). El cuerpo va dentro del panel, sobre el fondo (luz y trama) y debajo del
-// titular y las portadas; la punta va por encima, así siempre se ve.
+// titular y las portadas; su último tramo va por encima, así siempre se ve hasta dónde llegó.
 // `refPoner.current(fase)` la mueve; la llama ReelHitos en cada cuadro.
 import { useEffect, useRef } from 'react';
-import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, puntoEnLargo, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './ReelHitos.module.css';
 
 const POR_HITO = 0.78; // ancho de trazo por hito, en pantallas
-const LARGO_PUNTA = 90;
+const LARGO_PUNTA = 150;
 
 export default function LineaReel({ total, refPoner }) {
   const refSvg = useRef(null);
@@ -25,7 +25,6 @@ export default function LineaReel({ total, refPoner }) {
     const grupos = [svg.querySelector('g'), svgPunta.querySelector('g')];
     const ruta = svg.querySelector('path');
     const cola = svgPunta.querySelector('path');
-    const [halo, cabeza] = svgPunta.querySelectorAll('circle');
     const grads = [svg.querySelector('linearGradient'), svgPunta.querySelector('linearGradient')];
     let medida = null;
     let fase = 0;
@@ -43,11 +42,6 @@ export default function LineaReel({ total, refPoner }) {
       const desde = Math.max(0, largo - LARGO_PUNTA);
       cola.style.strokeDasharray = `${(largo - desde).toFixed(1)} ${trazo.largo * 2}`;
       cola.style.strokeDashoffset = (-desde).toFixed(1);
-      const [px, py] = puntoEnLargo(trazo, largo);
-      for (const c of [halo, cabeza]) {
-        c.setAttribute('cx', px.toFixed(1));
-        c.setAttribute('cy', py.toFixed(1));
-      }
     };
 
     const armar = () => {
@@ -74,8 +68,6 @@ export default function LineaReel({ total, refPoner }) {
       ruta.style.strokeDasharray = `${trazo.largo} ${trazo.largo + 10}`;
       cola.setAttribute('d', d);
       cola.setAttribute('stroke-width', ancho.toFixed(1));
-      halo.setAttribute('r', (ancho * 1.6).toFixed(1));
-      cabeza.setAttribute('r', (ancho * 0.62).toFixed(1));
       grads.forEach((g) => g.setAttribute('x2', String(Math.round(W * 1.2))));
       medida = { W, recorrido, trazo, tabla: tablaAvance(trazo, 0) };
       poner(fase);
@@ -110,8 +102,6 @@ export default function LineaReel({ total, refPoner }) {
         <defs>{degrade('linea-reel-punta')}</defs>
         <g>
           <path stroke="url(#linea-reel-punta)" />
-          <circle className={styles.lineaHalo} />
-          <circle className={styles.lineaCabeza} />
         </g>
       </svg>
     </>
