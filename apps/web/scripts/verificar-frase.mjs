@@ -42,7 +42,7 @@ try {
   await s.enviar('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await s.enviar('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await s.enviar('Page.addScriptToEvaluateOnNewDocument', {
-    source: `try{localStorage.setItem('theme','${process.env.TEMA ?? 'dark'}');sessionStorage.setItem('portafolio:sin-intro','1');sessionStorage.setItem('portafolio:intro-agentes','1')}catch(e){};window.__errores=[];const ce=console.error;console.error=(...a)=>{window.__errores.push(a.map(String).join(' ').slice(0,300));ce(...a)};window.addEventListener('error',e=>window.__errores.push('EXC '+e.message))`,
+    source: `try{localStorage.setItem('theme','${process.env.TEMA ?? 'dark'}');sessionStorage.setItem('portafolio:sin-intro','1');sessionStorage.setItem('portafolio:bienvenida-vista','1');sessionStorage.setItem('portafolio:intro-agentes','1')}catch(e){};window.__errores=[];const ce=console.error;console.error=(...a)=>{window.__errores.push(a.map(String).join(' ').slice(0,300));ce(...a)};window.addEventListener('error',e=>window.__errores.push('EXC '+e.message))`,
   });
   await s.enviar('Page.navigate', { url: `${BASE_URL}/` });
   const evaluar = async (expresion) => {

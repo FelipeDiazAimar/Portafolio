@@ -12,6 +12,7 @@ import UrlPorScroll from '@/components/UrlPorScroll/UrlPorScroll.jsx';
 import ScrollSuave from '@/components/ScrollSuave/ScrollSuave.jsx';
 import Precarga from '@/components/Precarga/Precarga.jsx';
 import { ProveedorPortfolio } from '@/contexto/ProveedorPortfolio.jsx';
+import { SCRIPT_BIENVENIDA } from '@/lib/bienvenida.js';
 import '../styles/globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -88,6 +89,7 @@ export default async function RootLayout({ children }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SCROLL_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_BIENVENIDA }} />
       </head>
       <body>
         <ProveedorPortfolio>

@@ -116,3 +116,8 @@
     display: none;
   }
 }
+
+/* Por encima de la portada de Bienvenida mientras está (src/lib/bienvenida.js). */
+:global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .wrapper {
+  z-index: 10000;
+}

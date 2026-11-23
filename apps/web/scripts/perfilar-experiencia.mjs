@@ -22,7 +22,7 @@ try {
   const { id } = await nuevaPestana(PUERTO, 'about:blank');
   const s = await abrirSesion(PUERTO, id);
   await s.enviar('Emulation.setDeviceMetricsOverride', { width: 1440, height: 860, deviceScaleFactor: 1, mobile: false });
-  await s.enviar('Page.addScriptToEvaluateOnNewDocument', { source: "try{sessionStorage.setItem('portafolio:sin-intro','1')}catch(e){}" });
+  await s.enviar('Page.addScriptToEvaluateOnNewDocument', { source: "try{sessionStorage.setItem('portafolio:sin-intro','1');sessionStorage.setItem('portafolio:bienvenida-vista','1')}catch(e){}" });
   await s.enviar('Page.enable');
   await s.enviar('Page.navigate', { url: `${BASE}/` });
   const ev = async (expr) => (await s.enviar('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })).result?.value;

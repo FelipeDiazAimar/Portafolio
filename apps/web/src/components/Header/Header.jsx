@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GlassSurface } from '@portafolio/ui';
 import ElementoNavegacion from '@/components/ElementoNavegacion/ElementoNavegacion.jsx';
 import MenuMovil from '@/components/MenuMovil/MenuMovil.jsx';
 import TextoDescifrado from '@/components/TextoDescifrado/TextoDescifrado.jsx';
 import useScrollPasadoViewport from '@/hooks/useScrollPasadoViewport.js';
+import { useTrasBienvenida } from '@/hooks/useTrasBienvenida.js';
 import useSeccionVisible from '@/hooks/useSeccionVisible.js';
 import { irASeccion, terminarVistaPrevia, vistaPrevia } from '@/lib/teletransporte.js';
 import styles from './Header.module.css';
@@ -92,21 +93,15 @@ const PROPS_GLASS = {
 
 const TRANSICION_FADE = { duration: 0.4, ease: [0.16, 1, 0.3, 1] };
 
-// Coincide con UNMOUNT_DELAY_MS de Bienvenida (igual que DEMORA_RODANTE_MS
-// en ElementoNavegacion): si el nombre se descifra antes, queda tapado por
-// el splash y nadie lo llega a ver.
-const DEMORA_NOMBRE_MS = 3300;
+// El nombre se descifra cuando se va la portada de Bienvenida (si no, queda
+// tapado y nadie lo llega a ver), con el mismo margen que el resto del hero.
+const DEMORA_NOMBRE_MS = 350;
 
 export default function Header() {
   const estaScrolleado = useScrollPasadoViewport();
   const seccionActiva = useSeccionVisible();
   const refPildoraGrande = useRef(null);
-  const [mostrarNombreDescifrado, setMostrarNombreDescifrado] = useState(false);
-
-  useEffect(() => {
-    const temporizador = setTimeout(() => setMostrarNombreDescifrado(true), DEMORA_NOMBRE_MS);
-    return () => clearTimeout(temporizador);
-  }, []);
+  const mostrarNombreDescifrado = useTrasBienvenida(DEMORA_NOMBRE_MS);
 
   function manejarMovimientoRaton(evento) {
     const contenedor = refPildoraGrande.current;

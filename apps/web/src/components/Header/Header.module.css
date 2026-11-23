@@ -184,3 +184,23 @@
     display: none;
   }
 }
+
+/* Mientras está la portada de Bienvenida (src/lib/bienvenida.js) el header queda por encima de
+   ella sólo con tu nombre: la navegación y el menú esperan al hero. Sin tocarlo: el logo lleva
+   al hero y con la portada arriba no tiene a dónde ir. */
+:global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .header {
+  z-index: 10000;
+}
+
+:global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .header > :not(.logo) {
+  visibility: hidden;
+}
+
+:global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .logo {
+  pointer-events: none;
+}
+
+:global(html:not([data-sin-bienvenida]):not([data-portada-fuera])) .logoNombre {
+  max-width: 220px;
+  opacity: 1;
+}

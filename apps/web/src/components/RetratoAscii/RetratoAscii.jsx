@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { usePortfolio } from '@/contexto/ProveedorPortfolio.jsx';
 import { esTactil, prefiereMovimientoReducido } from '@/lib/entrada.js';
+import { trasBienvenida } from '@/lib/bienvenida.js';
 import RevelarEsqueleto from '@/components/RayosX/RevelarEsqueleto.jsx';
 import ZonaTactil from '@/components/RayosX/ZonaTactil.jsx';
 import styles from './RetratoAscii.module.css';
@@ -13,8 +14,8 @@ const RUTA_RETRATO = '/retrato.png';
 // del esqueleto cubre la caja entera y se calibra en fracciones de ella.
 const ANCHO_RETRATO = 1792;
 const ALTO_RETRATO = 2390;
-// Mismo valor que en NombreAscii: la foto aparece cuando se va el splash de Bienvenida.
-const DEMORA_INICIO_MS = 3300;
+// Mismo valor que en NombreAscii: la foto aparece al irse la portada de Bienvenida (src/lib/bienvenida.js).
+const DEMORA_INICIO_MS = 350;
 // Cuántas alturas de pantalla de scroll tarda el retrato en apagarse del todo.
 const ALTURAS_PARA_DESVANECER = 0.85;
 
@@ -31,8 +32,7 @@ export default function RetratoAscii({ rayosX = false, alDispararRayosX }) {
 
   useEffect(() => {
     const demora = prefiereMovimientoReducido() ? 0 : DEMORA_INICIO_MS;
-    const temporizador = setTimeout(() => setVisible(true), demora);
-    return () => clearTimeout(temporizador);
+    return trasBienvenida(() => setVisible(true), demora);
   }, []);
 
   // El retrato se difumina con el scroll. Se escribe una variable CSS directo en el nodo, sin

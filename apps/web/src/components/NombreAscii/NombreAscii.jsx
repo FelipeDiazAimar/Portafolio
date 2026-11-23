@@ -8,6 +8,7 @@ import { calcarTextoLimpio, medirRatioMonoespaciado } from '@/lib/calcoTexto.js'
 import { esTactil, prefiereMovimientoReducido, tieneHoverFino } from '@/lib/entrada.js';
 import useToqueSobre from '@/hooks/useToqueSobre.js';
 import { irASeccion } from '@/lib/teletransporte.js';
+import { trasBienvenida } from '@/lib/bienvenida.js';
 import useDestelloAleatorio from '@/hooks/useDestelloAleatorio.js';
 import destello from '@/styles/destello.module.css';
 import SubtituloHero from '@/components/SubtituloHero/SubtituloHero.jsx';
@@ -23,7 +24,9 @@ const ColapsoFisico = dynamic(
   { ssr: false }
 );
 
-const DEMORA_INICIO_MS = 3300;
+// Después de que se va la portada de Bienvenida (src/lib/bienvenida.js): el nombre se arma con el
+// hero ya a la vista.
+const DEMORA_INICIO_MS = 350;
 // Aire entre la última línea del nombre y el subtítulo.
 const SEPARACION_SUBTITULO_PX = 6;
 // Texto de presentación bajo el subtítulo. Lo que va entre ** ** sale en
@@ -393,8 +396,7 @@ export default function NombreAscii() {
   useEffect(() => {
     setTactil(esTactil());
     setMontado(true);
-    const temporizador = setTimeout(() => setEmpezar(true), DEMORA_INICIO_MS);
-    return () => clearTimeout(temporizador);
+    return trasBienvenida(() => setEmpezar(true), DEMORA_INICIO_MS);
   }, []);
 
   // Sube sólo cuando se construye un campo NUEVO (primera vez o resize),
