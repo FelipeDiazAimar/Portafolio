@@ -6,7 +6,7 @@
 // Va dentro del panel, sobre el fondo (luz y trama) y debajo del titular y las portadas.
 // `refPoner.current(fase)` la mueve; la llama ReelHitos en cada cuadro.
 import { useEffect, useRef } from 'react';
-import { aRuta, grosorLinea, largoHasta, PRESETS, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './ReelHitos.module.css';
 
 const POR_HITO = 0.78; // ancho de trazo por hito, en pantallas
@@ -75,7 +75,8 @@ export default function LineaReel({ total, refPoner }) {
     };
   }, [total, refPoner]);
 
-  const { c0, c1 } = PRESETS.reel;
+  // el mismo cian que la línea del resto del sitio (es la misma línea, que acá corre de costado)
+  const { c0, c1 } = COLOR_LINEA;
   return (
     <svg ref={refSvg} className={styles.linea} aria-hidden="true">
       <defs>

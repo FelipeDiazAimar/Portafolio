@@ -101,14 +101,50 @@ export function largoHasta(trazo, tabla, valor) {
   return trazo.largos[a] + (trazo.largos[b] - trazo.largos[a]) * f;
 }
 
-// Colores de LINES_DATA_LIST de lusion.co; en tema claro el blanco pasa a grafito.
-export const PRESETS = {
-  reel: { c0: '#5a90ff', c1: '#2a38ee' },
-  goal: { c0: '#94fffb', c1: '#1285dc' },
-  capability: { c0: '#ffffff', c1: '#bbbbbb', claro: { c0: '#2a2f3a', c1: '#8a91a0' } },
-  office: { c0: '#ffffff', c1: '#bbbbbb', claro: { c0: '#2a2f3a', c1: '#8a91a0' } },
-};
-
 export function grosorLinea(vw) {
   return Math.min(16, Math.max(9, vw * 0.0095));
 }
+
+// Guía suave que pasa por todos los puntos (Catmull-Rom centrípeta): u 0..1 se reparte entre los
+// tramos según su largo, así la velocidad es pareja. Para encadenar secciones en un solo trazo.
+export function spline(puntos) {
+  const P = [puntos[0], ...puntos, puntos[puntos.length - 1]];
+  const tramos = [];
+  for (let i = 1; i < P.length - 2; i += 1) {
+    const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+    const d = (a, b) => Math.max(1e-3, Math.sqrt(Math.hypot(b[0] - a[0], b[1] - a[1])));
+    const t1 = d(p0, p1);
+    const t2 = t1 + d(p1, p2);
+    const t3 = t2 + d(p2, p3);
+    tramos.push({ p0, p1, p2, p3, t1, t2, t3, largo: Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) });
+  }
+  const total = tramos.reduce((s, t) => s + t.largo, 0) || 1;
+  let acc = 0;
+  tramos.forEach((t) => {
+    t.desde = acc / total;
+    acc += t.largo;
+    t.hasta = acc / total;
+  });
+  const lerp2 = (a, b, ta, tb, t) => {
+    const k = (t - ta) / (tb - ta || 1e-6);
+    return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  };
+  const guia = (u) => {
+    const v = Math.min(1, Math.max(0, u));
+    const tr = tramos.find((t) => v <= t.hasta) ?? tramos[tramos.length - 1];
+    const local = (v - tr.desde) / Math.max(1e-6, tr.hasta - tr.desde);
+    const t = tr.t1 + (tr.t2 - tr.t1) * local;
+    const A1 = lerp2(tr.p0, tr.p1, 0, tr.t1, t);
+    const A2 = lerp2(tr.p1, tr.p2, tr.t1, tr.t2, t);
+    const A3 = lerp2(tr.p2, tr.p3, tr.t2, tr.t3, t);
+    const B1 = lerp2(A1, A2, 0, tr.t2, t);
+    const B2 = lerp2(A2, A3, tr.t1, tr.t3, t);
+    return lerp2(B1, B2, tr.t1, tr.t2, t);
+  };
+  // dónde empieza y termina cada tramo (en u), para ubicar rulos
+  guia.tramos = tramos.map((t) => [t.desde, t.hasta]);
+  return guia;
+}
+
+// El color de la línea (el cian del tubo original): se alterna suave a lo largo del recorrido.
+export const COLOR_LINEA = { c0: '#94fffb', c1: '#1285dc' };

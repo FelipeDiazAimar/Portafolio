@@ -1,62 +1,74 @@
 'use client';
 
-// Líneas que te llevan de una sección a la siguiente (como las de lusion.co): un trazo 2D por unión,
-// con degradé y rulos redondos, que se dibuja con el scroll (la punta sigue a la mitad de la pantalla)
-// y se recoge al subir. Van en una capa fija DETRÁS de todo el contenido: sólo se ven sobre el fondo
-// de la página, nunca encima de un texto, una tarjeta o una escena. Con la sección en reposo se
-// desvanecen. Sobre mí tiene la suya propia, horizontal, dentro de su panel (ver LineaReel).
+// La línea del sitio (como las de lusion.co): un solo trazo 2D cian, con rulos redondos, que baja
+// por toda la página y se va dibujando con el scroll (la punta sigue a la mitad de la pantalla; al
+// subir se recoge). Va en una capa fija DETRÁS de todo el contenido: sólo se ve sobre el fondo de la
+// página, nunca encima de un texto, una tarjeta o una escena.
+//
+// Es continua entre secciones: donde una sección tiene su propio fondo, la línea sigue adentro de
+// ella con su forma: en Sobre mí corre horizontal con el reel (LineaReel) y en Experiencia se vuelve
+// la línea central del piso del pasillo (EscenaPasillo). Acá van los tres tramos sobre el fondo:
+//   1. del inicio hasta el borde izquierdo de Sobre mí (donde arranca la del reel),
+//   2. del final de Proyectos hasta el centro de abajo de la pantalla, donde empieza el pasillo,
+//   3. de la salida del pasillo hasta el final de la página.
 import { useEffect, useRef } from 'react';
 import { alCuadro, movimientoReducido, scroll, SecondOrderDynamics, limitar } from '@/lib/movimiento.js';
-import { aRuta, bezier, grosorLinea, largoHasta, PRESETS, tablaAvance, trazar } from '@/lib/trazos.js';
+import { aRuta, COLOR_LINEA, grosorLinea, largoHasta, spline, tablaAvance, trazar } from '@/lib/trazos.js';
 import styles from './LineasScroll.module.css';
-
-// [sección que entra, preset, forma]. (Sobre mí → Proyectos no lleva: ahí la transición es el puente.)
-const UNIONES = [
-  ['#sobre-mi', 'reel', 0],
-  ['#experiencia', 'goal', 1],
-  ['#titulos', 'capability', 2],
-  ['#habilidades', 'reel', 3],
-  ['#contacto', 'goal', 0],
-  ['footer', 'office', 2],
-];
 
 const SVG = 'http://www.w3.org/2000/svg';
 
-function tema() {
-  const t = document.documentElement.getAttribute('data-theme');
-  if (t === 'light' || t === 'dark') return t;
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+function caja(sel, y0) {
+  const n = document.querySelector(sel);
+  if (!n) return null;
+  const r = n.getBoundingClientRect();
+  return { top: r.top + y0, bottom: r.bottom + y0, alto: r.height };
 }
 
-
-// El dibujo de cada unión, en px de página. Entra por un costado ~1,15 pantallas antes de la unión
-// y sale por el otro apenas pasada; los rulos son círculos tangentes a la guía.
-function trazoDeUnion(forma, J, vw, vh, lado) {
-  const s = lado;
-  const W = vw / 2;
-  const cx = (x) => W + x;
-  const Y = (k) => J + k * vh;
-  const R = Math.min(vw, vh) * 0.13;
-  if (forma === 0) {
-    return trazar(bezier([cx(-s * (W + 80)), Y(-1.12)], [cx(s * W * 0.9), Y(-0.95)], [cx(-s * W * 0.9), Y(-0.05)], [cx(s * (W + 80)), Y(0.1)]), [
-      { u: 0.47, r: R, sentido: s },
-    ]);
-  }
-  if (forma === 1) {
-    return trazar(bezier([cx(s * (W + 80)), Y(-1.1)], [cx(-s * W * 0.2), Y(-1.05)], [cx(s * W * 0.3), Y(0.05)], [cx(-s * (W + 80)), Y(0.08)]), [
-      { u: 0.36, r: R * 0.72, sentido: -s },
-      { u: 0.62, r: R * 1.05, sentido: -s },
-    ]);
-  }
-  if (forma === 2) {
-    return trazar(bezier([cx(-s * W * 0.35), Y(-1.2)], [cx(s * W * 0.25), Y(-0.75)], [cx(-s * W * 0.6), Y(-0.3)], [cx(s * (W + 80)), Y(0.1)]), [
-      { u: 0.5, r: R * 1.25, sentido: s },
-    ]);
-  }
-  return trazar(bezier([cx(-s * (W + 80)), Y(-1.0)], [cx(s * W * 1.1), Y(-0.85)], [cx(-s * W * 0.2), Y(-0.2)], [cx(-s * (W + 80)), Y(0.06)]), [
-    { u: 0.32, r: R * 0.6, sentido: s },
-    { u: 0.58, r: R * 0.95, sentido: s },
-  ]);
+// Los tramos: puntos de paso (px de página) y en qué tramos de la guía va un rulo.
+function tramos(vw, vh) {
+  const y0 = window.scrollY;
+  const s = caja('#sobre-mi', y0);
+  const p = caja('#proyectos', y0);
+  const e = caja('#experiencia', y0);
+  const t = caja('#titulos', y0);
+  const h = caja('#habilidades', y0);
+  const c = caja('#contacto', y0);
+  const f = caja('footer', y0);
+  if (!s || !p || !e || !t || !h || !c || !f) return [];
+  const X = (k) => k * vw;
+  const R = Math.min(vw, vh) * 0.12;
+  return [
+    {
+      puntos: [[X(-0.06), vh * 0.1], [X(0.74), vh * 0.42], [X(0.34), s.top - vh * 0.12], [X(-0.03), s.top + vh * 0.66]],
+      lazos: [{ tramo: 1, r: R, sentido: 1 }],
+    },
+    {
+      puntos: [[X(1.06), p.bottom - vh * 0.45], [X(0.28), p.bottom - vh * 0.08], [X(0.66), e.top - vh * 0.22], [X(0.5), e.top + vh * 0.3], [X(0.5), e.top + vh * 1.02]],
+      lazos: [{ tramo: 1, r: R * 0.9, sentido: -1 }],
+    },
+    {
+      puntos: [
+        [X(0.5), e.bottom - vh * 0.4],
+        [X(0.5), e.bottom + vh * 0.02],
+        [X(0.22), e.bottom + vh * 0.34],
+        [X(0.78), t.top + vh * 0.2],
+        [X(0.16), t.top + t.alto * 0.5],
+        [X(0.84), h.top - vh * 0.22],
+        [X(0.3), h.top + vh * 0.55],
+        [X(0.76), c.top - vh * 0.18],
+        [X(0.24), c.top + vh * 0.62],
+        [X(0.68), f.top + vh * 0.2],
+        [X(0.9), f.bottom - vh * 0.12],
+      ],
+      lazos: [
+        { tramo: 2, r: R * 0.85, sentido: 1 },
+        { tramo: 4, r: R * 1.1, sentido: -1 },
+        { tramo: 6, r: R * 0.9, sentido: 1 },
+        { tramo: 8, r: R, sentido: -1 },
+      ],
+    },
+  ];
 }
 
 export default function LineasScroll() {
@@ -66,46 +78,35 @@ export default function LineasScroll() {
     const svg = refSvg.current;
     if (!svg || movimientoReducido()) return undefined;
     const grupo = svg.querySelector('g');
-    const defs = svg.querySelector('defs');
+    const grad = svg.querySelector('linearGradient');
     let lineas = [];
     let firma = '';
     let espera = 0;
 
     const armar = (forzar = false) => {
       if (!document.getElementById('inicio')) return;
-      const y0 = window.scrollY;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const uniones = UNIONES.map(([sel, preset, forma]) => {
-        const nodo = document.querySelector(sel);
-        return nodo ? { preset, forma, J: nodo.getBoundingClientRect().top + y0 } : null;
-      }).filter(Boolean);
-      const claro = tema() === 'light';
-      const nueva = `${vw}x${vh}|${claro}|${uniones.map((u) => Math.round(u.J)).join(',')}`;
+      const lista = tramos(vw, vh);
+      const nueva = `${vw}x${vh}|${lista.map((l) => l.puntos.map((q) => Math.round(q[1])).join(',')).join('|')}`;
       if (!forzar && nueva === firma) return;
       firma = nueva;
+      grad.setAttribute('y2', String(Math.round(vh * 1.3)));
       grupo.replaceChildren();
-      defs.replaceChildren();
-      const ancho = grosorLinea(vw);
-      lineas = uniones.map(({ preset, forma, J }, i) => {
-        const trazo = trazoDeUnion(forma, J, vw, vh, i % 2 === 0 ? 1 : -1);
-        const p = PRESETS[preset];
-        const col = claro && p.claro ? p.claro : p;
-        const grad = document.createElementNS(SVG, 'linearGradient');
-        grad.id = `linea-grad-${i}`;
-        grad.setAttribute('gradientUnits', 'userSpaceOnUse');
-        const a = trazo.puntos[0];
-        const b = trazo.puntos[trazo.puntos.length - 1];
-        grad.setAttribute('x1', a[0]);
-        grad.setAttribute('y1', a[1]);
-        grad.setAttribute('x2', b[0]);
-        grad.setAttribute('y2', b[1]);
-        grad.innerHTML = `<stop offset="0" stop-color="${col.c0}"/><stop offset="1" stop-color="${col.c1}"/>`;
-        defs.appendChild(grad);
+      const ancho = grosorLinea(vw).toFixed(1);
+      lineas = lista.map(({ puntos, lazos }) => {
+        const guia = spline(puntos);
+        const trazo = trazar(
+          guia,
+          lazos.map(({ tramo, r, sentido }) => {
+            const [a, b] = guia.tramos[Math.min(tramo, guia.tramos.length - 1)];
+            return { u: (a + b) / 2, r, sentido };
+          })
+        );
         const ruta = document.createElementNS(SVG, 'path');
         ruta.setAttribute('d', aRuta(trazo.puntos));
-        ruta.setAttribute('stroke', `url(#${grad.id})`);
-        ruta.setAttribute('stroke-width', ancho.toFixed(1));
+        ruta.setAttribute('stroke', 'url(#linea-cian)');
+        ruta.setAttribute('stroke-width', ancho);
         ruta.style.strokeDasharray = `${trazo.largo} ${trazo.largo + 10}`;
         ruta.style.strokeDashoffset = String(trazo.largo);
         ruta.style.opacity = '0';
@@ -116,7 +117,7 @@ export default function LineasScroll() {
           yMin = Math.min(yMin, y);
           yMax = Math.max(yMax, y);
         });
-        return { ruta, trazo, tabla: tablaAvance(trazo, 1), J, yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
+        return { ruta, trazo, tabla: tablaAvance(trazo, 1), yMin, yMax, resorte: new SecondOrderDynamics(1.5, 0.8, 0, 0), primero: true, ultimo: '' };
       });
     };
 
@@ -125,11 +126,6 @@ export default function LineasScroll() {
       const vh = window.innerHeight;
       grupo.setAttribute('transform', `translate(0 ${(-y).toFixed(1)})`);
       for (const l of lineas) {
-        const enVista = l.yMax > y - 60 && l.yMin < y + vh + 60;
-        // sólo mientras su unión cruza la pantalla: en reposo sobre una sección no se ve
-        const lejos = Math.abs(l.J - (y + vh * 0.5)) / vh;
-        const a = limitar((0.5 - lejos) / 0.14, 0, 1);
-        const alfa = enVista ? a * a * (3 - 2 * a) : 0;
         const objetivo = largoHasta(l.trazo, l.tabla, y + vh * 0.56) / l.trazo.largo;
         let show;
         if (l.primero) {
@@ -138,11 +134,12 @@ export default function LineasScroll() {
           show = objetivo;
         } else show = l.resorte.actualizar(dt, objetivo);
         show = limitar(show, 0, 1);
-        const op = show < 0.002 ? 0 : alfa;
-        const clave = `${op.toFixed(3)}|${show.toFixed(4)}`;
+        const enVista = l.yMax > y - 60 && l.yMin < y + vh + 60;
+        const op = enVista && show > 0.002 ? 1 : 0;
+        const clave = `${op}|${show.toFixed(4)}`;
         if (clave === l.ultimo) continue;
         l.ultimo = clave;
-        l.ruta.style.opacity = op.toFixed(3);
+        l.ruta.style.opacity = String(op);
         l.ruta.style.strokeDashoffset = (l.trazo.largo * (1 - show)).toFixed(1);
       }
     };
@@ -157,22 +154,24 @@ export default function LineasScroll() {
     const ro = new ResizeObserver(pedir);
     ro.observe(document.body);
     window.addEventListener('resize', pedir);
-    const mo = new MutationObserver(() => armar(true));
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     const tarde = setTimeout(() => armar(), 2500);
     return () => {
       clearTimeout(espera);
       clearTimeout(tarde);
       quitar();
       ro.disconnect();
-      mo.disconnect();
       window.removeEventListener('resize', pedir);
     };
   }, []);
 
   return (
     <svg ref={refSvg} className={styles.lienzo} aria-hidden="true">
-      <defs />
+      <defs>
+        <linearGradient id="linea-cian" gradientUnits="userSpaceOnUse" spreadMethod="reflect" x1="0" y1="0" x2="0" y2="900">
+          <stop offset="0" stopColor={COLOR_LINEA.c0} />
+          <stop offset="1" stopColor={COLOR_LINEA.c1} />
+        </linearGradient>
+      </defs>
       <g />
     </svg>
   );

@@ -305,7 +305,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
   // radio de choque: que el montón ocupe una bola de ~la mitad del alto del panel
   const marco0 = marco();
   // en el puente son más chicos: flotan por toda la pantalla, no dentro de un recuadro
-  const radio = puente ? limitar(Math.min(marco0.w, marco0.h) * 0.5 * Math.cbrt(0.5 / Math.max(8, total)), 34, 110) : limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
+  const radio = puente ? limitar(Math.sqrt((marco0.w * marco0.h * 0.5) / Math.max(8, total) / Math.PI), 34, 100) : limitar(Math.min(marco0.w, marco0.h) * 0.66 * Math.cbrt(0.5 / Math.max(8, total)), 46, 150);
   // así está inclinada la grilla de la marquesina: las tarjetas 3D flotan ya con esa inclinación
   const grilla = new THREE.Quaternion();
   if (iniciales[0]) grilla.copy(poseDeTarjeta(iniciales[0], { posicion: new THREE.Vector3(), cuaternion: new THREE.Quaternion() }).cuaternion);
@@ -493,19 +493,37 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     // ... y va a su lugar en el montón. Al volver a esta etapa desde la física, el "lugar" pasa a
     // ser donde estaba.
     const m = marco();
-    piezas.forEach((a) => {
-      a.casa = new THREE.Vector3(m.x + m.w * azar(0.14, 0.86), m.y + m.h * azar(0.2, 0.8), azar(-160, 160));
+    // Caen desde arriba del recuadro y se apilan llenándolo: su lugar final es una pila por filas,
+    // de abajo hacia arriba (las de abajo caen primero), y arrancan bien por encima del recuadro.
+    const diametro = radio * 2;
+    const columnas = Math.max(1, Math.floor((m.w - diametro * 0.4) / diametro));
+    const filas = Math.ceil(piezas.length / columnas);
+    const orden = [...piezas].sort(() => Math.random() - 0.5);
+    orden.forEach((a, n) => {
+      const fila = Math.floor(n / columnas);
+      const col = n % columnas;
+      const corrida = fila % 2 ? diametro * 0.5 : 0;
+      const x = m.x + diametro * 0.7 + col * ((m.w - diametro * 1.4) / Math.max(1, columnas - 1 + (fila % 2 ? 0.5 : 0))) + corrida * 0.5 + azar(-10, 10);
+      const y = m.y + m.h - radio * 1.05 - fila * diametro * 0.86 + azar(-8, 8);
+      a.casa = new THREE.Vector3(limitar(x, m.x + radio, m.x + m.w - radio), Math.max(m.y + radio, y), azar(-120, 120));
+      a.cielo = new THREE.Vector3(a.casa.x + azar(-60, 60), m.y - azar(0.25, 1.35) * m.h - diametro, azar(-120, 120));
       a.qBase = a.malla.quaternion.clone();
       a.qCasa = a.qBase.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(azar(-1, 1), azar(-1, 1), azar(-1, 1)).normalize(), azar(2, 4)));
-      a.demoraPuente = azar(0, 0.35);
-      a.conector.scale.setScalar(0.0001);
-      a.p.copy(a.casa);
+      a.demoraPuente = (filas > 1 ? fila / (filas - 1) : 0) * 0.42 + azar(0, 0.08);
+      a.p.copy(a.cielo);
       a.v.set(0, 0, 0);
     });
     armarPortadas(puente.portadas);
   }
   const punto = new THREE.Vector3();
   const salidaCubica = (x) => 1 - Math.pow(1 - limitar(x, 0, 1), 3);
+  // caída con un pique corto al tocar (bounce.out suave)
+  const piqueAlCaer = (x) => {
+    const v = limitar(x, 0, 1);
+    if (v < 0.72) return (v / 0.72) * (v / 0.72);
+    const k = (v - 0.86) / 0.14;
+    return 1 - 0.06 * (1 - k * k);
+  };
   // Las portadas se rompen y de cada una salen sus conectores. `t`: 0 = portadas enteras, 1 = sólo conectores.
   function portadasCuadro(t) {
     for (const p of portadas3d) {
@@ -516,6 +534,19 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       p.malla.quaternion.setFromAxisAngle(p.eje, e * 1.4);
       p.malla.scale.setScalar(Math.max(0.0001, 1 - e * e));
       p.material.opacity = p.opacidad * (1 - suaveP(limitar((e - 0.5) / 0.5, 0, 1)));
+    }
+    if (!portadas3d.length) {
+      // caída: del cielo a su lugar en la pila, con un pique al llegar
+      for (const a of piezas) {
+        const ei = limitar((t - 0.1 - a.demoraPuente) / 0.45, 0, 1);
+        a.p.lerpVectors(a.cielo, a.casa, piqueAlCaer(ei));
+        a.v.set(0, 0, 0);
+        a.malla.position.set(a.p.x, -a.p.y, a.p.z);
+        a.malla.quaternion.slerpQuaternions(a.qBase, a.qCasa, salidaCubica(ei));
+        a.conector.scale.setScalar(a.r0 * 0.98);
+        a.r = a.r0;
+      }
+      return;
     }
     for (const a of piezas) {
       const ei = limitar((t - 0.12 - a.demoraPuente * 0.5) / 0.6, 0, 1);
@@ -633,8 +664,12 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
       // A lo ancho no van a un punto sino a una franja: dentro de ella nada las junta, así se
       // reparten por todo el ancho del recuadro en vez de apilarse en el medio.
       const franja = marco().w * 0.36;
-      a.v.x += (limitar(a.p.x, cx - franja, cx + franja) - a.p.x) * 3.4 * dt;
-      a.v.y += (cy - a.p.y) * 6.2 * dt;
+      if (puente && !portadas3d.length) {
+        a.v.y += 650 * dt;
+      } else {
+        a.v.x += (limitar(a.p.x, cx - franja, cx + franja) - a.p.x) * 3.4 * dt;
+        a.v.y += (cy - a.p.y) * 6.2 * dt;
+      }
       a.v.z += -a.p.z * 4.5 * dt;
       // el cursor las aparta
       if (puntero.activo) {
@@ -654,6 +689,7 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     }
     // choques entre esferas: se separan y se pasan parte del impulso. Cada pieza cabe entera en
     // su esfera, así que nunca se atraviesan.
+    for (let pasada = 0; pasada < (puente ? 3 : 1); pasada++)
     for (let i = 0; i < piezas.length; i++) {
       for (let j = i + 1; j < piezas.length; j++) {
         const a = piezas[i];
@@ -680,9 +716,29 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     const freno = Math.exp(-2.4 * dt);
     const frenoGiro = Math.exp(-(0.9 + comoTarjetas * 3.2) * dt);
     const minimoGiro = 0.2 * (1 - comoTarjetas * 0.8);
+    const caja = puente && !portadas3d.length ? marco() : null;
     for (const a of piezas) {
       a.v.multiplyScalar(freno);
       a.p.addScaledVector(a.v, dt);
+      // paredes del recuadro: rebotan contra los bordes (y el piso) y quedan adentro
+      if (caja && a.r > 0.5) {
+        const r = a.r * 0.92;
+        if (a.p.x < caja.x + r) {
+          a.p.x = caja.x + r;
+          a.v.x = Math.abs(a.v.x) * 0.45;
+        } else if (a.p.x > caja.x + caja.w - r) {
+          a.p.x = caja.x + caja.w - r;
+          a.v.x = -Math.abs(a.v.x) * 0.45;
+        }
+        if (a.p.y > caja.y + caja.h - r) {
+          a.p.y = caja.y + caja.h - r;
+          a.v.y = -Math.abs(a.v.y) * 0.35;
+          a.v.x *= 0.92;
+        } else if (a.p.y < caja.y - caja.h * 0.6) {
+          a.p.y = caja.y - caja.h * 0.6;
+          a.v.y = Math.abs(a.v.y) * 0.3;
+        }
+      }
       a.giro.multiplyScalar(frenoGiro);
       // nunca quedan del todo quietas
       const velocidad = a.giro.length();
@@ -1007,8 +1063,10 @@ export function crearEscenaPiezas({ lienzo, panel, objetivos, infoDe, claro = fa
     etapaPuente: () => etapaP,
     // fuera de pantalla no se dibuja ni se simula
     activar(si) {
+      const antes = activoP;
       activoP = Boolean(si);
-      if (activoP) ultimo = null;
+      // sólo al volver de inactivo: si no, cada cuadro reiniciaba el reloj y la física no avanzaba
+      if (activoP && !antes) ultimo = null;
     },
     piezas: () => piezas.length,
     // En qué tiempo está: 'conectores', 'mutando', 'tarjetas' (3D, flotando) o 'aplanando'.

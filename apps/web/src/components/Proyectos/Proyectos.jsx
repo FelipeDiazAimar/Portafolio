@@ -20,7 +20,6 @@ import { cuandoInactivo, esEscritorio } from '@/lib/precarga.js';
 import VistaProyecto from './VistaProyecto.jsx';
 import styles from './Proyectos.module.css';
 import useEmbudo from '@/hooks/useEmbudo.js';
-import { calcarPortadas } from '@/lib/puente.js';
 import { alCuadro } from '@/lib/movimiento.js';
 
 // Marquesina: la grilla inclinada deja huecos en las esquinas si sólo están los 13 proyectos,
@@ -307,6 +306,7 @@ export default function Proyectos() {
     }, 5000);
   }, []);
   const refCajaIntro = useRef(null);
+  const refVeloPuente = useRef(null);
   const refIntro = useRef(null);
   const refVisible = useRef(false);
   refVisible.current = visible;
@@ -391,7 +391,8 @@ export default function Proyectos() {
     const lienzo = refLienzoIntro.current;
     const fondo = refFondo.current;
     const caja = refCajaIntro.current;
-    if (!seccion || !panel || !lienzo || !fondo || !caja) return undefined;
+    const velo = refVeloPuente.current;
+    if (!seccion || !panel || !lienzo || !fondo || !caja || !velo) return undefined;
     const raiz = document.documentElement;
     const medir = () => {
       const y = window.scrollY;
@@ -417,7 +418,8 @@ export default function Proyectos() {
       creando = true;
       const intro = { escena: null, cancelada: false };
       refIntro.current = intro;
-      const portadas = conPortadas ? calcarPortadas() : [];
+      // (las piezas ya no salen de las portadas: caen desde arriba al recuadro)
+      const portadas = [];
       import('./piezas/EscenaPiezas.js')
         .then(({ crearEscenaPiezas }) => {
           creando = false;
@@ -462,8 +464,7 @@ export default function Proyectos() {
         t = (y - c0) / (c1 - c0);
       }
       const dentro = y > inicio + 0.5 && y < fin - 0.5;
-      if (dentro && !refIntro.current) crear(etapa === 'portadas');
-      if (y <= inicio + 0.5) delete raiz.dataset.puente;
+      if (dentro && !refIntro.current) crear(false);
       const escena = refIntro.current?.escena;
       // la marquesina de verdad aparece al final, mientras la escena se funde
       const real = dentro ? limitar((y - (llegada + L * 0.86)) / (L * 0.1), 0, 1) : y >= fin - 0.5 ? 1 : 0;
@@ -473,21 +474,19 @@ export default function Proyectos() {
       if (escena) {
         escena.activar(dentro && real < 1);
         if (dentro) escena.ponerProgreso(etapa, t);
-        // se llegó desde abajo (menú, recarga): la escena nació sin portadas; al volver a la cola
-        // se calcan ahora, y los conectores vuelven a ellas desde donde estén
-        if (dentro && etapa === 'portadas' && !escena.tienePortadas()) {
-          const lista = calcarPortadas();
-          if (lista.length) {
-            escena.ponerPortadas(lista);
-            raiz.dataset.puente = 'on';
-          }
-        }
       }
-      // el recuadro oscuro llega con el panel y se va mientras las tarjetas salen hacia su lugar
-      const llega = limitar((y - (llegada - vh * 0.6)) / (vh * 0.6), 0, 1);
-      const sale = 1 - limitar((y - c0) / (L * 0.2), 0, 1);
-      const recuadro = dentro ? llega * sale : 0;
+      // Con la cola de Sobre mí todo se oscurece; el recuadro aparece en la oscuridad y las piezas
+      // caen adentro. Mientras las tarjetas salen hacia la marquesina, el recuadro se abre a toda la
+      // pantalla y la oscuridad se va.
+      const suaveP = (x) => x * x * (3 - 2 * x);
+      const tCola = limitar((y - inicio) / C, 0, 1);
+      const abre = etapa === 'convertir' ? suaveP(limitar(t / 0.35, 0, 1)) : 0;
+      const sale = 1 - limitar((y - c0) / (L * 0.32), 0, 1);
+      const oscuro = dentro ? suaveP(limitar(tCola / 0.55, 0, 1)) * suaveP(sale) : 0;
+      fijar(velo, 'opacity', (oscuro * 0.94).toFixed(3));
+      const recuadro = dentro ? suaveP(limitar((tCola - 0.15) / 0.4, 0, 1)) * suaveP(sale) : 0;
       fijar(caja, 'opacity', recuadro.toFixed(3));
+      lienzo.style.setProperty('--abre-k', (1 - abre).toFixed(3));
       const intro = recuadro > 0.35 ? 'true' : 'false';
       if (intro !== ultimoIntro) {
         ultimoIntro = intro;
@@ -522,6 +521,8 @@ export default function Proyectos() {
       fondo.style.pointerEvents = '';
       lienzo.style.opacity = '';
       caja.style.opacity = '';
+      velo.style.opacity = '';
+      lienzo.style.removeProperty('--abre-k');
       delete panel.dataset.intro;
     };
   }, [puenteOn, opcionesEscena, terminarIntro, mvX, mvY, mvS]);
@@ -654,6 +655,7 @@ export default function Proyectos() {
         </div>
         <div ref={refDestello} className={styles.destello} aria-hidden="true" />
         {/* Entrada: las piezas 3D que se vuelven tarjetas (ver el puente) */}
+        <div ref={refVeloPuente} className={styles.veloPuente} aria-hidden="true" />
         <div ref={refCajaIntro} className={styles.introCaja} aria-hidden="true" />
         <canvas ref={refLienzoIntro} className={styles.intro} aria-hidden="true" />
 

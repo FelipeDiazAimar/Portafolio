@@ -405,11 +405,37 @@
   }
 }
 
+/* El lienzo de las piezas es fijo y ocupa la ventana. Mientras caen y flotan queda recortado al
+   recuadro (como una caja de vidrio); cuando las tarjetas salen hacia la marquesina el recorte se abre
+   (--abre-k: 1 → 0, lo escribe Proyectos.jsx). */
 .contenedor[data-puente='true'] .intro {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  clip-path: none;
   z-index: 1;
+  clip-path: inset(
+    calc(var(--intro-arriba) * var(--abre-k, 1)) calc(var(--intro-lado) * var(--abre-k, 1))
+      calc(var(--intro-abajo) * var(--abre-k, 1)) round calc(var(--intro-radio) * var(--abre-k, 1))
+  );
+}
+
+/* el recuadro también queda fijo: aparece en la oscuridad antes de que llegue el panel */
+.contenedor[data-puente='true'] .introCaja {
+  position: fixed;
+}
+
+/* La oscuridad que cae con el scroll sobre el final de Sobre mí (sólo con el puente). */
+.veloPuente {
+  display: none;
+}
+
+.contenedor[data-puente='true'] .veloPuente {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #05060a;
+  opacity: 0;
+  pointer-events: none;
 }

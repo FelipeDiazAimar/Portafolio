@@ -737,6 +737,8 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
 
   const raiz = new THREE.Group();
   escena.add(raiz);
+  const lineaPiso = crearLineaPiso(recorrido);
+  raiz.add(lineaPiso.malla);
   if (process.env.NODE_ENV !== 'production') {
     window.__escenaPasillo = escena;
     window.__rendererPasillo = renderer;
@@ -1487,6 +1489,7 @@ export function crearEscenaPasillo({ lienzo, trabajos, recorrido, tema = 'dark',
     // acercamiento exponencial independiente de los fps
     actual += (objetivo - actual) * (1 - Math.exp(-dt * 6));
     if (Math.abs(objetivo - actual) < 0.0005) actual = objetivo;
+    lineaPiso.avanzar(actual, dt);
     mezclaLibre += ((libre ? 1 : 0) - mezclaLibre) * (1 - Math.exp(-dt * 4));
     if (Math.abs(mezclaLibre - (libre ? 1 : 0)) < 0.001) mezclaLibre = libre ? 1 : 0;
     giroMirada += (giroMiradaObjetivo - giroMirada) * (1 - Math.exp(-dt * 4));
@@ -1757,4 +1760,84 @@ function envolver(ctx, texto, x, y, ancho, interlineado) {
     } else linea = prueba;
   }
   ctx.fillText(linea, x, y + fila * interlineado);
+}
+
+
+// La línea del sitio, ya en el pasillo: una cinta cian en el centro del piso, a lo largo de todo el
+// recorrido (también en las curvas entre pasillos). Se dibuja delante de la cámara a medida que se
+// camina (unos metros adelante, con la punta difuminada) y se recoge al volver.
+function crearLineaPiso(recorrido) {
+  const ANCHO_LINEA = 0.11;
+  const PASO = 0.08;
+  const posiciones = [];
+  const datos = [];
+  const indices = [];
+  let n = 0;
+  for (let s = 0; s <= recorrido.largo + 1e-6; s += PASO) {
+    const [x, z] = puntoEn(recorrido, s);
+    const [x2, z2] = puntoEn(recorrido, Math.min(recorrido.largo, s + 0.05));
+    let tx = x2 - x;
+    let tz = z2 - z;
+    const l = Math.hypot(tx, tz) || 1;
+    tx /= l;
+    tz /= l;
+    const nx = -tz * (ANCHO_LINEA / 2);
+    const nz = tx * (ANCHO_LINEA / 2);
+    posiciones.push(x - nx, 0.012, z - nz, x + nx, 0.012, z + nz);
+    datos.push(s, -1, s, 1);
+    if (n > 0) {
+      const a = (n - 1) * 2;
+      indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    }
+    n += 1;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(posiciones, 3));
+  geo.setAttribute('aDato', new THREE.Float32BufferAttribute(datos, 2));
+  geo.setIndex(indices);
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uHasta: { value: 0 },
+      uC0: { value: new THREE.Color('#94fffb') },
+      uC1: { value: new THREE.Color('#1285dc') },
+    },
+    vertexShader: /* glsl */ `
+      attribute vec2 aDato;
+      varying vec2 vDato;
+      void main() {
+        vDato = aDato;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uHasta;
+      uniform vec3 uC0;
+      uniform vec3 uC1;
+      varying vec2 vDato;
+      void main() {
+        if (vDato.x > uHasta) discard;
+        float punta = smoothstep(uHasta, uHasta - 1.6, vDato.x);
+        float borde = smoothstep(1.0, 0.55, abs(vDato.y));
+        vec3 c = mix(uC0, uC1, 0.5 + 0.5 * sin(vDato.x * 0.35));
+        gl_FragColor = vec4(c * 1.25, punta * borde);
+      }
+    `,
+  });
+  const malla = new THREE.Mesh(geo, material);
+  malla.frustumCulled = false;
+  malla.renderOrder = 2;
+  let hasta = 0;
+  return {
+    malla,
+    // `s`: metros recorridos por la cámara
+    avanzar(s, dt) {
+      const objetivo = s + 6.5;
+      hasta += (objetivo - hasta) * (1 - Math.exp(-(dt || 0.016) * 5));
+      material.uniforms.uHasta.value = hasta;
+    },
+  };
 }
